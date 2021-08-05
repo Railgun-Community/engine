@@ -1,0 +1,41 @@
+{
+  "name": "@railgun-community/lepton",
+  "version": "0.0.1",
+  "description": "Wallet framework for Railgun",
+  "author": "Railgun Contributors",
+  "license": "UNLICENSED",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rimraf dist",
+    "lint": "eslint src/**/*.ts",
+    "test": "npm run lint && mocha --require ts-node/register 'test/**/*.test.ts'",
+    "compile": "npm run clean && tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Railgun-Community/lepton.git"
+  },
+  "homepage": "https://github.com/Railgun-Community/lepton#readme",
+  "bugs": {
+    "url": "https://github.com/Railgun-Community/lepton/issues"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.21",
+    "@types/level": "^6.0.0",
+    "@types/mocha": "^9.0.0",
+    "@types/rimraf": "^3.0.1",
+    "@typescript-eslint/eslint-plugin": "^4.29.0",
+    "@typescript-eslint/parser": "^4.29.0",
+    "chai": "^4.3.4",
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.23.4",
+    "mocha": "^9.0.3",
+    "rimraf": "^3.0.2",
+    "ts-node": "^10.1.0",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "level": "^7.0.0"
+  }
+}
