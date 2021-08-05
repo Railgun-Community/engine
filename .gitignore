@@ -18,6 +18,10 @@ pnpm-debug.log*
 *.sln
 *.sw?
 
+# NYC
+.nyc_output
+coverage
+
 # Project specific
 dist
 test/testDB
