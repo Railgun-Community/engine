@@ -24,4 +24,4 @@ coverage
 
 # Project specific
 dist
-test/testDB
+test/testDB*
