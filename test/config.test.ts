@@ -1,3 +1,3 @@
 export default {
-  dbpath: './test/dbpath',
+  dbpath: './test/testDB',
 };

@@ -8,8 +8,7 @@
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts",
-    "test": "npm run lint && mocha --require ts-node/register 'test/**/*.test.ts'",
-    "coverage": "nyc npm run test",
+    "test": "npm run lint && nyc mocha --require ts-node/register 'test/**/*.test.ts'",
     "compile": "npm run clean && tsc"
   },
   "repository": {
