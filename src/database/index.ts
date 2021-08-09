@@ -26,6 +26,7 @@ class Database {
    * Set value in database
    * @param key - database key
    * @param value - value to set
+   * @returns complete
    */
   put(key: string, value: string): Promise<void> {
     return this.level.put(key, value);
@@ -34,6 +35,7 @@ class Database {
   /**
    * Get value from database
    * @param key - database key
+   * @returns value
    */
   get(key: string): Promise<string> {
     return this.level.get(key);
@@ -42,6 +44,7 @@ class Database {
   /**
    * Delete value from database
    * @param key - database key
+   * @returns complete
    */
   del(key: string): Promise<void> {
     return this.level.del(key);
@@ -49,6 +52,7 @@ class Database {
 
   /**
    * Perform chained batch operation on database
+   * @returns chain constructor
    */
   batch(): LevelUpChain {
     return this.level.batch();
@@ -56,6 +60,7 @@ class Database {
 
   /**
    * Perform batch operation on database
+   * @returns complete
    */
   batchArray(ops: AbstractBatch[]): Promise<void> {
     return this.level.batch(ops);
@@ -64,6 +69,7 @@ class Database {
   /**
    * Delete all keys in namespace
    * @param namespace - namespace to delete
+   * @returns complete
    */
   clearNamespace(namespace: string): Promise<void> {
     return new Promise((resolve) => {
