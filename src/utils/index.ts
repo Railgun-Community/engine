@@ -1,7 +1,7 @@
 import convert from './convert';
-import crypto from './crypto';
+import hash from './hash';
 
 export default {
   convert,
-  crypto,
+  hash,
 };

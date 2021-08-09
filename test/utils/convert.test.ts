@@ -7,7 +7,7 @@ import utils from '../../src/utils';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Utils/Crypto', () => {
+describe('Utils/Convert', () => {
   it('Should convert hex to byte array and back', () => {
     const vectors = [
       {

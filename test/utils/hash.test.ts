@@ -34,12 +34,12 @@ describe('Utils/Crypto', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.crypto.sha256(vector.preimage),
+        utils.hash.sha256(vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.crypto.sha256(vector.array),
+        utils.hash.sha256(vector.array),
       ).to.equal(vector.result);
     });
   });
@@ -70,12 +70,12 @@ describe('Utils/Crypto', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.crypto.sha512(vector.preimage),
+        utils.hash.sha512(vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.crypto.sha512(vector.array),
+        utils.hash.sha512(vector.array),
       ).to.equal(vector.result);
     });
   });
@@ -106,12 +106,12 @@ describe('Utils/Crypto', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.crypto.keccak256(vector.preimage),
+        utils.hash.keccak256(vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.crypto.keccak256(vector.array),
+        utils.hash.keccak256(vector.array),
       ).to.equal(vector.result);
     });
   });
