@@ -1,12 +1,9 @@
 /* eslint-disable no-unused-expressions */
 /* globals describe it beforeEach afterEach */
-import * as chai from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
+import chai from 'chai';
+import chaiAsPromised from 'chai-as-promised';
 
-import * as rimraf from 'rimraf';
-import * as level from 'level';
-
-import testConfig from '../config.test';
+import memdown from 'memdown';
 
 import Database from '../../src/database';
 
@@ -19,96 +16,90 @@ let db: Database;
 describe('Database', () => {
   beforeEach(async () => {
     // Create database
-    db = new Database(testConfig.dbpath);
+    db = new Database(memdown());
   });
 
   it('Should create database', async () => {
     // Put value in database
-    await db.put('a', '1');
+    await db.put(['a'], '01');
 
     // Check if value is returned correctly
-    expect(await db.get('a')).to.equal('1');
-  });
-
-  it('Should create database from existing level object', async () => {
-    // Create database from level object
-    const db2: Database = new Database(level(`${testConfig.dbpath}2`));
-
-    // Put value in database
-    await db2.put('a', '1');
-
-    // Check if value is returned correctly
-    expect(await db2.get('a')).to.equal('1');
-
-    // Clean up database
-    db2.level.close();
-    rimraf(`${testConfig.dbpath}2`, () => {});
+    expect(await db.get(['a'])).to.equal('01');
   });
 
   it('Should perform CRUD operations on database', async () => {
     // Value should not exist yet
-    await expect(db.get('a')).to.eventually.be.rejected;
+    await expect(db.get(['a'])).to.eventually.be.rejected;
 
     // Put value in database
-    await db.put('a', '1');
+    await db.put(['a'], '01');
 
     // Check if value is returned correctly
-    expect(await db.get('a')).to.equal('1');
+    expect(await db.get(['a'])).to.equal('01');
 
     // Delete value
-    await db.del('a');
+    await db.del(['a']);
 
     // Check if value is deleted
-    await expect(db.get('a')).to.eventually.be.rejected;
+    await expect(db.get(['a'])).to.eventually.be.rejected;
+  });
 
+  it('Should perform batch operations on database', async () => {
     // Should do a batch put operation
-    await db.batch()
-      .put('a', '1')
-      .put('b', '2')
-      .put('c', '3')
-      .write();
+    await db.batch([
+      { type: 'put', key: 'a'.padStart(64, '0'), value: '01' },
+      { type: 'put', key: 'b'.padStart(64, '0'), value: '02' },
+      { type: 'put', key: 'c'.padStart(64, '0'), value: '03' },
+    ]);
 
     // Check if values are returned correctly
-    expect(await db.get('a')).to.equal('1');
-    expect(await db.get('b')).to.equal('2');
-    expect(await db.get('c')).to.equal('3');
+    expect(await db.get(['a'])).to.equal('01');
+    expect(await db.get(['b'])).to.equal('02');
+    expect(await db.get(['c'])).to.equal('03');
 
     // Should do a batch delete operation
-    await db.batch()
-      .del('a')
-      .del('b')
-      .del('c')
-      .write();
+    await db.batch([
+      { type: 'del', key: 'a'.padStart(64, '0') },
+      { type: 'del', key: 'b'.padStart(64, '0') },
+      { type: 'del', key: 'c'.padStart(64, '0') },
+    ]);
 
     // Check if values are deleted
-    await expect(db.get('a')).to.eventually.be.rejected;
-    await expect(db.get('b')).to.eventually.be.rejected;
-    await expect(db.get('c')).to.eventually.be.rejected;
+    await expect(db.get(['a'])).to.eventually.be.rejected;
+    await expect(db.get(['b'])).to.eventually.be.rejected;
+    await expect(db.get(['c'])).to.eventually.be.rejected;
   });
 
   it('Should delete values in a namespace', async () => {
     // Insert values in foo namespace
-    await db.put('foo:a', '1');
-    await db.put('foo:b', '2');
-    await db.put('foo:c', '3');
+    await db.put(['a', 'a'], '01');
+    await db.put(['a', 'b'], '02');
+    await db.put(['a', 'c'], '03');
 
     // Check if values are returned correctly
-    expect(await db.get('foo:a')).to.equal('1');
-    expect(await db.get('foo:b')).to.equal('2');
-    expect(await db.get('foo:c')).to.equal('3');
+    expect(await db.get(['a', 'a'])).to.equal('01');
+    expect(await db.get(['a', 'b'])).to.equal('02');
+    expect(await db.get(['a', 'c'])).to.equal('03');
 
     // Clear foo namespace
-    await db.clearNamespace('foo');
+    await db.clearNamespace(['a']);
 
     // Check if values are deleted
-    await expect(db.get('foo:a')).to.eventually.be.rejected;
-    await expect(db.get('foo:b')).to.eventually.be.rejected;
-    await expect(db.get('foo:c')).to.eventually.be.rejected;
+    await expect(db.get(['a', 'a'])).to.eventually.be.rejected;
+    await expect(db.get(['a', 'b'])).to.eventually.be.rejected;
+    await expect(db.get(['a', 'c'])).to.eventually.be.rejected;
+  });
+
+  it('Should convert byte array data to hex', async () => {
+    // Insert values by bytes array
+    await db.put([[0x1], [0xb]], [0xaa]);
+
+    // Fetch values by hex
+    expect(await db.get(['01', '0b'])).to.equal('aa');
   });
 
   afterEach(() => {
     // Clean up database
     db.level.close();
-    rimraf.sync(testConfig.dbpath);
   });
 });

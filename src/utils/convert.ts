@@ -5,7 +5,7 @@ import * as ethers from 'ethers';
  * @param arr - array to convert
  * @returns hex string
  */
-function hexlify(arr: Uint8Array): string {
+function hexlify(arr: ArrayLike<number>): string {
   // Pass to ethers hexlify and remove leaving 0x
   return ethers.utils.hexlify(arr).slice(2);
 }

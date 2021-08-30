@@ -33,18 +33,21 @@
   "settings": {
     "import/extensions": [
       ".js",
-      ".ts"
+      ".ts",
+      ".d.ts"
     ],
     "import/parsers": {
       "@typescript-eslint/parser": [
-        ".ts"
+        ".ts",
+        ".d.ts"
       ]
     },
     "import/resolver": {
       "node": {
         "extensions": [
           ".js",
-          ".ts"
+          ".ts",
+          ".d.ts"
         ]
       }
     }
