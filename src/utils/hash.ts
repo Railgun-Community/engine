@@ -1,4 +1,4 @@
-import * as ethers from 'ethers';
+import { utils as ethersutils } from 'ethers';
 import type { BytesData } from './globaltypes';
 
 /**
@@ -12,7 +12,7 @@ function sha256(preimage: BytesData): string {
     ? `0x${preimage}`
     : preimage;
 
-  return ethers.utils.sha256(preimageFormatted).slice(2);
+  return ethersutils.sha256(preimageFormatted).slice(2);
 }
 
 /**
@@ -26,7 +26,7 @@ function sha512(preimage: BytesData): string {
     ? `0x${preimage}`
     : preimage;
 
-  return ethers.utils.sha512(preimageFormatted).slice(2);
+  return ethersutils.sha512(preimageFormatted).slice(2);
 }
 
 /**
@@ -45,9 +45,10 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
     ? `0x${data}`
     : data;
 
-  return ethers.utils.computeHmac(
-    ethers.utils.SupportedAlgorithm.sha512,
-    keyFormatted, dataFormatted,
+  return ethersutils.computeHmac(
+    ethersutils.SupportedAlgorithm.sha512,
+    keyFormatted,
+    dataFormatted,
   ).slice(2);
 }
 
@@ -62,7 +63,7 @@ function keccak256(preimage: BytesData): string {
     ? `0x${preimage}`
     : preimage;
 
-  return ethers.utils.keccak256(preimageFormatted).slice(2);
+  return ethersutils.keccak256(preimageFormatted).slice(2);
 }
 
 export default {

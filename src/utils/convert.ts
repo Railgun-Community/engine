@@ -1,4 +1,4 @@
-import * as ethers from 'ethers';
+import { utils as ethersutils } from 'ethers';
 
 /**
  * Converts byte array to hex string
@@ -7,7 +7,7 @@ import * as ethers from 'ethers';
  */
 function hexlify(arr: ArrayLike<number>): string {
   // Pass to ethers hexlify and remove leaving 0x
-  return ethers.utils.hexlify(arr).slice(2);
+  return ethersutils.hexlify(arr).slice(2);
 }
 
 /**
@@ -17,7 +17,7 @@ function hexlify(arr: ArrayLike<number>): string {
  */
 function arrayify(hexString: string): Uint8Array {
   // Pass to ethers arrayify with leading 0x
-  return ethers.utils.arrayify(`0x${hexString}`);
+  return ethersutils.arrayify(`0x${hexString}`);
 }
 
 export default {
