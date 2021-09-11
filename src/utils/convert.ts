@@ -20,7 +20,7 @@ function hexlify(data: BytesData): string {
 }
 
 /**
- * Coerces bytesdata into Uint8Array of bytes
+ * Coerces bytesdata into array of bytes
  * @param data - bytes data to coerce
  * @returns byte array
  */
@@ -30,7 +30,7 @@ function arrayify(data: BytesData): ArrayLike<number> {
     return data;
   }
 
-  // Create empty Uint8Array
+  // Create empty array
   const bytesArray: number[] = [];
 
   // Loop through each nibble and push to array
