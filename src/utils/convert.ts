@@ -1,23 +1,45 @@
-import { utils as ethersutils } from 'ethers';
+import type { BytesData } from './globaltypes';
 
 /**
- * Converts byte array to hex string
- * @param arr - array to convert
+ * Coerces bytesdata into hex string format
+ * @param data - bytes data to coerce
  * @returns hex string
  */
-function hexlify(arr: ArrayLike<number>): string {
-  // Pass to ethers hexlify and remove leaving 0x
-  return ethersutils.hexlify(arr).slice(2);
+function hexlify(data: BytesData): string {
+  // If we're already a string return the string
+  if (typeof data === 'string') {
+    // Strip leading 0x if it exists before returning
+    return data.startsWith('0x') ? data.slice(2) : data;
+  }
+
+  // Coerce ArrayLike to Array
+  const dataArray: number[] = Object.values(data);
+
+  // Convert array of bytes to hex string and return
+  return dataArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * Converts hex string to byte array
- * @param hexString - hex string to convert
+ * Coerces bytesdata into array of bytes
+ * @param data - bytes data to coerce
  * @returns byte array
  */
-function arrayify(hexString: string): Uint8Array {
-  // Pass to ethers arrayify with leading 0x
-  return ethersutils.arrayify(`0x${hexString}`);
+function arrayify(data: BytesData): ArrayLike<number> {
+  // If we're already a byte array return
+  if (typeof data !== 'string') {
+    return data;
+  }
+
+  // Create empty array
+  const bytesArray: number[] = [];
+
+  // Loop through each nibble and push to array
+  for (let i = 0; i < data.length; i += 2) {
+    bytesArray.push(parseInt(data.substr(i, 2), 16));
+  }
+
+  // Return bytes array
+  return bytesArray;
 }
 
 export default {

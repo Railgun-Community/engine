@@ -92,10 +92,14 @@ describe('Database', () => {
 
   it('Should convert byte array data to hex', async () => {
     // Insert values by bytes array
-    await db.put([[0x1], [0xb]], [0xaa]);
+    await db.put([[0x1], [0xa]], [0xaa]);
+    await db.put([[0x1], [0xb]], new Uint8Array([0xab]).buffer);
+    await db.put([[0x1], [0xc]], new Uint8Array([0xac]));
 
     // Fetch values by hex
-    expect(await db.get(['01', '0b'])).to.equal('aa');
+    expect(await db.get(['01', '0a'])).to.equal('aa');
+    expect(await db.get(['01', '0b'])).to.equal('ab');
+    expect(await db.get(['01', '0c'])).to.equal('ac');
   });
 
   afterEach(() => {
