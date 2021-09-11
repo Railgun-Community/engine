@@ -3,6 +3,18 @@ import type { BytesData } from './globaltypes';
 
 /**
  * Calculates sha256 hash of bytes
+ * @param {BigInt} left
+ * @param {BigInt} right
+ * @returns {BigInt} hash
+ */
+function hashLeftRight(left: BigInt, right: BigInt): BigInt {
+  // If type is a string, prepend with 0x
+  const hexValue = `0x${[left, right].map((v) => v.toString(16).padStart(64, '0')).join()}`;
+  return BigInt(ethersutils.sha256(hexValue));
+}
+
+/**
+ * Calculates sha256 hash of bytes
  * @param preimage - hex string or byte array
  * @returns hash
  */
@@ -71,4 +83,5 @@ export default {
   sha512,
   sha512HMAC,
   keccak256,
+  hashLeftRight,
 };
