@@ -1,13 +1,13 @@
+import bytes from './bytes';
 import constants from './constants';
 import convert from './convert';
 import encryption from './encryption';
 import hash from './hash';
-import random from './random';
 
 export default {
+  bytes,
   constants,
   convert,
   encryption,
   hash,
-  random,
 };
