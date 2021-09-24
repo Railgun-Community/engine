@@ -7,7 +7,7 @@ import utils from '../../src/utils';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Utils/Encrypt', () => {
+describe('Utils/Encryption', () => {
   it('Should encrypt/decrypt with AES-256-CTR', () => {
     const vectors = [
       {

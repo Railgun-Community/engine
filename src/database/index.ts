@@ -28,10 +28,10 @@ class Database {
    * @param path - path to covert
    * @returns key
    */
-  static pathToKey(path: Array<BytesData>): string {
+  static pathToKey(path: BytesData[]): string {
     // Convert to hex string, pad to 32 bytes, and join with :
     return path.map(
-      (element) => utils.convert.hexlify(element).toLowerCase().padStart(64, '0'),
+      (element) => utils.bytes.hexlify(element).toLowerCase().padStart(64, '0'),
     ).join(':');
   }
 
@@ -42,7 +42,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  put(path: Array<BytesData>, value: any, encoding: Encoding = 'hex'): Promise<void> {
+  put(path: BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.put(key, value, { valueEncoding: encoding });
   }
@@ -53,7 +53,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns value
    */
-  get(path: Array<BytesData>, encoding: Encoding = 'hex'): Promise<any> {
+  get(path: BytesData[], encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
     return this.level.get(key, { valueEncoding: encoding });
   }
@@ -64,7 +64,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  del(path: Array<BytesData>, encoding: Encoding = 'hex'): Promise<void> {
+  del(path: BytesData[], encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.del(key, { valueEncoding: encoding });
   }
@@ -84,7 +84,7 @@ class Database {
    * @param namespace - namespace to delete
    * @returns complete
    */
-  clearNamespace(namespace: Array<BytesData>): Promise<void> {
+  clearNamespace(namespace: BytesData[]): Promise<void> {
     const pathkey = Database.pathToKey(namespace);
 
     return new Promise((resolve) => {
