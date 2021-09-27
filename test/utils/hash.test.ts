@@ -168,6 +168,10 @@ describe('Utils/Hash', () => {
         preimage: [[0x1], [0x2], [0x3], [0x4]],
         result: '299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465',
       },
+      {
+        preimage: ['6b021e0d06d0b2d161cf0ea494e3fc1cbff12cc1b29281f7412170351b708fad'],
+        result: '0b77a7c8dcbf2c84e75b6ff1dd558365532956cb7c1f328a67220a3a47a3ab43',
+      },
     ];
 
     vectors.forEach((vector) => {

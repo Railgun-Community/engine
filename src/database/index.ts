@@ -3,9 +3,10 @@ import encode from 'encoding-down';
 import type { AbstractLevelDOWN, AbstractBatch } from 'abstract-leveldown';
 import type { LevelUp } from 'levelup';
 import utils from '../utils';
-import type { BytesData } from '../utils/globaltypes';
 
-type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
+import type { BytesData } from '../utils/bytes';
+
+export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
 
 /** Database class */
 class Database {

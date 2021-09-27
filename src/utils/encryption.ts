@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import bytes from './bytes';
-import type { BytesData } from './globaltypes';
+import type { BytesData } from './bytes';
 
 export interface Ciphertext {
   iv: BytesData,

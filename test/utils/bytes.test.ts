@@ -13,16 +13,19 @@ const convertVectors = [
     hex: '',
     array: [],
     number: new BN('0', 10),
+    numberLe: new BN('0', 10, 'le'),
   },
   {
     hex: '0138bc',
     array: [1, 56, 188],
     number: new BN('80060', 10),
+    numberLe: new BN('80060', 10, 'le'),
   },
   {
     hex: '5241494c47554e',
     array: [82, 65, 73, 76, 71, 85, 78],
     number: new BN('23152731158435150', 10),
+    numberLe: new BN('23152731158435150', 10, 'le'),
   },
   {
     hex: '50524956414359202620414e4f4e594d495459',
@@ -32,6 +35,7 @@ const convertVectors = [
       89, 77, 73, 84, 89,
     ],
     number: new BN('1791227778594112336062762560780788585783186521', 10),
+    numberLe: new BN('1791227778594112336062762560780788585783186521', 10, 'le'),
   },
 ];
 
@@ -194,9 +198,19 @@ describe('Utils/Bytes', () => {
         utils.bytes.numberify(vector.hex).eq(vector.number),
       ).to.equal(true);
 
+      // Test hex string to number little endian
+      expect(
+        utils.bytes.numberify(vector.hex, 'le').eq(vector.numberLe),
+      ).to.equal(true);
+
       // Test byte array to number
       expect(
         utils.bytes.numberify(vector.array).eq(vector.number),
+      ).to.equal(true);
+
+      // Test byte array to number little endian
+      expect(
+        utils.bytes.numberify(vector.array, 'le').eq(vector.numberLe),
       ).to.equal(true);
 
       // Test number to number
