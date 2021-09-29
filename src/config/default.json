@@ -1,0 +1,41 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 4000
+  },
+  "logs": {
+    "level": "debug"
+  },
+  "blockchain": {
+    "httpProvider": "https://bsc-dataseed.binance.org/",
+    "explorer": "https://bscscan.com",
+    "confirmations": 1,
+    "networkId": 56
+  },
+  "feetokens": [
+    {
+      "token": "busd",
+      "fee": "5"
+    }
+  ],
+  "acceptedTokens": {
+    "usdt": {
+      "contract": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+      "name": "tether",
+      "decimal": 6,
+      "feeAmount": 20
+    },
+    "eth": {
+      "contract": "0x0000000000000000000000000000000000000000",
+      "name": "ethereum",
+      "decimal": 18,
+      "feeAmount": 0.01
+    }
+  },
+  "contractAddress": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+  "paymentAddress": "0x1ee5dd0c64a65a6d7a51745a2463e92ee47aac9b",
+  "redisUrl": "redis://127.0.0.1:6379",
+  "accounts": [
+    "0x65e4d261c9a92f4d68701e01eaaf5f8c2cd20e11038545761e19038c4a314e97"
+  ]
+}
