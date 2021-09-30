@@ -70,8 +70,30 @@ function unpackPoint(packed: BytesData): string[] {
   });
 }
 
+/**
+ * Performs an ECDH key derivation
+ * @param privateKey - private key to derive shared key from
+ * @param publicKey - public key to derive shared key from
+ * @returns shared key
+ */
+function ecdh(privateKey: BytesData, publicKey: BytesData): string {
+  // TODO: remove dependance on circomlib
+  // Unpack public key and map to BigInt
+  const publicKeyUnpacked = unpackPoint(publicKey).map((element) => BigInt(`0x${element}`));
+
+  // Convert private key to BigInt
+  const privateKeyBI = BigInt(`0x${privateKey}`);
+
+  // Perform scalar mul
+  const sharedKey = babyJub.mulPointEscalar(publicKeyUnpacked, privateKeyBI)[0].toString(16);
+
+  // Pad to even length if needed
+  return sharedKey.length % 2 === 0 ? sharedKey : sharedKey.padStart(sharedKey.length + 1, '0');
+}
+
 export default {
   seedToPrivateKey,
   packPoint,
   unpackPoint,
+  ecdh,
 };

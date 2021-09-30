@@ -91,4 +91,85 @@ describe('Note/Index', () => {
       )).hash).to.equal(vector.hash);
     });
   });
+
+  it('Should encrypt and decrypt notes', () => {
+    const vectors = [
+      {
+        note: {
+          publicKey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
+          random: '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+          amount: '000000000000000000000000000000000000000000000000086aa1ade61ccb53',
+          token: '0abb1e400bf30a007f88f8397f4925cdf66ddf5b88016df1fe915e68eff8f192',
+        },
+        sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
+        ciphertext: {
+          iv: '9bff65f581092eb6df41cdcab156fabf',
+          data: [
+            '7d4e5e41a6bbed46972effc57abd5c6e59398d8bd6850c72411b8e6fc7c69880',
+            '3911ea03dece430aef72485837df8acb263cad7c429d6fc596bdbf59aaeda588',
+            '822acca386aca823b08eca93351841722a81e9bbae71d381b6f015a0e2421a31',
+            '4687459afd041f1b0ee8caad50cdd0ebc50805172e2b46fb526eb89bb782a428',
+            'f9eff627caffd1e4f1eb61428681ca2ef58cdee02984c2401ae58d2c90d57774',
+          ],
+        },
+      },
+      {
+        note: {
+          publicKey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
+          random: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
+          amount: '00000000000000000000000000000000000000000000000007cf6b5ae17ae75a',
+          token: '185554f7a3ae417e737ff9b8df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
+        },
+        sharedKey: 'c8c2a74bacf6ce3158069f81202d8c2d81fd25d226d7536f26442888c014a755',
+        ciphertext: {
+          iv: 'b0e4c3c696d34d95caa9c707716330a0',
+          data: [
+            '8196d2e3b35e3994e1aceb52b0bb12ee7e10822da17855dff1202d70bec731ca',
+            '4a9dd245ce55463ab3bfdd3f107639c5d1c12c4ee96cc5affc25ac6d7defe85f',
+            '2ca7c87aa6bbc849c2507259a7b3adcf8b9942cfc17630376111dca7d7167adf',
+            'cb310c79d47660a0f375d8d04113b7c33a96fbb2c7ae3570f47d882f3efb948c',
+            'e82e2e29d6f23f0a7bb47dad4b34d24411ae2cf730db3c2ed78b22df250ce474',
+          ],
+        },
+      },
+      {
+        note: {
+          publicKey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
+          random: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
+          amount: '0000000000000000000000000000000000000000000000000b9df0087cbbd709',
+          token: '1f8b716d50891becf4aa076834e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
+        },
+        sharedKey: '4676adb24e597086894880767f274818f711233eda9d617b348bb1cf92dd35e5',
+        ciphertext: {
+          iv: 'e35746546e5c4e7807207ccdf0809b9f',
+          data: [
+            'e002a7581977c8f57732b03157934125f036da2002aac23f58c1d05dc6e06180',
+            '908e5a4bcab9217b1a2d9ba5a472697e5a3b12133e3cd34b88841d5685b0e11e',
+            '53f7d48e6ded5f572216f4094ac70901f0e68f053f61292a32b10e0613a13292',
+            'd5d2341fac616e04504f784db3b75da430983dcafaf771d13b9609a35cd1e70b',
+            '7d093849907b4d49848b40ba8342c023eb4cea41974b7cb2605e2322442f8208',
+          ],
+        },
+      },
+    ];
+
+    vectors.forEach((vector) => {
+      // Create Note object
+      const note = new Note(
+        vector.note.publicKey,
+        vector.note.random,
+        vector.note.amount,
+        vector.note.token,
+      );
+
+      // Get encrypted values
+      const encrypted = note.encrypt(vector.sharedKey);
+
+      // Check if encrypted values are successfully decrypted
+      expect(Note.decrypt(encrypted, vector.sharedKey)).to.deep.equal(note);
+
+      // Check if vector encrypted values are successfully decrypted
+      expect(Note.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
+    });
+  });
 });
