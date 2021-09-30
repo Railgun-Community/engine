@@ -9,7 +9,8 @@
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts",
     "test": "npm run lint && nyc mocha --require ts-node/register 'test/**/*.test.ts'",
-    "compile": "npm run clean && tsc"
+    "compile": "npm run clean && tsc",
+    "build": "browserify dist/index.js -p tinyify --s RailgunWallet -o dist/railgun-wallet.min.js"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
     "@types/rimraf": "^3.0.1",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
+    "browserify": "^17.0.0",
     "chai": "^4.3.4",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.1",
@@ -37,6 +39,7 @@
     "mocha": "^9.0.3",
     "nyc": "^15.1.0",
     "rimraf": "^3.0.2",
+    "tinyify": "^3.0.0",
     "ts-node": "^10.1.0",
     "typescript": "^4.3.5"
   },
