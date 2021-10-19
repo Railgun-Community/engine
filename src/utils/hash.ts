@@ -1,62 +1,45 @@
 import { utils as ethersutils } from 'ethers';
+import convert from './convert';
 import type { BytesData } from './globaltypes';
 
 /**
  * Calculates sha256 hash of bytes
- * @param {BigInt} left
- * @param {BigInt} right
- * @returns {BigInt} hash
- */
-function hashLeftRight(left: BigInt, right: BigInt): BigInt {
-  // If type is a string, prepend with 0x
-  const hexValue = `0x${[left, right].map((v) => v.toString(16).padStart(64, '0')).join()}`;
-  return BigInt(ethersutils.sha256(hexValue));
-}
-
-/**
- * Calculates sha256 hash of bytes
- * @param preimage - hex string or byte array
+ * @param preimage - bytesdata
  * @returns hash
  */
 function sha256(preimage: BytesData): string {
-  // If type is a string, prepend with 0x
-  const preimageFormatted = typeof preimage === 'string'
-    ? `0x${preimage}`
-    : preimage;
+  // Convert to bytes array
+  const preimageFormatted = convert.arrayify(preimage);
 
+  // Hash and return
   return ethersutils.sha256(preimageFormatted).slice(2);
 }
 
 /**
  * Calculates sha512 hash of bytes
- * @param preimage - hex string or byte array
+ * @param preimage - bytesdata
  * @returns hash
  */
 function sha512(preimage: BytesData): string {
-  // If type is a string, prepend with 0x
-  const preimageFormatted = typeof preimage === 'string'
-    ? `0x${preimage}`
-    : preimage;
+  // Convert to bytes array
+  const preimageFormatted = convert.arrayify(preimage);
 
+  // Hash and return
   return ethersutils.sha512(preimageFormatted).slice(2);
 }
 
 /**
  * Calculates sha512 hmac
- * @param key - hex string or byte array
- * @param data - hex string or byte array
+ * @param key - bytesdata
+ * @param data - bytesdata
  * @returns hmac
  */
 function sha512HMAC(key: BytesData, data: BytesData): string {
-  // If type is a string, prepend with 0x
-  const keyFormatted = typeof key === 'string'
-    ? `0x${key}`
-    : key;
+  // Convert to bytes array
+  const keyFormatted = convert.arrayify(key);
+  const dataFormatted = convert.arrayify(data);
 
-  const dataFormatted = typeof data === 'string'
-    ? `0x${data}`
-    : data;
-
+  // Hash HMAC and return
   return ethersutils.computeHmac(
     ethersutils.SupportedAlgorithm.sha512,
     keyFormatted,
@@ -66,15 +49,14 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
 
 /**
  * Calculates keccak256 hash of bytes
- * @param preimage - hex string or byte array
+ * @param preimage - bytesdata
  * @returns hash
  */
 function keccak256(preimage: BytesData): string {
-  // If type is a string, prepend with 0x
-  const preimageFormatted = typeof preimage === 'string'
-    ? `0x${preimage}`
-    : preimage;
+  // Convert to bytes array
+  const preimageFormatted = convert.arrayify(preimage);
 
+  // Hash and return
   return ethersutils.keccak256(preimageFormatted).slice(2);
 }
 
@@ -83,5 +65,4 @@ export default {
   sha512,
   sha512HMAC,
   keccak256,
-  hashLeftRight,
 };
