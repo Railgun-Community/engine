@@ -67,4 +67,51 @@ describe('Utils/BabyJubJub', () => {
       expect(utils.babyjubjub.unpackPoint(vector.packed)).to.deep.equal(vector.unpacked);
     });
   });
+
+  it('Should perform ECDH operations correctly', () => {
+    const vectors = [
+      {
+        keyA: {
+          private: '0b19eb11c1412cbc15c65dea82b61d02f7c8c5d58e2c9884125ed86eebcfd325',
+          public: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
+        },
+        keyB: {
+          private: '0edbfaa1ddc148178b47abac6bb1051b54cdbe8b92ab42e3575696bbefe101a0',
+          public: '2e16136258306d0837a3e3c87e329d835f58dac6879e31d41d4690845cb2a914',
+        },
+        sharedKey: '053b8632c6a35c58d857beb1b9a7928e28b830cf700a6dbaf141e8391c6cbcf5',
+      },
+      {
+        keyA: {
+          private: '0b251c4f746c9567185ba40f4a1db0c881ac4fa6b3d090153ccae1bac2a46983',
+          public: 'f63395d36c024b4c9af5c5c1e581fff216e741ed9a0f404b3eb1903bbf274b1c',
+        },
+        keyB: {
+          private: '0b1a11822cff763ed1c9b57ebe0399373687c68feafd9f1b67240a6d56a481a0',
+          public: '0db982dde20781925565e30034496af26fcfab731dd265a2c9363eb14a0ac89a',
+        },
+        sharedKey: '19aa730d1af1b553f6ad56018bc09105e6d53b533abc47de89df8a19bd5c4bde',
+      },
+      {
+        keyA: {
+          private: '0c60a0eb058f68c279632ac2db824ac5610992e9aef53aa8d80028c5fdf25225',
+          public: '6f8a7164e562db168bbebbd19ba447ccd30be09d33946df4f1d2019c83720205',
+        },
+        keyB: {
+          private: '0e44b9ffb6becefddf06edbd717eb3fa740d1a424bcb5003cac2112d71f7eb63',
+          public: '5b3619619f75f71b2d113f31227253c6012b6af561f7fa604cafea10f169ee2c',
+        },
+        sharedKey: '2643aca561253bc0f506cba9610062e01d698d705d558d823ce070547139c9a3',
+      },
+    ];
+
+    vectors.forEach((vector) => {
+      expect(
+        utils.babyjubjub.ecdh(vector.keyA.private, vector.keyB.public),
+      ).to.equal(vector.sharedKey);
+      expect(
+        utils.babyjubjub.ecdh(vector.keyB.private, vector.keyA.public),
+      ).to.equal(vector.sharedKey);
+    });
+  });
 });
