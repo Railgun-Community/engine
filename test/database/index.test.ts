@@ -70,7 +70,22 @@ describe('Database', () => {
     await expect(db.get(['c'])).to.eventually.be.rejected;
   });
 
-  it('Should delete values in a namespace', async () => {
+  it('Should count values in a namespace', async () => {
+    // Insert values in foo namespace
+    await db.put(['a', 'a'], '01');
+    await db.put(['a', 'b'], '02');
+    await db.put(['a', 'c'], '03');
+
+    // Check if values are returned correctly
+    expect(await db.get(['a', 'a'])).to.equal('01');
+    expect(await db.get(['a', 'b'])).to.equal('02');
+    expect(await db.get(['a', 'c'])).to.equal('03');
+
+    // Count namespace
+    expect(await db.countNamespace(['a'])).to.equal(3);
+  });
+
+  it('Should clear values in a namespace', async () => {
     // Insert values in foo namespace
     await db.put(['a', 'a'], '01');
     await db.put(['a', 'b'], '02');
