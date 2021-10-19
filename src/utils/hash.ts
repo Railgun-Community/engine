@@ -1,5 +1,7 @@
 import { utils as ethersutils } from 'ethers';
-import convert from './convert';
+// @ts-ignore
+import { poseidon as poseidonHash } from 'circomlib';
+import bytes from './bytes';
 import type { BytesData } from './globaltypes';
 
 /**
@@ -8,8 +10,9 @@ import type { BytesData } from './globaltypes';
  * @returns hash
  */
 function sha256(preimage: BytesData): string {
+  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = convert.arrayify(preimage);
+  const preimageFormatted = bytes.arrayify(preimage);
 
   // Hash and return
   return ethersutils.sha256(preimageFormatted).slice(2);
@@ -21,8 +24,9 @@ function sha256(preimage: BytesData): string {
  * @returns hash
  */
 function sha512(preimage: BytesData): string {
+  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = convert.arrayify(preimage);
+  const preimageFormatted = bytes.arrayify(preimage);
 
   // Hash and return
   return ethersutils.sha512(preimageFormatted).slice(2);
@@ -35,9 +39,10 @@ function sha512(preimage: BytesData): string {
  * @returns hmac
  */
 function sha512HMAC(key: BytesData, data: BytesData): string {
+  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const keyFormatted = convert.arrayify(key);
-  const dataFormatted = convert.arrayify(data);
+  const keyFormatted = bytes.arrayify(key);
+  const dataFormatted = bytes.arrayify(data);
 
   // Hash HMAC and return
   return ethersutils.computeHmac(
@@ -53,11 +58,26 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
  * @returns hash
  */
 function keccak256(preimage: BytesData): string {
+  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = convert.arrayify(preimage);
+  const preimageFormatted = bytes.arrayify(preimage);
 
   // Hash and return
   return ethersutils.keccak256(preimageFormatted).slice(2);
+}
+
+/**
+ * Calculates the poseidon hash of an array of bytes32
+ * @param preimage - bytes32 array
+ * @returns hash
+ */
+function poseidon(preimage: BytesData[]): string {
+  // TODO: Remove reliance on circomlib
+  // Convert all bytes into number strings
+  const preimageFormatted = preimage.map((bytedata) => bytes.numberify(bytedata).toString(10));
+
+  // Hash and return bytes
+  return poseidonHash(preimageFormatted).toString(16);
 }
 
 export default {
@@ -65,4 +85,5 @@ export default {
   sha512,
   sha512HMAC,
   keccak256,
+  poseidon,
 };

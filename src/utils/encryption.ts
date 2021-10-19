@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import bytes from './bytes';
-import convert from './convert';
 import type { BytesData } from './globaltypes';
 
 export interface Ciphertext {
@@ -12,7 +11,6 @@ const aes = {
   ctr: {
     /**
      * Encrypt blocks of data with AES-256-CTR
-     *
      * @param plaintext - plaintext to encrypt
      * @param key - key to encrypt with
      * @param iv - initialization vector to use
@@ -21,10 +19,10 @@ const aes = {
     encrypt(plaintext: BytesData[], key: BytesData, iv: BytesData = bytes.random(16)): Ciphertext {
       // If types are strings, convert to bytes array
       const plaintextFormatted = plaintext.map(
-        (block) => new Uint8Array(convert.arrayify(block)),
+        (block) => new Uint8Array(bytes.arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(convert.arrayify(key));
-      const ivFormatted = new Uint8Array(convert.arrayify(iv));
+      const keyFormatted = new Uint8Array(bytes.arrayify(key));
+      const ivFormatted = new Uint8Array(bytes.arrayify(iv));
 
       // Initialize cipher
       const cipher = crypto.createCipheriv(
@@ -40,14 +38,13 @@ const aes = {
 
       // Return encrypted data bundle
       return {
-        iv: convert.hexlify(ivFormatted),
+        iv: bytes.hexlify(ivFormatted),
         data,
       };
     },
 
     /**
      * Decrypts AES-256-CTR encrypted data
-     *
      * @param ciphertext - ciphertext bundle to decrypt
      * @param key - key to decrypt with
      * @returns - plaintext
@@ -55,10 +52,10 @@ const aes = {
     decrypt(ciphertext: Ciphertext, key: BytesData): BytesData[] {
       // If types are strings, convert to bytes array
       const ciphertextFormatted = ciphertext.data.map(
-        (block) => new Uint8Array(convert.arrayify(block)),
+        (block) => new Uint8Array(bytes.arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(convert.arrayify(key));
-      const ivFormatted = new Uint8Array(convert.arrayify(ciphertext.iv));
+      const keyFormatted = new Uint8Array(bytes.arrayify(key));
+      const ivFormatted = new Uint8Array(bytes.arrayify(ciphertext.iv));
 
       // Initialize decipher
       const decipher = crypto.createDecipheriv(

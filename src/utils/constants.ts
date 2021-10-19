@@ -1,16 +1,19 @@
 import BN from 'bn.js';
+import bytes from './bytes';
+import hash from './hash';
 
-const MERKLE_TREE_DEPTH: BN = new BN('16', 10);
+const MERKLE_TREE_DEPTH: number = 16;
 
 const SNARK_PRIME: BN = new BN(
   '21888242871839275222246405745257275088548364400416034343698204186575808495617',
   10,
 );
 
-const MERKLE_ZERO_VALUE: BN = new BN(
-  '2051258411002736885948763699317990061539314419500486054347250703186609807356',
-  10,
-); // keccak256('railgun') % SNARK_PRIME
+const MERKLE_ZERO_VALUE: BN = bytes.numberify(
+  hash.keccak256(
+    bytes.fromUTF8String('Railgun'),
+  ),
+).mod(SNARK_PRIME);
 
 export default {
   MERKLE_TREE_DEPTH,
