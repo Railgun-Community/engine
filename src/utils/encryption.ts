@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import random from './random';
+import bytes from './bytes';
 import convert from './convert';
 import type { BytesData } from './globaltypes';
 
@@ -18,7 +18,7 @@ const aes = {
      * @param iv - initialization vector to use
      * @returns ciphertext bundle
      */
-    encrypt(plaintext: BytesData[], key: BytesData, iv: BytesData = random(16)): Ciphertext {
+    encrypt(plaintext: BytesData[], key: BytesData, iv: BytesData = bytes.random(16)): Ciphertext {
       // If types are strings, convert to bytes array
       const plaintextFormatted = plaintext.map(
         (block) => new Uint8Array(convert.arrayify(block)),
