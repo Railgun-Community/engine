@@ -11,7 +11,7 @@ export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' |
 /** Database class */
 class Database {
   /** Levelup store */
-  level: LevelUp;
+  readonly level: LevelUp;
 
   /**
    * Create a Database object from levelDB store
@@ -81,21 +81,35 @@ class Database {
   }
 
   /**
+   * Gets stream of keys and/or values in namespace
+   * @param namespace - namespace to stream from
+   * @returns namespace stream
+   */
+  streamNamespace(
+    namespace: BytesData[],
+    keys: boolean = true,
+    values: boolean = false,
+  ) {
+    const pathkey = Database.pathToKey(namespace);
+    return this.level.createReadStream({
+      gte: `${pathkey}`,
+      lte: `${pathkey}~`,
+      keys,
+      values,
+    });
+  }
+
+  /**
    * Delete all keys in namespace
    * @param namespace - namespace to delete
    * @returns complete
    */
   clearNamespace(namespace: BytesData[]): Promise<void> {
-    const pathkey = Database.pathToKey(namespace);
-
     return new Promise((resolve) => {
       const deleteOperations: AbstractBatch[] = [];
 
       // Create read stream for namespace*
-      this.level.createKeyStream({
-        gte: `${pathkey}`,
-        lte: `${pathkey}~`,
-      }).on('data', (key: string) => {
+      this.streamNamespace(namespace).on('data', (key: string) => {
         // Push key to batch delete array
         deleteOperations.push({
           type: 'del',
@@ -104,6 +118,26 @@ class Database {
       }).on('end', () => {
         // Run batch delete and resolve
         this.batch(deleteOperations).then(resolve);
+      });
+    });
+  }
+
+  /**
+   * Counnts number of keys in namespace
+   * @param namespace - namespace to count keys in
+   * @returns number of keys in namespace
+   */
+  countNamespace(namespace: BytesData[]): Promise<number> {
+    return new Promise((resolve) => {
+      let keyNumber = 0;
+
+      // Create read stream for namespace*
+      this.streamNamespace(namespace).on('data', () => {
+        // Increment keynumber
+        keyNumber += 1;
+      }).on('end', () => {
+        // Return keynumber
+        resolve(keyNumber);
       });
     });
   }
