@@ -1,23 +1,77 @@
+/* eslint-disable no-bitwise */
 // @ts-ignore
-import { babyJub, eddsa } from 'circomlib';
+import { babyJub } from 'circomlib';
+import bytes from './bytes';
 import hash from './hash';
+
+import type { BytesData } from './bytes';
 
 /**
  * Converts 32 byte seed to babyjubjub point
  * @param seed - 32 byte seed to convert to babyjubjub point
+ * @returns private key
  */
-function seedToPoint(seed: BytesData): string {
-  // TODO: clarify this explanation and remove dependance on circomlib
+function seedToPrivateKey(seed: BytesData): string {
+  // TODO: clarify this explanation
   // https://tools.ietf.org/html/rfc8032
   // Because of the 'buff[0] & 0xF8' part which makes sure you have a point
   // with order that 8 divides (^ pruneBuffer)
   // Every point in babyjubjub is of the form: aP + bH, where H has order 8
   // and P has a big large prime order
-  // Guaranteeing that any low order points in babyjubjub get deleted
-  const sBuff = eddsa.pruneBuffer(bigInt2Buffer(poseidon([seed])).slice(0, 32));
+  // guaranteeing that any low order points in babyjubjub get deleted
 
+  // Get poseidon hash of seed
+  const seedHash = bytes.arrayify(hash.poseidon([seed]));
+
+  // Prune seed hash
+  seedHash[0] &= 0xF8;
+  seedHash[31] &= 0x7F;
+  seedHash[31] |= 0x40;
+
+  // Convert from little endian bytes to number and shift right
+  const key = bytes.numberify(seedHash, 'le').shrn(3);
+
+  // Return hex bytes key
+  return bytes.hexlify(key);
+}
+
+/**
+ * Packs babyjubjub point
+ * @param unpacked - unpacked point to pack
+ * @returns packed point
+ */
+function packPoint(unpacked: BytesData[]): string {
+  // TODO: remove dependance on circomlib
+  // Format point elements
+  const unpackedFormatted = unpacked.map(
+    (element) => BigInt(bytes.numberify(element).toString(10)),
+  );
+
+  // Pack point
+  return bytes.hexlify(babyJub.packPoint(unpackedFormatted));
+}
+
+/**
+ * Unpacks babyjubjub point
+ * @param packed - packed point to unpack
+ * @returns unpacked point
+ */
+function unpackPoint(packed: BytesData): string[] {
+  // TODO: remove dependance on circomlib
+  // Unpack point
+  const unpacked: BigInt[] = babyJub.unpackPoint(bytes.arrayify(packed));
+
+  return unpacked.map((element) => {
+    // Convert to byte string
+    const elementBytes = element.toString(16);
+
+    // Pad to even length if needed
+    return elementBytes.length % 2 === 0 ? elementBytes : elementBytes.padStart(elementBytes.length + 1, '0');
+  });
 }
 
 export default {
-  seedToPoint,
+  seedToPrivateKey,
+  packPoint,
+  unpackPoint,
 };

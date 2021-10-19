@@ -1,7 +1,8 @@
 /* eslint-disable no-bitwise */
 import BN from 'bn.js';
 import crypto from 'crypto';
-import type { BytesData } from './globaltypes';
+
+export type BytesData = ArrayLike<number> | string | BN;
 
 /**
  * Pads byte data to specified length
@@ -130,9 +131,10 @@ function arrayify(data: BytesData): number[] {
 /**
  * Coerces bytesdata into BN.js object
  * @param data - bytes data to coerce
+ * @param endian - bytes endianess
  * @returns BN.js object
  */
-function numberify(data: BytesData): BN {
+function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
   // If we're a BN already, return
   if (data instanceof BN) {
     return data;
@@ -140,14 +142,14 @@ function numberify(data: BytesData): BN {
 
   // If we're a hex string create a BN object from it and return
   if (typeof data === 'string') {
-    return new BN(data, 'hex');
+    return new BN(data, 'hex', endian);
   }
 
   // Coerce ArrayLike to Array
   const dataArray: number[] = Array.from(data);
 
   // Create BN object from array and return
-  return new BN(dataArray);
+  return new BN(dataArray, undefined, endian);
 }
 
 /**

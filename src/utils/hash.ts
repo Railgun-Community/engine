@@ -2,7 +2,8 @@ import { utils as ethersutils } from 'ethers';
 // @ts-ignore
 import { poseidon as poseidonHash } from 'circomlib';
 import bytes from './bytes';
-import type { BytesData } from './globaltypes';
+
+import type { BytesData } from './bytes';
 
 /**
  * Calculates sha256 hash of bytes
@@ -76,8 +77,11 @@ function poseidon(preimage: BytesData[]): string {
   // Convert all bytes into number strings
   const preimageFormatted = preimage.map((bytedata) => bytes.numberify(bytedata).toString(10));
 
-  // Hash and return bytes
-  return poseidonHash(preimageFormatted).toString(16);
+  // Hash
+  const hash = poseidonHash(preimageFormatted).toString(16);
+
+  // Pad to even length if needed
+  return hash.length % 2 === 0 ? hash : hash.padStart(hash.length + 1, '0');
 }
 
 export default {
