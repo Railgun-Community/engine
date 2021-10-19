@@ -29,16 +29,10 @@ class Database {
    * @returns key
    */
   static pathToKey(path: Array<BytesData>): string {
-    return path.map((element) => {
-      // If type string then pad start to 64 charectors (32 bytes) and lower case
-      if (typeof element === 'string') {
-        return element.toLowerCase().padStart(64, '0');
-      }
-
-      // If type arraylike then convert to hex string and
-      // pad start to 64 charectors (32 bytes) and lower case
-      return utils.convert.hexlify(element).toLowerCase().padStart(64, '0');
-    }).join(':');
+    // Convert to hex string, pad to 32 bytes, and join with :
+    return path.map(
+      (element) => utils.convert.hexlify(element).toLowerCase().padStart(64, '0'),
+    ).join(':');
   }
 
   /**
