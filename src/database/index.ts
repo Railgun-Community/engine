@@ -3,14 +3,15 @@ import encode from 'encoding-down';
 import type { AbstractLevelDOWN, AbstractBatch } from 'abstract-leveldown';
 import type { LevelUp } from 'levelup';
 import utils from '../utils';
-import type { BytesData } from '../utils/globaltypes';
 
-type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
+import type { BytesData } from '../utils/bytes';
+
+export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
 
 /** Database class */
 class Database {
   /** Levelup store */
-  level: LevelUp;
+  readonly level: LevelUp;
 
   /**
    * Create a Database object from levelDB store
@@ -28,17 +29,11 @@ class Database {
    * @param path - path to covert
    * @returns key
    */
-  static pathToKey(path: Array<BytesData>): string {
-    return path.map((element) => {
-      // If type string then pad start to 64 charectors (32 bytes) and lower case
-      if (typeof element === 'string') {
-        return element.toLowerCase().padStart(64, '0');
-      }
-
-      // If type arraylike then convert to hex string and
-      // pad start to 64 charectors (32 bytes) and lower case
-      return utils.convert.hexlify(element).toLowerCase().padStart(64, '0');
-    }).join(':');
+  static pathToKey(path: BytesData[]): string {
+    // Convert to hex string, pad to 32 bytes, and join with :
+    return path.map(
+      (element) => utils.bytes.hexlify(element).toLowerCase().padStart(64, '0'),
+    ).join(':');
   }
 
   /**
@@ -48,7 +43,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  put(path: Array<BytesData>, value: any, encoding: Encoding = 'hex'): Promise<void> {
+  put(path: BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.put(key, value, { valueEncoding: encoding });
   }
@@ -59,7 +54,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns value
    */
-  get(path: Array<BytesData>, encoding: Encoding = 'hex'): Promise<any> {
+  get(path: BytesData[], encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
     return this.level.get(key, { valueEncoding: encoding });
   }
@@ -70,7 +65,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  del(path: Array<BytesData>, encoding: Encoding = 'hex'): Promise<void> {
+  del(path: BytesData[], encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.del(key, { valueEncoding: encoding });
   }
@@ -86,21 +81,35 @@ class Database {
   }
 
   /**
+   * Gets stream of keys and/or values in namespace
+   * @param namespace - namespace to stream from
+   * @returns namespace stream
+   */
+  streamNamespace(
+    namespace: BytesData[],
+    keys: boolean = true,
+    values: boolean = false,
+  ) {
+    const pathkey = Database.pathToKey(namespace);
+    return this.level.createReadStream({
+      gte: `${pathkey}`,
+      lte: `${pathkey}~`,
+      keys,
+      values,
+    });
+  }
+
+  /**
    * Delete all keys in namespace
    * @param namespace - namespace to delete
    * @returns complete
    */
-  clearNamespace(namespace: Array<BytesData>): Promise<void> {
-    const pathkey = Database.pathToKey(namespace);
-
+  clearNamespace(namespace: BytesData[]): Promise<void> {
     return new Promise((resolve) => {
       const deleteOperations: AbstractBatch[] = [];
 
       // Create read stream for namespace*
-      this.level.createKeyStream({
-        gte: `${pathkey}`,
-        lte: `${pathkey}~`,
-      }).on('data', (key: string) => {
+      this.streamNamespace(namespace).on('data', (key: string) => {
         // Push key to batch delete array
         deleteOperations.push({
           type: 'del',
@@ -109,6 +118,26 @@ class Database {
       }).on('end', () => {
         // Run batch delete and resolve
         this.batch(deleteOperations).then(resolve);
+      });
+    });
+  }
+
+  /**
+   * Counnts number of keys in namespace
+   * @param namespace - namespace to count keys in
+   * @returns number of keys in namespace
+   */
+  countNamespace(namespace: BytesData[]): Promise<number> {
+    return new Promise((resolve) => {
+      let keyNumber = 0;
+
+      // Create read stream for namespace*
+      this.streamNamespace(namespace).on('data', () => {
+        // Increment keynumber
+        keyNumber += 1;
+      }).on('end', () => {
+        // Return keynumber
+        resolve(keyNumber);
       });
     });
   }

@@ -1,11 +1,13 @@
-import convert from './convert';
+import babyjubjub from './babyjubjub';
+import bytes from './bytes';
+import constants from './constants';
 import encryption from './encryption';
 import hash from './hash';
-import random from './random';
 
 export default {
-  convert,
+  babyjubjub,
+  bytes,
+  constants,
   encryption,
   hash,
-  random,
 };

@@ -7,7 +7,7 @@ import utils from '../../src/utils';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Utils/Crypto', () => {
+describe('Utils/Hash', () => {
   it('Should perform sha256 hashes correctly', () => {
     const vectors = [
       {
@@ -154,6 +154,29 @@ describe('Utils/Crypto', () => {
       // Test bytes array hash
       expect(
         utils.hash.sha512HMAC(vector.keyArray, vector.array),
+      ).to.equal(vector.result);
+    });
+  });
+
+  it('Should perform poseidon hashes correctly', () => {
+    const vectors = [
+      {
+        preimage: [[0x1], [0x2]],
+        result: '115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a',
+      },
+      {
+        preimage: [[0x1], [0x2], [0x3], [0x4]],
+        result: '299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465',
+      },
+      {
+        preimage: ['6b021e0d06d0b2d161cf0ea494e3fc1cbff12cc1b29281f7412170351b708fad'],
+        result: '0b77a7c8dcbf2c84e75b6ff1dd558365532956cb7c1f328a67220a3a47a3ab43',
+      },
+    ];
+
+    vectors.forEach((vector) => {
+      expect(
+        utils.hash.poseidon(vector.preimage),
       ).to.equal(vector.result);
     });
   });
