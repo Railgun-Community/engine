@@ -83,7 +83,7 @@ describe('Note/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect((new Note(
+      expect((new Note.ERC20(
         vector.publicKey,
         vector.random,
         vector.amount,
@@ -155,7 +155,7 @@ describe('Note/Index', () => {
 
     vectors.forEach((vector) => {
       // Create Note object
-      const note = new Note(
+      const note = new Note.ERC20(
         vector.note.publicKey,
         vector.note.random,
         vector.note.amount,
@@ -166,10 +166,10 @@ describe('Note/Index', () => {
       const encrypted = note.encrypt(vector.sharedKey);
 
       // Check if encrypted values are successfully decrypted
-      expect(Note.decrypt(encrypted, vector.sharedKey)).to.deep.equal(note);
+      expect(Note.ERC20.decrypt(encrypted, vector.sharedKey)).to.deep.equal(note);
 
       // Check if vector encrypted values are successfully decrypted
-      expect(Note.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
+      expect(Note.ERC20.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
     });
   });
 });
