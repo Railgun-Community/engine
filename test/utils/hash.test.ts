@@ -180,4 +180,31 @@ describe('Utils/Hash', () => {
       ).to.equal(vector.result);
     });
   });
+
+  it('Should perform pbkdf2 hashes correctly', () => {
+    const vectors = [
+      {
+        secret: '676c6f7279206d6978206469676974616c206475747920616e616c79737420706879736963616c20636c75737465722067656e75696e65206465736b20696e6469636174652061746f6d20746872697665',
+        salt: '6d6e656d6f6e6963',
+        result: '5fcafbbfe78d319c631598d1f2a13b06d9a39fdda323683c64082945d234660b0c460599f5f1b267be39cb140c5c360273f95cb30bae6fafed966476e5d91dd6',
+      },
+      {
+        secret: '70617469656e742071756f7465207061747465726e207768656e207069656365206d75737420656d65726765206f616b206f626a656374206e61706b696e2074776963652077686970',
+        salt: '6d6e656d6f6e69637465737470617373',
+        result: '89b2d609ff80008fee887c799436c791644cb39ed820fbc4dad2f43713ef781616cbc2036a29f22236ac22ea1e1b1c66a97cc4ecdcf093fb270ae61690d3b0e9',
+      },
+    ];
+
+    vectors.forEach((vector) => {
+      expect(
+        utils.hash.pbkdf2(
+          vector.secret,
+          vector.salt,
+          2048,
+          64,
+          'sha512',
+        ),
+      ).to.equal(vector.result);
+    });
+  });
 });
