@@ -13,7 +13,7 @@ const { expect } = chai;
 // Database object for tests
 let db: Database;
 
-describe('Database', () => {
+describe('Database/Index', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());

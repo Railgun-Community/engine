@@ -7,7 +7,7 @@ import Note from '../../src/note';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Note/Index', () => {
+describe('Note/ERC20', () => {
   it('Should calculate hashes correctly', () => {
     const vectors = [
       {
