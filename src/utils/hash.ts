@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { utils as ethersutils } from 'ethers';
 // @ts-ignore
-import { poseidon as poseidonHash } from 'circomlib';
+import { poseidon as poseidonHash } from 'circomlibjs';
 import bytes from './bytes';
 
 import type { BytesData } from './bytes';
@@ -138,7 +138,7 @@ function keccak256(preimage: BytesData): string {
  * @returns hash
  */
 function poseidon(preimage: BytesData[]): string {
-  // TODO: Remove reliance on circomlib
+  // TODO: Remove reliance on circomlibjs
   // Convert all bytes into number strings
   const preimageFormatted = preimage.map((bytedata) => bytes.numberify(bytedata).toString(10));
 

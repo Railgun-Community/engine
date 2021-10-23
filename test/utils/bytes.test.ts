@@ -127,34 +127,6 @@ describe('Utils/Bytes', () => {
     expect(utils.bytes.random(128).length).to.equal(256);
   });
 
-  it('Should pad to length', () => {
-    padVectors.forEach((vector) => {
-      expect(
-        utils.bytes.padToLength(vector.original, 16),
-      ).to.deep.equal(vector.left16);
-
-      expect(
-        utils.bytes.padToLength(vector.original, 32),
-      ).to.deep.equal(vector.left32);
-
-      expect(
-        utils.bytes.padToLength(vector.original, 16, 'right'),
-      ).to.deep.equal(vector.right16);
-
-      expect(
-        utils.bytes.padToLength(vector.original, 32, 'right'),
-      ).to.deep.equal(vector.right32);
-    });
-
-    expect(
-      () => utils.bytes.padToLength('000000', 2),
-    ).to.throw();
-
-    expect(
-      () => utils.bytes.padToLength([0, 0, 0], 2),
-    ).to.throw();
-  });
-
   it('Should hexlify', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
@@ -224,6 +196,55 @@ describe('Utils/Bytes', () => {
       expect(
         utils.bytes.numberify(vector.number).eq(vector.number),
       ).to.equal(true);
+    });
+  });
+
+  it('Should pad to length', () => {
+    padVectors.forEach((vector) => {
+      expect(
+        utils.bytes.padToLength(vector.original, 16),
+      ).to.deep.equal(vector.left16);
+
+      expect(
+        utils.bytes.padToLength(vector.original, 32),
+      ).to.deep.equal(vector.left32);
+
+      expect(
+        utils.bytes.padToLength(vector.original, 16, 'right'),
+      ).to.deep.equal(vector.right16);
+
+      expect(
+        utils.bytes.padToLength(vector.original, 32, 'right'),
+      ).to.deep.equal(vector.right32);
+    });
+
+    expect(
+      () => utils.bytes.padToLength('000000', 2),
+    ).to.throw();
+
+    expect(
+      () => utils.bytes.padToLength([0, 0, 0], 2),
+    ).to.throw();
+  });
+
+  it('Should reverse bytes', () => {
+    const vectors = [
+      {
+        bytes: '',
+        reversed: '',
+      },
+      {
+        bytes: '001122',
+        reversed: '221100',
+      },
+      {
+        bytes: [0x1, 0x2, 0x3, 0x4],
+        reversed: [0x4, 0x3, 0x2, 0x1],
+      },
+    ];
+
+    vectors.forEach((vector) => {
+      expect(utils.bytes.reverseBytes(vector.bytes)).to.deep.equal(vector.reversed);
     });
   });
 

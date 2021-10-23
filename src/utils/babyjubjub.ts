@@ -1,6 +1,6 @@
 /* eslint-disable no-bitwise */
 // @ts-ignore
-import { babyJub } from 'circomlib';
+import { babyjub } from 'circomlibjs';
 import bytes from './bytes';
 import hash from './hash';
 
@@ -41,14 +41,14 @@ function seedToPrivateKey(seed: BytesData): string {
  * @returns packed point
  */
 function packPoint(unpacked: BytesData[]): string {
-  // TODO: remove dependance on circomlib
+  // TODO: remove dependance on circomlibjs
   // Format point elements
   const unpackedFormatted = unpacked.map(
     (element) => BigInt(bytes.numberify(element).toString(10)),
   );
 
   // Pack point
-  return bytes.hexlify(babyJub.packPoint(unpackedFormatted));
+  return bytes.hexlify(babyjub.packPoint(unpackedFormatted));
 }
 
 /**
@@ -57,9 +57,9 @@ function packPoint(unpacked: BytesData[]): string {
  * @returns unpacked point
  */
 function unpackPoint(packed: BytesData): string[] {
-  // TODO: remove dependance on circomlib
+  // TODO: remove dependance on circomlibjs
   // Unpack point
-  const unpacked: BigInt[] = babyJub.unpackPoint(bytes.arrayify(packed));
+  const unpacked: BigInt[] = babyjub.unpackPoint(bytes.arrayify(packed));
 
   return unpacked.map((element) => {
     // Convert to byte string
@@ -77,7 +77,7 @@ function unpackPoint(packed: BytesData): string[] {
  * @returns shared key
  */
 function ecdh(privateKey: BytesData, publicKey: BytesData): string {
-  // TODO: remove dependance on circomlib
+  // TODO: remove dependance on circomlibjs
   // Unpack public key and map to BigInt
   const publicKeyUnpacked = unpackPoint(publicKey).map((element) => BigInt(`0x${element}`));
 
@@ -85,10 +85,33 @@ function ecdh(privateKey: BytesData, publicKey: BytesData): string {
   const privateKeyBI = BigInt(`0x${privateKey}`);
 
   // Perform scalar mul
-  const sharedKey = babyJub.mulPointEscalar(publicKeyUnpacked, privateKeyBI)[0].toString(16);
+  const sharedKey = babyjub.mulPointEscalar(publicKeyUnpacked, privateKeyBI)[0].toString(16);
 
   // Pad to even length if needed
   return sharedKey.length % 2 === 0 ? sharedKey : sharedKey.padStart(sharedKey.length + 1, '0');
+}
+
+/**
+ * Convert babyjubjub private key to public key
+ * @param privateKey - private key
+ * @returns public key
+ */
+function privateKeyToPublicKey(privateKey: BytesData): string {
+  // TODO: remove dependance on circomlibjs
+  // Format as number string
+  const privateKeyFormatted = bytes.numberify(privateKey).toString(10);
+
+  // Calculate publicKey
+  const publicKey = babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted)
+    .map((element: BigInt) => {
+      const elementString = element.toString(16);
+      return elementString.length % 2 === 0
+        ? elementString
+        : elementString.padStart(elementString.length + 1, '0');
+    });
+
+  // Pack and return
+  return packPoint(publicKey);
 }
 
 export default {
@@ -96,4 +119,5 @@ export default {
   packPoint,
   unpackPoint,
   ecdh,
+  privateKeyToPublicKey,
 };

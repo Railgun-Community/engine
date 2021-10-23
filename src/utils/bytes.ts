@@ -156,6 +156,21 @@ function padToLength(
 }
 
 /**
+ * Reverses order of bytes
+ * @param data - bytes to reverse
+ * @returns reversed bytes
+ */
+function reverseBytes(data: ArrayLike<number> | string): ArrayLike<number> | string {
+  if (typeof data === 'string') {
+    // Split to nibbles array, reverse, join, and return
+    return data.split(/(..)/g).reverse().join('');
+  }
+
+  // Coerce to array and reverse
+  return Array.from(data).reverse();
+}
+
+/**
  * Converts bytes to string
  * @param data - bytes data to convert
  * @param encoding - string encoding to use
@@ -219,6 +234,7 @@ export default {
   arrayify,
   numberify,
   padToLength,
+  reverseBytes,
   toUTF8String,
   fromUTF8String,
 };
