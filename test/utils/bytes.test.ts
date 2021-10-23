@@ -95,6 +95,13 @@ const padVectors = [
     right16: 'f6fc84c9f21c24907d6bee6eec38caba',
     right32: 'f6fc84c9f21c24907d6bee6eec38caba00000000000000000000000000000000',
   },
+  {
+    original: new BN('f6fc84c9f21c24907d6bee6eec38caba', 'hex'),
+    left16: 'f6fc84c9f21c24907d6bee6eec38caba',
+    left32: '00000000000000000000000000000000f6fc84c9f21c24907d6bee6eec38caba',
+    right16: 'f6fc84c9f21c24907d6bee6eec38caba',
+    right32: 'f6fc84c9f21c24907d6bee6eec38caba00000000000000000000000000000000',
+  },
 ];
 
 const stringVectors = [
