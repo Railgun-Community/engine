@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/Index', () => {
-  it('Should derive keys correctly', () => {
+  it('Should derive keys', () => {
     const vectors = [
       {
         mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',

@@ -5,6 +5,13 @@ import utils from '../utils';
 import type Database from '../database';
 import { BytesData } from '../utils/bytes';
 
+export type MerkleProof = {
+  leaf: BytesData,
+  elements: BytesData[],
+  indices: BytesData,
+  root: BytesData,
+};
+
 // Declare depth
 const depths = {
   erc20: 16,
@@ -163,7 +170,7 @@ class MerkleTree {
    * @param tree - tree to write
    */
   async writeTreeCache(tree: number) {
-    // Build write cache
+    // Build write batch operation
     const writeBatch: AbstractBatch[] = [];
 
     // Get new leaves
@@ -336,6 +343,76 @@ class MerkleTree {
 
     // Process tree updates
     await this.updateTrees();
+  }
+
+  /**
+   * Gets merkle proof for leaf
+   * @param tree - tree number
+   * @param index - index of leaf
+   * @returns Merkle proof
+   */
+  async getProof(tree: number, index: number): Promise<MerkleProof> {
+    // Fetch leaf
+    const leaf = await this.getNode(tree, 0, index);
+
+    // Get indexes of path elements to fetch
+    const elementsIndexes: number[] = [index ^ 1];
+
+    // Loop through each level and calculate index
+    while (elementsIndexes.length < this.depth) {
+      // Shift right and flip last bit
+      elementsIndexes.push(elementsIndexes[elementsIndexes.length - 1] >> 1 ^ 1);
+    }
+
+    // Fetch path elements
+    const elements = await Promise.all(
+      elementsIndexes.map((elementIndex, level) => this.getNode(tree, level, elementIndex)),
+    );
+
+    // Convert index to bytes data, the binary representation is the indices of the merkle path
+    // Pad to 32 bytes
+    const indices = utils.bytes.hexlify(new BN(index));
+
+    // Fetch root
+    const root = await this.getRoot(tree);
+
+    // Return proof
+    return {
+      leaf,
+      elements,
+      indices,
+      root,
+    };
+  }
+
+  /**
+   * Verifies a merkle proof
+   * @param proof - proof to verify
+   * @returns is valid
+   */
+  static verifyProof(proof: MerkleProof): boolean {
+    // Get indicies as BN form
+    const indices = utils.bytes.numberify(proof.indices);
+
+    // Calculate proof root and return if it matches the proof in the MerkleProof
+    return utils.bytes.hexlify(proof.root) === utils.bytes.hexlify(
+      // Loop through each element and hash till we've reduced to 1 element
+      proof.elements.reduce((current, element, index) => {
+        // If index is right
+        if (indices.testn(index)) {
+          return MerkleTree.hashLeftRight(
+            element,
+            current,
+          );
+        }
+
+        // If index is left
+        return MerkleTree.hashLeftRight(
+          current,
+          element,
+        );
+      }, proof.leaf),
+    );
   }
 }
 

@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/BIP32-BabyJubJub', () => {
-  it('Should derive master key correctly', () => {
+  it('Should derive master key', () => {
     const vectors = [
       {
         seed: '5eb00bbddcf069084889a8ab9155568165f5c453ccb85e70811aaed6f6da5fc19a5ac40b389cd370d086206dec8aa6c43daea6690f20ad3d8d48b2d2ce9e38e4',
@@ -84,7 +84,7 @@ describe('Key Derivation/BIP32-BabyJubJub', () => {
     });
   });
 
-  it('Should parse path segments correctly', () => {
+  it('Should parse path segments', () => {
     const valid = [
       {
         path: "m/0'/1'/1'",

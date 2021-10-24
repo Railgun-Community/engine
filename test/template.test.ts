@@ -6,7 +6,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Test Template', () => {
-  it('Math should work correctly', () => {
+  it('Math should work', () => {
     expect(3 + 4).to.equal(7);
   });
 });

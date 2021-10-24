@@ -10,12 +10,6 @@ const { expect } = chai;
 
 const convertVectors = [
   {
-    hex: '',
-    array: [],
-    number: new BN('0', 10),
-    numberLe: new BN('0', 10, 'le'),
-  },
-  {
     hex: '0138bc',
     array: [1, 56, 188],
     number: new BN('80060', 10),

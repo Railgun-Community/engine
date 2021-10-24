@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Utils/Hash', () => {
-  it('Should perform sha256 hashes correctly', () => {
+  it('Should perform sha256 hashes', () => {
     const vectors = [
       {
         preimage: '',
@@ -44,7 +44,7 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform sha512 hashes correctly', () => {
+  it('Should perform sha512 hashes', () => {
     const vectors = [
       {
         preimage: '',
@@ -80,7 +80,7 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform keccak256 hashes correctly', () => {
+  it('Should perform keccak256 hashes', () => {
     const vectors = [
       {
         preimage: '',
@@ -116,7 +116,7 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform sha512 HMAC hashes correctly', () => {
+  it('Should perform sha512 HMAC hashes', () => {
     const vectors = [
       {
         preimage: '',
@@ -158,7 +158,7 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform poseidon hashes correctly', () => {
+  it('Should perform poseidon hashes', () => {
     const vectors = [
       {
         preimage: [[0x1], [0x2]],
@@ -181,7 +181,7 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform pbkdf2 hashes correctly', () => {
+  it('Should perform pbkdf2 hashes', () => {
     const vectors = [
       {
         secret: '676c6f7279206d6978206469676974616c206475747920616e616c79737420706879736963616c20636c75737465722067656e75696e65206465736b20696e6469636174652061746f6d20746872697665',

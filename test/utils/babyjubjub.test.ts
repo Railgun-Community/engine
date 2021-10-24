@@ -68,7 +68,7 @@ describe('Utils/BabyJubJub', () => {
     });
   });
 
-  it('Should perform ECDH operations correctly', () => {
+  it('Should perform ECDH operations', () => {
     const vectors = [
       {
         keyA: {
@@ -115,7 +115,7 @@ describe('Utils/BabyJubJub', () => {
     });
   });
 
-  it('Should private keys to public keys correctly', () => {
+  it('Should private keys to public keys', () => {
     const vectors = [
       {
         privateKey: '0bd2dfe7ed7323285b1dbc3480580ef16eb488b62038f5095308551103902c03',

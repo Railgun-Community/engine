@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Note/ERC20', () => {
-  it('Should calculate hashes correctly', () => {
+  it('Should calculate hashes', () => {
     const vectors = [
       {
         publicKey: '9902564685f24f396263c64f582aa9a87499704509c60862930b1f9f7d258e8e',

@@ -27,13 +27,8 @@ function hexlify(data: BytesData): string {
 
   // If we're a BN object convert to string and return
   if (data instanceof BN) {
-    // If value is 0, return empty string
-    if (data.isZero()) {
-      return '';
-    }
-
-    // Else return hex string 0 padded to even length
-    return data.toString('hex', data.byteLength() * 2);
+    // Return hex string 0 padded to even length, if length is 0 then set to 2
+    return data.toString('hex', data.byteLength() * 2 || 2);
   }
 
   // Coerce ArrayLike to Array
@@ -51,11 +46,6 @@ function hexlify(data: BytesData): string {
 function arrayify(data: BytesData): number[] {
   // If we're a BN object, convert to bytes array and return
   if (data instanceof BN) {
-    // If value is 0, return empty array
-    if (data.isZero()) {
-      return [];
-    }
-
     // Else return bytes array
     return data.toArray();
   }

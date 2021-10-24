@@ -8,7 +8,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/BIP39', () => {
-  it('Should generate mnemonic correctly', () => {
+  it('Should generate mnemonic', () => {
     expect(bip39.generateMnemonic().split(' ').length).to.equal(12);
     expect(bip39.generateMnemonic(192).split(' ').length).to.equal(18);
     expect(bip39.generateMnemonic(256).split(' ').length).to.equal(24);
