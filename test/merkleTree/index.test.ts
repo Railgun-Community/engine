@@ -21,8 +21,8 @@ describe('MerkleTree/Index', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
-    merkletree = new MerkleTree(db, 0, 'erc20');
-    merkletreeNFT = new MerkleTree(db, 0, 'erc721');
+    merkletree = new MerkleTree(db, 0, 'erc20', async () => true);
+    merkletreeNFT = new MerkleTree(db, 0, 'erc721', async () => true);
   });
 
   it('Should hash left/right', () => {
@@ -143,7 +143,9 @@ describe('MerkleTree/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      const merkletreeVectorTest = new MerkleTree(db, vector.chainID, vector.purpose);
+      const merkletreeVectorTest = new MerkleTree(
+        db, vector.chainID, vector.purpose, async () => true,
+      );
 
       expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber))
         .to.deep.equal(vector.result.slice(0, 3));
@@ -158,92 +160,168 @@ describe('MerkleTree/Index', () => {
     expect(await merkletreeNFT.getRoot(0)).to.equal('2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc');
   });
 
-  it('Should update merkle tree', async () => {
-    expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
-
-    await merkletree.insertLeaves(0, [
-      '0000000000000000000000000000000000000000000000000000000000000001',
-      '0000000000000000000000000000000000000000000000000000000000000002',
-      '0000000000000000000000000000000000000000000000000000000000000003',
-    ], 0);
-
-    expect(await merkletree.getRoot(0)).to.equal('2e1f312e4ead9cd1594ffa4c020578c155ea0552b3d96136ae68b83efa15d912');
-
-    await merkletree.insertLeaves(0, [
-      '0000000000000000000000000000000000000000000000000000000000000004',
-    ], 3);
-
-    expect(await merkletree.getRoot(0)).to.equal('2f4c02f094b5c881b9a2d25539d50bc839652b96acb147b81181922064b25f29');
-
-    await merkletree.insertLeaves(0, [
-      '0000000000000000000000000000000000000000000000000000000000000005',
-    ], 4);
-
-    expect(await merkletree.getRoot(0)).to.equal('1ad4d800e15fac5591e35bd7a92e4dbc4af312958d9629d84e73e6c338f5da81');
-
-    await merkletree.insertLeaves(0, [
-      'ab2f9d1ebd74c3e1f1ccee452a80ae27a94f14a542a4fd8b0c9ad9a1b7f9ffe5',
-      '8902638fe6fc05e4f1cd7c06940d6217591a0ccb003ed45198782fbff38e9f2d',
-      '19889087c2ff4c4a164060a832a3ba11cce0c2e2dbd42da10c57101efb966fcd',
-      '9f5e8310e384c6a0840699951d67810c6d90fd3f265bda66e9385fcb7142373d',
-      '4c71361b89e9b6b55b094a0f0de4451d8306786b2626d67b3810c9b61fbf45b6',
-      'b2eabd832f0bb9d8b42399a56821a565eec64669d7a55b828c8af2a541b044d6',
-      '817e6732d170352ea6517c9640757570d4ea71c660603f9d7a060b2f2eb27be6',
-    ], 5);
-
-    expect(await merkletree.getRoot(0)).to.equal('1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c');
-  });
-
-  it('Should queue tree updates', async () => {
+  it('Should update merkle tree correctly', async () => {
     expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
 
     await merkletree.queueLeaves(0, [
-      'ab2f9d1ebd74c3e1f1ccee452a80ae27a94f14a542a4fd8b0c9ad9a1b7f9ffe5',
-      '8902638fe6fc05e4f1cd7c06940d6217591a0ccb003ed45198782fbff38e9f2d',
-      '19889087c2ff4c4a164060a832a3ba11cce0c2e2dbd42da10c57101efb966fcd',
-      '9f5e8310e384c6a0840699951d67810c6d90fd3f265bda66e9385fcb7142373d',
-      '4c71361b89e9b6b55b094a0f0de4451d8306786b2626d67b3810c9b61fbf45b6',
-      'b2eabd832f0bb9d8b42399a56821a565eec64669d7a55b828c8af2a541b044d6',
-      '817e6732d170352ea6517c9640757570d4ea71c660603f9d7a060b2f2eb27be6',
+      {
+        hash: 'ab2f9d1ebd74c3e1f1ccee452a80ae27a94f14a542a4fd8b0c9ad9a1b7f9ffe5',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '8902638fe6fc05e4f1cd7c06940d6217591a0ccb003ed45198782fbff38e9f2d',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '19889087c2ff4c4a164060a832a3ba11cce0c2e2dbd42da10c57101efb966fcd',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '9f5e8310e384c6a0840699951d67810c6d90fd3f265bda66e9385fcb7142373d',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '4c71361b89e9b6b55b094a0f0de4451d8306786b2626d67b3810c9b61fbf45b6',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: 'b2eabd832f0bb9d8b42399a56821a565eec64669d7a55b828c8af2a541b044d6',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '817e6732d170352ea6517c9640757570d4ea71c660603f9d7a060b2f2eb27be6',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
     ], 5);
 
     expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
 
     await merkletree.queueLeaves(0, [
-      '0000000000000000000000000000000000000000000000000000000000000004',
+      {
+        hash: '0000000000000000000000000000000000000000000000000000000000000004',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
     ], 3);
 
     expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
 
     await merkletree.queueLeaves(0, [
-      '0000000000000000000000000000000000000000000000000000000000000001',
-      '0000000000000000000000000000000000000000000000000000000000000002',
-      '0000000000000000000000000000000000000000000000000000000000000003',
+      {
+        hash: '0000000000000000000000000000000000000000000000000000000000000001',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '0000000000000000000000000000000000000000000000000000000000000002',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '0000000000000000000000000000000000000000000000000000000000000003',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
     ], 0);
 
     expect(await merkletree.getRoot(0)).to.equal('2f4c02f094b5c881b9a2d25539d50bc839652b96acb147b81181922064b25f29');
 
     await Promise.all([
       merkletree.queueLeaves(0, [
-        '0000000000000000000000000000000000000000000000000000000000000005',
+        {
+          hash: '0000000000000000000000000000000000000000000000000000000000000005',
+          senderPublicKey: '',
+          ciphertext: { iv: '', data: [] },
+        },
       ], 4),
       merkletree.queueLeaves(0, [
-        '0000000000000000000000000000000000000000000000000000000000000005',
+        {
+          hash: '0000000000000000000000000000000000000000000000000000000000000005',
+          senderPublicKey: '',
+          ciphertext: { iv: '', data: [] },
+        },
       ], 4),
     ]);
+
+    await merkletree.queueLeaves(0, [
+      {
+        hash: '0000000000000000000000000000000000000000000000000000000000000005',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+    ], 4);
 
     expect(await merkletree.getRoot(0)).to.equal('1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c');
   });
 
+  it('Should insert and retrieve commitment objects', async () => {
+    // Insert leaves
+    await merkletree.queueLeaves(0, [
+      {
+        hash: '02',
+        senderPublicKey: '01',
+        ciphertext: { iv: '02', data: ['03', '04'] },
+      },
+      {
+        hash: '04',
+        senderPublicKey: new BN('05', 10),
+        ciphertext: { iv: [0x06], data: [[0x07], [0x08]] },
+      },
+    ], 0);
+
+    expect(await merkletree.getCommitment(0, 0)).to.deep.equal({
+      hash: '02',
+      senderPublicKey: '01',
+      ciphertext: { iv: '02', data: ['03', '04'] },
+    });
+
+    expect(await merkletree.getCommitment(0, 1)).to.deep.equal({
+      hash: '04',
+      senderPublicKey: '05',
+      ciphertext: { iv: '06', data: ['07', '08'] },
+    });
+  });
+
   it('Should generate and validate merkle proofs', async () => {
     // Insert leaves
-    await merkletree.insertLeaves(3, [
-      '02',
-      '04',
-      '08',
-      '10',
-      '20',
-      '40',
+    await merkletree.queueLeaves(3, [
+      {
+        hash: '02',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '04',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '08',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '10',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '20',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '40',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
     ], 0);
 
     // Get proof
@@ -278,9 +356,13 @@ describe('MerkleTree/Index', () => {
     expect(MerkleTree.verifyProof(proof)).to.equal(true);
 
     // Insert leaves
-    await merkletree.insertLeaves(
+    await merkletree.queueLeaves(
       0,
-      Array.from(Array(600).keys()).map((el) => new BN(el, 10)),
+      Array.from(Array(600).keys()).map((el) => ({
+        hash: new BN(el, 10),
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      })),
       0,
     );
 
@@ -318,7 +400,52 @@ describe('MerkleTree/Index', () => {
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
-  }).timeout(500000000);
+  });
+
+  it('Shouldn\'t write invalid batches', async () => {
+    // Validate function always returns false
+    const merkletreeTest = new MerkleTree(db, 0, 'erc20', async () => false);
+
+    // Check root is empty tree root
+    expect(await merkletreeTest.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+
+    // Insert leaves
+    await merkletreeTest.queueLeaves(0, [
+      {
+        hash: '02',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '04',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '08',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '10',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '20',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+      {
+        hash: '40',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+    ], 0);
+
+    // Batch should have been rejected
+    expect(await merkletreeTest.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+  });
 
   afterEach(() => {
     // Clean up database

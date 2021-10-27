@@ -1,5 +1,5 @@
-import ERC20 from './erc20';
+import ERC20Transaction from './erc20';
 
 export default {
-  ERC20,
+  ERC20Transaction,
 };
