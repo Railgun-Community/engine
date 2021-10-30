@@ -14,32 +14,42 @@ function random(length: number = 32): string {
 }
 
 /**
- * Coerces bytesdata into hex string format
+ * Coerces BytesData into hex string format
  * @param data - bytes data to coerce
+ * @param prefix - prefix with 0x
  * @returns hex string
  */
-function hexlify(data: BytesData): string {
-  // If we're already a string return the string
+function hexlify(data: BytesData, prefix = false): string {
+  let hexString = '';
+
   if (typeof data === 'string') {
+    // If we're already a string return the string
     // Strip leading 0x if it exists before returning
-    return data.startsWith('0x') ? data.slice(2) : data;
-  }
-
-  // If we're a BN object convert to string and return
-  if (data instanceof BN) {
+    hexString = data.startsWith('0x') ? data.slice(2) : data;
+  } else if (data instanceof BN) {
+    // If we're a BN object convert to string
     // Return hex string 0 padded to even length, if length is 0 then set to 2
-    return data.toString('hex', data.byteLength() * 2 || 2);
+    hexString = data.toString('hex', data.byteLength() * 2 || 2);
+  } else {
+    // We're an ArrayLike
+    // Coerce ArrayLike to Array
+    const dataArray: number[] = Array.from(data);
+
+    // Convert array of bytes to hex string
+    hexString = dataArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
-  // Coerce ArrayLike to Array
-  const dataArray: number[] = Array.from(data);
+  // Return 0x prefixed hex string if specified
+  if (prefix) {
+    return `0x${hexString}`;
+  }
 
-  // Convert array of bytes to hex string and return
-  return dataArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  // Else return plain hex string
+  return hexString;
 }
 
 /**
- * Coerces bytesdata into array of bytes
+ * Coerces BytesData into array of bytes
  * @param data - bytes data to coerce
  * @returns byte array
  */
@@ -55,12 +65,15 @@ function arrayify(data: BytesData): number[] {
     return Array.from(data);
   }
 
+  // Remove leading 0x if exists
+  const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+
   // Create empty array
   const bytesArray: number[] = [];
 
   // Loop through each byte and push to array
-  for (let i = 0; i < data.length; i += 2) {
-    bytesArray.push(parseInt(data.substr(i, 2), 16));
+  for (let i = 0; i < dataFormatted.length; i += 2) {
+    bytesArray.push(parseInt(dataFormatted.substr(i, 2), 16));
   }
 
   // Return bytes array
@@ -68,7 +81,7 @@ function arrayify(data: BytesData): number[] {
 }
 
 /**
- * Coerces bytesdata into BN.js object
+ * Coerces BytesData into BN.js object
  * @param data - bytes data to coerce
  * @param endian - bytes endianess
  * @returns BN.js object
@@ -81,7 +94,10 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
 
   // If we're a hex string create a BN object from it and return
   if (typeof data === 'string') {
-    return new BN(data, 'hex', endian);
+    // Remove leading 0x if exists
+    const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+
+    return new BN(dataFormatted, 'hex', endian);
   }
 
   // Coerce ArrayLike to Array
@@ -92,7 +108,7 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
 }
 
 /**
- * Pads byte data to specified length
+ * Pads BytesData to specified length
  * @param data - bytes data
  * @param length - length in bytes to pad to
  * @param side - whether to pad left or right
@@ -151,8 +167,9 @@ function padToLength(
  * @returns reversed bytes
  */
 function reverseBytes(data: ArrayLike<number> | string): ArrayLike<number> | string {
+  // TODO: Allow reversing number bytes
   if (typeof data === 'string') {
-    // Split to nibbles array, reverse, join, and return
+    // Split to bytes array, reverse, join, and return
     return data.split(/(..)/g).reverse().join('');
   }
 

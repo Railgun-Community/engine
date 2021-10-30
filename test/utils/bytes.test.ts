@@ -133,20 +133,40 @@ describe('Utils/Bytes', () => {
         utils.bytes.hexlify(vector.hex),
       ).to.equal(vector.hex);
 
+      // Test hex string to hex string prefixed
+      expect(
+        utils.bytes.hexlify(vector.hex, true),
+      ).to.equal(`0x${vector.hex}`);
+
       // Test bytes array to hex string
       expect(
         utils.bytes.hexlify(vector.array),
       ).to.equal(vector.hex);
 
+      // Test bytes array to hex string prefixed
+      expect(
+        utils.bytes.hexlify(vector.array, true),
+      ).to.equal(`0x${vector.hex}`);
+
       // Test number to hex string
       expect(
         utils.bytes.hexlify(vector.number),
       ).to.equal(vector.hex);
+
+      // Test number to hex string prefixed
+      expect(
+        utils.bytes.hexlify(vector.number, true),
+      ).to.equal(`0x${vector.hex}`);
     });
   });
 
   it('Should arrayify', () => {
     convertVectors.forEach((vector) => {
+      // Test prefixed hex string to hex string
+      expect(
+        utils.bytes.arrayify(`0x${vector.hex}`),
+      ).to.deep.equal(vector.array);
+
       // Test hex string to byte array
       expect(
         utils.bytes.arrayify(vector.hex),
@@ -166,6 +186,11 @@ describe('Utils/Bytes', () => {
 
   it('Should numberify', () => {
     convertVectors.forEach((vector) => {
+      // Test prefixed hex string to hex string
+      expect(
+        utils.bytes.numberify(`0x${vector.hex}`).eq(vector.number),
+      ).to.equal(true);
+
       // Test hex string to number
       expect(
         utils.bytes.numberify(vector.hex).eq(vector.number),
