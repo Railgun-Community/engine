@@ -19,6 +19,9 @@ export type Commitment = {
   ciphertext: Ciphertext,
 }
 
+// eslint-disable-next-line no-unused-vars
+export type RootValidator = (root: BytesData) => Promise<boolean>;
+
 // Declare depth
 const depths = {
   erc20: 16,
@@ -76,7 +79,7 @@ class MerkleTree {
     db: Database,
     chainID: number,
     purpose: TreePurpose,
-    validateRoot: Function,
+    validateRoot: RootValidator,
     depth: number = depths[purpose],
   ) {
     // Set passed values
@@ -281,7 +284,7 @@ class MerkleTree {
         senderPublicKey: utils.bytes.hexlify(leaf.senderPublicKey),
         ciphertext: {
           iv: utils.bytes.hexlify(leaf.ciphertext.iv),
-          data: leaf.ciphertext.data.map(utils.bytes.hexlify),
+          data: leaf.ciphertext.data.map((element) => utils.bytes.hexlify(element)),
         },
       };
 

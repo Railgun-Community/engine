@@ -1,5 +1,4 @@
-/* eslint-disable no-empty, global-require, import/no-mutable-exports, import/no-unresolved */
-let config = {
+export default {
   rpc: 'http://localhost:8545/',
   mnemonic: 'test test test test test test test test test test test junk',
   contracts: {
@@ -13,9 +12,3 @@ let config = {
     proxy: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
   },
 };
-
-try {
-  config = require('./configOverrides.test');
-} catch {}
-
-export default config;
