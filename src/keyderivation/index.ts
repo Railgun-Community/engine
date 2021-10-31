@@ -5,13 +5,13 @@ import utils from '../utils';
 import type { KeyNode } from './bip32-babyjubjub';
 
 class BIP32Node {
-  private chainKey: string;
+  #chainKey: string;
 
-  private chainCode: string;
+  #chainCode: string;
 
   constructor(keyNode: KeyNode) {
-    this.chainKey = keyNode.chainKey;
-    this.chainCode = keyNode.chainCode;
+    this.#chainKey = keyNode.chainKey;
+    this.#chainCode = keyNode.chainCode;
   }
 
   /**
@@ -45,8 +45,8 @@ class BIP32Node {
         parentKeys, segment,
       ),
       {
-        chainCode: this.chainCode,
-        chainKey: this.chainKey,
+        chainCode: this.#chainCode,
+        chainKey: this.#chainKey,
       },
     );
 
@@ -59,7 +59,7 @@ class BIP32Node {
    * @returns keypair
    */
   getBabyJubJubKey(): { privateKey: string, publicKey: string } {
-    const privateKey = utils.babyjubjub.seedToPrivateKey(this.chainKey);
+    const privateKey = utils.babyjubjub.seedToPrivateKey(this.#chainKey);
     const publicKey = utils.babyjubjub.privateKeyToPublicKey(privateKey);
 
     return {

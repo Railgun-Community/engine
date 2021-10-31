@@ -122,6 +122,7 @@ class MerkleTree {
    * Construct DB prefix from tree number, level
    * @param tree - tree number
    * @param level - merkle tree level
+   * @returns database prefix
    */
   getTreeDBPrefix(tree: number): string[] {
     return [
@@ -136,6 +137,7 @@ class MerkleTree {
    * @param tree - tree number
    * @param level - merkle tree level
    * @param index - node index
+   * @returns database path
    */
   getNodeDBPath(tree: number, level: number, index: number): string[] {
     return [
@@ -149,6 +151,7 @@ class MerkleTree {
    * Construct DB path from tree number, and index
    * @param tree - tree number
    * @param index - commitment index
+   * @returns database path
    */
   getCommitmentDBPath(tree: number, index: number): string[] {
     return [
@@ -162,7 +165,7 @@ class MerkleTree {
    * Gets Commitment from tree
    * @param tree - tree to get commitment from
    * @param index - index of commitment
-   * @returns node
+   * @returns commitment
    */
   getCommitment(tree: number, index: number): Promise<Commitment> {
     return this.db.get(this.getCommitmentDBPath(
@@ -193,6 +196,7 @@ class MerkleTree {
   /**
    * Gets length of tree
    * @param tree - tree to get length of
+   * @retruns tree length
    */
   async getTreeLength(tree: number): Promise<number> {
     this.treeLengthCache[tree] = this.treeLengthCache[tree]
@@ -206,7 +210,7 @@ class MerkleTree {
    * @param tree - tree to get root of
    * @returns tree root
    */
-  getRoot(tree: number) {
+  getRoot(tree: number): Promise<string> {
     return this.getNode(tree, this.depth, 0);
   }
 
@@ -214,7 +218,7 @@ class MerkleTree {
    * Write tree cache to DB
    * @param tree - tree to write
    */
-  async writeTreeCache(tree: number) {
+  private async writeTreeCache(tree: number) {
     // Build write batch operation
     const nodeWriteBatch: AbstractBatch[] = [];
     const commitmentWriteBatch: AbstractBatch[] = [];
