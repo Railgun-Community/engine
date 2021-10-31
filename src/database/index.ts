@@ -5,6 +5,7 @@ import type { LevelUp } from 'levelup';
 import utils from '../utils';
 
 import type { BytesData } from '../utils/bytes';
+import type { Ciphertext } from '../utils/encryption';
 
 export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
 
@@ -78,6 +79,34 @@ class Database {
    */
   batch(ops: AbstractBatch[], encoding: Encoding = 'hex'): Promise<void> {
     return this.level.batch(ops, { valueEncoding: encoding });
+  }
+
+  /**
+   * Set encrypted value in database
+   * @param path - database path
+   * @param encryptionKey - AES-256-CTR encryption key
+   * @param value - value to encrypt and set
+   */
+  async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData[]) {
+    // Encrypt data
+    const encrypted = utils.encryption.aes.ctr.encrypt(value, encryptionKey);
+
+    // Write to database
+    await this.put(path, encrypted, 'json');
+  }
+
+  /**
+   * Get encrypted value in database
+   * @param path - database path
+   * @param encryptionKey - AES-256-CTR  encryption key
+   * @return decrypted value
+   */
+  async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData[]> {
+    // Read from database
+    const encrypted: Ciphertext = await this.get(path, 'json');
+
+    // Decrypt and return
+    return utils.encryption.aes.ctr.decrypt(encrypted, encryptionKey);
   }
 
   /**

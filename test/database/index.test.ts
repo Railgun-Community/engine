@@ -44,6 +44,14 @@ describe('Database/Index', () => {
     await expect(db.get(['a'])).to.eventually.be.rejected;
   });
 
+  it('Should write and read encrypted values', async () => {
+    // Put value in database
+    await db.putEncrypted(['a'], '01', ['01']);
+
+    // Check if value is returned correctly
+    expect(await db.getEncrypted(['a'], '01')).to.deep.equal(['01']);
+  });
+
   it('Should perform batch operations on database', async () => {
     // Should do a batch put operation
     await db.batch([

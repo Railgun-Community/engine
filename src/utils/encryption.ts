@@ -21,7 +21,7 @@ const aes = {
       const plaintextFormatted = plaintext.map(
         (block) => new Uint8Array(bytes.arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(bytes.arrayify(key));
+      const keyFormatted = new Uint8Array(bytes.arrayify(bytes.padToLength(key, 32)));
       const ivFormatted = new Uint8Array(bytes.arrayify(iv));
 
       // Initialize cipher
@@ -54,7 +54,7 @@ const aes = {
       const ciphertextFormatted = ciphertext.data.map(
         (block) => new Uint8Array(bytes.arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(bytes.arrayify(key));
+      const keyFormatted = new Uint8Array(bytes.arrayify(bytes.padToLength(key, 32)));
       const ivFormatted = new Uint8Array(bytes.arrayify(ciphertext.iv));
 
       // Initialize decipher
