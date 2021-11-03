@@ -37,7 +37,6 @@ describe('Key Derivation/Bech32 Encode', () => {
       });
     });
 
-    expect(() => { bech32.encode('000000', 90000); }).to.throw('Unrecognised ChainID');
     expect(() => { bech32.decode('rgany1qthxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxvewd2r7'); })
       .to.throw('Incorrect address version');
     expect(() => { bech32.decode('rgunknown1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxv0uzkrc'); })

@@ -24,13 +24,8 @@ function encode(key: BytesData, chainID: number | undefined = undefined) {
     utils.bytes.arrayify(utils.bytes.combine([new BN(utils.constants.VERSION), key])),
   );
 
-  if (chainID) {
-    // Prefix exists, encode and return with prefix
-    if (prefixes[chainID]) return bech32.encode(prefixes[chainID], data);
-
-    // Prefix doesn't exist throw error
-    throw new Error('Unrecognised ChainID');
-  }
+  // Prefix exists, encode and return with prefix
+  if (chainID && prefixes[chainID]) return bech32.encode(prefixes[chainID], data);
 
   // No chainID specified, throw error
   return bech32.encode('rgany', data);
