@@ -36,6 +36,10 @@ describe('Wallet/Index', () => {
     ]);
   });
 
+  it('Should derive addresses correctly', async () => {
+    expect(wallet.getAddress(0, 1)).to.deep.equal({});
+  });
+
   afterEach(() => {
     // Clean up database
     db.level.close();

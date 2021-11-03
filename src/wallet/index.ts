@@ -70,11 +70,19 @@ class Wallet {
    * @param index - index to get address at
    * @returns addresses
    */
-  getAddress(index: number): string {
-    const keypair = this.#addressNode.derive(`m/${index}'`).getBabyJubJubKey();
+  getAddress(index: number, chainID: number | undefined = undefined): string {
+    const keypair = this.#addressNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
     return keypair.publicKey;
   }
 
+  /**
+   * Create a wallet from mnemonic
+   * @param db - database
+   * @param encryptionKey - encryption key to use with database
+   * @param mnemonic - mnemonic to load wallet from
+   * @param derivationPath - wallet derivation path
+   * @returns Wallet
+   */
   static async fromMnemonic(
     db: Database,
     encryptionKey: BytesData,
@@ -100,6 +108,13 @@ class Wallet {
     return new Wallet(db, encryptionKey, mnemonic, derivationPath);
   }
 
+  /**
+   * Loads wallet data from database and creates wallet object
+   * @param db - database
+   * @param encryptionKey - encryption key to use with database
+   * @param id - wallet id
+   * @returns Wallet
+   */
   static async loadExisting(
     db: Database,
     encryptionKey: BytesData,

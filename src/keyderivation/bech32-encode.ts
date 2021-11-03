@@ -16,17 +16,23 @@ prefixes[137] = 'rgpoly';
  * @param version - version
  * @param chainID - chainID to encode
  */
-function encode(key: BytesData, chainID: number | undefined = undefined, version: number = 1) {
+function encode(key: BytesData, chainID: number | undefined = undefined) {
   // TODO: Remove reliance on bech32-buffer
+  // TODO: Add bit for chain type (EVM, Solana, etc.)
   // Combine key and version byte
-  const data = new Uint8Array(utils.bytes.arrayify(utils.bytes.combine([new BN(version), key])));
+  const data = new Uint8Array(
+    utils.bytes.arrayify(utils.bytes.combine([new BN(utils.constants.VERSION), key])),
+  );
 
-  if (chainID && prefixes[chainID]) {
+  if (chainID) {
     // Prefix exists, encode and return with prefix
-    return bech32.encode(prefixes[chainID], data);
+    if (prefixes[chainID]) return bech32.encode(prefixes[chainID], data);
+
+    // Prefix doesn't exist throw error
+    throw new Error('Unrecognised ChainID');
   }
 
-  // Prefix doesn't exist, encode with generic prefix
+  // No chainID specified, throw error
   return bech32.encode('rgany', data);
 }
 
@@ -38,19 +44,32 @@ function decode(address: string) {
   const data = utils.bytes.hexlify(decoded.data);
 
   // Get version
-  const version = parseInt(data.slice(0, 2), 16);
+  const version = utils.bytes.numberify(data.slice(0, 2));
+
+  // Throw if address version is not supported
+  if (!version.eq(utils.constants.VERSION)) throw new Error('Incorrect address version');
 
   // Get key
   const key = data.slice(2);
 
-  // Get chainID
-  const chainID = prefixes.includes(decoded.prefix) ? prefixes.indexOf(decoded.prefix) : undefined;
+  if (prefixes.includes(decoded.prefix)) {
+    // If we know this prefix, then return with chainID
+    return {
+      chainID: prefixes.indexOf(decoded.prefix),
+      key,
+    };
+  }
 
-  return {
-    chainID,
-    version,
-    key,
-  };
+  if (decoded.prefix === 'rgany') {
+    // If this is the generic prefix, return undefined
+    return {
+      chainID: undefined,
+      key,
+    };
+  }
+
+  // Don't know what this prefix is, throw
+  throw new Error('Address prefix unrecognized');
 }
 
 export default {

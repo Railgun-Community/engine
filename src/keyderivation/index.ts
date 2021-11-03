@@ -1,5 +1,6 @@
 import bip39 from './bip39';
 import bip32 from './bip32-babyjubjub';
+import bech32Encode from './bech32-encode';
 import utils from '../utils';
 
 import type { KeyNode } from './bip32-babyjubjub';
@@ -58,13 +59,16 @@ class BIP32Node {
    * Gets babyjubjub key pair of this BIP32 Node
    * @returns keypair
    */
-  getBabyJubJubKey(): { privateKey: string, publicKey: string } {
+  getBabyJubJubKey(
+    chainID: number | undefined = undefined,
+  ): { privateKey: string, publicKey: string, address: string } {
     const privateKey = utils.babyjubjub.seedToPrivateKey(this.#chainKey);
     const publicKey = utils.babyjubjub.privateKeyToPublicKey(privateKey);
-
+    const address = bech32Encode.encode(publicKey, chainID);
     return {
       privateKey,
       publicKey,
+      address,
     };
   }
 }
