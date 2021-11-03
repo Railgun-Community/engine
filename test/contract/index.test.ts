@@ -36,7 +36,7 @@ describe('Contract/Index', () => {
 
   it('Should retrieve merkle root from contract', async () => {
     expect(await contract.merkleRoot()).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
-  });
+  }).timeout(30000);
 
   it('Should parse tree update events', async () => {
     let result;

@@ -400,7 +400,7 @@ describe('MerkleTree/Index', () => {
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
-  });
+  }).timeout(10000);
 
   it('Shouldn\'t write invalid batches', async () => {
     // Validate function always returns false

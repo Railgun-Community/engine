@@ -166,8 +166,9 @@ function padToLength(
  * @param data - bytes to reverse
  * @returns reversed bytes
  */
-function reverseBytes(data: ArrayLike<number> | string): ArrayLike<number> | string {
+function reverseBytes(data: ArrayLike<number> | string): typeof data {
   // TODO: Allow reversing number bytes
+  // TODO: Conditional type return or overload so passed param and return are same type
   if (typeof data === 'string') {
     // Split to bytes array, reverse, join, and return
     return data.split(/(..)/g).reverse().join('');
@@ -235,6 +236,34 @@ function fromUTF8String(string: string): string {
   return hexlify(data);
 }
 
+/**
+ * Split bytes into array of chunks
+ * @param data - data to chunk
+ * @param size - size of chunks
+ * @returns chunked data
+ */
+function chunk(data: BytesData, size = 32): string[] {
+  // Convert to hex string
+  const dataFormatted = hexlify(data);
+
+  // Split into byte chunks and return
+  return dataFormatted.match(new RegExp(`.{1,${size * 2}}`, 'g')) || [];
+}
+
+/**
+ * Combines array of BytesData into single BytesData
+ * @param data - data to chunk
+ * @param size - size of chunks
+ * @returns chunked data
+ */
+function combine(data: BytesData[]): string {
+  // Convert all chunks into hex strings
+  const dataFormatted = data.map((element) => hexlify(element));
+
+  // Combine and return
+  return dataFormatted.join('');
+}
+
 export default {
   random,
   hexlify,
@@ -244,4 +273,6 @@ export default {
   reverseBytes,
   toUTF8String,
   fromUTF8String,
+  chunk,
+  combine,
 };

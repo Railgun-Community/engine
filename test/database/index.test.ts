@@ -46,10 +46,10 @@ describe('Database/Index', () => {
 
   it('Should write and read encrypted values', async () => {
     // Put value in database
-    await db.putEncrypted(['a'], '01', ['01']);
+    await db.putEncrypted(['a'], '01', '01');
 
     // Check if value is returned correctly
-    expect(await db.getEncrypted(['a'], '01')).to.deep.equal(['01']);
+    expect(await db.getEncrypted(['a'], '01')).to.equal('01');
   });
 
   it('Should perform batch operations on database', async () => {

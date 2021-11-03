@@ -320,4 +320,48 @@ describe('Utils/Bytes', () => {
       utils.bytes.fromUTF8String(testString),
     ).to.equal(fullBytes);
   });
+
+  it('Should chunk and combine bytes', () => {
+    const vectors = [
+      {
+        bytes: '',
+        size: 32,
+        chunked: [],
+      },
+      {
+        bytes: '5d0afac6783502d701ebd089be93f497bd46ea52b0fb2a4304a952572899aadb032b6a5bae56a1423ffb6bfeb3416b01748a6bbffc5ae430c572b00953dca448',
+        size: 32,
+        chunked: [
+          '5d0afac6783502d701ebd089be93f497bd46ea52b0fb2a4304a952572899aadb',
+          '032b6a5bae56a1423ffb6bfeb3416b01748a6bbffc5ae430c572b00953dca448',
+        ],
+      },
+      {
+        bytes: '5d0afac6783502d701ebd089be93f497bd46ea52b0fb2a4304a952572899aadb032b6a5bae56a1423ffb6bfeb3416b01748a6bbffc5ae430c572b00953dca448',
+        size: 16,
+        chunked: [
+          '5d0afac6783502d701ebd089be93f497',
+          'bd46ea52b0fb2a4304a952572899aadb',
+          '032b6a5bae56a1423ffb6bfeb3416b01',
+          '748a6bbffc5ae430c572b00953dca448',
+        ],
+      },
+      {
+        bytes: '5d0afac6783502d701ebd089be93f497bd46ea52b0fb2a4304a952572899aadb032b6a5bae56a1423ffb6bfeb3416b01748a6bbffc5ae430c572b00953dca448',
+        size: 25,
+        chunked: [
+          '5d0afac6783502d701ebd089be93f497bd46ea52b0fb2a4304',
+          'a952572899aadb032b6a5bae56a1423ffb6bfeb3416b01748a',
+          '6bbffc5ae430c572b00953dca448',
+        ],
+      },
+    ];
+
+    expect(utils.bytes.chunk('5d0afa')).to.deep.equal(['5d0afa']);
+
+    vectors.forEach((vector) => {
+      expect(utils.bytes.chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
+      expect(utils.bytes.combine(vector.chunked)).to.equal(vector.bytes);
+    });
+  });
 });

@@ -7,7 +7,7 @@ import bip32 from '../../src/keyderivation/bip32-babyjubjub';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Key Derivation/BIP32-BabyJubJub', () => {
+describe('Key Derivation/BIP32 BabyJubJub', () => {
   it('Should derive master key', () => {
     const vectors = [
       {

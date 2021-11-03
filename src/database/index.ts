@@ -7,6 +7,7 @@ import utils from '../utils';
 import type { BytesData } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
 
+// TODO: Remove JSON encoding and standardize everything as msgpack
 export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
 
 /** Database class */
@@ -87,9 +88,9 @@ class Database {
    * @param encryptionKey - AES-256-CTR encryption key
    * @param value - value to encrypt and set
    */
-  async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData[]) {
+  async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData) {
     // Encrypt data
-    const encrypted = utils.encryption.aes.ctr.encrypt(value, encryptionKey);
+    const encrypted = utils.encryption.aes.ctr.encrypt(utils.bytes.chunk(value), encryptionKey);
 
     // Write to database
     await this.put(path, encrypted, 'json');
@@ -101,12 +102,14 @@ class Database {
    * @param encryptionKey - AES-256-CTR  encryption key
    * @return decrypted value
    */
-  async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData[]> {
+  async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData> {
     // Read from database
     const encrypted: Ciphertext = await this.get(path, 'json');
 
     // Decrypt and return
-    return utils.encryption.aes.ctr.decrypt(encrypted, encryptionKey);
+    return utils.bytes.combine(
+      utils.encryption.aes.ctr.decrypt(encrypted, encryptionKey),
+    );
   }
 
   /**
