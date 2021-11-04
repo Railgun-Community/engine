@@ -6,6 +6,13 @@ import keyderivation from '../keyderivation';
 import bip39 from '../keyderivation/bip39';
 import { BytesData } from '../utils/bytes';
 import type BIP32Node from '../keyderivation';
+import type MerkleTree from '../merkletree';
+
+export type WalletDetails = {
+  treeScannedHeights: number[],
+  primaryHeight: number,
+  changeHeight: number,
+};
 
 class Wallet {
   db: Database;
@@ -18,9 +25,13 @@ class Wallet {
 
   #changeNode: BIP32Node;
 
+  // Lock scanning operations to prevent race conditions
+  private scanLock = false;
+
   /**
    * Create Wallet controller
    * @param db - database
+   * @param merkletree - merkle tree to use
    * @param id - wallet ID
    * @param encryptionKey - database encryption key
    */
@@ -59,20 +70,131 @@ class Wallet {
    */
   getWalletDBPrefix(chainID: number): string[] {
     return [
-      utils.bytes.hexlify(new BN(chainID)),
       utils.bytes.fromUTF8String('wallet'),
       utils.bytes.hexlify(this.id),
+      utils.bytes.hexlify(new BN(chainID)),
     ].map((element) => element.padStart(64, '0'));
+  }
+
+  /**
+   * Get keypair at index
+   * @param index - index to get keypair at
+   * @param change - get change keypair
+   * @param chainID - chainID for keypair
+   * @returns keypair
+   */
+  #getKeypair(
+    index: number,
+    change: boolean,
+    chainID: number | undefined,
+  ) {
+    if (change) {
+      return this.#changeNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
+    }
+    return this.#addressNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
   }
 
   /**
    * Get Address at index
    * @param index - index to get address at
+   * @param change - get change address
+   * @param chainID - chainID for address
    * @returns addresses
    */
-  getAddress(index: number, chainID: number | undefined = undefined): string {
-    const keypair = this.#addressNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
-    return keypair.publicKey;
+  getAddress(
+    index: number,
+    change: boolean,
+    chainID: number | undefined = undefined,
+  ): string {
+    return this.#getKeypair(index, change, chainID).address;
+  }
+
+  /**
+   * Gets wallet details for this wallet
+   */
+  async getWalletDetails(chainID: number): Promise<WalletDetails> {
+    let walletDetails: WalletDetails;
+
+    try {
+      // Try fetching from database
+      walletDetails = msgpack.decode(
+        utils.bytes.arrayify(
+          await this.db.getEncrypted(
+            this.getWalletDBPrefix(chainID),
+            this.#encryptionKey,
+          ),
+        ),
+      );
+    } catch {
+      // If details don't exist yet, return defaults
+      walletDetails = {
+        treeScannedHeights: [],
+        primaryHeight: 0,
+        changeHeight: 0,
+      };
+    }
+
+    return walletDetails;
+  }
+
+  /**
+   * Scans for new balances
+   * @param merkletree - merkletree to scan
+   */
+  async scan(merkletree: MerkleTree) {
+    // Don't proceed if scan write is locked
+    if (this.scanLock) return;
+
+    // Lock
+    this.scanLock = true;
+
+    // Fetch wallet details
+    const walletDetails = await this.getWalletDetails(merkletree.chainID);
+
+    // Refresh list of trees
+    // eslint-disable-next-line no-await-in-loop
+    while (await merkletree.getTreeLength(walletDetails.treeScannedHeights.length) !== 0) {
+      // Instantiate new trees in wallet data until we encounter a tree with tree length 0
+      walletDetails.treeScannedHeights[walletDetails.treeScannedHeights.length] = 0;
+    }
+
+    // Derive all primary keypairs
+    const primaryKeys = await Promise.all(
+      new Array(
+        walletDetails.primaryHeight,
+      ).map(
+        (value, index) => this.#getKeypair(index, false, merkletree.chainID),
+      ),
+    );
+
+    // Derive all change keypairs
+    const changeKeys = await Promise.all(
+      new Array(
+        walletDetails.changeHeight,
+      ).map(
+        (value, index) => this.#getKeypair(index, true, merkletree.chainID),
+      ),
+    );
+
+    // Loop through each tree
+    await Promise.all(walletDetails.treeScannedHeights.map((scannedHeight, tree) => {
+      // For each tree fetch every leaf we haven't scanned yet
+      console.log(tree);
+      return false;
+    }));
+
+    console.log(primaryKeys);
+    console.log(changeKeys);
+
+    // Write wallet details to db
+    await this.db.putEncrypted(
+      this.getWalletDBPrefix(merkletree.chainID),
+      this.#encryptionKey,
+      msgpack.encode(walletDetails),
+    );
+
+    // Release lock
+    this.scanLock = false;
   }
 
   /**
