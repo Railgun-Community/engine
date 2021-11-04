@@ -126,8 +126,8 @@ class MerkleTree {
    */
   getTreeDBPrefix(tree: number): string[] {
     return [
-      utils.bytes.hexlify(new BN(this.chainID)),
       utils.bytes.fromUTF8String(`merkletree-${this.purpose}`),
+      utils.bytes.hexlify(new BN(this.chainID)),
       utils.bytes.hexlify(new BN(tree)),
     ].map((element) => element.padStart(64, '0'));
   }
@@ -345,7 +345,7 @@ class MerkleTree {
     // Don't proceed if queue write is locked
     if (this.queueLock) return;
 
-    // Write lock queue
+    // Lock queue
     this.queueLock = true;
 
     // Loop until there isn't work to do
