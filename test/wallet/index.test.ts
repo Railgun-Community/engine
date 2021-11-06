@@ -159,6 +159,11 @@ describe('Wallet/Index', () => {
       .to.deep.equal([true, false, false, false, false, true]);
   });
 
+  it('Should scan ERC20 balances', async () => {
+    await merkletree.queueLeaves(0, leaves, 0);
+    await wallet.scan(merkletree);
+  });
+
   afterEach(() => {
     // Clean up database
     db.level.close();

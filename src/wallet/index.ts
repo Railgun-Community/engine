@@ -186,33 +186,25 @@ class Wallet {
       walletDetails.treeScannedHeights[walletDetails.treeScannedHeights.length] = 0;
     }
 
-    // Derive all primary keypairs
-    const primaryKeys = await Promise.all(
-      new Array(
-        walletDetails.primaryHeight,
-      ).map(
-        (value, index) => this.#getKeypair(index, false, merkletree.chainID),
-      ),
-    );
-
-    // Derive all change keypairs
-    const changeKeys = await Promise.all(
-      new Array(
-        walletDetails.changeHeight,
-      ).map(
-        (value, index) => this.#getKeypair(index, true, merkletree.chainID),
-      ),
-    );
-
     // Loop through each tree
-    await Promise.all(walletDetails.treeScannedHeights.map((scannedHeight, tree) => {
+    walletDetails.treeScannedHeights = await Promise.all(
+      walletDetails.treeScannedHeights.map(async (scannedHeight, tree) => {
       // For each tree fetch every leaf we haven't scanned yet
-      console.log(tree);
-      return false;
-    }));
+        const leaves = await Promise.all(
+          new Array(await merkletree.getTreeLength(tree) - scannedHeight).map(
+            (value, index) => merkletree.getCommitment(tree, index),
+          ),
+        );
 
-    console.log(primaryKeys);
-    console.log(changeKeys);
+        console.log(leaves);
+
+        // Calculate new scanned height, don't call getTreeLength again incase new leaves were
+        // committed while we were scanning
+        return scannedHeight + leaves.length;
+      }),
+    );
+
+    console.log(walletDetails);
 
     // Write wallet details to db
     await this.db.putEncrypted(
