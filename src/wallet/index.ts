@@ -5,8 +5,10 @@ import Database from '../database';
 import keyderivation from '../keyderivation';
 import bip39 from '../keyderivation/bip39';
 import { BytesData } from '../utils/bytes';
+import Note from '../note';
 import type BIP32Node from '../keyderivation';
 import type MerkleTree from '../merkletree';
+import type { Commitment } from '../merkletree';
 
 export type WalletDetails = {
   treeScannedHeights: number[],
@@ -86,7 +88,7 @@ class Wallet {
   #getKeypair(
     index: number,
     change: boolean,
-    chainID: number | undefined,
+    chainID: number | undefined = undefined,
   ) {
     if (change) {
       return this.#changeNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
@@ -135,6 +137,32 @@ class Wallet {
     }
 
     return walletDetails;
+  }
+
+  /**
+   * Scans wallet at index for new balances
+   * @param index - index of address to scan
+   * @param change - whether we're scanning the change address
+   * @param commitments - commitments to scan
+   */
+  async scanIndex(index: number, change: boolean, commitments: Commitment[]): Promise<boolean[]> {
+    // Derive keypair
+    const key = this.#getKeypair(index, change);
+
+    // Loop through passed commitments
+    return commitments.map((commitment) => {
+      // Derive shared secret
+      const sharedKey = utils.babyjubjub.ecdh(
+        key.privateKey,
+        commitment.senderPublicKey,
+      );
+
+      // Attempt to decrypt
+      const note = Note.ERC20.decrypt(commitment.ciphertext, sharedKey);
+
+      // Return if this note is addressed to us
+      return note.publicKey === key.publicKey;
+    });
   }
 
   /**
