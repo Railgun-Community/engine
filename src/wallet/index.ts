@@ -177,7 +177,7 @@ class Wallet {
     this.scanLock = true;
 
     // Fetch wallet details
-    const walletDetails = await this.getWalletDetails(merkletree.chainID);
+    let walletDetails = await this.getWalletDetails(merkletree.chainID);
 
     // Refresh list of trees
     // eslint-disable-next-line no-await-in-loop
@@ -196,15 +196,13 @@ class Wallet {
           ),
         );
 
-        console.log(leaves);
+        walletDetails = await this.findWalletHighestIndex(walletDetails, leaves);
 
         // Calculate new scanned height, don't call getTreeLength again incase new leaves were
         // committed while we were scanning
         return scannedHeight + leaves.length;
       }),
     );
-
-    console.log(walletDetails);
 
     // Write wallet details to db
     await this.db.putEncrypted(
@@ -215,6 +213,31 @@ class Wallet {
 
     // Release lock
     this.scanLock = false;
+  }
+
+  /**
+   * Find the highest index of the wallet
+   * @param walletDetails - Wallet details of the user
+   * @param commitments - User's commitments
+   */
+  async findWalletHighestIndex(
+    walletDetails: WalletDetails,
+    commitments: Commitment[],
+  ): Promise<WalletDetails> {
+    const updatedWalletDetails = { ...walletDetails };
+
+    for (let index = 0; index < updatedWalletDetails.primaryHeight + 20; index += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const commitmentsInIndices = await Promise.all([true, false].map(
+        (changeValue) => this.scanIndex(index, changeValue, commitments),
+      ));
+      const hasAsset = commitmentsInIndices.flat().includes(true);
+      if (hasAsset && index > walletDetails.primaryHeight) {
+        updatedWalletDetails.primaryHeight = index;
+      }
+    }
+
+    return updatedWalletDetails;
   }
 
   /**

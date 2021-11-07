@@ -8,7 +8,7 @@ import MerkleTree from '../../src/merkletree';
 import Note from '../../src/note';
 import utils from '../../src/utils';
 
-import Wallet from '../../src/wallet';
+import Wallet, { WalletDetails } from '../../src/wallet';
 
 import type { Commitment } from '../../src/merkletree';
 
@@ -162,6 +162,30 @@ describe('Wallet/Index', () => {
   it('Should scan ERC20 balances', async () => {
     await merkletree.queueLeaves(0, leaves, 0);
     await wallet.scan(merkletree);
+  });
+
+  it('Should find the highest index of wallet', async () => {
+    let walletDetails: WalletDetails = {
+      treeScannedHeights: [],
+      primaryHeight: 0,
+      changeHeight: 0,
+    };
+
+    // mock scanIndex
+    // user is deemed to have a balance on indices 0, 1 and 2
+    // both on main address and change address
+    let counter = 0;
+    wallet.scanIndex = async () => {
+      if (counter < 6) {
+        counter += 1;
+        return [true, false, false, true, false, false];
+      }
+      return [false, false, false, false, false, false];
+    };
+
+    walletDetails = await wallet.findWalletHighestIndex(walletDetails, leaves);
+    const expectedWalletDetails = { ...walletDetails, primaryHeight: 2 };
+    expect(walletDetails).to.deep.equal(expectedWalletDetails);
   });
 
   afterEach(() => {
