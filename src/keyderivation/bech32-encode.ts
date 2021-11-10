@@ -12,16 +12,16 @@ prefixes[137] = 'rgpoly';
 
 /**
  * Bech32 encodes address
- * @param key - public key to encode
+ * @param publicKey - public key to encode
  * @param version - version
  * @param chainID - chainID to encode
  */
-function encode(key: BytesData, chainID: number | undefined = undefined) {
+function encode(publicKey: BytesData, chainID: number | undefined = undefined) {
   // TODO: Remove reliance on bech32-buffer
   // TODO: Add bit for chain type (EVM, Solana, etc.)
   // Combine key and version byte
   const data = new Uint8Array(
-    utils.bytes.arrayify(utils.bytes.combine([new BN(utils.constants.VERSION), key])),
+    utils.bytes.arrayify(utils.bytes.combine([new BN(utils.constants.VERSION), publicKey])),
   );
 
   // Prefix exists, encode and return with prefix
@@ -45,13 +45,13 @@ function decode(address: string) {
   if (!version.eq(utils.constants.VERSION)) throw new Error('Incorrect address version');
 
   // Get key
-  const key = data.slice(2);
+  const publicKey = data.slice(2);
 
   if (prefixes.includes(decoded.prefix)) {
     // If we know this prefix, then return with chainID
     return {
       chainID: prefixes.indexOf(decoded.prefix),
-      key,
+      publicKey,
     };
   }
 
@@ -59,7 +59,7 @@ function decode(address: string) {
     // If this is the generic prefix, return undefined
     return {
       chainID: undefined,
-      key,
+      publicKey,
     };
   }
 
