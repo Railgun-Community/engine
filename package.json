@@ -4,7 +4,7 @@
   "description": "Wallet framework for Railgun",
   "author": "Railgun Contributors",
   "license": "UNLICENSED",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts",
