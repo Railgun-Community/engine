@@ -154,15 +154,28 @@ describe('Wallet/Index', () => {
   });
 
   it('Should scan ERC20 balances at index', async () => {
-    merkletree.queueLeaves(0, leaves, 0);
-    expect(await wallet.scanIndex(0, false, leaves))
-      .to.deep.equal([true, false, false, false, false, true]);
+    await merkletree.queueLeaves(0, leaves, 0);
+    expect(await wallet.scanIndex(0, false, leaves)).to.equal(true);
+    expect(await wallet.scanIndex(900, false, leaves)).to.equal(false);
   });
 
   it('Should scan ERC20 balances', async () => {
     await merkletree.queueLeaves(0, leaves, 0);
-    await wallet.scan(merkletree);
-  });
+
+    const process = wallet.scan(merkletree);
+
+    // Should respect scan lock
+    wallet.scan(merkletree);
+    await process;
+
+    expect(await wallet.getWalletDetails(1)).to.deep.equal({
+      treeScannedHeights: [5],
+      primaryHeight: 5,
+      changeHeight: 2,
+    });
+
+    expect(1 + 1).to.equal(2);
+  }).timeout(60000);
 
   afterEach(() => {
     // Clean up database

@@ -143,26 +143,58 @@ class Wallet {
    * Scans wallet at index for new balances
    * @param index - index of address to scan
    * @param change - whether we're scanning the change address
-   * @param commitments - commitments to scan
+   * @param commitments - sparse array of commitments to scan
+   * Commitment index in array should be same as commitment index in tree
    */
-  async scanIndex(index: number, change: boolean, commitments: Commitment[]): Promise<boolean[]> {
+  async scanIndex(index: number, change: boolean, commitments: Commitment[]): Promise<boolean> {
     // Derive keypair
     const key = this.#getKeypair(index, change);
 
     // Loop through passed commitments
-    return commitments.map((commitment) => {
+    const scannedCommitments = commitments.map((commitment) => {
       // Derive shared secret
       const sharedKey = utils.babyjubjub.ecdh(
         key.privateKey,
         commitment.senderPublicKey,
       );
 
-      // Attempt to decrypt
+      // Decrypt
       const note = Note.ERC20.decrypt(commitment.ciphertext, sharedKey);
 
       // Return if this note is addressed to us
       return note.publicKey === key.publicKey;
     });
+
+    return scannedCommitments.includes(true);
+  }
+
+  async scanLeaves(leaves: Commitment[], change: boolean, initialHeight: number): Promise<number> {
+    // Start at initial height
+    let height = initialHeight;
+
+    // Create sparse array of length height
+    let usedIndexes: (Promise<boolean> | boolean)[] = [];
+
+    while (usedIndexes.length < height + 20) {
+      // Loop through each index that needs to be scanned
+      for (let index = 0; index <= height + 20; index += 1) {
+        // If this index hasn't been scanned yet, scan
+        if (!usedIndexes[index]) {
+          // Start scan for this index
+          usedIndexes[index] = this.scanIndex(index, change, leaves);
+        }
+      }
+
+      // Wait till all wallets in this iteration have been scanned
+      // eslint-disable-next-line no-await-in-loop
+      usedIndexes = await Promise.all(usedIndexes);
+
+      // Update the wallet height the the highest index with a detected note
+      height = usedIndexes.lastIndexOf(true);
+    }
+
+    // Return new height
+    return height;
   }
 
   /**
@@ -186,25 +218,37 @@ class Wallet {
       walletDetails.treeScannedHeights[walletDetails.treeScannedHeights.length] = 0;
     }
 
-    // Loop through each tree
-    walletDetails.treeScannedHeights = await Promise.all(
-      walletDetails.treeScannedHeights.map(async (scannedHeight, tree) => {
-      // For each tree fetch every leaf we haven't scanned yet
-        const leaves = await Promise.all(
-          new Array(await merkletree.getTreeLength(tree) - scannedHeight).map(
-            (value, index) => merkletree.getCommitment(tree, index),
-          ),
-        );
+    // Loop through each tree and scan
+    for (let tree = 0; tree < walletDetails.treeScannedHeights.length; tree += 1) {
+      // Get scanned height
+      const scannedHeight = walletDetails.treeScannedHeights[tree];
 
-        console.log(leaves);
+      // Create sparse array of tree
+      // eslint-disable-next-line no-await-in-loop
+      const fetcher = new Array(await merkletree.getTreeLength(tree));
 
-        // Calculate new scanned height, don't call getTreeLength again incase new leaves were
-        // committed while we were scanning
-        return scannedHeight + leaves.length;
-      }),
-    );
+      // Fetch each leaf we need to scan
+      for (let index = scannedHeight; index < fetcher.length; index += 1) {
+        fetcher[index] = merkletree.getCommitment(tree, index);
+      }
 
-    console.log(walletDetails);
+      // Wait till all leaves are fetched
+      // eslint-disable-next-line no-await-in-loop
+      const leaves = await Promise.all(fetcher);
+
+      // Start scanning primary and change
+      const primaryHeight = this.scanLeaves(leaves, false, walletDetails.primaryHeight);
+      const changeHeight = this.scanLeaves(leaves, true, walletDetails.changeHeight);
+
+      // Set new height values
+      // eslint-disable-next-line no-await-in-loop
+      walletDetails.primaryHeight = await primaryHeight;
+      // eslint-disable-next-line no-await-in-loop
+      walletDetails.changeHeight = await changeHeight;
+
+      // Commit new scanned height
+      walletDetails.treeScannedHeights[tree] = leaves.length - 1;
+    }
 
     // Write wallet details to db
     await this.db.putEncrypted(

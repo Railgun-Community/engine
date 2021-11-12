@@ -78,6 +78,7 @@ function unpackPoint(packed: BytesData): string[] {
  */
 function ecdh(privateKey: BytesData, publicKey: BytesData): string {
   // TODO: remove dependance on circomlibjs
+  // TODO: OPTIMISE HEAVILY, THIS IS THE PRIMARY REASON WALLET SCAN IS SO SLOW
   // Unpack public key and map to BigInt
   const publicKeyUnpacked = unpackPoint(publicKey).map((element) => BigInt(`0x${element}`));
 
