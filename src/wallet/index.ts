@@ -27,6 +27,8 @@ class Wallet {
 
   #changeNode: BIP32Node;
 
+  gapLimit: number;
+
   // Lock scanning operations to prevent race conditions
   private scanLock = false;
 
@@ -42,9 +44,11 @@ class Wallet {
     encryptionKey: BytesData,
     mnemonic: string,
     derivationPath: string,
+    gapLimit: number = 5,
   ) {
     this.db = db;
     this.#encryptionKey = encryptionKey;
+    this.gapLimit = gapLimit;
 
     // Calculate ID
     this.id = utils.hash.sha256(utils.bytes.combine([
@@ -79,6 +83,14 @@ class Wallet {
   }
 
   /**
+   * Construct DB path from chainID
+   * @returns wallet DB path
+   */
+  getWalletDetailsPath(): string[] {
+    return this.getWalletDBPrefix(0);
+  }
+
+  /**
    * Get keypair at index
    * @param index - index to get keypair at
    * @param change - get change keypair
@@ -101,7 +113,7 @@ class Wallet {
    * @param index - index to get address at
    * @param change - get change address
    * @param chainID - chainID for address
-   * @returns addresses
+   * @returns address
    */
   getAddress(
     index: number,
@@ -114,7 +126,7 @@ class Wallet {
   /**
    * Gets wallet details for this wallet
    */
-  async getWalletDetails(chainID: number): Promise<WalletDetails> {
+  async getWalletDetails(): Promise<WalletDetails> {
     let walletDetails: WalletDetails;
 
     try {
@@ -122,7 +134,7 @@ class Wallet {
       walletDetails = msgpack.decode(
         utils.bytes.arrayify(
           await this.db.getEncrypted(
-            this.getWalletDBPrefix(chainID),
+            this.getWalletDetailsPath(),
             this.#encryptionKey,
           ),
         ),
@@ -140,13 +152,32 @@ class Wallet {
   }
 
   /**
+   * Gets list of addresses for use in UI
+   * @param chainID - chainID to get addresses for
+   */
+  async addresses(chainID: number): Promise<string[]> {
+    // Fetch wallet details for this chain
+    const walletDetails = await this.getWalletDetails();
+
+    // Derive addresses up to gas limit
+    return new Array(this.gapLimit).fill(0).map(
+      (value, index) => this.getAddress(walletDetails.primaryHeight + index, false, chainID),
+    );
+  }
+
+  /**
    * Scans wallet at index for new balances
    * @param index - index of address to scan
    * @param change - whether we're scanning the change address
    * @param commitments - sparse array of commitments to scan
    * Commitment index in array should be same as commitment index in tree
    */
-  async scanIndex(index: number, change: boolean, commitments: Commitment[]): Promise<boolean> {
+  private async scanIndex(
+    index: number,
+    change: boolean,
+    commitments: Commitment[],
+    chainID: number,
+  ): Promise<boolean> {
     // Derive keypair
     const key = this.#getKeypair(index, change);
 
@@ -165,23 +196,39 @@ class Wallet {
       return note.publicKey === key.publicKey;
     });
 
+    console.log(chainID);
+
     return scannedCommitments.includes(true);
   }
 
-  async scanLeaves(leaves: Commitment[], change: boolean, initialHeight: number): Promise<number> {
+  /**
+   * Scan leaves for balances
+   * @param leaves - sparse array of commitments to scan
+   * Commitment index in array should be same as commitment index in tree
+   * @param change - Whether to scan primary or change indexes
+   * @param initialHeight - address height to start scanning at
+   * @param chainID - chainID of leaves to scan
+   * @returns New address height
+   */
+  private async scanLeaves(
+    leaves: Commitment[],
+    change: boolean,
+    initialHeight: number,
+    chainID: number,
+  ): Promise<number> {
     // Start at initial height
     let height = initialHeight;
 
     // Create sparse array of length height
     let usedIndexes: (Promise<boolean> | boolean)[] = [];
 
-    while (usedIndexes.length < height + 20) {
+    while (usedIndexes.length < height + this.gapLimit) {
       // Loop through each index that needs to be scanned
-      for (let index = 0; index <= height + 20; index += 1) {
+      for (let index = 0; index <= height + this.gapLimit; index += 1) {
         // If this index hasn't been scanned yet, scan
         if (!usedIndexes[index]) {
           // Start scan for this index
-          usedIndexes[index] = this.scanIndex(index, change, leaves);
+          usedIndexes[index] = this.scanIndex(index, change, leaves, chainID);
         }
       }
 
@@ -209,7 +256,7 @@ class Wallet {
     this.scanLock = true;
 
     // Fetch wallet details
-    const walletDetails = await this.getWalletDetails(merkletree.chainID);
+    const walletDetails = await this.getWalletDetails();
 
     // Refresh list of trees
     // eslint-disable-next-line no-await-in-loop
@@ -237,8 +284,18 @@ class Wallet {
       const leaves = await Promise.all(fetcher);
 
       // Start scanning primary and change
-      const primaryHeight = this.scanLeaves(leaves, false, walletDetails.primaryHeight);
-      const changeHeight = this.scanLeaves(leaves, true, walletDetails.changeHeight);
+      const primaryHeight = this.scanLeaves(
+        leaves,
+        false,
+        walletDetails.primaryHeight,
+        merkletree.chainID,
+      );
+      const changeHeight = this.scanLeaves(
+        leaves,
+        true,
+        walletDetails.primaryHeight,
+        merkletree.chainID,
+      );
 
       // Set new height values
       // eslint-disable-next-line no-await-in-loop
@@ -252,7 +309,7 @@ class Wallet {
 
     // Write wallet details to db
     await this.db.putEncrypted(
-      this.getWalletDBPrefix(merkletree.chainID),
+      this.getWalletDetailsPath(),
       this.#encryptionKey,
       msgpack.encode(walletDetails),
     );

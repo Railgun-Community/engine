@@ -90,6 +90,24 @@ describe('Wallet/Index', () => {
     ]);
   });
 
+  it('Should get wallet details path', async () => {
+    expect(wallet.getWalletDetailsPath()).to.deep.equal([
+      '000000000000000000000000000000000000000000000000000077616c6c6574',
+      'c9855eb0e997395c2e4e2ada52487860509e0daf2ef8f74a6fe7ded9853efa42',
+      '0000000000000000000000000000000000000000000000000000000000000000',
+    ]);
+  });
+
+  it('Should get addresses', async () => {
+    expect(await wallet.addresses(0)).to.deep.equal([
+      'rgany1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapkz2ffkk',
+      'rgany1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2dv0hm0',
+      'rgany1qyzzx3d36h7q9d6l68jd86h8egen0vnw2hkv8rv7w7fep2md8kyfvmm50s2',
+      'rgany1qyaf5xkrufh0y8wx6yer7skpfd0u9yfludk65ulp3d9ut4ramlf2jd9z4v3',
+      'rgany1q8x0yspfamxvdykkf8upnjt7jr0h2hs86mwq0jarszkp7utd0j0s67er68c',
+    ]);
+  });
+
   it('Should derive addresses correctly', async () => {
     const vectors = [
       {
@@ -146,17 +164,11 @@ describe('Wallet/Index', () => {
   });
 
   it('Should get empty wallet details', async () => {
-    expect(await wallet.getWalletDetails(1)).to.deep.equal({
+    expect(await wallet.getWalletDetails()).to.deep.equal({
       treeScannedHeights: [],
       primaryHeight: 0,
       changeHeight: 0,
     });
-  });
-
-  it('Should scan ERC20 balances at index', async () => {
-    await merkletree.queueLeaves(0, leaves, 0);
-    expect(await wallet.scanIndex(0, false, leaves)).to.equal(true);
-    expect(await wallet.scanIndex(900, false, leaves)).to.equal(false);
   });
 
   it('Should scan ERC20 balances', async () => {
@@ -168,13 +180,11 @@ describe('Wallet/Index', () => {
     wallet.scan(merkletree);
     await process;
 
-    expect(await wallet.getWalletDetails(1)).to.deep.equal({
+    expect(await wallet.getWalletDetails()).to.deep.equal({
       treeScannedHeights: [5],
       primaryHeight: 5,
       changeHeight: 2,
     });
-
-    expect(1 + 1).to.equal(2);
   }).timeout(60000);
 
   afterEach(() => {
