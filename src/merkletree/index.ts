@@ -318,7 +318,7 @@ class MerkleTree {
           this.nodeWriteCache[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
             this.nodeWriteCache[tree][level][index - 1]
               || await this.getNode(tree, level, index - 1),
-            this.nodeWriteCache[tree][level][index],
+            this.nodeWriteCache[tree][level][index] || await this.getNode(tree, level, index),
           );
         }
       }
