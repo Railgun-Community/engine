@@ -1,5 +1,6 @@
 import BN from 'bn.js';
 import msgpack from 'msgpack-lite';
+import type { AbstractBatch } from 'abstract-leveldown';
 import utils from '../utils';
 import Database from '../database';
 import keyderivation from '../keyderivation';
@@ -169,36 +170,54 @@ class Wallet {
    * Scans wallet at index for new balances
    * @param index - index of address to scan
    * @param change - whether we're scanning the change address
-   * @param commitments - sparse array of commitments to scan
+   * @param leaves - sparse array of commitments to scan
    * Commitment index in array should be same as commitment index in tree
+   * @param tree - tree number we're scanning
+   * @param chainID - chainID we're scanning
    */
   private async scanIndex(
     index: number,
     change: boolean,
-    commitments: Commitment[],
+    leaves: Commitment[],
+    tree: number,
     chainID: number,
   ): Promise<boolean> {
     // Derive keypair
     const key = this.#getKeypair(index, change);
 
+    const writeBatch: AbstractBatch[] = [];
+
     // Loop through passed commitments
-    const scannedCommitments = commitments.map((commitment) => {
+    leaves.forEach((leaf, position) => {
       // Derive shared secret
       const sharedKey = utils.babyjubjub.ecdh(
         key.privateKey,
-        commitment.senderPublicKey,
+        leaf.senderPublicKey,
       );
 
       // Decrypt
-      const note = Note.ERC20.decrypt(commitment.ciphertext, sharedKey);
+      const note = Note.ERC20.decrypt(leaf.ciphertext, sharedKey);
 
-      // Return if this note is addressed to us
-      return note.publicKey === key.publicKey;
+      // If this note is addressed to us add to write queue
+      if (note.publicKey === key.publicKey) {
+        writeBatch.push({
+          type: 'put',
+          key: [
+            ...this.getWalletDBPrefix(chainID),
+            utils.bytes.hexlify(utils.bytes.padToLength(new BN(tree), 32)),
+            utils.bytes.hexlify(utils.bytes.padToLength(new BN(position), 32)),
+          ].join(':'),
+          value: msgpack.encode({
+            index,
+            change,
+            decrypted: note,
+          }),
+        });
+      }
     });
 
-    console.log(chainID);
-
-    return scannedCommitments.includes(true);
+    // Return if we found any leaves we could decrypt
+    return writeBatch.length > 0;
   }
 
   /**
@@ -207,6 +226,7 @@ class Wallet {
    * Commitment index in array should be same as commitment index in tree
    * @param change - Whether to scan primary or change indexes
    * @param initialHeight - address height to start scanning at
+   * @param tree- tree number we're scanning
    * @param chainID - chainID of leaves to scan
    * @returns New address height
    */
@@ -214,6 +234,7 @@ class Wallet {
     leaves: Commitment[],
     change: boolean,
     initialHeight: number,
+    tree: number,
     chainID: number,
   ): Promise<number> {
     // Start at initial height
@@ -228,7 +249,7 @@ class Wallet {
         // If this index hasn't been scanned yet, scan
         if (!usedIndexes[index]) {
           // Start scan for this index
-          usedIndexes[index] = this.scanIndex(index, change, leaves, chainID);
+          usedIndexes[index] = this.scanIndex(index, change, leaves, tree, chainID);
         }
       }
 
@@ -283,17 +304,24 @@ class Wallet {
       // eslint-disable-next-line no-await-in-loop
       const leaves = await Promise.all(fetcher);
 
+      // Delete undefined values and return sparse array
+      leaves.forEach((value, index) => {
+        if (value === undefined) delete leaves[index];
+      });
+
       // Start scanning primary and change
       const primaryHeight = this.scanLeaves(
         leaves,
         false,
         walletDetails.primaryHeight,
+        tree,
         merkletree.chainID,
       );
       const changeHeight = this.scanLeaves(
         leaves,
         true,
         walletDetails.primaryHeight,
+        tree,
         merkletree.chainID,
       );
 

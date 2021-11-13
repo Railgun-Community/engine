@@ -69,6 +69,25 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   };
 });
 
+const notesPrep2 = [
+  0, 1, 2, 3, 2, 0,
+];
+
+const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
+  const note = new Note.ERC20(
+    keypairsPopulated[keyIndex].publicKey,
+    '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+    'ffff',
+    '21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8',
+  );
+
+  return {
+    hash: note.hash,
+    senderPublicKey,
+    ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
+  };
+});
+
 describe('Wallet/Index', () => {
   beforeEach(async () => {
     // Create database and wallet
@@ -182,6 +201,16 @@ describe('Wallet/Index', () => {
 
     expect(await wallet.getWalletDetails()).to.deep.equal({
       treeScannedHeights: [5],
+      primaryHeight: 5,
+      changeHeight: 2,
+    });
+
+    await merkletree.queueLeaves(0, leaves2, 6);
+
+    await wallet.scan(merkletree);
+
+    expect(await wallet.getWalletDetails()).to.deep.equal({
+      treeScannedHeights: [11],
       primaryHeight: 5,
       changeHeight: 2,
     });
