@@ -1,10 +1,15 @@
 /* eslint-disable no-bitwise */
 // @ts-ignore
 import { babyjub } from 'circomlibjs';
+import { createPrimeField } from '@guildofweavers/galois';
 import bytes from './bytes';
 import hash from './hash';
+import constants from './constants';
 
 import type { BytesData } from './bytes';
+
+const ffModulus = BigInt(constants.SNARK_PRIME.toString());
+const FiniteField = createPrimeField(ffModulus, true);
 
 /**
  * Converts 32 byte seed to babyjubjub point
@@ -59,7 +64,7 @@ function packPoint(unpacked: BytesData[]): string {
 function unpackPoint(packed: BytesData): string[] {
   // TODO: remove dependance on circomlibjs
   // Unpack point
-  const unpacked: BigInt[] = babyjub.unpackPoint(bytes.arrayify(packed));
+  const unpacked: bigint[] = babyjub.unpackPoint(bytes.arrayify(packed));
 
   return unpacked.map((element) => {
     // Convert to byte string
@@ -68,6 +73,86 @@ function unpackPoint(packed: BytesData): string[] {
     // Pad to even length if needed
     return elementBytes.length % 2 === 0 ? elementBytes : elementBytes.padStart(elementBytes.length + 1, '0');
   });
+}
+
+/**
+ * Get element from the finite field
+ * @param el - Base 10 integer to coerce into the ff
+ * @returns ff element
+ */
+function getFFElement(el: string): bigint {
+  const parsedNumber = BigInt(el);
+
+  if (parsedNumber < 0) {
+    throw new Error('Element not in the finite field');
+  }
+
+  const ffElement = parsedNumber % ffModulus;
+  if (!FiniteField.isElement(ffElement)) {
+    throw new Error('Element not in the finite field');
+  }
+
+  return ffElement;
+}
+
+/**
+ * Add two points together
+ * @param a - point a
+ * @param b - point b
+ * @returns new point
+ */
+function addPoint(a: bigint[], b: bigint[]): bigint[] {
+  // @ts-ignore
+  const res: bigint[] = new Array<bigint>(2);
+  const F = FiniteField;
+
+  const A = getFFElement('168700');
+  const D = getFFElement('168696');
+
+  const beta = F.mul(a[0], b[1]);
+  const gamma = F.mul(a[1], b[0]);
+  const delta = F.mul(
+    F.sub(a[1], F.mul(A, a[0])),
+    F.add(b[0], b[1]),
+  );
+  const tau = F.mul(beta, gamma);
+  const dtau = F.mul(D, tau);
+
+  res[0] = F.div(
+    F.add(beta, gamma),
+    F.add(F.one, dtau),
+  );
+
+  res[1] = F.div(
+    F.add(delta, F.sub(F.mul(A, beta), gamma)),
+    F.sub(F.one, dtau),
+  );
+
+  return res;
+}
+
+/**
+ * Multiply point by an escalar
+ * @param base point
+ * @param escalar one escalar
+ * @returns new point
+ */
+function mulPointEscalar(base: bigint[], escalar: bigint): bigint[] {
+  let res = [getFFElement('0'), getFFElement('1')];
+  let rem = escalar;
+  let exp = base;
+
+  while (rem !== BigInt(0)) {
+    const isOdd = (a: bigint): boolean => (BigInt(a) & BigInt(1)) === BigInt(1);
+
+    if (isOdd(rem)) {
+      res = addPoint(res, exp);
+    }
+    exp = addPoint(exp, exp);
+    rem >>= BigInt(1);
+  }
+
+  return res;
 }
 
 /**
@@ -104,7 +189,7 @@ function privateKeyToPublicKey(privateKey: BytesData): string {
 
   // Calculate publicKey
   const publicKey = babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted)
-    .map((element: BigInt) => {
+    .map((element: bigint) => {
       const elementString = element.toString(16);
       return elementString.length % 2 === 0
         ? elementString
@@ -116,6 +201,9 @@ function privateKeyToPublicKey(privateKey: BytesData): string {
 }
 
 export default {
+  getFFElement,
+  addPoint,
+  mulPointEscalar,
   seedToPrivateKey,
   packPoint,
   unpackPoint,

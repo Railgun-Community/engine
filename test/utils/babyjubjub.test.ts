@@ -1,6 +1,7 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { createPrimeField } from '@guildofweavers/galois';
 
 import utils from '../../src/utils';
 
@@ -135,6 +136,117 @@ describe('Utils/BabyJubJub', () => {
       expect(
         utils.babyjubjub.privateKeyToPublicKey(vector.privateKey),
       ).to.equal(vector.publicKey);
+    });
+  });
+
+  describe('Finite field operations', () => {
+    const ffModulus = BigInt(utils.constants.SNARK_PRIME.toString());
+    const FiniteField = createPrimeField(ffModulus, true);
+
+    before(() => {
+      // @ts-ignore
+      utils.babyjubjub.ffModulus = ffModulus;
+      // @ts-ignore
+      utils.babyjubjub.FiniteField = FiniteField;
+    });
+
+    it('Get element from finite field', () => {
+      // error cases
+      expect(() => utils.babyjubjub.getFFElement('-1')).to.throw();
+      expect(() => utils.babyjubjub.getFFElement('3.14')).to.throw();
+      expect(() => utils.babyjubjub.getFFElement('foo')).to.throw();
+
+      // valid elements
+      expect(utils.babyjubjub.getFFElement('0')).to.deep.equal(BigInt('0'));
+      expect(utils.babyjubjub.getFFElement('1')).to.deep.equal(BigInt('1'));
+      expect(utils.babyjubjub.getFFElement('123')).to.deep.equal(BigInt('123'));
+      expect(utils.babyjubjub.getFFElement(ffModulus.toString())).to.deep.equal(BigInt('0'));
+
+      const overFFModulus = ffModulus + BigInt(1);
+      expect(utils.babyjubjub.getFFElement(overFFModulus.toString())).to.deep.equal(BigInt('1'));
+    });
+
+    it('Should add point (0,1) and (0,1)', () => {
+      const p1 = [
+        utils.babyjubjub.getFFElement('0'),
+        utils.babyjubjub.getFFElement('1'),
+      ];
+      const p2 = [
+        utils.babyjubjub.getFFElement('0'),
+        utils.babyjubjub.getFFElement('1'),
+      ];
+
+      const out = utils.babyjubjub.addPoint(p1, p2);
+      expect(out[0]).to.equal(utils.babyjubjub.getFFElement('0'));
+      expect(out[1]).to.equal(utils.babyjubjub.getFFElement('1'));
+    });
+
+    it('Should add 2 same numbers', () => {
+      const p1 = [
+        utils.babyjubjub.getFFElement('17777552123799933955779906779655732241715742912184938656739573121738514868268'),
+        utils.babyjubjub.getFFElement('2626589144620713026669568689430873010625803728049924121243784502389097019475'),
+      ];
+      const p2 = [
+        utils.babyjubjub.getFFElement('17777552123799933955779906779655732241715742912184938656739573121738514868268'),
+        utils.babyjubjub.getFFElement('2626589144620713026669568689430873010625803728049924121243784502389097019475'),
+      ];
+
+      const out = utils.babyjubjub.addPoint(p1, p2);
+      expect(out[0]).to.equal(utils.babyjubjub.getFFElement('6890855772600357754907169075114257697580319025794532037257385534741338397365'));
+      expect(out[1]).to.equal(utils.babyjubjub.getFFElement('4338620300185947561074059802482547481416142213883829469920100239455078257889'));
+    });
+
+    it('Should add 2 different numbers', () => {
+      const p1 = [
+        utils.babyjubjub.getFFElement('17777552123799933955779906779655732241715742912184938656739573121738514868268'),
+        utils.babyjubjub.getFFElement('2626589144620713026669568689430873010625803728049924121243784502389097019475'),
+      ];
+      const p2 = [
+        utils.babyjubjub.getFFElement('16540640123574156134436876038791482806971768689494387082833631921987005038935'),
+        utils.babyjubjub.getFFElement('20819045374670962167435360035096875258406992893633759881276124905556507972311'),
+      ];
+
+      const out = utils.babyjubjub.addPoint(p1, p2);
+      expect(out[0]).to.equal(utils.babyjubjub.getFFElement('7916061937171219682591368294088513039687205273691143098332585753343424131937'));
+      expect(out[1]).to.equal(utils.babyjubjub.getFFElement('14035240266687799601661095864649209771790948434046947201833777492504781204499'));
+    });
+
+    it('Should mulPointEscalar 0', () => {
+      const p = [
+        utils.babyjubjub.getFFElement('17777552123799933955779906779655732241715742912184938656739573121738514868268'),
+        utils.babyjubjub.getFFElement('2626589144620713026669568689430873010625803728049924121243784502389097019475'),
+      ];
+
+      const r = utils.babyjubjub.mulPointEscalar(p, BigInt(3));
+      let r2 = utils.babyjubjub.addPoint(p, p);
+      r2 = utils.babyjubjub.addPoint(r2, p);
+
+      expect(r2[0]).to.equal(r[0]);
+      expect(r2[1]).to.equal(r[1]);
+      expect(r[0]).to.equal(utils.babyjubjub.getFFElement('19372461775513343691590086534037741906533799473648040012278229434133483800898'));
+      expect(r[1]).to.equal(utils.babyjubjub.getFFElement('9458658722007214007257525444427903161243386465067105737478306991484593958249'));
+    });
+
+    it('Should mulPointEscalar 1', () => {
+      const p = [
+        utils.babyjubjub.getFFElement('17777552123799933955779906779655732241715742912184938656739573121738514868268'),
+        utils.babyjubjub.getFFElement('2626589144620713026669568689430873010625803728049924121243784502389097019475'),
+      ];
+
+      const r = utils.babyjubjub.mulPointEscalar(p, utils.babyjubjub.getFFElement('14035240266687799601661095864649209771790948434046947201833777492504781204499'));
+      expect(r[0]).to.equal(utils.babyjubjub.getFFElement('17070357974431721403481313912716834497662307308519659060910483826664480189605'));
+      expect(r[1]).to.equal(utils.babyjubjub.getFFElement('4014745322800118607127020275658861516666525056516280575712425373174125159339'));
+    });
+
+    it('Should mulPointEscalar 2', () => {
+      const p = [
+        utils.babyjubjub.getFFElement('6890855772600357754907169075114257697580319025794532037257385534741338397365'),
+        utils.babyjubjub.getFFElement('4338620300185947561074059802482547481416142213883829469920100239455078257889'),
+      ];
+
+      const r = utils.babyjubjub.mulPointEscalar(p, utils.babyjubjub.getFFElement('20819045374670962167435360035096875258406992893633759881276124905556507972311'));
+      expect(r[0]).to.equal(utils.babyjubjub.getFFElement('13563888653650925984868671744672725781658357821216877865297235725727006259983'));
+      expect(r[1]).to.equal(utils.babyjubjub.getFFElement('8442587202676550862664528699803615547505326611544120184665036919364004251662'));
     });
   });
 });
