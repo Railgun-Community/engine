@@ -171,7 +171,7 @@ function ecdh(privateKey: BytesData, publicKey: BytesData): string {
   const privateKeyBI = BigInt(`0x${privateKey}`);
 
   // Perform scalar mul
-  const sharedKey = babyjub.mulPointEscalar(publicKeyUnpacked, privateKeyBI)[0].toString(16);
+  const sharedKey = mulPointEscalar(publicKeyUnpacked, privateKeyBI)[0].toString(16);
 
   // Pad to even length if needed
   return sharedKey.length % 2 === 0 ? sharedKey : sharedKey.padStart(sharedKey.length + 1, '0');
