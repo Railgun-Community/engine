@@ -15,6 +15,7 @@ export type MerkleProof = {
 
 export type Commitment = {
   hash: BytesData,
+  txid: BytesData,
   senderPublicKey: BytesData,
   ciphertext: Ciphertext,
 }
@@ -285,6 +286,7 @@ class MerkleTree {
       this.nodeWriteCache[tree][level][index] = utils.bytes.hexlify(leaf.hash);
       this.commitmentWriteCache[tree][index] = {
         hash: utils.bytes.hexlify(leaf.hash),
+        txid: utils.bytes.hexlify(leaf.txid),
         senderPublicKey: utils.bytes.hexlify(leaf.senderPublicKey),
         ciphertext: {
           iv: utils.bytes.hexlify(leaf.ciphertext.iv),

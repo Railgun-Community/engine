@@ -209,6 +209,8 @@ class Wallet {
           ].join(':'),
           value: msgpack.encode({
             index,
+            txid: utils.bytes.hexlify(leaf.txid),
+            nullifier: '',
             change,
             decrypted: note,
           }),
