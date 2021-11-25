@@ -215,6 +215,8 @@ describe('Wallet/Index', () => {
       primaryHeight: 5,
       changeHeight: 2,
     });
+
+    await wallet.balances(1);
   }).timeout(60000);
 
   afterEach(() => {

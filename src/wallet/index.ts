@@ -18,6 +18,17 @@ export type WalletDetails = {
   changeHeight: number,
 };
 
+export type Balances = {
+  [ key: string ]: { // Key: Token
+    balance: BN,
+    utxos: {
+      tree: number,
+      position: number,
+      note: ERC20Note,
+    }[],
+  }
+};
+
 class Wallet {
   db: Database;
 
@@ -218,7 +229,11 @@ class Wallet {
           value: msgpack.encode({
             index,
             txid: utils.bytes.hexlify(leaf.txid),
-            nullifier: '',
+            nullifier: Note.ERC20.getNullifier(
+              key.privateKey,
+              tree,
+              position,
+            ),
             change,
             decrypted: note,
           }),
@@ -226,8 +241,37 @@ class Wallet {
       }
     });
 
+    // Write to DB
+    await this.db.batch(writeBatch);
+
     // Return if we found any leaves we could decrypt
     return writeBatch.length > 0;
+  }
+
+  /**
+   * Gets wallet balances
+   * @param chainID - chainID to get balances for
+   * @returns balances
+   */
+  async balances(chainID: number): Promise<Balances> {
+    const namespace = this.getWalletDBPrefix(chainID);
+
+    const keys: string[] = await new Promise((resolve) => {
+      const keyList: string[] = [];
+
+      this.db.streamNamespace(namespace).on('data', (key) => {
+        keyList.push(key);
+      }).on('end', () => {
+        resolve(keyList);
+      });
+    });
+
+    const values = (await Promise.all(keys.map((key) => this.db.get(key.split(':')))))
+      .map((value) => msgpack.decode(utils.bytes.arrayify(value)));
+
+    console.log(values);
+
+    return {};
   }
 
   /**
