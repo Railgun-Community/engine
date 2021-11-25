@@ -1,3 +1,4 @@
+import BN from 'bn.js';
 import utils from '../utils';
 import { BytesData } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
@@ -106,6 +107,21 @@ class ERC20Note {
       utils.bytes.hexlify(noteData.amount),
       utils.bytes.hexlify(noteData.token),
     );
+  }
+
+  /**
+   * Calculates nullifier for a given note
+   * @param privateKey - note private key
+   * @param tree - tree number
+   * @param position - position in tree
+   * @returns nullifier (hex string)
+   */
+  static getNullifier(privateKey: BytesData, tree: number, position: number): string {
+    return utils.hash.poseidon([
+      privateKey,
+      new BN(tree),
+      new BN(position),
+    ]);
   }
 }
 

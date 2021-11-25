@@ -193,4 +193,32 @@ describe('Note/ERC20', () => {
       expect(serializedContract.token).to.equal(`0x${vector.token}`);
     });
   });
+
+  it('Should calculate nullifiers', () => {
+    const nullifierVectors = [
+      {
+        privateKey: '08ad9143ae793cdfe94b77e4e52bc4e9f13666966cffa395e3d412ea4e20480f',
+        tree: 0,
+        position: 0,
+        nullifier: '086ba0bf110354e8e0e739a2f75f16b4881b860eee3a3f8ec496697d4772b070',
+      },
+      {
+        privateKey: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
+        tree: 1,
+        position: 12,
+        nullifier: '221726902157517f269638f3cb694c9fb70bf4945d4c31a37c6e980bb874c0e1',
+      },
+      {
+        privateKey: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
+        tree: 14,
+        position: 6500,
+        nullifier: '063ada7117b163a5d5d9c1b66e8ce397040163846bd2757c8fbd79f0971d3ab9',
+      },
+    ];
+
+    nullifierVectors.forEach((vector) => {
+      expect(Note.ERC20.getNullifier(vector.privateKey, vector.tree, vector.position))
+        .to.equal(vector.nullifier);
+    });
+  });
 });
