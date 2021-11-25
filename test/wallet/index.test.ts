@@ -225,6 +225,23 @@ describe('Wallet/Index', () => {
     expect(
       balances['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].balance.eqn(786420),
     ).to.equal(true);
+
+    await merkletree.nullify([{
+      txid: '000001',
+      nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
+    }, {
+      txid: '000001',
+      nullifier: '1c3ba503ad9e144683649756ce1e9a919afb56d836988435c1528ea8942f286e',
+    }]);
+
+    const balances2 = await wallet.balances(1);
+
+    expect(balances2['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].utxos.length)
+      .to.equal(10);
+
+    expect(
+      balances2['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].balance.eqn(655350),
+    ).to.equal(true);
   }).timeout(60000);
 
   afterEach(() => {
