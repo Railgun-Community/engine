@@ -95,6 +95,7 @@ describe('Wallet/Index', () => {
     db = new Database(memdown());
     merkletree = new MerkleTree(db, 1, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic);
+    wallet.loadTree(merkletree);
   });
 
   it('Should load existing wallet', async () => {
@@ -194,10 +195,10 @@ describe('Wallet/Index', () => {
   it('Should scan ERC20 balances', async () => {
     await merkletree.queueLeaves(0, leaves, 0);
 
-    const process = wallet.scan(merkletree);
+    const process = wallet.scan(1);
 
     // Should respect scan lock
-    wallet.scan(merkletree);
+    wallet.scan(1);
     await process;
 
     expect(await wallet.getWalletDetails()).to.deep.equal({
@@ -208,7 +209,7 @@ describe('Wallet/Index', () => {
 
     await merkletree.queueLeaves(0, leaves2, 6);
 
-    await wallet.scan(merkletree);
+    await wallet.scan(1);
 
     expect(await wallet.getWalletDetails()).to.deep.equal({
       treeScannedHeights: [11],
@@ -216,7 +217,14 @@ describe('Wallet/Index', () => {
       changeHeight: 2,
     });
 
-    await wallet.balances(1);
+    const balances = await wallet.balances(1);
+
+    expect(balances['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].utxos.length)
+      .to.equal(12);
+
+    expect(
+      balances['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].balance.eqn(786420),
+    ).to.equal(true);
   }).timeout(60000);
 
   afterEach(() => {

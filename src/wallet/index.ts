@@ -18,14 +18,18 @@ export type WalletDetails = {
   changeHeight: number,
 };
 
+export type TXO = {
+  tree: number,
+  position: number,
+  txid: string,
+  spendtxid: string | false,
+  note: ERC20Note,
+};
+
 export type Balances = {
   [ key: string ]: { // Key: Token
     balance: BN,
-    utxos: {
-      tree: number,
-      position: number,
-      note: ERC20Note,
-    }[],
+    utxos: TXO[],
   }
 };
 
@@ -41,6 +45,8 @@ class Wallet {
   #changeNode: BIP32Node;
 
   gapLimit: number;
+
+  merkletree: MerkleTree[] = [];
 
   // Lock scanning operations to prevent race conditions
   private scanLock = false;
@@ -80,6 +86,14 @@ class Wallet {
       mnemonic,
       derivationPath,
     }));
+  }
+
+  /**
+   * Loads merkle tree into wallet
+   * @param merkletree - merkletree to load
+   */
+  loadTree(merkletree: MerkleTree) {
+    this.merkletree[merkletree.chainID] = merkletree;
   }
 
   /**
@@ -228,6 +242,7 @@ class Wallet {
           ].join(':'),
           value: msgpack.encode({
             index,
+            spendtxid: false,
             txid: utils.bytes.hexlify(leaf.txid),
             nullifier: Note.ERC20.getNullifier(
               key.privateKey,
@@ -235,7 +250,7 @@ class Wallet {
               position,
             ),
             change,
-            decrypted: note,
+            decrypted: note.serialize(),
           }),
         });
       }
@@ -249,16 +264,19 @@ class Wallet {
   }
 
   /**
-   * Gets wallet balances
-   * @param chainID - chainID to get balances for
-   * @returns balances
+   * Get TXOs list of a chain
+   * @param chainID - chainID to get UTXOs for
+   * @returns UTXOs list
    */
-  async balances(chainID: number): Promise<Balances> {
+  async TXOs(chainID: number): Promise<TXO[]> {
+    // Get chain namespace
     const namespace = this.getWalletDBPrefix(chainID);
 
+    // Stream list of keys out
     const keys: string[] = await new Promise((resolve) => {
       const keyList: string[] = [];
 
+      // Stream list of keys and resolve on end
       this.db.streamNamespace(namespace).on('data', (key) => {
         keyList.push(key);
       }).on('end', () => {
@@ -266,12 +284,75 @@ class Wallet {
       });
     });
 
-    const values = (await Promise.all(keys.map((key) => this.db.get(key.split(':')))))
-      .map((value) => msgpack.decode(utils.bytes.arrayify(value)));
+    // Calculate UTXOs
+    const UTXOs = await Promise.all(keys.map(async (key) => {
+      // Split key into path components
+      const keySplit = key.split(':');
 
-    console.log(values);
+      // Decode UTXO
+      const UTXO = msgpack.decode(utils.bytes.arrayify(await this.db.get((keySplit))));
 
-    return {};
+      // If this UTXO hasn't already been marked as spent, check if it has
+      if (!UTXO.spendtxid) {
+        // Get nullifier
+        const nullifier = await this.merkletree[chainID].getNullified(UTXO.nullifier);
+
+        // If it's nullified write spend txid to wallet storage
+        if (nullifier) {
+          UTXO.spendtxid = nullifier;
+
+          // Write nullifier spend txid to db
+          await this.db.put(keySplit, msgpack.encode(UTXO));
+        }
+      }
+
+      const tree = utils.bytes.numberify(keySplit[3]).toNumber();
+      const position = utils.bytes.numberify(keySplit[4]).toNumber();
+
+      return {
+        tree,
+        position,
+        txid: UTXO.txid,
+        spendtxid: UTXO.spendtxid,
+        note: Note.ERC20.deserialize(UTXO.decrypted),
+      };
+    }));
+
+    return UTXOs;
+  }
+
+  /**
+   * Gets wallet balances
+   * @param chainID - chainID to get balances for
+   * @returns balances
+   */
+  async balances(chainID: number): Promise<Balances> {
+    const TXOs = await this.TXOs(chainID);
+    const balances: Balances = {};
+
+    // Loop through each TXO and add to balances if unspent
+    TXOs.forEach((txOutput) => {
+      // If we don't have an entry for this token yet, create one
+      if (!balances[txOutput.note.token]) {
+        balances[txOutput.note.token] = {
+          balance: new BN(0),
+          utxos: [],
+        };
+      }
+
+      // If txOutput is unspent process it
+      if (!txOutput.spendtxid) {
+        // Store txo
+        balances[txOutput.note.token].utxos.push(txOutput);
+
+        // Increment balance
+        balances[txOutput.note.token].balance.iadd(
+          utils.bytes.numberify(txOutput.note.amount),
+        );
+      }
+    });
+
+    return balances;
   }
 
   /**
@@ -321,9 +402,9 @@ class Wallet {
 
   /**
    * Scans for new balances
-   * @param merkletree - merkletree to scan
+   * @param chainID - chainID to scan
    */
-  async scan(merkletree: MerkleTree) {
+  async scan(chainID: number) {
     // Don't proceed if scan write is locked
     if (this.scanLock) return;
 
@@ -334,8 +415,10 @@ class Wallet {
     const walletDetails = await this.getWalletDetails();
 
     // Refresh list of trees
-    // eslint-disable-next-line no-await-in-loop
-    while (await merkletree.getTreeLength(walletDetails.treeScannedHeights.length) !== 0) {
+    while (
+      // eslint-disable-next-line no-await-in-loop
+      await this.merkletree[chainID].getTreeLength(walletDetails.treeScannedHeights.length) !== 0
+    ) {
       // Instantiate new trees in wallet data until we encounter a tree with tree length 0
       walletDetails.treeScannedHeights[walletDetails.treeScannedHeights.length] = 0;
     }
@@ -347,11 +430,11 @@ class Wallet {
 
       // Create sparse array of tree
       // eslint-disable-next-line no-await-in-loop
-      const fetcher = new Array(await merkletree.getTreeLength(tree));
+      const fetcher = new Array(await this.merkletree[chainID].getTreeLength(tree));
 
       // Fetch each leaf we need to scan
       for (let index = scannedHeight; index < fetcher.length; index += 1) {
-        fetcher[index] = merkletree.getCommitment(tree, index);
+        fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
       }
 
       // Wait till all leaves are fetched
@@ -369,14 +452,14 @@ class Wallet {
         false,
         walletDetails.primaryHeight,
         tree,
-        merkletree.chainID,
+        this.merkletree[chainID].chainID,
       );
       const changeHeight = this.scanLeaves(
         leaves,
         true,
         walletDetails.primaryHeight,
         tree,
-        merkletree.chainID,
+        this.merkletree[chainID].chainID,
       );
 
       // Set new height values
