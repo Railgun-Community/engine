@@ -70,6 +70,53 @@ export default [
     anonymous: false,
     inputs: [
       {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'treeNumber',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'startPosition',
+        type: 'uint256',
+      },
+      {
+        components: [
+          {
+            internalType: 'uint256[2]',
+            name: 'pubkey',
+            type: 'uint256[2]',
+          },
+          {
+            internalType: 'uint256',
+            name: 'random',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'amount',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'token',
+            type: 'address',
+          },
+        ],
+        indexed: false,
+        internalType: 'struct GeneratedCommitment[]',
+        name: 'commitments',
+        type: 'tuple[]',
+      },
+    ],
+    name: 'GeneratedCommitmentBatch',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         components: [
           {
             components: [
@@ -394,7 +441,7 @@ export default [
         type: 'address',
       },
     ],
-    name: 'TokeDelisting',
+    name: 'TokenDelisting',
     type: 'event',
   },
   {
@@ -488,24 +535,31 @@ export default [
   {
     inputs: [
       {
-        internalType: 'uint256[2]',
-        name: '_pubkey',
-        type: 'uint256[2]',
-      },
-      {
-        internalType: 'uint256',
-        name: '_random',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'address',
-        name: '_tokenField',
-        type: 'address',
+        components: [
+          {
+            internalType: 'uint256[2]',
+            name: 'pubkey',
+            type: 'uint256[2]',
+          },
+          {
+            internalType: 'uint256',
+            name: 'random',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'amount',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'token',
+            type: 'address',
+          },
+        ],
+        internalType: 'struct GeneratedCommitment[]',
+        name: '_transactions',
+        type: 'tuple[]',
       },
     ],
     name: 'generateDeposit',

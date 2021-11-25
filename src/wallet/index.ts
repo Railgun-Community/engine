@@ -7,6 +7,7 @@ import keyderivation from '../keyderivation';
 import bip39 from '../keyderivation/bip39';
 import { BytesData } from '../utils/bytes';
 import Note from '../note';
+import type { ERC20Note } from '../note';
 import type BIP32Node from '../keyderivation';
 import type MerkleTree from '../merkletree';
 import type { Commitment } from '../merkletree';
@@ -189,14 +190,21 @@ class Wallet {
 
     // Loop through passed commitments
     leaves.forEach((leaf, position) => {
-      // Derive shared secret
-      const sharedKey = utils.babyjubjub.ecdh(
-        key.privateKey,
-        leaf.senderPublicKey,
-      );
+      let note: ERC20Note;
 
-      // Decrypt
-      const note = Note.ERC20.decrypt(leaf.ciphertext, sharedKey);
+      if ('ciphertext' in leaf) {
+        // Derive shared secret
+        const sharedKey = utils.babyjubjub.ecdh(
+          key.privateKey,
+          leaf.senderPublicKey,
+        );
+
+        // Decrypt
+        note = Note.ERC20.decrypt(leaf.ciphertext, sharedKey);
+      } else {
+        // Deserialize
+        note = Note.ERC20.deserialize(leaf.data);
+      }
 
       // If this note is addressed to us add to write queue
       if (note.publicKey === key.publicKey) {

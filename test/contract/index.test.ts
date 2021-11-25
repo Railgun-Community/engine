@@ -9,6 +9,8 @@ import config from '../config.test';
 
 import RailgunContract from '../../src/contract';
 
+import Note from '../../src/note';
+
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
@@ -46,17 +48,21 @@ describe('Contract/Index', () => {
     });
 
     const transaction = await contract.generateDeposit(
-      '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
-      '09f4c002178ea5c93820d44e8e83409fe6dcc9ed710f6d5c7b0817e173799d04',
-      '01',
-      config.contracts.rail,
+      [
+        new Note.ERC20(
+          '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
+          '09f4c002178ea5c93820d44e8e83409fe6dcc9ed710f6d5c7b0817e173799d04',
+          '01',
+          config.contracts.rail,
+        ),
+      ],
     );
 
     // Send transaction on chain
     wallet.sendTransaction(transaction);
 
     // Wait for events to fire
-    await new Promise((resolve) => contract.contract.once('NewGeneratedCommitment', resolve));
+    await new Promise((resolve) => contract.contract.once('GeneratedCommitmentBatch', resolve));
 
     // Check result
     expect(result).to.deep.equal({
@@ -64,11 +70,10 @@ describe('Contract/Index', () => {
       startingIndex: 0,
       commitments: [
         {
-          hash: '0eb464151996a2fd7a6557b26854b612ed9564faac2352085a8a3fdf9b5940fc',
           pubkey: '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
           random: '09f4c002178ea5c93820d44e8e83409fe6dcc9ed710f6d5c7b0817e173799d04',
           amount: '01',
-          tokenField: config.contracts.rail,
+          token: config.contracts.rail,
         },
       ],
     });

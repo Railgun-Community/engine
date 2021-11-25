@@ -2,6 +2,13 @@ import utils from '../utils';
 import { BytesData } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
 
+export type ERC20NoteSerialized = {
+  publicKey: string,
+  random: string,
+  amount: string,
+  token: string,
+};
+
 class ERC20Note {
   publicKey: string;
 
@@ -69,6 +76,35 @@ class ERC20Note {
       decryptedValues[2],
       decryptedValues[3],
       decryptedValues[4],
+    );
+  }
+
+  /**
+   * Gets JSON serialized version of note
+   * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
+   * @returns serialized note
+   */
+  serialize(forContract: boolean = false): ERC20NoteSerialized {
+    return {
+      publicKey: utils.bytes.hexlify(this.publicKey, forContract),
+      random: utils.bytes.hexlify(this.random, forContract),
+      amount: utils.bytes.hexlify(this.amount, forContract),
+      token: utils.bytes.hexlify(this.token, forContract),
+    };
+  }
+
+  /**
+   * Creates note from serialized note JSON
+   * @param noteData - serialized note data
+   * @returns Note
+   */
+  static deserialize(noteData: ERC20NoteSerialized): ERC20Note {
+    // Call hexlify to ensure all note data isn't 0x prefixed
+    return new ERC20Note(
+      utils.bytes.hexlify(noteData.publicKey),
+      utils.bytes.hexlify(noteData.random),
+      utils.bytes.hexlify(noteData.amount),
+      utils.bytes.hexlify(noteData.token),
     );
   }
 }

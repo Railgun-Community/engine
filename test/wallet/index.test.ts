@@ -85,8 +85,7 @@ const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
   return {
     hash: note.hash,
     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-    senderPublicKey,
-    ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
+    data: note.serialize(),
   };
 });
 

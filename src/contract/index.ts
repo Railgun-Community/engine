@@ -2,7 +2,7 @@ import { Contract, PopulatedTransaction, BigNumber } from 'ethers';
 import type { Listener, Provider } from '@ethersproject/abstract-provider';
 import utils from '../utils';
 import abi from './abi';
-import { BytesData } from '../utils/bytes';
+import type { ERC20Note } from '../note';
 
 class RailgunContract {
   contract: Contract;
@@ -33,54 +33,56 @@ class RailgunContract {
    * @param listener - listener callback
    */
   treeUpdates(listener: Listener) {
-    this.contract.on('NewGeneratedCommitment', (
-      treeNumber: BigNumber,
-      nextLeafIndex: BigNumber,
-      hash: BigNumber,
-      pubkey: Array<BigNumber>,
-      random: BigNumber,
-      amount: BigNumber,
-      tokenField: string,
-    ) => {
-      listener({
-        tree: treeNumber.toNumber(),
-        startingIndex: nextLeafIndex.toNumber(),
-        commitments: [{
-          hash: utils.bytes.hexlify(hash.toHexString()),
-          pubkey: utils.babyjubjub.packPoint(pubkey.map((el) => el.toHexString())),
-          random: utils.bytes.hexlify(random.toHexString()),
-          amount: utils.bytes.hexlify(amount.toHexString()),
-          tokenField: utils.bytes.hexlify(tokenField, true),
-        }],
-      });
-    });
+    this.contract.on(
+      'GeneratedCommitmentBatch',
+      (
+        treeNumber: BigNumber,
+        startPosition: BigNumber,
+        commitments: {
+          pubkey: [BigNumber, BigNumber];
+          random: BigNumber;
+          amount: BigNumber;
+          token: string;
+        }[],
+      ) => {
+        listener({
+          tree: treeNumber.toNumber(),
+          startingIndex: startPosition.toNumber(),
+          commitments: commitments.map((commitment) => ({
+            pubkey: utils.babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
+            random: utils.bytes.hexlify(commitment.random.toHexString()),
+            amount: utils.bytes.hexlify(commitment.amount.toHexString()),
+            token: utils.bytes.hexlify(commitment.token, true),
+          })),
+        });
+      },
+    );
   }
 
   /**
    * Get generateDeposit populated transaction
-   * @param publicKey - public key of node
-   * @param random - randomness value of note
-   * @param amount - amount of note
-   * @param token - token of node
+   * @param notes - notes to deposit to
    * @returns Populated transaction
    */
   generateDeposit(
-    publicKey: BytesData,
-    random: BytesData,
-    amount: BytesData,
-    token: BytesData,
+    notes: ERC20Note[],
   ): Promise<PopulatedTransaction> {
-    const publicKeyFormatted = utils.babyjubjub.unpackPoint(publicKey).map((el) => `0x${el}`);
-    const randomFormatted = utils.bytes.hexlify(random, true);
-    const amountFormatted = utils.bytes.hexlify(amount, true);
-    const tokenFormatted = utils.bytes.hexlify(token, true);
+    // Serialize for contract
+    const inputs = notes.map((note) => {
+      const serialized = note.serialize(true);
+      const pubkeyUnpacked = utils.babyjubjub.unpackPoint(serialized.publicKey)
+        .map((element) => utils.bytes.hexlify(element, true));
 
-    return this.contract.populateTransaction.generateDeposit(
-      publicKeyFormatted,
-      randomFormatted,
-      amountFormatted,
-      tokenFormatted,
-    );
+      return {
+        pubkey: pubkeyUnpacked,
+        random: serialized.random,
+        amount: serialized.amount,
+        token: serialized.token,
+      };
+    });
+
+    // Return populated transaction
+    return this.contract.populateTransaction.generateDeposit(inputs);
   }
 }
 

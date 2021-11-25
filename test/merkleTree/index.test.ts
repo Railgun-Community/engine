@@ -287,8 +287,9 @@ describe('MerkleTree/Index', () => {
       {
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-        senderPublicKey: new BN('05', 10),
-        ciphertext: { iv: [0x06], data: [[0x07], [0x08]] },
+        data: {
+          publicKey: '00', random: '01', amount: '02', token: '0x03',
+        },
       },
     ], 0);
 
@@ -302,8 +303,9 @@ describe('MerkleTree/Index', () => {
     expect(await merkletree.getCommitment(0, 1)).to.deep.equal({
       hash: '04',
       txid: '1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      senderPublicKey: '05',
-      ciphertext: { iv: '06', data: ['07', '08'] },
+      data: {
+        publicKey: '00', random: '01', amount: '02', token: '03',
+      },
     });
   });
 
@@ -476,6 +478,12 @@ describe('MerkleTree/Index', () => {
 
     // Batch should have been rejected
     expect(await merkletreeTest.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+  });
+
+  it('Should store nullifiers', async () => {
+    expect(await merkletree.getNullified('00')).to.equal(false);
+    await merkletree.nullify([{ nullifier: '00', txid: '01' }]);
+    expect(await merkletree.getNullified('00')).to.equal('01');
   });
 
   afterEach(() => {

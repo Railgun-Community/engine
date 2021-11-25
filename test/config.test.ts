@@ -15,7 +15,7 @@ let config = {
 };
 
 try {
-  config = require('./configOverrides.test');
+  config = require('./configOverrides.test').default;
 } catch {}
 
 export default config;

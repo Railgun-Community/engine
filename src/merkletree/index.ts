@@ -5,6 +5,7 @@ import utils from '../utils';
 import type Database from '../database';
 import type { BytesData } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
+import type { ERC20NoteSerialized } from '../note/erc20';
 
 export type MerkleProof = {
   leaf: BytesData,
@@ -18,7 +19,11 @@ export type Commitment = {
   txid: BytesData,
   senderPublicKey: BytesData,
   ciphertext: Ciphertext,
-}
+} | {
+  hash: BytesData,
+  txid: BytesData,
+  data: ERC20NoteSerialized, // | ERC721NoteSerialized
+};
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (root: BytesData) => Promise<boolean>;
@@ -157,9 +162,56 @@ class MerkleTree {
   getCommitmentDBPath(tree: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      utils.bytes.hexlify((new BN('0')).notn(32)), // 2^256-1
+      utils.bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
       utils.bytes.hexlify(new BN(index)),
     ].map((element) => element.padStart(64, '0'));
+  }
+
+  /**
+   * Construct DB path from nullifier
+   * @param nullifier - nullifier to get path for
+   * @returns database path
+   */
+  getNullifierDBPath(nullifier: BytesData): string[] {
+    return [
+      utils.bytes.fromUTF8String(`merkletree-${this.purpose}`),
+      utils.bytes.hexlify(new BN(this.chainID)),
+      utils.bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
+      utils.bytes.hexlify(nullifier),
+    ].map((element) => element.padStart(64, '0'));
+  }
+
+  /**
+   * Gets if a nullifier has been seen
+   * @param nullifier - nullifier to check
+   * @returns txid of spend transaction if spent, else false
+   */
+  async getNullified(nullifier: BytesData): Promise<string | false> {
+    // Return if nullifier is set
+    try {
+      return await this.db.get(this.getNullifierDBPath(
+        nullifier,
+      ));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Adds nullifiers to database
+   * @param nullifiers - nullifiers to add to db
+   */
+  async nullify(nullifiers: {
+    nullifier: BytesData,
+    txid: BytesData,
+  }[]): Promise<void> {
+    // Build write batch for nullifiers
+    const nullifierWriteBatch: AbstractBatch[] = nullifiers.map(
+      (nullifier) => ({ type: 'put', key: this.getNullifierDBPath(nullifier.nullifier).join(':'), value: nullifier.txid }),
+    );
+
+    // Write to DB
+    return this.db.batch(nullifierWriteBatch);
   }
 
   /**
@@ -219,7 +271,7 @@ class MerkleTree {
    * Write tree cache to DB
    * @param tree - tree to write
    */
-  private async writeTreeCache(tree: number) {
+  private async writeTreeCache(tree: number): Promise<void> {
     // Build write batch operation
     const nodeWriteBatch: AbstractBatch[] = [];
     const commitmentWriteBatch: AbstractBatch[] = [];
@@ -284,15 +336,29 @@ class MerkleTree {
     leaves.forEach((leaf) => {
       // Set writecache value
       this.nodeWriteCache[tree][level][index] = utils.bytes.hexlify(leaf.hash);
-      this.commitmentWriteCache[tree][index] = {
-        hash: utils.bytes.hexlify(leaf.hash),
-        txid: utils.bytes.hexlify(leaf.txid),
-        senderPublicKey: utils.bytes.hexlify(leaf.senderPublicKey),
-        ciphertext: {
-          iv: utils.bytes.hexlify(leaf.ciphertext.iv),
-          data: leaf.ciphertext.data.map((element) => utils.bytes.hexlify(element)),
-        },
-      };
+
+      if ('ciphertext' in leaf) {
+        this.commitmentWriteCache[tree][index] = {
+          hash: utils.bytes.hexlify(leaf.hash),
+          txid: utils.bytes.hexlify(leaf.txid),
+          senderPublicKey: utils.bytes.hexlify(leaf.senderPublicKey),
+          ciphertext: {
+            iv: utils.bytes.hexlify(leaf.ciphertext.iv),
+            data: leaf.ciphertext.data.map((element) => utils.bytes.hexlify(element)),
+          },
+        };
+      } else {
+        this.commitmentWriteCache[tree][index] = {
+          hash: utils.bytes.hexlify(leaf.hash),
+          txid: utils.bytes.hexlify(leaf.txid),
+          data: {
+            publicKey: utils.bytes.hexlify(leaf.data.publicKey),
+            random: utils.bytes.hexlify(leaf.data.random),
+            amount: utils.bytes.hexlify(leaf.data.amount),
+            token: utils.bytes.hexlify(leaf.data.token),
+          },
+        };
+      }
 
       // Increment index
       index += 1;
