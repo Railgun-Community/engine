@@ -172,6 +172,13 @@ class Database {
       });
     });
   }
+
+  /**
+   * Closes DB connections and cleans up listeners
+   */
+  close() {
+    this.level.close();
+  }
 }
 
 export default Database;

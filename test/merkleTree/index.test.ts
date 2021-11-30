@@ -488,6 +488,6 @@ describe('MerkleTree/Index', () => {
 
   afterEach(() => {
     // Clean up database
-    db.level.close();
+    db.close();
   });
 });

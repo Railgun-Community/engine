@@ -8,7 +8,7 @@
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts",
-    "test": "npm run lint && nyc mocha --require ts-node/register --exit 'test/**/*.test.ts'",
+    "test": "npm run lint && nyc mocha --require ts-node/register 'test/**/*.test.ts'",
     "compile": "npm run clean && tsc",
     "prepack": "npm run compile"
   },
