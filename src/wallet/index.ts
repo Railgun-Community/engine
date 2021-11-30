@@ -34,9 +34,9 @@ export type Balances = {
 };
 
 class Wallet {
-  db: Database;
+  private db: Database;
 
-  id: string;
+  readonly id: string;
 
   #encryptionKey: BytesData;
 
@@ -44,9 +44,9 @@ class Wallet {
 
   #changeNode: BIP32Node;
 
-  gapLimit: number;
+  readonly gapLimit: number;
 
-  merkletree: MerkleTree[] = [];
+  readonly merkletree: MerkleTree[] = [];
 
   // Lock scanning operations to prevent race conditions
   private scanLock = false;

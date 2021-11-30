@@ -12,7 +12,6 @@ export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' |
 
 /** Database class */
 class Database {
-  /** Levelup store */
   readonly level: LevelUp;
 
   /**
