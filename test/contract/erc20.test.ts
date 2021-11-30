@@ -7,7 +7,8 @@ import { ethers } from 'ethers';
 import erc20abi from '../erc20abi.test';
 import config from '../config.test';
 
-import RailgunContract from '../../src/contract';
+import Contract from '../../src/contract';
+import type { ERC20RailgunContract } from '../../src/contract';
 
 import Note from '../../src/note';
 
@@ -18,7 +19,7 @@ let provider: ethers.providers.JsonRpcProvider;
 let wallet: ethers.Wallet;
 let snapshot: number;
 let token: ethers.Contract;
-let contract: RailgunContract;
+let contract: ERC20RailgunContract;
 
 describe('Contract/Index', () => {
   beforeEach(async () => {
@@ -30,7 +31,7 @@ describe('Contract/Index', () => {
 
     snapshot = await provider.send('evm_snapshot', []);
     token = new ethers.Contract(config.contracts.rail, erc20abi, wallet);
-    contract = new RailgunContract(config.contracts.proxy, provider);
+    contract = new Contract.ERC20(config.contracts.proxy, provider);
 
     const balance = await token.balanceOf(wallet.address);
     await token.approve(contract.address, balance);
@@ -39,6 +40,11 @@ describe('Contract/Index', () => {
   it('Should retrieve merkle root from contract', async () => {
     expect(await contract.merkleRoot()).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
   }).timeout(30000);
+
+  it('Should return valid merkle roots', async () => {
+    expect(await contract.validateRoot('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90')).to.equal(true);
+    expect(await contract.validateRoot('09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d')).to.equal(false);
+  });
 
   it('Should parse tree update events', async () => {
     let result;
@@ -80,6 +86,7 @@ describe('Contract/Index', () => {
   }).timeout(30000);
 
   afterEach(async () => {
+    contract.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });
