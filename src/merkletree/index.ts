@@ -26,7 +26,7 @@ export type Commitment = {
 };
 
 // eslint-disable-next-line no-unused-vars
-export type RootValidator = (root: BytesData) => Promise<boolean>;
+export type RootValidator = (tree: number, root: BytesData) => Promise<boolean>;
 
 // Declare depth
 const depths = {
@@ -400,7 +400,7 @@ class MerkleTree {
     }
 
     // Check if new root is valid
-    if (await this.validateRoot(this.nodeWriteCache[tree][this.depth][0])) {
+    if (await this.validateRoot(tree, this.nodeWriteCache[tree][this.depth][0])) {
       // Commit to DB if valid
       await this.writeTreeCache(tree);
     } else {
