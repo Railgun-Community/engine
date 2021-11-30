@@ -62,8 +62,8 @@ class Wallet {
     db: Database,
     encryptionKey: BytesData,
     mnemonic: string,
-    derivationPath: string = "m/1984'/0'/0'",
-    gapLimit: number = 5,
+    derivationPath: string,
+    gapLimit: number,
   ) {
     this.db = db;
     this.#encryptionKey = encryptionKey;
