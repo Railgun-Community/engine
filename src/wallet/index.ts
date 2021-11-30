@@ -97,6 +97,14 @@ class Wallet {
   }
 
   /**
+   * Unload merkle tree by chainID
+   * @param chainID - chainID of tree to unload
+   */
+  unloadTree(chainID: number) {
+    delete this.merkletree[chainID];
+  }
+
+  /**
    * Construct DB path from chainID
    * @param chainID - chainID
    * @returns wallet DB prefix
