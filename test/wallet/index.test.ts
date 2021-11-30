@@ -257,6 +257,7 @@ describe('Wallet/Index', () => {
 
   afterEach(() => {
     // Clean up database
+    wallet.unloadTree(merkletree.chainID);
     db.close();
   });
 });
