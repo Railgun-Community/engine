@@ -62,7 +62,7 @@ class Wallet {
     db: Database,
     encryptionKey: BytesData,
     mnemonic: string,
-    derivationPath: string,
+    derivationPath: string = "m/1984'/0'/0'",
     gapLimit: number = 5,
   ) {
     this.db = db;
@@ -504,6 +504,7 @@ class Wallet {
     encryptionKey: BytesData,
     mnemonic: string,
     derivationPath: string = "m/1984'/0'/0'",
+    gapLimit: number = 5,
   ): Promise<Wallet> {
     // Calculate ID
     const id = utils.hash.sha256(utils.bytes.combine([
@@ -521,7 +522,7 @@ class Wallet {
     ], encryptionKey, mnemonic);
 
     // Create wallet object and return
-    return new Wallet(db, encryptionKey, mnemonic, derivationPath);
+    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit);
   }
 
   /**
@@ -535,6 +536,7 @@ class Wallet {
     db: Database,
     encryptionKey: BytesData,
     id: BytesData,
+    gapLimit: number = 5,
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
     const { mnemonic, derivationPath } = msgpack.decode(
@@ -547,7 +549,7 @@ class Wallet {
     );
 
     // Create wallet object and return
-    return new Wallet(db, encryptionKey, mnemonic, derivationPath);
+    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit);
   }
 }
 
