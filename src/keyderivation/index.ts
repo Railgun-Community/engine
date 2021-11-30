@@ -71,6 +71,13 @@ class BIP32Node {
       address,
     };
   }
+
+  /**
+   * Generate mnemonic
+   */
+  static createMnemonic(): string {
+    return bip39.generateMnemonic();
+  }
 }
 
 export default BIP32Node;

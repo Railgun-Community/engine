@@ -3,6 +3,7 @@ import type { ethers } from 'ethers';
 import Contracts from './contract';
 import type { ERC20RailgunContract } from './contract';
 import Database from './database';
+import KeyDerivation from './keyderivation';
 import MerkleTree from './merkletree';
 
 class Lepton {
@@ -61,6 +62,13 @@ class Lepton {
    */
   get networks(): number[] {
     return this.contracts.map((element, index) => index);
+  }
+
+  /**
+   * Generate mnemonic
+   */
+  static createMnemonic(): string {
+    return KeyDerivation.createMnemonic();
   }
 }
 
