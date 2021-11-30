@@ -34,9 +34,9 @@ class ERC20RailgunContract {
    * @param root - root to validate
    * @returns isValid
    */
-  validateRoot(root: BytesData): Promise<boolean> {
-    // Return result of roothistory
-    return this.contract.rootHistory(utils.bytes.hexlify(root, true));
+  validateRoot(tree: number, root: BytesData): Promise<boolean> {
+    // Return result of root history lookup
+    return this.contract.rootHistory(tree, utils.bytes.hexlify(root, true));
   }
 
   /**

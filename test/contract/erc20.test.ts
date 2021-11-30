@@ -42,8 +42,8 @@ describe('Contract/Index', () => {
   }).timeout(30000);
 
   it('Should return valid merkle roots', async () => {
-    expect(await contract.validateRoot('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90')).to.equal(true);
-    expect(await contract.validateRoot('09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d')).to.equal(false);
+    expect(await contract.validateRoot(0, '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90')).to.equal(true);
+    expect(await contract.validateRoot(0, '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d')).to.equal(false);
   });
 
   it('Should parse tree update events', async () => {
