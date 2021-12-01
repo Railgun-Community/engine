@@ -21,6 +21,8 @@ export type WalletDetails = {
 export type TXO = {
   tree: number,
   position: number,
+  index: number,
+  change: boolean,
   txid: string,
   spendtxid: string | false,
   note: ERC20Note,
@@ -250,6 +252,7 @@ class Wallet {
           ].join(':'),
           value: msgpack.encode({
             index,
+            change,
             spendtxid: false,
             txid: utils.bytes.hexlify(leaf.txid),
             nullifier: Note.ERC20.getNullifier(
@@ -257,7 +260,6 @@ class Wallet {
               tree,
               position,
             ),
-            change,
             decrypted: note.serialize(),
           }),
         });
@@ -293,7 +295,7 @@ class Wallet {
     });
 
     // Calculate UTXOs
-    const UTXOs = await Promise.all(keys.map(async (key) => {
+    return Promise.all(keys.map(async (key) => {
       // Split key into path components
       const keySplit = key.split(':');
 
@@ -320,13 +322,13 @@ class Wallet {
       return {
         tree,
         position,
+        index: UTXO.index,
+        change: UTXO.change,
         txid: UTXO.txid,
         spendtxid: UTXO.spendtxid,
         note: Note.ERC20.deserialize(UTXO.decrypted),
       };
     }));
-
-    return UTXOs;
   }
 
   /**
