@@ -119,6 +119,15 @@ describe('Wallet/Index', () => {
     ]);
   });
 
+  it('Should get keypairs', async () => {
+    expect(wallet.getKeypair(testEncryptionKey, 0, false)).to.deep.equal({
+      address: 'rgany1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapkz2ffkk',
+      privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
+      publicKey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+    });
+    expect(() => { wallet.getKeypair('111111', 0, false); }).to.throw('Wrong encryption key');
+  });
+
   it('Should get addresses', async () => {
     expect(await wallet.addresses(0)).to.deep.equal([
       'rgany1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapkz2ffkk',

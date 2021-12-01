@@ -134,11 +134,16 @@ class Wallet {
    * @param chainID - chainID for keypair
    * @returns keypair
    */
-  #getKeypair(
+  getKeypair(
+    encryptionKey: BytesData,
     index: number,
     change: boolean,
     chainID: number | undefined = undefined,
   ) {
+    if (utils.bytes.hexlify(encryptionKey) !== utils.bytes.hexlify(this.#encryptionKey)) {
+      throw new Error('Wrong encryption key');
+    }
+
     if (change) {
       return this.#changeNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
     }
@@ -157,7 +162,7 @@ class Wallet {
     change: boolean,
     chainID: number | undefined = undefined,
   ): string {
-    return this.#getKeypair(index, change, chainID).address;
+    return this.getKeypair(this.#encryptionKey, index, change, chainID).address;
   }
 
   /**
@@ -219,7 +224,7 @@ class Wallet {
     chainID: number,
   ): Promise<boolean> {
     // Derive keypair
-    const key = this.#getKeypair(index, change);
+    const key = this.getKeypair(this.#encryptionKey, index, change);
 
     const writeBatch: AbstractBatch[] = [];
 
