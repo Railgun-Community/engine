@@ -7,7 +7,7 @@ const SNARK_PRIME: BN = new BN(
 
 const VERSION: BN = new BN('1', 10);
 
-export default {
+export {
   SNARK_PRIME,
   VERSION,
 };

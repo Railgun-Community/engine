@@ -2,7 +2,11 @@ import crypto from 'crypto';
 import { utils as ethersutils } from 'ethers';
 // @ts-ignore
 import { poseidon as poseidonHash } from 'circomlibjs';
-import bytes from './bytes';
+import {
+  arrayify,
+  hexlify,
+  numberify,
+} from './bytes';
 
 import type { BytesData } from './bytes';
 
@@ -78,7 +82,7 @@ export type PBKDF2Digest = typeof hashes[number];
 function sha256(preimage: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = bytes.arrayify(preimage);
+  const preimageFormatted = arrayify(preimage);
 
   // Hash and return
   return ethersutils.sha256(preimageFormatted).slice(2);
@@ -92,7 +96,7 @@ function sha256(preimage: BytesData): string {
 function sha512(preimage: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = bytes.arrayify(preimage);
+  const preimageFormatted = arrayify(preimage);
 
   // Hash and return
   return ethersutils.sha512(preimageFormatted).slice(2);
@@ -107,8 +111,8 @@ function sha512(preimage: BytesData): string {
 function sha512HMAC(key: BytesData, data: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const keyFormatted = bytes.arrayify(key);
-  const dataFormatted = bytes.arrayify(data);
+  const keyFormatted = arrayify(key);
+  const dataFormatted = arrayify(data);
 
   // Hash HMAC and return
   return ethersutils.computeHmac(
@@ -126,7 +130,7 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
 function keccak256(preimage: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = bytes.arrayify(preimage);
+  const preimageFormatted = arrayify(preimage);
 
   // Hash and return
   return ethersutils.keccak256(preimageFormatted).slice(2);
@@ -140,7 +144,7 @@ function keccak256(preimage: BytesData): string {
 function poseidon(preimage: BytesData[]): string {
   // TODO: Remove reliance on circomlibjs
   // Convert all bytes into number strings
-  const preimageFormatted = preimage.map((bytedata) => bytes.numberify(bytedata).toString(10));
+  const preimageFormatted = preimage.map((bytedata) => numberify(bytedata).toString(10));
 
   // Hash
   const hash = poseidonHash(preimageFormatted).toString(16);
@@ -164,10 +168,10 @@ function pbkdf2(
   keyLength: number,
   digest: PBKDF2Digest,
 ): string {
-  const secretFormatted = new Uint8Array(bytes.arrayify(secret));
-  const saltFormatted = new Uint8Array(bytes.arrayify(salt));
+  const secretFormatted = new Uint8Array(arrayify(secret));
+  const saltFormatted = new Uint8Array(arrayify(salt));
 
-  return bytes.hexlify(crypto.pbkdf2Sync(
+  return hexlify(crypto.pbkdf2Sync(
     secretFormatted,
     saltFormatted,
     iterations,
@@ -176,7 +180,7 @@ function pbkdf2(
   ));
 }
 
-export default {
+export {
   sha256,
   sha512,
   sha512HMAC,

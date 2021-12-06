@@ -1,8 +1,12 @@
 /* eslint-disable no-bitwise */
 // @ts-ignore
 import { babyjub } from 'circomlibjs';
-import bytes from './bytes';
-import hash from './hash';
+import {
+  arrayify,
+  numberify,
+  hexlify,
+} from './bytes';
+import { poseidon } from './hash';
 
 import type { BytesData } from './bytes';
 
@@ -21,7 +25,7 @@ function seedToPrivateKey(seed: BytesData): string {
   // guaranteeing that any low order points in babyjubjub get deleted
 
   // Get poseidon hash of seed
-  const seedHash = bytes.arrayify(hash.poseidon([seed]));
+  const seedHash = arrayify(poseidon([seed]));
 
   // Prune seed hash
   seedHash[0] &= 0xF8;
@@ -29,10 +33,10 @@ function seedToPrivateKey(seed: BytesData): string {
   seedHash[31] |= 0x40;
 
   // Convert from little endian bytes to number and shift right
-  const key = bytes.numberify(seedHash, 'le').shrn(3);
+  const key = numberify(seedHash, 'le').shrn(3);
 
   // Return hex bytes key
-  return bytes.hexlify(key);
+  return hexlify(key);
 }
 
 /**
@@ -44,11 +48,11 @@ function packPoint(unpacked: BytesData[]): string {
   // TODO: remove dependance on circomlibjs
   // Format point elements
   const unpackedFormatted = unpacked.map(
-    (element) => BigInt(bytes.numberify(element).toString(10)),
+    (element) => BigInt(numberify(element).toString(10)),
   );
 
   // Pack point
-  return bytes.hexlify(babyjub.packPoint(unpackedFormatted));
+  return hexlify(babyjub.packPoint(unpackedFormatted));
 }
 
 /**
@@ -59,7 +63,7 @@ function packPoint(unpacked: BytesData[]): string {
 function unpackPoint(packed: BytesData): string[] {
   // TODO: remove dependance on circomlibjs
   // Unpack point
-  const unpacked: BigInt[] = babyjub.unpackPoint(bytes.arrayify(packed));
+  const unpacked: BigInt[] = babyjub.unpackPoint(arrayify(packed));
 
   return unpacked.map((element) => {
     // Convert to byte string
@@ -100,7 +104,7 @@ function ecdh(privateKey: BytesData, publicKey: BytesData): string {
 function privateKeyToPublicKey(privateKey: BytesData): string {
   // TODO: remove dependance on circomlibjs
   // Format as number string
-  const privateKeyFormatted = bytes.numberify(privateKey).toString(10);
+  const privateKeyFormatted = numberify(privateKey).toString(10);
 
   // Calculate publicKey
   const publicKey = babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted)
@@ -115,7 +119,7 @@ function privateKeyToPublicKey(privateKey: BytesData): string {
   return packPoint(publicKey);
 }
 
-export default {
+export {
   seedToPrivateKey,
   packPoint,
   unpackPoint,

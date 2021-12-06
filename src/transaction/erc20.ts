@@ -6,9 +6,7 @@ export type Output = {
 }
 
 class ERC20Transaction {
-  token: string | null = null;
-
-  tree: number | null = null;
+  token: string;
 
   outputs: Output[] = [];
 

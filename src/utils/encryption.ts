@@ -1,5 +1,10 @@
 import crypto from 'crypto';
-import bytes from './bytes';
+import {
+  arrayify,
+  hexlify,
+  padToLength,
+  random,
+} from './bytes';
 import type { BytesData } from './bytes';
 
 export interface Ciphertext {
@@ -16,13 +21,13 @@ const aes = {
      * @param iv - initialization vector to use
      * @returns ciphertext bundle
      */
-    encrypt(plaintext: BytesData[], key: BytesData, iv: BytesData = bytes.random(16)): Ciphertext {
+    encrypt(plaintext: BytesData[], key: BytesData, iv: BytesData = random(16)): Ciphertext {
       // If types are strings, convert to bytes array
       const plaintextFormatted = plaintext.map(
-        (block) => new Uint8Array(bytes.arrayify(block)),
+        (block) => new Uint8Array(arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(bytes.arrayify(bytes.padToLength(key, 32)));
-      const ivFormatted = new Uint8Array(bytes.arrayify(iv));
+      const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
+      const ivFormatted = new Uint8Array(arrayify(iv));
 
       // Initialize cipher
       const cipher = crypto.createCipheriv(
@@ -38,7 +43,7 @@ const aes = {
 
       // Return encrypted data bundle
       return {
-        iv: bytes.hexlify(ivFormatted),
+        iv: hexlify(ivFormatted),
         data,
       };
     },
@@ -52,10 +57,10 @@ const aes = {
     decrypt(ciphertext: Ciphertext, key: BytesData): BytesData[] {
       // If types are strings, convert to bytes array
       const ciphertextFormatted = ciphertext.data.map(
-        (block) => new Uint8Array(bytes.arrayify(block)),
+        (block) => new Uint8Array(arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(bytes.arrayify(bytes.padToLength(key, 32)));
-      const ivFormatted = new Uint8Array(bytes.arrayify(ciphertext.iv));
+      const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
+      const ivFormatted = new Uint8Array(arrayify(ciphertext.iv));
 
       // Initialize decipher
       const decipher = crypto.createDecipheriv(
@@ -72,6 +77,6 @@ const aes = {
   },
 };
 
-export default {
+export {
   aes,
 };

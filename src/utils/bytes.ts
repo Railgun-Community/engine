@@ -264,7 +264,7 @@ function combine(data: BytesData[]): string {
   return dataFormatted.join('');
 }
 
-export default {
+export {
   random,
   hexlify,
   arrayify,
