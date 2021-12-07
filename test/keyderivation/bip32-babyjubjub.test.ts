@@ -2,7 +2,11 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import bip32 from '../../src/keyderivation/bip32-babyjubjub';
+import {
+  getMasterKeyFromSeed,
+  childKeyDerivationHardened,
+  getPathSegments,
+} from '../../src/keyderivation/bip32-babyjubjub';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -33,7 +37,7 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      const masterKey = bip32.getMasterKeyFromSeed(vector.seed);
+      const masterKey = getMasterKeyFromSeed(vector.seed);
 
       expect(masterKey.chainCode).to.equal(vector.chainCode);
       expect(masterKey.chainKey).to.equal(vector.chainKey);
@@ -79,7 +83,7 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
 
     vectors.forEach((vector) => {
       expect(
-        bip32.childKeyDerivationHardened(vector.parent, vector.index),
+        childKeyDerivationHardened(vector.parent, vector.index),
       ).to.deep.equal(vector.child);
     });
   });
@@ -107,11 +111,11 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
     ];
 
     valid.forEach((vector) => {
-      expect(bip32.getPathSegments(vector.path)).to.deep.equal(vector.segments);
+      expect(getPathSegments(vector.path)).to.deep.equal(vector.segments);
     });
 
     invalid.forEach((vector) => {
-      expect(() => bip32.getPathSegments(vector)).to.throw('Invalid derivation path');
+      expect(() => getPathSegments(vector)).to.throw('Invalid derivation path');
     });
   });
 });

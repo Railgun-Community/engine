@@ -15,4 +15,4 @@ class ERC20Transaction {
   withdraw: BN | null = null;
 }
 
-export default ERC20Transaction;
+export { ERC20Transaction };

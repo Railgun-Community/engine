@@ -2,7 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import utils from '../../src/utils';
+import { encryption } from '../../src/utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -64,7 +64,7 @@ describe('Utils/Encryption', () => {
 
     vectors.forEach((vector) => {
       // Test encryption returns correct ciphertext bundles
-      expect(utils.encryption.aes.ctr.encrypt(
+      expect(encryption.aes.ctr.encrypt(
         vector.data,
         vector.key,
         vector.iv,
@@ -74,7 +74,7 @@ describe('Utils/Encryption', () => {
       });
 
       // Test decryption returns correct plaintext array
-      expect(utils.encryption.aes.ctr.decrypt(
+      expect(encryption.aes.ctr.decrypt(
         {
           iv: vector.iv,
           data: vector.encrypted,
@@ -83,12 +83,12 @@ describe('Utils/Encryption', () => {
       )).to.deep.equal(vector.data);
 
       // Test encryption with random generated IV is decrypted correctly
-      const ciphertext = utils.encryption.aes.ctr.encrypt(
+      const ciphertext = encryption.aes.ctr.encrypt(
         vector.data,
         vector.key,
       );
 
-      expect(utils.encryption.aes.ctr.decrypt(
+      expect(encryption.aes.ctr.decrypt(
         ciphertext,
         vector.key,
       )).to.deep.equal(vector.data);

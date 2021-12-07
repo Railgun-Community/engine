@@ -4,9 +4,9 @@ import chaiAsPromised from 'chai-as-promised';
 
 import BN from 'bn.js';
 import memdown from 'memdown';
-import Database from '../../src/database';
+import { Database } from '../../src/database';
 
-import MerkleTree from '../../src/merkletree';
+import { MerkleTree } from '../../src/merkletree';
 import type { TreePurpose } from '../../src/merkletree';
 
 chai.use(chaiAsPromised);

@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import * as bech32 from 'bech32-buffer';
-import utils from '../utils';
+import { bytes, constants } from '../utils';
 import type { BytesData } from '../utils/bytes';
 
 const prefixes: string[] = [];
@@ -21,7 +21,7 @@ function encode(publicKey: BytesData, chainID: number | undefined = undefined) {
   // TODO: Add bit for chain type (EVM, Solana, etc.)
   // Combine key and version byte
   const data = new Uint8Array(
-    utils.bytes.arrayify(utils.bytes.combine([new BN(utils.constants.VERSION), publicKey])),
+    bytes.arrayify(bytes.combine([new BN(constants.VERSION), publicKey])),
   );
 
   // Prefix exists, encode and return with prefix
@@ -36,13 +36,13 @@ function decode(address: string) {
   const decoded = bech32.decode(address);
 
   // Hexlify data
-  const data = utils.bytes.hexlify(decoded.data);
+  const data = bytes.hexlify(decoded.data);
 
   // Get version
-  const version = utils.bytes.numberify(data.slice(0, 2));
+  const version = bytes.numberify(data.slice(0, 2));
 
   // Throw if address version is not supported
-  if (!version.eq(utils.constants.VERSION)) throw new Error('Incorrect address version');
+  if (!version.eq(constants.VERSION)) throw new Error('Incorrect address version');
 
   // Get key
   const publicKey = data.slice(2);
@@ -67,7 +67,7 @@ function decode(address: string) {
   throw new Error('Address prefix unrecognized');
 }
 
-export default {
+export {
   encode,
   decode,
 };

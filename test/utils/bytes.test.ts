@@ -3,7 +3,7 @@ import BN from 'bn.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import utils from '../../src/utils';
+import { bytes } from '../../src/utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -116,46 +116,46 @@ const stringVectors = [
 describe('Utils/Bytes', () => {
   it('Should return random values', () => {
     // Check length of random values is what we expect
-    expect(utils.bytes.random().length).to.equal(64);
-    expect(utils.bytes.random(1).length).to.equal(2);
-    expect(utils.bytes.random(128).length).to.equal(256);
+    expect(bytes.random().length).to.equal(64);
+    expect(bytes.random(1).length).to.equal(2);
+    expect(bytes.random(128).length).to.equal(256);
   });
 
   it('Should hexlify', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
       expect(
-        utils.bytes.hexlify(`0x${vector.hex}`),
+        bytes.hexlify(`0x${vector.hex}`),
       ).to.equal(vector.hex);
 
       // Test hex string to hex string
       expect(
-        utils.bytes.hexlify(vector.hex),
+        bytes.hexlify(vector.hex),
       ).to.equal(vector.hex);
 
       // Test hex string to hex string prefixed
       expect(
-        utils.bytes.hexlify(vector.hex, true),
+        bytes.hexlify(vector.hex, true),
       ).to.equal(`0x${vector.hex}`);
 
       // Test bytes array to hex string
       expect(
-        utils.bytes.hexlify(vector.array),
+        bytes.hexlify(vector.array),
       ).to.equal(vector.hex);
 
       // Test bytes array to hex string prefixed
       expect(
-        utils.bytes.hexlify(vector.array, true),
+        bytes.hexlify(vector.array, true),
       ).to.equal(`0x${vector.hex}`);
 
       // Test number to hex string
       expect(
-        utils.bytes.hexlify(vector.number),
+        bytes.hexlify(vector.number),
       ).to.equal(vector.hex);
 
       // Test number to hex string prefixed
       expect(
-        utils.bytes.hexlify(vector.number, true),
+        bytes.hexlify(vector.number, true),
       ).to.equal(`0x${vector.hex}`);
     });
   });
@@ -164,22 +164,22 @@ describe('Utils/Bytes', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
       expect(
-        utils.bytes.arrayify(`0x${vector.hex}`),
+        bytes.arrayify(`0x${vector.hex}`),
       ).to.deep.equal(vector.array);
 
       // Test hex string to byte array
       expect(
-        utils.bytes.arrayify(vector.hex),
+        bytes.arrayify(vector.hex),
       ).to.deep.equal(vector.array);
 
       // Test byte array to byte array
       expect(
-        utils.bytes.arrayify(vector.array),
+        bytes.arrayify(vector.array),
       ).to.deep.equal(vector.array);
 
       // Test number to byte array
       expect(
-        utils.bytes.arrayify(vector.number),
+        bytes.arrayify(vector.number),
       ).to.deep.equal(vector.array);
     });
   });
@@ -188,32 +188,32 @@ describe('Utils/Bytes', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
       expect(
-        utils.bytes.numberify(`0x${vector.hex}`).eq(vector.number),
+        bytes.numberify(`0x${vector.hex}`).eq(vector.number),
       ).to.equal(true);
 
       // Test hex string to number
       expect(
-        utils.bytes.numberify(vector.hex).eq(vector.number),
+        bytes.numberify(vector.hex).eq(vector.number),
       ).to.equal(true);
 
       // Test hex string to number little endian
       expect(
-        utils.bytes.numberify(vector.hex, 'le').eq(vector.numberLe),
+        bytes.numberify(vector.hex, 'le').eq(vector.numberLe),
       ).to.equal(true);
 
       // Test byte array to number
       expect(
-        utils.bytes.numberify(vector.array).eq(vector.number),
+        bytes.numberify(vector.array).eq(vector.number),
       ).to.equal(true);
 
       // Test byte array to number little endian
       expect(
-        utils.bytes.numberify(vector.array, 'le').eq(vector.numberLe),
+        bytes.numberify(vector.array, 'le').eq(vector.numberLe),
       ).to.equal(true);
 
       // Test number to number
       expect(
-        utils.bytes.numberify(vector.number).eq(vector.number),
+        bytes.numberify(vector.number).eq(vector.number),
       ).to.equal(true);
     });
   });
@@ -221,28 +221,28 @@ describe('Utils/Bytes', () => {
   it('Should pad to length', () => {
     padVectors.forEach((vector) => {
       expect(
-        utils.bytes.padToLength(vector.original, 16),
+        bytes.padToLength(vector.original, 16),
       ).to.deep.equal(vector.left16);
 
       expect(
-        utils.bytes.padToLength(vector.original, 32),
+        bytes.padToLength(vector.original, 32),
       ).to.deep.equal(vector.left32);
 
       expect(
-        utils.bytes.padToLength(vector.original, 16, 'right'),
+        bytes.padToLength(vector.original, 16, 'right'),
       ).to.deep.equal(vector.right16);
 
       expect(
-        utils.bytes.padToLength(vector.original, 32, 'right'),
+        bytes.padToLength(vector.original, 32, 'right'),
       ).to.deep.equal(vector.right32);
     });
 
     expect(
-      () => utils.bytes.padToLength('000000', 2),
+      () => bytes.padToLength('000000', 2),
     ).to.throw();
 
     expect(
-      () => utils.bytes.padToLength([0, 0, 0], 2),
+      () => bytes.padToLength([0, 0, 0], 2),
     ).to.throw();
   });
 
@@ -263,7 +263,7 @@ describe('Utils/Bytes', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(utils.bytes.reverseBytes(vector.bytes)).to.deep.equal(vector.reversed);
+      expect(bytes.reverseBytes(vector.bytes)).to.deep.equal(vector.reversed);
     });
   });
 
@@ -271,12 +271,12 @@ describe('Utils/Bytes', () => {
     stringVectors.forEach((vector) => {
       // Test bytes -> string
       expect(
-        utils.bytes.toUTF8String(vector.hex),
+        bytes.toUTF8String(vector.hex),
       ).to.equal(vector.utf8);
 
       // Test string -> bytes
       expect(
-        utils.bytes.fromUTF8String(vector.utf8),
+        bytes.fromUTF8String(vector.utf8),
       ).to.equal(vector.hex);
     });
 
@@ -294,17 +294,17 @@ describe('Utils/Bytes', () => {
     // Loop through each group and test
     vectors.forEach((vector) => {
       // Test against Buffer output as reference
-      const bytes = Buffer.from(vector, 'utf8').toString('hex');
+      const bytesdata = Buffer.from(vector, 'utf8').toString('hex');
 
       // Test bytes -> string
       expect(
-        utils.bytes.toUTF8String(bytes),
+        bytes.toUTF8String(bytesdata),
       ).to.equal(vector);
 
       // Test string -> bytes
       expect(
-        utils.bytes.fromUTF8String(vector),
-      ).to.equal(bytes);
+        bytes.fromUTF8String(vector),
+      ).to.equal(bytesdata);
     });
 
     // Test full string
@@ -312,12 +312,12 @@ describe('Utils/Bytes', () => {
 
     // Test bytes -> string
     expect(
-      utils.bytes.toUTF8String(fullBytes),
+      bytes.toUTF8String(fullBytes),
     ).to.equal(testString);
 
     // Test string -> bytes
     expect(
-      utils.bytes.fromUTF8String(testString),
+      bytes.fromUTF8String(testString),
     ).to.equal(fullBytes);
   });
 
@@ -357,11 +357,11 @@ describe('Utils/Bytes', () => {
       },
     ];
 
-    expect(utils.bytes.chunk('5d0afa')).to.deep.equal(['5d0afa']);
+    expect(bytes.chunk('5d0afa')).to.deep.equal(['5d0afa']);
 
     vectors.forEach((vector) => {
-      expect(utils.bytes.chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
-      expect(utils.bytes.combine(vector.chunked)).to.equal(vector.bytes);
+      expect(bytes.chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
+      expect(bytes.combine(vector.chunked)).to.equal(vector.bytes);
     });
   });
 });

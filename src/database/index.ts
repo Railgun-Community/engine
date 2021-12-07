@@ -2,7 +2,7 @@ import levelup from 'levelup';
 import encode from 'encoding-down';
 import type { AbstractLevelDOWN, AbstractBatch } from 'abstract-leveldown';
 import type { LevelUp } from 'levelup';
-import utils from '../utils';
+import { bytes, encryption } from '../utils';
 
 import type { BytesData } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
@@ -33,7 +33,7 @@ class Database {
   static pathToKey(path: BytesData[]): string {
     // Convert to hex string, pad to 32 bytes, and join with :
     return path.map(
-      (element) => utils.bytes.hexlify(element).toLowerCase().padStart(64, '0'),
+      (element) => bytes.hexlify(element).toLowerCase().padStart(64, '0'),
     ).join(':');
   }
 
@@ -89,7 +89,7 @@ class Database {
    */
   async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData) {
     // Encrypt data
-    const encrypted = utils.encryption.aes.ctr.encrypt(utils.bytes.chunk(value), encryptionKey);
+    const encrypted = encryption.aes.ctr.encrypt(bytes.chunk(value), encryptionKey);
 
     // Write to database
     await this.put(path, encrypted, 'json');
@@ -106,8 +106,8 @@ class Database {
     const encrypted: Ciphertext = await this.get(path, 'json');
 
     // Decrypt and return
-    return utils.bytes.combine(
-      utils.encryption.aes.ctr.decrypt(encrypted, encryptionKey),
+    return bytes.combine(
+      encryption.aes.ctr.decrypt(encrypted, encryptionKey),
     );
   }
 
@@ -181,4 +181,4 @@ class Database {
   }
 }
 
-export default Database;
+export { Database };

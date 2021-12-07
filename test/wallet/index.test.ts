@@ -3,12 +3,12 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import memdown from 'memdown';
-import Database from '../../src/database';
-import MerkleTree from '../../src/merkletree';
-import Note from '../../src/note';
-import utils from '../../src/utils';
+import { Database } from '../../src/database';
+import { MerkleTree } from '../../src/merkletree';
+import { ERC20Note } from '../../src/note';
+import { babyjubjub } from '../../src/utils';
 
-import Wallet from '../../src/wallet';
+import { Wallet } from '../../src/wallet';
 
 import type { Commitment } from '../../src/merkletree';
 
@@ -47,7 +47,7 @@ const senderPublicKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84
 
 const keypairsPopulated = keypairs.map((key) => ({
   ...key,
-  sharedKey: utils.babyjubjub.ecdh(key.privateKey, senderPublicKey),
+  sharedKey: babyjubjub.ecdh(key.privateKey, senderPublicKey),
 }));
 
 const notesPrep = [
@@ -55,7 +55,7 @@ const notesPrep = [
 ];
 
 const leaves: Commitment[] = notesPrep.map((keyIndex) => {
-  const note = new Note.ERC20(
+  const note = new ERC20Note(
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     'ffff',
@@ -75,7 +75,7 @@ const notesPrep2 = [
 ];
 
 const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
-  const note = new Note.ERC20(
+  const note = new ERC20Note(
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     'ffff',

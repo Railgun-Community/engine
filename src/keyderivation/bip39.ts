@@ -25,7 +25,7 @@ function entropyToMnemonic(mnemonic: string) {
   return bip39.entropyToMnemonic(mnemonic);
 }
 
-export default {
+export {
   generateMnemonic,
   validateMnemonic,
   mnemonicToSeed,

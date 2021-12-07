@@ -4,13 +4,11 @@ import chaiAsPromised from 'chai-as-promised';
 
 import { ethers } from 'ethers';
 
-import erc20abi from '../erc20abi.test';
-import config from '../config.test';
+import { abi as erc20abi } from '../erc20abi.test';
+import { config } from '../config.test';
 
-import Contract from '../../src/contract';
-import type { ERC20RailgunContract } from '../../src/contract';
-
-import Note from '../../src/note';
+import { ERC20RailgunContract } from '../../src/contract';
+import { ERC20Note } from '../../src/note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -31,7 +29,7 @@ describe('Contract/Index', () => {
 
     snapshot = await provider.send('evm_snapshot', []);
     token = new ethers.Contract(config.contracts.rail, erc20abi, wallet);
-    contract = new Contract.ERC20(config.contracts.proxy, provider);
+    contract = new ERC20RailgunContract(config.contracts.proxy, provider);
 
     const balance = await token.balanceOf(wallet.address);
     await token.approve(contract.address, balance);
@@ -55,7 +53,7 @@ describe('Contract/Index', () => {
 
     const transaction = await contract.generateDeposit(
       [
-        new Note.ERC20(
+        new ERC20Note(
           '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
           '09f4c002178ea5c93820d44e8e83409fe6dcc9ed710f6d5c7b0817e173799d04',
           '01',

@@ -1,10 +1,9 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
-import Contracts from './contract';
-import type { ERC20RailgunContract } from './contract';
-import Database from './database';
-import KeyDerivation from './keyderivation';
-import MerkleTree from './merkletree';
+import { ERC20RailgunContract } from './contract';
+import { Database } from './database';
+import { BIP32Node } from './keyderivation';
+import { MerkleTree } from './merkletree';
 
 class Lepton {
   readonly db;
@@ -34,7 +33,7 @@ class Lepton {
     if (this.merkletree[chainID]) this.unloadNetwork(chainID);
 
     // Create contract instance
-    this.contracts[chainID] = new Contracts.ERC20(address, provider);
+    this.contracts[chainID] = new ERC20RailgunContract(address, provider);
 
     // Create ERC20
     this.merkletree[chainID] = {
@@ -68,8 +67,8 @@ class Lepton {
    * Generate mnemonic
    */
   static createMnemonic(): string {
-    return KeyDerivation.createMnemonic();
+    return BIP32Node.createMnemonic();
   }
 }
 
-export default Lepton;
+export { Lepton };

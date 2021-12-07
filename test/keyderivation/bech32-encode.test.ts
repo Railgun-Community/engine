@@ -2,7 +2,10 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import bech32 from '../../src/keyderivation/bech32-encode';
+import {
+  encode,
+  decode,
+} from '../../src/keyderivation/bech32-encode';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -28,18 +31,18 @@ describe('Key Derivation/Bech32 Encode', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(bech32.encode(vector.publicKey, vector.chainID))
+      expect(encode(vector.publicKey, vector.chainID))
         .to.equal(vector.address);
 
-      expect(bech32.decode(vector.address)).to.deep.equal({
+      expect(decode(vector.address)).to.deep.equal({
         publicKey: vector.publicKey,
         chainID: vector.chainID,
       });
     });
 
-    expect(() => { bech32.decode('rgany1qthxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxvewd2r7'); })
+    expect(() => { decode('rgany1qthxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxvewd2r7'); })
       .to.throw('Incorrect address version');
-    expect(() => { bech32.decode('rgunknown1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxv0uzkrc'); })
+    expect(() => { decode('rgunknown1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxv0uzkrc'); })
       .to.throw('Address prefix unrecognized');
   });
 });

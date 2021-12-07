@@ -2,19 +2,25 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import bip39 from '../../src/keyderivation/bip39';
+import {
+  generateMnemonic,
+  mnemonicToEntropy,
+  entropyToMnemonic,
+  validateMnemonic,
+  mnemonicToSeed,
+} from '../../src/keyderivation/bip39';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/BIP39', () => {
   it('Should generate mnemonic', () => {
-    expect(bip39.generateMnemonic().split(' ').length).to.equal(12);
-    expect(bip39.generateMnemonic(192).split(' ').length).to.equal(18);
-    expect(bip39.generateMnemonic(256).split(' ').length).to.equal(24);
+    expect(generateMnemonic().split(' ').length).to.equal(12);
+    expect(generateMnemonic(192).split(' ').length).to.equal(18);
+    expect(generateMnemonic(256).split(' ').length).to.equal(24);
 
     // Should only have letters and spaces
-    expect(/^[a-z ]+$/.test(bip39.generateMnemonic())).to.equal(true);
+    expect(/^[a-z ]+$/.test(generateMnemonic())).to.equal(true);
   });
 
   it('Should convert mnemonic to entropy and back', () => {
@@ -34,8 +40,8 @@ describe('Key Derivation/BIP39', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(bip39.mnemonicToEntropy(vector.mnemonic)).to.equal(vector.entropy);
-      expect(bip39.entropyToMnemonic(vector.entropy)).to.equal(vector.mnemonic);
+      expect(mnemonicToEntropy(vector.mnemonic)).to.equal(vector.entropy);
+      expect(entropyToMnemonic(vector.entropy)).to.equal(vector.mnemonic);
     });
   });
 
@@ -53,11 +59,11 @@ describe('Key Derivation/BIP39', () => {
     ];
 
     valid.forEach((vector) => {
-      expect(bip39.validateMnemonic(vector)).to.equal(true);
+      expect(validateMnemonic(vector)).to.equal(true);
     });
 
     invalid.forEach((vector) => {
-      expect(bip39.validateMnemonic(vector)).to.equal(false);
+      expect(validateMnemonic(vector)).to.equal(false);
     });
   });
 
@@ -84,7 +90,7 @@ describe('Key Derivation/BIP39', () => {
 
     vectors.forEach((vector) => {
       expect(
-        bip39.mnemonicToSeed(vector.mnemonic, vector.password || undefined),
+        mnemonicToSeed(vector.mnemonic, vector.password || undefined),
       ).to.equal(vector.seed);
     });
   });

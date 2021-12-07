@@ -1,7 +1,5 @@
-import ERC20 from './erc20';
+import { ERC20Note } from './erc20';
 
-export type ERC20Note = ERC20;
-
-export default {
-  ERC20,
+export {
+  ERC20Note,
 };

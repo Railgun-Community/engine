@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import utils from '../utils';
+import { bytes, hash } from '../utils';
 import type { BytesData } from '../utils/bytes';
 
 export type KeyNode = {
@@ -7,7 +7,7 @@ export type KeyNode = {
   chainCode: string,
 };
 
-const CURVE_SEED = utils.bytes.fromUTF8String('babyjubjub seed');
+const CURVE_SEED = bytes.fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
 
 /**
@@ -17,7 +17,7 @@ const HARDENED_OFFSET = 0x80000000;
  */
 function getMasterKeyFromSeed(seed: BytesData): KeyNode {
   // HMAC with seed to get I
-  const I = utils.hash.sha512HMAC(CURVE_SEED, seed);
+  const I = hash.sha512HMAC(CURVE_SEED, seed);
 
   // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
   const chainKey = I.slice(0, 64);
@@ -37,13 +37,13 @@ function getMasterKeyFromSeed(seed: BytesData): KeyNode {
  */
 function childKeyDerivationHardened(node: KeyNode, index: number): KeyNode {
   // Convert index to bytes as 32bit big endian
-  const indexFormatted = utils.bytes.padToLength(new BN(index + HARDENED_OFFSET), 4);
+  const indexFormatted = bytes.padToLength(new BN(index + HARDENED_OFFSET), 4);
 
   // Calculate HMAC preimage
   const preimage = `00${node.chainKey}${indexFormatted}`;
 
   // Calculate I
-  const I = utils.hash.sha512HMAC(node.chainCode, preimage);
+  const I = hash.sha512HMAC(node.chainCode, preimage);
 
   // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
   const chainKey = I.slice(0, 64);
@@ -85,7 +85,7 @@ function getPathSegments(path: string): number[] {
     .map((el) => parseInt(el, 10));
 }
 
-export default {
+export {
   getMasterKeyFromSeed,
   childKeyDerivationHardened,
   isValidPath,

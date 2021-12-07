@@ -2,7 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import utils from '../../src/utils';
+import { babyjubjub } from '../../src/utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -33,7 +33,7 @@ describe('Utils/BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(utils.babyjubjub.seedToPrivateKey(vector.seed)).to.equal(vector.key);
+      expect(babyjubjub.seedToPrivateKey(vector.seed)).to.equal(vector.key);
     });
   });
 
@@ -63,8 +63,8 @@ describe('Utils/BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(utils.babyjubjub.packPoint(vector.unpacked)).to.equal(vector.packed);
-      expect(utils.babyjubjub.unpackPoint(vector.packed)).to.deep.equal(vector.unpacked);
+      expect(babyjubjub.packPoint(vector.unpacked)).to.equal(vector.packed);
+      expect(babyjubjub.unpackPoint(vector.packed)).to.deep.equal(vector.unpacked);
     });
   });
 
@@ -107,10 +107,10 @@ describe('Utils/BabyJubJub', () => {
 
     vectors.forEach((vector) => {
       expect(
-        utils.babyjubjub.ecdh(vector.keyA.private, vector.keyB.public),
+        babyjubjub.ecdh(vector.keyA.private, vector.keyB.public),
       ).to.equal(vector.sharedKey);
       expect(
-        utils.babyjubjub.ecdh(vector.keyB.private, vector.keyA.public),
+        babyjubjub.ecdh(vector.keyB.private, vector.keyA.public),
       ).to.equal(vector.sharedKey);
     });
   });
@@ -133,7 +133,7 @@ describe('Utils/BabyJubJub', () => {
 
     vectors.forEach((vector) => {
       expect(
-        utils.babyjubjub.privateKeyToPublicKey(vector.privateKey),
+        babyjubjub.privateKeyToPublicKey(vector.privateKey),
       ).to.equal(vector.publicKey);
     });
   });

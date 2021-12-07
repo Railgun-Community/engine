@@ -1,16 +1,13 @@
 import BN from 'bn.js';
 import msgpack from 'msgpack-lite';
 import type { AbstractBatch } from 'abstract-leveldown';
-import utils from '../utils';
-import Database from '../database';
-import keyderivation from '../keyderivation';
-import bip39 from '../keyderivation/bip39';
+import { bytes, hash, babyjubjub } from '../utils';
+import { Database } from '../database';
+import { BIP32Node } from '../keyderivation';
+import { mnemonicToSeed } from '../keyderivation/bip39';
 import { BytesData } from '../utils/bytes';
-import Note from '../note';
-import type { ERC20Note } from '../note';
-import type BIP32Node from '../keyderivation';
-import type MerkleTree from '../merkletree';
-import type { Commitment } from '../merkletree';
+import { ERC20Note } from '../note';
+import type { MerkleTree, Commitment } from '../merkletree';
 
 export type WalletDetails = {
   treeScannedHeights: number[],
@@ -72,17 +69,17 @@ class Wallet {
     this.gapLimit = gapLimit;
 
     // Calculate ID
-    this.id = utils.hash.sha256(utils.bytes.combine([
-      bip39.mnemonicToSeed(mnemonic),
-      utils.bytes.fromUTF8String(derivationPath),
+    this.id = hash.sha256(bytes.combine([
+      mnemonicToSeed(mnemonic),
+      bytes.fromUTF8String(derivationPath),
     ]));
 
-    this.#addressNode = keyderivation.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
-    this.#changeNode = keyderivation.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
+    this.#addressNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
+    this.#changeNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
 
     // Write encrypted mnemonic to DB
     this.db.putEncrypted([
-      utils.bytes.fromUTF8String('wallet'),
+      bytes.fromUTF8String('wallet'),
       this.id,
     ], encryptionKey, msgpack.encode({
       mnemonic,
@@ -113,9 +110,9 @@ class Wallet {
    */
   getWalletDBPrefix(chainID: number): string[] {
     return [
-      utils.bytes.fromUTF8String('wallet'),
-      utils.bytes.hexlify(this.id),
-      utils.bytes.hexlify(new BN(chainID)),
+      bytes.fromUTF8String('wallet'),
+      bytes.hexlify(this.id),
+      bytes.hexlify(new BN(chainID)),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -140,7 +137,7 @@ class Wallet {
     change: boolean,
     chainID: number | undefined = undefined,
   ) {
-    if (utils.bytes.hexlify(encryptionKey) !== utils.bytes.hexlify(this.#encryptionKey)) {
+    if (bytes.hexlify(encryptionKey) !== bytes.hexlify(this.#encryptionKey)) {
       throw new Error('Wrong encryption key');
     }
 
@@ -174,7 +171,7 @@ class Wallet {
     try {
       // Try fetching from database
       walletDetails = msgpack.decode(
-        utils.bytes.arrayify(
+        bytes.arrayify(
           await this.db.getEncrypted(
             this.getWalletDetailsPath(),
             this.#encryptionKey,
@@ -234,16 +231,16 @@ class Wallet {
 
       if ('ciphertext' in leaf) {
         // Derive shared secret
-        const sharedKey = utils.babyjubjub.ecdh(
+        const sharedKey = babyjubjub.ecdh(
           key.privateKey,
           leaf.senderPublicKey,
         );
 
         // Decrypt
-        note = Note.ERC20.decrypt(leaf.ciphertext, sharedKey);
+        note = ERC20Note.decrypt(leaf.ciphertext, sharedKey);
       } else {
         // Deserialize
-        note = Note.ERC20.deserialize(leaf.data);
+        note = ERC20Note.deserialize(leaf.data);
       }
 
       // If this note is addressed to us add to write queue
@@ -252,15 +249,15 @@ class Wallet {
           type: 'put',
           key: [
             ...this.getWalletDBPrefix(chainID),
-            utils.bytes.hexlify(utils.bytes.padToLength(new BN(tree), 32)),
-            utils.bytes.hexlify(utils.bytes.padToLength(new BN(position), 32)),
+            bytes.hexlify(bytes.padToLength(new BN(tree), 32)),
+            bytes.hexlify(bytes.padToLength(new BN(position), 32)),
           ].join(':'),
           value: msgpack.encode({
             index,
             change,
             spendtxid: false,
-            txid: utils.bytes.hexlify(leaf.txid),
-            nullifier: Note.ERC20.getNullifier(
+            txid: bytes.hexlify(leaf.txid),
+            nullifier: ERC20Note.getNullifier(
               key.privateKey,
               tree,
               position,
@@ -305,7 +302,7 @@ class Wallet {
       const keySplit = key.split(':');
 
       // Decode UTXO
-      const UTXO = msgpack.decode(utils.bytes.arrayify(await this.db.get((keySplit))));
+      const UTXO = msgpack.decode(bytes.arrayify(await this.db.get((keySplit))));
 
       // If this UTXO hasn't already been marked as spent, check if it has
       if (!UTXO.spendtxid) {
@@ -321,8 +318,8 @@ class Wallet {
         }
       }
 
-      const tree = utils.bytes.numberify(keySplit[3]).toNumber();
-      const position = utils.bytes.numberify(keySplit[4]).toNumber();
+      const tree = bytes.numberify(keySplit[3]).toNumber();
+      const position = bytes.numberify(keySplit[4]).toNumber();
 
       return {
         tree,
@@ -331,7 +328,7 @@ class Wallet {
         change: UTXO.change,
         txid: UTXO.txid,
         spendtxid: UTXO.spendtxid,
-        note: Note.ERC20.deserialize(UTXO.decrypted),
+        note: ERC20Note.deserialize(UTXO.decrypted),
       };
     }));
   }
@@ -362,7 +359,7 @@ class Wallet {
 
         // Increment balance
         balances[txOutput.note.token].balance.iadd(
-          utils.bytes.numberify(txOutput.note.amount),
+          bytes.numberify(txOutput.note.amount),
         );
       }
     });
@@ -514,14 +511,14 @@ class Wallet {
     gapLimit: number = 5,
   ): Promise<Wallet> {
     // Calculate ID
-    const id = utils.hash.sha256(utils.bytes.combine([
-      bip39.mnemonicToSeed(mnemonic),
-      utils.bytes.fromUTF8String(derivationPath),
+    const id = hash.sha256(bytes.combine([
+      mnemonicToSeed(mnemonic),
+      bytes.fromUTF8String(derivationPath),
     ]));
 
     // Write encrypted mnemonic to DB
     db.putEncrypted([
-      utils.bytes.fromUTF8String('wallet'),
+      bytes.fromUTF8String('wallet'),
       msgpack.encode({
         id,
         derivationPath,
@@ -547,9 +544,9 @@ class Wallet {
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
     const { mnemonic, derivationPath } = msgpack.decode(
-      utils.bytes.arrayify(
+      bytes.arrayify(
         await db.getEncrypted([
-          utils.bytes.fromUTF8String('wallet'),
+          bytes.fromUTF8String('wallet'),
           id,
         ], encryptionKey),
       ),
@@ -560,4 +557,4 @@ class Wallet {
   }
 }
 
-export default Wallet;
+export { Wallet };

@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import utils from '../utils';
+import * as utils from '../utils';
 import { BytesData } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
 
@@ -125,4 +125,4 @@ class ERC20Note {
   }
 }
 
-export default ERC20Note;
+export { ERC20Note };

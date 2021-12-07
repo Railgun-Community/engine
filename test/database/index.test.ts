@@ -5,7 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 
 import memdown from 'memdown';
 
-import Database from '../../src/database';
+import { Database } from '../../src/database';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

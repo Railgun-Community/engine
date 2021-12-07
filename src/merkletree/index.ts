@@ -1,8 +1,8 @@
 /* eslint-disable no-bitwise, no-await-in-loop */
 import BN from 'bn.js';
 import type { AbstractBatch } from 'abstract-leveldown';
-import utils from '../utils';
-import type Database from '../database';
+import { bytes, hash, constants } from '../utils';
+import type { Database } from '../database';
 import type { BytesData } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
 import type { ERC20NoteSerialized } from '../note/erc20';
@@ -14,16 +14,20 @@ export type MerkleProof = {
   root: BytesData,
 };
 
-export type Commitment = {
+export type GeneratedCommitment = {
+  hash: BytesData,
+  txid: BytesData,
+  data: ERC20NoteSerialized // | ERC721NoteSerialized
+}
+
+export type EncryptedCommitment = {
   hash: BytesData,
   txid: BytesData,
   senderPublicKey: BytesData,
   ciphertext: Ciphertext,
-} | {
-  hash: BytesData,
-  txid: BytesData,
-  data: ERC20NoteSerialized, // | ERC721NoteSerialized
 };
+
+export type Commitment = GeneratedCommitment | EncryptedCommitment;
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: BytesData) => Promise<boolean>;
@@ -38,12 +42,12 @@ const depths = {
 export type TreePurpose = keyof typeof depths;
 
 // Calculate tree zero value
-const MERKLE_ZERO_VALUE: string = utils.bytes.hexlify(
-  utils.bytes.numberify(
-    utils.hash.keccak256(
-      utils.bytes.fromUTF8String('Railgun'),
+const MERKLE_ZERO_VALUE: string = bytes.hexlify(
+  bytes.numberify(
+    hash.keccak256(
+      bytes.fromUTF8String('Railgun'),
     ),
-  ).mod(utils.constants.SNARK_PRIME),
+  ).mod(constants.SNARK_PRIME),
 );
 
 class MerkleTree {
@@ -112,7 +116,7 @@ class MerkleTree {
    * @returns hash
    */
   static hashLeftRight(left: BytesData, right: BytesData): string {
-    return utils.hash.poseidon([left, right]);
+    return hash.poseidon([left, right]);
   }
 
   /**
@@ -132,9 +136,9 @@ class MerkleTree {
    */
   getTreeDBPrefix(tree: number): string[] {
     return [
-      utils.bytes.fromUTF8String(`merkletree-${this.purpose}`),
-      utils.bytes.hexlify(new BN(this.chainID)),
-      utils.bytes.hexlify(new BN(tree)),
+      bytes.fromUTF8String(`merkletree-${this.purpose}`),
+      bytes.hexlify(new BN(this.chainID)),
+      bytes.hexlify(new BN(tree)),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -148,8 +152,8 @@ class MerkleTree {
   getNodeDBPath(tree: number, level: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      utils.bytes.hexlify(new BN(level)),
-      utils.bytes.hexlify(new BN(index)),
+      bytes.hexlify(new BN(level)),
+      bytes.hexlify(new BN(index)),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -162,8 +166,8 @@ class MerkleTree {
   getCommitmentDBPath(tree: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      utils.bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
-      utils.bytes.hexlify(new BN(index)),
+      bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
+      bytes.hexlify(new BN(index)),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -174,10 +178,10 @@ class MerkleTree {
    */
   getNullifierDBPath(nullifier: BytesData): string[] {
     return [
-      utils.bytes.fromUTF8String(`merkletree-${this.purpose}`),
-      utils.bytes.hexlify(new BN(this.chainID)),
-      utils.bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
-      utils.bytes.hexlify(nullifier),
+      bytes.fromUTF8String(`merkletree-${this.purpose}`),
+      bytes.hexlify(new BN(this.chainID)),
+      bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
+      bytes.hexlify(nullifier),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -313,7 +317,11 @@ class MerkleTree {
    * @param leaves - Leaves to insert
    * @param startIndex - Starting index of leaves to insert
    */
-  private async insertLeaves(tree: number, leaves: Commitment[], startIndex: number) {
+  private async insertLeaves(
+    tree: number,
+    leaves: Commitment[],
+    startIndex: number,
+  ) {
     // Clear write cache before starting to avoid errors from leftover data
     this.clearWriteCache(tree);
 
@@ -335,27 +343,27 @@ class MerkleTree {
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
       // Set writecache value
-      this.nodeWriteCache[tree][level][index] = utils.bytes.hexlify(leaf.hash);
+      this.nodeWriteCache[tree][level][index] = bytes.hexlify(leaf.hash);
 
       if ('ciphertext' in leaf) {
         this.commitmentWriteCache[tree][index] = {
-          hash: utils.bytes.hexlify(leaf.hash),
-          txid: utils.bytes.hexlify(leaf.txid),
-          senderPublicKey: utils.bytes.hexlify(leaf.senderPublicKey),
+          hash: bytes.hexlify(leaf.hash),
+          txid: bytes.hexlify(leaf.txid),
+          senderPublicKey: bytes.hexlify(leaf.senderPublicKey),
           ciphertext: {
-            iv: utils.bytes.hexlify(leaf.ciphertext.iv),
-            data: leaf.ciphertext.data.map((element) => utils.bytes.hexlify(element)),
+            iv: bytes.hexlify(leaf.ciphertext.iv),
+            data: leaf.ciphertext.data.map((element) => bytes.hexlify(element)),
           },
         };
       } else {
         this.commitmentWriteCache[tree][index] = {
-          hash: utils.bytes.hexlify(leaf.hash),
-          txid: utils.bytes.hexlify(leaf.txid),
+          hash: bytes.hexlify(leaf.hash),
+          txid: bytes.hexlify(leaf.txid),
           data: {
-            publicKey: utils.bytes.hexlify(leaf.data.publicKey),
-            random: utils.bytes.hexlify(leaf.data.random),
-            amount: utils.bytes.hexlify(leaf.data.amount),
-            token: utils.bytes.hexlify(leaf.data.token),
+            publicKey: bytes.hexlify(leaf.data.publicKey),
+            random: bytes.hexlify(leaf.data.random),
+            amount: bytes.hexlify(leaf.data.amount),
+            token: bytes.hexlify(leaf.data.token),
           },
         };
       }
@@ -511,7 +519,7 @@ class MerkleTree {
 
     // Convert index to bytes data, the binary representation is the indices of the merkle path
     // Pad to 32 bytes
-    const indices = utils.bytes.hexlify(new BN(index));
+    const indices = bytes.hexlify(new BN(index));
 
     // Fetch root
     const root = await this.getRoot(tree);
@@ -532,10 +540,10 @@ class MerkleTree {
    */
   static verifyProof(proof: MerkleProof): boolean {
     // Get indicies as BN form
-    const indices = utils.bytes.numberify(proof.indices);
+    const indices = bytes.numberify(proof.indices);
 
     // Calculate proof root and return if it matches the proof in the MerkleProof
-    return utils.bytes.hexlify(proof.root) === utils.bytes.hexlify(
+    return bytes.hexlify(proof.root) === bytes.hexlify(
       // Loop through each element and hash till we've reduced to 1 element
       proof.elements.reduce((current, element, index) => {
         // If index is right
@@ -556,4 +564,4 @@ class MerkleTree {
   }
 }
 
-export default MerkleTree;
+export { MerkleTree };

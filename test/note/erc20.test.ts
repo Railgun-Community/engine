@@ -2,7 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import Note from '../../src/note';
+import { ERC20Note } from '../../src/note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -83,7 +83,7 @@ const vectors = [
 describe('Note/ERC20', () => {
   it('Should calculate hashes', () => {
     vectors.forEach((vector) => {
-      expect((new Note.ERC20(
+      expect((new ERC20Note(
         vector.publicKey,
         vector.random,
         vector.amount,
@@ -155,7 +155,7 @@ describe('Note/ERC20', () => {
 
     ciphertextVectors.forEach((vector) => {
       // Create Note object
-      const note = new Note.ERC20(
+      const note = new ERC20Note(
         vector.note.publicKey,
         vector.note.random,
         vector.note.amount,
@@ -166,16 +166,16 @@ describe('Note/ERC20', () => {
       const encrypted = note.encrypt(vector.sharedKey);
 
       // Check if encrypted values are successfully decrypted
-      expect(Note.ERC20.decrypt(encrypted, vector.sharedKey)).to.deep.equal(note);
+      expect(ERC20Note.decrypt(encrypted, vector.sharedKey)).to.deep.equal(note);
 
       // Check if vector encrypted values are successfully decrypted
-      expect(Note.ERC20.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
+      expect(ERC20Note.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
     });
   });
 
   it('Should serialize and deserialize notes', () => {
     vectors.forEach((vector) => {
-      const note = Note.ERC20.deserialize(vector);
+      const note = ERC20Note.deserialize(vector);
 
       expect(note.hash).to.equal(vector.hash);
 
@@ -217,7 +217,7 @@ describe('Note/ERC20', () => {
     ];
 
     nullifierVectors.forEach((vector) => {
-      expect(Note.ERC20.getNullifier(vector.privateKey, vector.tree, vector.position))
+      expect(ERC20Note.getNullifier(vector.privateKey, vector.tree, vector.position))
         .to.equal(vector.nullifier);
     });
   });

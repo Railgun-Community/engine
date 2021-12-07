@@ -2,7 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import utils from '../../src/utils';
+import { hash } from '../../src/utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -34,12 +34,12 @@ describe('Utils/Hash', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.hash.sha256(vector.preimage),
+        hash.sha256(vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.hash.sha256(vector.array),
+        hash.sha256(vector.array),
       ).to.equal(vector.result);
     });
   });
@@ -70,12 +70,12 @@ describe('Utils/Hash', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.hash.sha512(vector.preimage),
+        hash.sha512(vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.hash.sha512(vector.array),
+        hash.sha512(vector.array),
       ).to.equal(vector.result);
     });
   });
@@ -106,12 +106,12 @@ describe('Utils/Hash', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.hash.keccak256(vector.preimage),
+        hash.keccak256(vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.hash.keccak256(vector.array),
+        hash.keccak256(vector.array),
       ).to.equal(vector.result);
     });
   });
@@ -148,12 +148,12 @@ describe('Utils/Hash', () => {
     vectors.forEach((vector) => {
       // Test hex string hash
       expect(
-        utils.hash.sha512HMAC(vector.key, vector.preimage),
+        hash.sha512HMAC(vector.key, vector.preimage),
       ).to.equal(vector.result);
 
       // Test bytes array hash
       expect(
-        utils.hash.sha512HMAC(vector.keyArray, vector.array),
+        hash.sha512HMAC(vector.keyArray, vector.array),
       ).to.equal(vector.result);
     });
   });
@@ -176,7 +176,7 @@ describe('Utils/Hash', () => {
 
     vectors.forEach((vector) => {
       expect(
-        utils.hash.poseidon(vector.preimage),
+        hash.poseidon(vector.preimage),
       ).to.equal(vector.result);
     });
   });
@@ -197,7 +197,7 @@ describe('Utils/Hash', () => {
 
     vectors.forEach((vector) => {
       expect(
-        utils.hash.pbkdf2(
+        hash.pbkdf2(
           vector.secret,
           vector.salt,
           2048,

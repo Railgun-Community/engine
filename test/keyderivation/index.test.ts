@@ -2,14 +2,14 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import KeyDerivation from '../../src/keyderivation';
+import { BIP32Node } from '../../src/keyderivation';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/Index', () => {
   it('Should create mnemonic', () => {
-    expect(KeyDerivation.createMnemonic().split(' ').length).to.equal(12);
+    expect(BIP32Node.createMnemonic().split(' ').length).to.equal(12);
   });
 
   it('Should derive keys', () => {
@@ -44,7 +44,7 @@ describe('Key Derivation/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      const node = KeyDerivation.fromMnemonic(vector.mnemonic);
+      const node = BIP32Node.fromMnemonic(vector.mnemonic);
       expect(node.derive(vector.path).getBabyJubJubKey()).to.deep.equal(vector.keyPair);
     });
   });

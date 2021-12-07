@@ -1,7 +1,7 @@
-import bip39 from './bip39';
-import bip32 from './bip32-babyjubjub';
-import bech32Encode from './bech32-encode';
-import utils from '../utils';
+import { mnemonicToSeed, generateMnemonic } from './bip39';
+import { getMasterKeyFromSeed, getPathSegments, childKeyDerivationHardened } from './bip32-babyjubjub';
+import { encode } from './bech32-encode';
+import { babyjubjub } from '../utils';
 
 import type { KeyNode } from './bip32-babyjubjub';
 
@@ -22,10 +22,10 @@ class BIP32Node {
    */
   static fromMnemonic(mnemonic: string): BIP32Node {
     // Calcualte seed
-    const seed = bip39.mnemonicToSeed(mnemonic);
+    const seed = mnemonicToSeed(mnemonic);
 
     // Calculate keynode
-    const keyNode = bip32.getMasterKeyFromSeed(seed);
+    const keyNode = getMasterKeyFromSeed(seed);
 
     // Return BIP32Node
     return new BIP32Node(keyNode);
@@ -38,11 +38,11 @@ class BIP32Node {
    */
   derive(path: string) {
     // Get path segments
-    const segments = bip32.getPathSegments(path);
+    const segments = getPathSegments(path);
 
     // Calculate new key node
     const keyNode = segments.reduce(
-      (parentKeys: KeyNode, segment: number) => bip32.childKeyDerivationHardened(
+      (parentKeys: KeyNode, segment: number) => childKeyDerivationHardened(
         parentKeys, segment,
       ),
       {
@@ -62,9 +62,9 @@ class BIP32Node {
   getBabyJubJubKey(
     chainID: number | undefined = undefined,
   ): { privateKey: string, publicKey: string, address: string } {
-    const privateKey = utils.babyjubjub.seedToPrivateKey(this.#chainKey);
-    const publicKey = utils.babyjubjub.privateKeyToPublicKey(privateKey);
-    const address = bech32Encode.encode(publicKey, chainID);
+    const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
+    const publicKey = babyjubjub.privateKeyToPublicKey(privateKey);
+    const address = encode(publicKey, chainID);
     return {
       privateKey,
       publicKey,
@@ -76,8 +76,8 @@ class BIP32Node {
    * Generate mnemonic
    */
   static createMnemonic(): string {
-    return bip39.generateMnemonic();
+    return generateMnemonic();
   }
 }
 
-export default BIP32Node;
+export { BIP32Node };

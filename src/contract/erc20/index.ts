@@ -1,7 +1,7 @@
 import { Contract, PopulatedTransaction, BigNumber } from 'ethers';
 import type { Listener, Provider } from '@ethersproject/abstract-provider';
-import utils from '../../utils';
-import abi from './abi';
+import { bytes, babyjubjub } from '../../utils';
+import { abi } from './abi';
 import type { ERC20Note } from '../../note';
 import type { BytesData } from '../../utils/bytes';
 
@@ -26,7 +26,7 @@ class ERC20RailgunContract {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return utils.bytes.hexlify((await this.contract.functions.merkleRoot())[0].toHexString());
+    return bytes.hexlify((await this.contract.functions.merkleRoot())[0].toHexString());
   }
 
   /**
@@ -36,7 +36,7 @@ class ERC20RailgunContract {
    */
   validateRoot(tree: number, root: BytesData): Promise<boolean> {
     // Return result of root history lookup
-    return this.contract.rootHistory(tree, utils.bytes.hexlify(root, true));
+    return this.contract.rootHistory(tree, bytes.hexlify(root, true));
   }
 
   /**
@@ -60,10 +60,10 @@ class ERC20RailgunContract {
           tree: treeNumber.toNumber(),
           startingIndex: startPosition.toNumber(),
           commitments: commitments.map((commitment) => ({
-            pubkey: utils.babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
-            random: utils.bytes.hexlify(commitment.random.toHexString()),
-            amount: utils.bytes.hexlify(commitment.amount.toHexString()),
-            token: utils.bytes.hexlify(commitment.token, true),
+            pubkey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
+            random: bytes.hexlify(commitment.random.toHexString()),
+            amount: bytes.hexlify(commitment.amount.toHexString()),
+            token: bytes.hexlify(commitment.token, true),
           })),
         });
       },
@@ -81,8 +81,8 @@ class ERC20RailgunContract {
     // Serialize for contract
     const inputs = notes.map((note) => {
       const serialized = note.serialize(true);
-      const pubkeyUnpacked = utils.babyjubjub.unpackPoint(serialized.publicKey)
-        .map((element) => utils.bytes.hexlify(element, true));
+      const pubkeyUnpacked = babyjubjub.unpackPoint(serialized.publicKey)
+        .map((element) => bytes.hexlify(element, true));
 
       return {
         pubkey: pubkeyUnpacked,
@@ -104,4 +104,4 @@ class ERC20RailgunContract {
   }
 }
 
-export default ERC20RailgunContract;
+export { ERC20RailgunContract };
