@@ -202,7 +202,7 @@ describe('Wallet/Index', () => {
   });
 
   it('Should scan ERC20 balances', async () => {
-    await merkletree.queueLeaves(0, leaves, 0);
+    await merkletree.queueLeaves(0, 0, leaves);
 
     const process = wallet.scan(1);
 
@@ -216,7 +216,7 @@ describe('Wallet/Index', () => {
       changeHeight: 2,
     });
 
-    await merkletree.queueLeaves(0, leaves2, 6);
+    await merkletree.queueLeaves(0, 6, leaves2);
 
     await wallet.scan(1);
 

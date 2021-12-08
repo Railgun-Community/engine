@@ -319,8 +319,8 @@ class MerkleTree {
    */
   private async insertLeaves(
     tree: number,
-    leaves: Commitment[],
     startIndex: number,
+    leaves: Commitment[],
   ) {
     // Clear write cache before starting to avoid errors from leftover data
     this.clearWriteCache(tree);
@@ -449,8 +449,8 @@ class MerkleTree {
         if (this.writeQueue[treeIndex]?.[treeLengths[treeIndex]]) {
           updatePromises.push(this.insertLeaves(
             treeIndex,
-            this.writeQueue[treeIndex][treeLengths[treeIndex]],
             treeLengths[treeIndex],
+            this.writeQueue[treeIndex][treeLengths[treeIndex]],
           ));
 
           // Delete the batch after processing it
@@ -477,7 +477,7 @@ class MerkleTree {
    * @param leaves - leaves to add
    * @param startingIndex - index of first leaf
    */
-  async queueLeaves(tree: number, leaves: Commitment[], startingIndex: number) {
+  async queueLeaves(tree: number, startingIndex: number, leaves: Commitment[]) {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 

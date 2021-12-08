@@ -9,6 +9,8 @@ import { config } from '../config.test';
 
 import { ERC20RailgunContract } from '../../src/contract';
 import { ERC20Note } from '../../src/note';
+import { bytes } from '../../src/utils';
+import type { Commitment } from '../../src/merkletree';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -47,8 +49,12 @@ describe('Contract/Index', () => {
   it('Should parse tree update events', async () => {
     let result;
 
-    contract.treeUpdates((res) => {
-      result = res;
+    contract.treeUpdates((tree: number, startPosition: number, leaves: Commitment[]) => {
+      result = {
+        tree,
+        startPosition,
+        leaves,
+      };
     });
 
     const transaction = await contract.generateDeposit(
@@ -71,15 +77,17 @@ describe('Contract/Index', () => {
     // Check result
     expect(result).to.deep.equal({
       tree: 0,
-      startingIndex: 0,
-      commitments: [
-        {
-          pubkey: '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
+      startPosition: 0,
+      leaves: [{
+        hash: '0eb464151996a2fd7a6557b26854b612ed9564faac2352085a8a3fdf9b5940fc',
+        txid: '0xeb0a579e1b59c26d14d866e9bc5e66e6c4f25f4713ea891298c6d00977a2b845',
+        data: {
+          publicKey: '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
           random: '09f4c002178ea5c93820d44e8e83409fe6dcc9ed710f6d5c7b0817e173799d04',
-          amount: '01',
-          token: config.contracts.rail,
+          amount: '0000000000000000000000000000000000000000000000000000000000000001',
+          token: bytes.padToLength(bytes.hexlify(config.contracts.rail), 32),
         },
-      ],
+      }],
     });
   }).timeout(30000);
 

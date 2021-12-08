@@ -1,9 +1,18 @@
-import { Contract, PopulatedTransaction, BigNumber } from 'ethers';
-import type { Listener, Provider } from '@ethersproject/abstract-provider';
+import {
+  Contract,
+  PopulatedTransaction,
+  BigNumber,
+  Event,
+} from 'ethers';
+import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
-import type { ERC20Note } from '../../note';
+import { ERC20Note } from '../../note';
+import type { Commitment } from '../../merkletree';
 import type { BytesData } from '../../utils/bytes';
+
+// eslint-disable-next-line no-unused-vars
+export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => void;
 
 class ERC20RailgunContract {
   contract: Contract;
@@ -55,17 +64,26 @@ class ERC20RailgunContract {
           amount: BigNumber;
           token: string;
         }[],
+        event: Event,
       ) => {
-        listener({
-          tree: treeNumber.toNumber(),
-          startingIndex: startPosition.toNumber(),
-          commitments: commitments.map((commitment) => ({
-            pubkey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
-            random: bytes.hexlify(commitment.random.toHexString()),
-            amount: bytes.hexlify(commitment.amount.toHexString()),
-            token: bytes.hexlify(commitment.token, true),
-          })),
-        });
+        listener(
+          treeNumber.toNumber(),
+          startPosition.toNumber(),
+          commitments.map((commitment) => {
+            const note = ERC20Note.deserialize({
+              publicKey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
+              random: bytes.hexlify(commitment.random.toHexString()),
+              amount: bytes.hexlify(commitment.amount.toHexString()),
+              token: bytes.hexlify(commitment.token, true),
+            });
+
+            return {
+              hash: note.hash,
+              txid: event.transactionHash,
+              data: note.serialize(),
+            };
+          }),
+        );
       },
     );
   }
