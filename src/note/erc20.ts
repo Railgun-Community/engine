@@ -1,5 +1,10 @@
 import BN from 'bn.js';
-import * as utils from '../utils';
+import {
+  bytes,
+  hash,
+  babyjubjub,
+  encryption,
+} from '../utils';
 import { BytesData } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
 
@@ -27,18 +32,18 @@ class ERC20Note {
    * @param token - note token ID
    */
   constructor(publicKey: BytesData, random: BytesData, amount: BytesData, token: BytesData) {
-    this.publicKey = utils.bytes.hexlify(publicKey);
-    this.random = utils.bytes.hexlify(random);
-    this.amount = utils.bytes.hexlify(amount);
-    this.token = utils.bytes.hexlify(token);
+    this.publicKey = bytes.hexlify(bytes.padToLength(publicKey, 32));
+    this.random = bytes.hexlify(bytes.padToLength(random, 32));
+    this.amount = bytes.hexlify(bytes.padToLength(amount, 32));
+    this.token = bytes.hexlify(bytes.padToLength(token, 32));
   }
 
   /**
    * Get note hash
    */
   get hash(): string {
-    return utils.hash.poseidon([
-      ...utils.babyjubjub.unpackPoint(this.publicKey),
+    return hash.poseidon([
+      ...babyjubjub.unpackPoint(this.publicKey),
       this.random,
       this.amount,
       this.token,
@@ -51,8 +56,8 @@ class ERC20Note {
    */
   encrypt(sharedKey: BytesData): Ciphertext {
     // Encrypt in order and return
-    return utils.encryption.aes.ctr.encrypt([
-      ...utils.babyjubjub.unpackPoint(this.publicKey),
+    return encryption.aes.ctr.encrypt([
+      ...babyjubjub.unpackPoint(this.publicKey),
       this.random,
       this.amount,
       this.token,
@@ -66,11 +71,11 @@ class ERC20Note {
    */
   static decrypt(encryptedNote: Ciphertext, sharedKey: BytesData): ERC20Note {
     // Decrypt values
-    const decryptedValues = utils.encryption.aes.ctr.decrypt(encryptedNote, sharedKey);
+    const decryptedValues = encryption.aes.ctr.decrypt(encryptedNote, sharedKey);
 
     // Create new note object and return
     return new ERC20Note(
-      utils.babyjubjub.packPoint([
+      babyjubjub.packPoint([
         decryptedValues[0],
         decryptedValues[1],
       ]),
@@ -87,10 +92,10 @@ class ERC20Note {
    */
   serialize(forContract: boolean = false): ERC20NoteSerialized {
     return {
-      publicKey: utils.bytes.hexlify(this.publicKey, forContract),
-      random: utils.bytes.hexlify(this.random, forContract),
-      amount: utils.bytes.hexlify(this.amount, forContract),
-      token: utils.bytes.hexlify(this.token, forContract),
+      publicKey: bytes.hexlify(this.publicKey, forContract),
+      random: bytes.hexlify(this.random, forContract),
+      amount: bytes.hexlify(this.amount, forContract),
+      token: bytes.hexlify(this.token, forContract),
     };
   }
 
@@ -102,10 +107,10 @@ class ERC20Note {
   static deserialize(noteData: ERC20NoteSerialized): ERC20Note {
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new ERC20Note(
-      utils.bytes.hexlify(noteData.publicKey),
-      utils.bytes.hexlify(noteData.random),
-      utils.bytes.hexlify(noteData.amount),
-      utils.bytes.hexlify(noteData.token),
+      bytes.hexlify(noteData.publicKey),
+      bytes.hexlify(noteData.random),
+      bytes.hexlify(noteData.amount),
+      bytes.hexlify(noteData.token),
     );
   }
 
@@ -117,7 +122,7 @@ class ERC20Note {
    * @returns nullifier (hex string)
    */
   static getNullifier(privateKey: BytesData, tree: number, position: number): string {
-    return utils.hash.poseidon([
+    return hash.poseidon([
       privateKey,
       new BN(tree),
       new BN(position),

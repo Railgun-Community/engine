@@ -59,7 +59,7 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     'ffff',
-    '21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8',
+    '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
   );
 
   return {
@@ -79,7 +79,7 @@ const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     'ffff',
-    '21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8',
+    '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
   );
 
   return {
@@ -228,11 +228,11 @@ describe('Wallet/Index', () => {
 
     const balances = await wallet.balances(1);
 
-    expect(balances['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].utxos.length)
+    expect(balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length)
       .to.equal(12);
 
     expect(
-      balances['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].balance.eqn(786420),
+      balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(786420),
     ).to.equal(true);
 
     await merkletree.nullify([{
@@ -242,11 +242,11 @@ describe('Wallet/Index', () => {
 
     const balances2 = await wallet.balances(1);
 
-    expect(balances2['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].utxos.length)
+    expect(balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length)
       .to.equal(11);
 
     expect(
-      balances2['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].balance.eqn(720885),
+      balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(720885),
     ).to.equal(true);
 
     await merkletree.nullify([{
@@ -256,11 +256,11 @@ describe('Wallet/Index', () => {
 
     const balances3 = await wallet.balances(1);
 
-    expect(balances3['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].utxos.length)
+    expect(balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length)
       .to.equal(10);
 
     expect(
-      balances3['21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8'].balance.eqn(655350),
+      balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(655350),
     ).to.equal(true);
   }).timeout(60000);
 

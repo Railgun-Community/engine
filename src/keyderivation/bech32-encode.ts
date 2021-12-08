@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import * as bech32 from 'bech32-buffer';
+import { encode as bech32encode, decode as bech32decode } from 'bech32-buffer';
 import { bytes, constants } from '../utils';
 import type { BytesData } from '../utils/bytes';
 
@@ -25,15 +25,15 @@ function encode(publicKey: BytesData, chainID: number | undefined = undefined) {
   );
 
   // Prefix exists, encode and return with prefix
-  if (chainID && prefixes[chainID]) return bech32.encode(prefixes[chainID], data);
+  if (chainID && prefixes[chainID]) return bech32encode(prefixes[chainID], data);
 
   // No chainID specified, throw error
-  return bech32.encode('rgany', data);
+  return bech32encode('rgany', data);
 }
 
 function decode(address: string) {
   // TODO: Remove reliance on bech32-buffer
-  const decoded = bech32.decode(address);
+  const decoded = bech32decode(address);
 
   // Hexlify data
   const data = bytes.hexlify(decoded.data);

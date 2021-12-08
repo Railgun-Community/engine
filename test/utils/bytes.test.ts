@@ -90,6 +90,13 @@ const padVectors = [
     right32: 'f6fc84c9f21c24907d6bee6eec38caba00000000000000000000000000000000',
   },
   {
+    original: '0xf6fc84c9f21c24907d6bee6eec38caba',
+    left16: '0xf6fc84c9f21c24907d6bee6eec38caba',
+    left32: '0x00000000000000000000000000000000f6fc84c9f21c24907d6bee6eec38caba',
+    right16: '0xf6fc84c9f21c24907d6bee6eec38caba',
+    right32: '0xf6fc84c9f21c24907d6bee6eec38caba00000000000000000000000000000000',
+  },
+  {
     original: new BN('f6fc84c9f21c24907d6bee6eec38caba', 'hex'),
     left16: 'f6fc84c9f21c24907d6bee6eec38caba',
     left32: '00000000000000000000000000000000f6fc84c9f21c24907d6bee6eec38caba',
@@ -244,6 +251,8 @@ describe('Utils/Bytes', () => {
     expect(
       () => bytes.padToLength([0, 0, 0], 2),
     ).to.throw();
+
+    expect(bytes.padToLength('0x00', 4)).to.equal('0x00000000');
   });
 
   it('Should reverse bytes', () => {
@@ -363,5 +372,16 @@ describe('Utils/Bytes', () => {
       expect(bytes.chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
       expect(bytes.combine(vector.chunked)).to.equal(vector.bytes);
     });
+  });
+
+  it('Should trim bytes', () => {
+    expect(() => { bytes.trim(new BN(32), 1, 'right'); }).to.throw('Can\t trim BN from right');
+    expect(bytes.trim(new BN(861), 1).toString(10)).to.equal('93');
+    expect(bytes.trim('17b3c8d9', 2)).to.equal('c8d9');
+    expect(bytes.trim('17b3c8d9', 2, 'right')).to.equal('17b3');
+    expect(bytes.trim('0x17b3c8d9', 2)).to.equal('0xc8d9');
+    expect(bytes.trim('0x17b3c8d9', 2, 'right')).to.equal('0x17b3');
+    expect(bytes.trim([12, 4, 250], 2)).to.deep.equal([4, 250]);
+    expect(bytes.trim([12, 4, 250], 2, 'right')).to.deep.equal([12, 4]);
   });
 });

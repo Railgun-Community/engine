@@ -123,18 +123,24 @@ function padToLength(
   const dataFormatted = data instanceof BN ? hexlify(data) : data;
 
   if (typeof dataFormatted === 'string') {
+    const dataFormattedString = dataFormatted.startsWith('0x') ? dataFormatted.slice(2) : dataFormatted;
+
     // Check if data length exceeds padding length
-    if (dataFormatted.length > length * 2) {
+    if (dataFormattedString.length > length * 2) {
       throw new Error('Data exceeds length');
     }
 
     // If we're requested to pad to left, pad left and return
     if (side === 'left') {
-      return dataFormatted.padStart(length * 2, '0');
+      return dataFormatted.startsWith('0x')
+        ? `0x${dataFormattedString.padStart(length * 2, '0')}`
+        : dataFormattedString.padStart(length * 2, '0');
     }
 
     // Else pad right and return
-    return dataFormatted.padEnd(length * 2, '0');
+    return dataFormatted.startsWith('0x')
+      ? `0x${dataFormattedString.padEnd(length * 2, '0')}`
+      : dataFormattedString.padEnd(length * 2, '0');
   }
 
   // Check if data length exceeds padding length
@@ -264,6 +270,50 @@ function combine(data: BytesData[]): string {
   return dataFormatted.join('');
 }
 
+/**
+ * Trim to length of bytes
+ * @param data - data to trim
+ * @param length - length to trim to
+ * @param side - side to trim from
+ * @returns trimmed data
+ */
+function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'): BytesData {
+  if (data instanceof BN) {
+    if (side === 'left') {
+      // If side is left, mask to byte length
+      return data.maskn(length * 8);
+    }
+
+    // Can't trim from right as we don't know the byte length of BN objects
+    throw new Error('Can\t trim BN from right');
+  } else if (typeof data === 'string') {
+    const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+
+    if (side === 'left') {
+      // If side is left return the last length bytes
+      return data.startsWith('0x')
+        ? `0x${dataFormatted.slice(dataFormatted.length - length * 2)}`
+        : dataFormatted.slice(dataFormatted.length - length * 2);
+    }
+
+    // Side is right, return the start of the string to length
+    return data.startsWith('0x')
+      ? `0x${dataFormatted.slice(0, length * 2)}`
+      : dataFormatted.slice(0, length * 2);
+  }
+
+  // Coerce to array
+  const dataFormatted = Array.from(data);
+
+  if (side === 'left') {
+    // If side is left return the last length bytes
+    return dataFormatted.slice(data.length - length);
+  }
+
+  // Side is right, return the start of the array to length
+  return dataFormatted.slice(0, length);
+}
+
 export {
   random,
   hexlify,
@@ -275,4 +325,5 @@ export {
   fromUTF8String,
   chunk,
   combine,
+  trim,
 };

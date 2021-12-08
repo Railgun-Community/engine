@@ -88,7 +88,7 @@ class ERC20RailgunContract {
         pubkey: pubkeyUnpacked,
         random: serialized.random,
         amount: serialized.amount,
-        token: serialized.token,
+        token: bytes.hexlify(bytes.trim(serialized.token, 20), true),
       };
     });
 
