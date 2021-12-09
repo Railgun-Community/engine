@@ -52,6 +52,7 @@
     "encoding-down": "^7.0.0",
     "ethers": "^5.4.4",
     "levelup": "^5.0.1",
-    "msgpack-lite": "^0.1.26"
+    "msgpack-lite": "^0.1.26",
+    "snarkjs": "^0.4.10"
   }
 }
