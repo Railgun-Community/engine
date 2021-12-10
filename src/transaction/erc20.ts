@@ -1,6 +1,8 @@
 import BN from 'bn.js';
 import { ERC20Note } from '../note';
 import { hash, bytes } from '../utils';
+import { Wallet } from '../wallet';
+// import type { ERC20Inputs } from '../prover';
 
 export type AdaptID = {
   contract: bytes.BytesData,
@@ -12,6 +14,8 @@ class ERC20Transaction {
     contract: '00',
     parameters: '00',
   };
+
+  chainID: number;
 
   token: string;
 
@@ -25,8 +29,9 @@ class ERC20Transaction {
    * Create ERC20Transaction Object
    * @param token - token of transaction
    */
-  constructor(token: string) {
+  constructor(token: string, chainID: number) {
     this.token = token;
+    this.chainID = chainID;
   }
 
   /**
@@ -37,6 +42,17 @@ class ERC20Transaction {
       bytes.padToLength(this.adaptID.contract, 32),
       bytes.padToLength(this.adaptID.parameters, 32),
     ]));
+  }
+
+  /**
+   * Generates inputs for prover
+   * @param wallet - wallet to spend from
+   * @param encryptionKey - encryption key of wallet
+   */
+  generateInputs(wallet: Wallet, encryptionKey: bytes.BytesData) {
+    const UTXOs = wallet.TXOs(this.chainID);
+    console.log(encryptionKey);
+    console.log(UTXOs);
   }
 }
 

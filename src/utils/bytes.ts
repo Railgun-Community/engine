@@ -258,9 +258,8 @@ function chunk(data: BytesData, size = 32): string[] {
 
 /**
  * Combines array of BytesData into single BytesData
- * @param data - data to chunk
- * @param size - size of chunks
- * @returns chunked data
+ * @param data - data to combine
+ * @returns combined data
  */
 function combine(data: BytesData[]): string {
   // Convert all chunks into hex strings
