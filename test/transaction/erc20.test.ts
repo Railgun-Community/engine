@@ -9,9 +9,9 @@ const { expect } = chai;
 
 let transaction: ERC20Transaction;
 
-describe('Wallet/Index', () => {
+describe('Transaction/ERC20', () => {
   beforeEach(async () => {
-    transaction = new ERC20Transaction('7f4925cdf66ddf5b88016df1fe915e68eff8f192');
+    transaction = new ERC20Transaction('7f4925cdf66ddf5b88016df1fe915e68eff8f192', 1);
   });
 
   it('Should calculate adaptID correctly', async () => {

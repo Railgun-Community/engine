@@ -39,6 +39,7 @@
     "memdown": "^6.0.0",
     "mocha": "^9.0.3",
     "nyc": "^15.1.0",
+    "railgun-artifacts": "https://npm.railgun.org/railgun-artifacts-0.0.1.tgz",
     "rimraf": "^3.0.2",
     "ts-node": "^10.1.0",
     "typescript": "^4.3.5"

@@ -8,6 +8,8 @@ export type Artifacts = {
   vkey: object;
 };
 
+export type Circuits = 'erc20small' | 'erc20large';
+
 export type Proof = {
   a: bytes.BytesData[];
   b: bytes.BytesData[][];
@@ -28,7 +30,7 @@ export type ERC20Inputs = {
   treeNumber: bytes.BytesData;
   merkleRoot: bytes.BytesData;
   nullifiers: bytes.BytesData[];
-  pathElements: bytes.BytesData[];
+  pathElements: bytes.BytesData[][];
   pathIndices: bytes.BytesData[];
   recipientPK: bytes.BytesData[];
   randomOut: bytes.BytesData[];
@@ -43,7 +45,8 @@ export type FormattedCircuitInputs = {
   [key: string]: string | string[] | string[][];
 }
 
-export type ArtifactsGetter = () => Promise<Artifacts>;
+// eslint-disable-next-line no-unused-vars
+export type ArtifactsGetter = (circuit: Circuits) => Promise<Artifacts>;
 
 class Prover {
   artifactsGetter: ArtifactsGetter;
@@ -52,9 +55,9 @@ class Prover {
     this.artifactsGetter = artifactsGetter;
   }
 
-  async verify(inputs: CircuitInputs, proof: Proof): Promise<boolean> {
+  async verify(circuit: Circuits, inputs: CircuitInputs, proof: Proof): Promise<boolean> {
     // Fetch artifacts
-    const artifacts = await this.artifactsGetter();
+    const artifacts = await this.artifactsGetter(circuit);
 
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(inputs);
@@ -63,9 +66,12 @@ class Prover {
     return groth16.verify(artifacts.vkey, formattedInputs, proof);
   }
 
-  async prove(inputs: CircuitInputs): Promise<{proof: Proof, inputs: CircuitInputs}> {
+  async prove(
+    circuit: Circuits,
+    inputs: CircuitInputs,
+  ): Promise<{proof: Proof, inputs: CircuitInputs}> {
     // Fetch artifacts
-    const artifacts = await this.artifactsGetter();
+    const artifacts = await this.artifactsGetter(circuit);
 
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(inputs);
@@ -74,7 +80,7 @@ class Prover {
     const proof: Proof = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 
     // Throw if proof is invalid
-    if (await this.verify(inputs, proof)) throw new Error('Proof generation failed');
+    if (await this.verify(circuit, inputs, proof)) throw new Error('Proof generation failed');
 
     // Return proof with inputs
     return {
@@ -99,6 +105,9 @@ class Prover {
       inputs.ciphertextHash,
     ].map((el) => bytes.padToLength(el, 32)));
 
+    console.log(preimage);
+    console.log(preimage.length);
+
     return hash.sha256(preimage);
     // }
   }
@@ -122,7 +131,7 @@ class Prover {
       treeNumber: bytes.hexlify(inputs.treeNumber, true),
       merkleRoot: bytes.hexlify(inputs.merkleRoot, true),
       nullifiers: inputs.nullifiers.map((el) => bytes.hexlify(el, true)),
-      pathElements: inputs.pathElements.map((el) => bytes.hexlify(el, true)),
+      pathElements: inputs.pathElements.map((el) => el.map((el2) => bytes.hexlify(el2, true))),
       pathIndices: inputs.pathIndices.map((el) => bytes.hexlify(el, true)),
       recipientPK: inputs.recipientPK.map(
         (el) => babyjubjub.unpackPoint(el).map(
