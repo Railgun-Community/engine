@@ -1,6 +1,11 @@
 // @ts-ignore-next-line
 import { groth16 } from 'snarkjs';
-import { bytes, hash, babyjubjub } from '../utils';
+import {
+  bytes,
+  hash,
+  babyjubjub,
+  constants,
+} from '../utils';
 
 export type Artifacts = {
   zkey: ArrayLike<number>;
@@ -16,7 +21,7 @@ export type Proof = {
   c: bytes.BytesData[];
 };
 
-export type ERC20Inputs = {
+export type ERC20PrivateInputs = {
   type: 'erc20';
   adaptID: bytes.BytesData;
   tokenField: bytes.BytesData;
@@ -39,7 +44,22 @@ export type ERC20Inputs = {
   ciphertextHash: bytes.BytesData;
 };
 
-export type CircuitInputs = ERC20Inputs; // | ERC721Inputs
+export type ERC20PublicInputs = {
+  type: 'erc20';
+  adaptID: bytes.BytesData;
+  depositAmount: bytes.BytesData;
+  withdrawAmount: bytes.BytesData;
+  outputTokenField: bytes.BytesData;
+  outputEthAddress: bytes.BytesData;
+  treeNumber: bytes.BytesData;
+  merkleRoot: bytes.BytesData;
+  nullifiers: bytes.BytesData[];
+  commitmentsOut: bytes.BytesData[];
+  ciphertextHash: bytes.BytesData;
+};
+
+export type PrivateInputs = ERC20PrivateInputs; // | ERC721PrivateInputs
+export type PublicInputs = ERC20PublicInputs; // | ERC721PublicInputs
 
 export type FormattedCircuitInputs = {
   [key: string]: string | string[] | string[][];
@@ -55,12 +75,12 @@ class Prover {
     this.artifactsGetter = artifactsGetter;
   }
 
-  async verify(circuit: Circuits, inputs: CircuitInputs, proof: Proof): Promise<boolean> {
+  async verify(circuit: Circuits, inputs: PublicInputs, proof: Proof): Promise<boolean> {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(circuit);
 
     // Get formatted inputs
-    const formattedInputs = Prover.formatInputs(inputs);
+    const formattedInputs = Prover.formatPublicInputs(inputs);
 
     // Return output of groth16 verify
     return groth16.verify(artifacts.vkey, formattedInputs, proof);
@@ -68,28 +88,31 @@ class Prover {
 
   async prove(
     circuit: Circuits,
-    inputs: CircuitInputs,
-  ): Promise<{proof: Proof, inputs: CircuitInputs}> {
+    inputs: PrivateInputs,
+  ): Promise<{proof: Proof, inputs: PublicInputs}> {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(circuit);
 
     // Get formatted inputs
-    const formattedInputs = Prover.formatInputs(inputs);
+    const formattedInputs = Prover.formatPrivateInputs(inputs);
+
+    // Get public inputs
+    const publicInputs = Prover.privateToPublicInputs(inputs);
 
     // Generate proof
-    const proof: Proof = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
+    const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 
     // Throw if proof is invalid
-    if (await this.verify(circuit, inputs, proof)) throw new Error('Proof generation failed');
+    if (await this.verify(circuit, publicInputs, proof)) throw new Error('Proof generation failed');
 
     // Return proof with inputs
     return {
       proof,
-      inputs,
+      inputs: publicInputs,
     };
   }
 
-  static hashInputs(inputs: CircuitInputs): string {
+  static hashInputs(inputs: PublicInputs): string {
     // if (inputs.type === 'erc20') {
     // Inputs type is ERC20, hash as ERC20 inputs
     const preimage = bytes.combine([
@@ -105,15 +128,36 @@ class Prover {
       inputs.ciphertextHash,
     ].map((el) => bytes.padToLength(el, 32)));
 
-    console.log(preimage);
-    console.log(preimage.length);
-
-    return hash.sha256(preimage);
+    return bytes.hexlify(
+      bytes.numberify(
+        hash.sha256(preimage),
+      ).mod(constants.SNARK_PRIME),
+    );
     // }
   }
 
-  static formatInputs(inputs: CircuitInputs): FormattedCircuitInputs {
-    const hashOfInputs = Prover.hashInputs(inputs);
+  static privateToPublicInputs(inputs: PrivateInputs): PublicInputs {
+    // if (inputs.type === 'erc20') {
+    // Inputs type is ERC20
+    return {
+      type: inputs.type,
+      adaptID: inputs.adaptID,
+      depositAmount: inputs.depositAmount,
+      withdrawAmount: inputs.withdrawAmount,
+      outputTokenField: inputs.outputTokenField,
+      outputEthAddress: inputs.outputEthAddress,
+      treeNumber: inputs.treeNumber,
+      merkleRoot: inputs.merkleRoot,
+      nullifiers: inputs.nullifiers,
+      commitmentsOut: inputs.commitmentsOut,
+      ciphertextHash: inputs.ciphertextHash,
+    };
+    // }
+  }
+
+  static formatPrivateInputs(inputs: PrivateInputs): FormattedCircuitInputs {
+    const publicInputs = Prover.privateToPublicInputs(inputs);
+    const hashOfInputs = Prover.hashInputs(publicInputs);
 
     // if (inputs.type === 'erc20') {
     // Inputs type is ERC20
@@ -140,6 +184,27 @@ class Prover {
       ),
       randomOut: inputs.randomOut.map((el) => bytes.hexlify(el, true)),
       valuesOut: inputs.valuesOut.map((el) => bytes.hexlify(el, true)),
+      commitmentsOut: inputs.commitmentsOut.map((el) => bytes.hexlify(el, true)),
+      ciphertextHash: bytes.hexlify(inputs.ciphertextHash, true),
+    };
+    // }
+  }
+
+  static formatPublicInputs(inputs: PublicInputs): FormattedCircuitInputs {
+    const hashOfInputs = Prover.hashInputs(inputs);
+
+    // if (inputs.type === 'erc20') {
+    // Inputs type is ERC20
+    return {
+      hashOfInputs: bytes.hexlify(hashOfInputs, true),
+      adaptID: bytes.hexlify(inputs.adaptID, true),
+      depositAmount: bytes.hexlify(inputs.depositAmount, true),
+      withdrawAmount: bytes.hexlify(inputs.withdrawAmount, true),
+      outputTokenField: bytes.hexlify(inputs.outputTokenField, true),
+      outputEthAddress: bytes.hexlify(inputs.outputEthAddress, true),
+      treeNumber: bytes.hexlify(inputs.treeNumber, true),
+      merkleRoot: bytes.hexlify(inputs.merkleRoot, true),
+      nullifiers: inputs.nullifiers.map((el) => bytes.hexlify(el, true)),
       commitmentsOut: inputs.commitmentsOut.map((el) => bytes.hexlify(el, true)),
       ciphertextHash: bytes.hexlify(inputs.ciphertextHash, true),
     };
