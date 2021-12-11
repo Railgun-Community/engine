@@ -79,11 +79,11 @@ class Prover {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(circuit);
 
-    // Get formatted inputs
-    const formattedInputs = Prover.formatPublicInputs(inputs);
+    // Get inputs hash
+    const hashOfInputs = Prover.hashInputs(inputs);
 
     // Return output of groth16 verify
-    return groth16.verify(artifacts.vkey, formattedInputs, proof);
+    return groth16.verify(artifacts.vkey, [hashOfInputs], proof);
   }
 
   async prove(
@@ -103,7 +103,7 @@ class Prover {
     const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 
     // Throw if proof is invalid
-    if (await this.verify(circuit, publicInputs, proof)) throw new Error('Proof generation failed');
+    if (!(await this.verify(circuit, publicInputs, proof))) throw new Error('Proof generation failed');
 
     // Return proof with inputs
     return {
@@ -184,27 +184,6 @@ class Prover {
       ),
       randomOut: inputs.randomOut.map((el) => bytes.hexlify(el, true)),
       valuesOut: inputs.valuesOut.map((el) => bytes.hexlify(el, true)),
-      commitmentsOut: inputs.commitmentsOut.map((el) => bytes.hexlify(el, true)),
-      ciphertextHash: bytes.hexlify(inputs.ciphertextHash, true),
-    };
-    // }
-  }
-
-  static formatPublicInputs(inputs: PublicInputs): FormattedCircuitInputs {
-    const hashOfInputs = Prover.hashInputs(inputs);
-
-    // if (inputs.type === 'erc20') {
-    // Inputs type is ERC20
-    return {
-      hashOfInputs: bytes.hexlify(hashOfInputs, true),
-      adaptID: bytes.hexlify(inputs.adaptID, true),
-      depositAmount: bytes.hexlify(inputs.depositAmount, true),
-      withdrawAmount: bytes.hexlify(inputs.withdrawAmount, true),
-      outputTokenField: bytes.hexlify(inputs.outputTokenField, true),
-      outputEthAddress: bytes.hexlify(inputs.outputEthAddress, true),
-      treeNumber: bytes.hexlify(inputs.treeNumber, true),
-      merkleRoot: bytes.hexlify(inputs.merkleRoot, true),
-      nullifiers: inputs.nullifiers.map((el) => bytes.hexlify(el, true)),
       commitmentsOut: inputs.commitmentsOut.map((el) => bytes.hexlify(el, true)),
       ciphertextHash: bytes.hexlify(inputs.ciphertextHash, true),
     };

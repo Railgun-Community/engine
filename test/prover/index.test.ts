@@ -223,51 +223,31 @@ describe('Prover/Index', () => {
     });
   });
 
-  it('Should format public inputs', async () => {
-    const publicInputs = Prover.privateToPublicInputs(erc20TestVector);
-
-    expect(Prover.formatPublicInputs(publicInputs)).to.deep.equal({
-      hashOfInputs: '0x2d0eaa4d90dd738bf8a7232f4c1be0634f4f38a06bb3c17bd07d7f5c35e00601',
-      adaptID: '0x03b075046b71ff5f8e0792de4b82ddc979fcb3b8c03abe12972e65c57759fb46',
-      depositAmount: '0x03',
-      withdrawAmount: '0x00',
-      outputTokenField: '0x01',
-      outputEthAddress: '0x00',
-      treeNumber: '0x00',
-      merkleRoot: '0x2f6c4330831c18d7c2589b8decb033a240411a7081d74f91518c49fb834193c9',
-      nullifiers: [
-        '0x1bca2b3dd7bb7ef965dbff2bdb277983c6cfd31506261262c10a08b856b52338',
-        '0x050c649d5025621f09f0e9b6e522ae7685f373fadc35bd895f82ca0ffa752c3a',
-      ],
-      commitmentsOut: [
-        '0x29e4809eb2d8ef7858864f5d4c0e1de765ac1d5d732c207fb474dbbecc010bc5',
-        '0x2fc6c08afd44ab9fc3e104ae5db9b3723fd1ed073a3b3bf2da682935788c6360',
-        '0x2adc28c56eedb6203e8d290963023c4435f3a7ff749410df339ea4a02133623b',
-      ],
-      ciphertextHash: '0x2f7d57a19b96d0d856b4ed3e274a146b8cacb2762397532069bb946a494703a0',
-    });
-  });
-
   it('Should calculate proofs', async () => {
     expect((await prover.prove('erc20small', erc20TestVector)).inputs).to.deep.equal({
-      hashOfInputs: '0x2d0eaa4d90dd738bf8a7232f4c1be0634f4f38a06bb3c17bd07d7f5c35e00601',
-      adaptID: '0x03b075046b71ff5f8e0792de4b82ddc979fcb3b8c03abe12972e65c57759fb46',
-      depositAmount: '0x03',
-      withdrawAmount: '0x00',
-      outputTokenField: '0x01',
-      outputEthAddress: '0x00',
-      treeNumber: '0x00',
-      merkleRoot: '0x2f6c4330831c18d7c2589b8decb033a240411a7081d74f91518c49fb834193c9',
+      type: 'erc20',
+      adaptID: '03b075046b71ff5f8e0792de4b82ddc979fcb3b8c03abe12972e65c57759fb46',
+      depositAmount: '03',
+      withdrawAmount: '00',
+      outputTokenField: '01',
+      outputEthAddress: '00',
+      treeNumber: '00',
+      merkleRoot: '2f6c4330831c18d7c2589b8decb033a240411a7081d74f91518c49fb834193c9',
       nullifiers: [
-        '0x1bca2b3dd7bb7ef965dbff2bdb277983c6cfd31506261262c10a08b856b52338',
-        '0x050c649d5025621f09f0e9b6e522ae7685f373fadc35bd895f82ca0ffa752c3a',
+        '1bca2b3dd7bb7ef965dbff2bdb277983c6cfd31506261262c10a08b856b52338',
+        '050c649d5025621f09f0e9b6e522ae7685f373fadc35bd895f82ca0ffa752c3a',
       ],
       commitmentsOut: [
-        '0x29e4809eb2d8ef7858864f5d4c0e1de765ac1d5d732c207fb474dbbecc010bc5',
-        '0x2fc6c08afd44ab9fc3e104ae5db9b3723fd1ed073a3b3bf2da682935788c6360',
-        '0x2adc28c56eedb6203e8d290963023c4435f3a7ff749410df339ea4a02133623b',
+        '29e4809eb2d8ef7858864f5d4c0e1de765ac1d5d732c207fb474dbbecc010bc5',
+        '2fc6c08afd44ab9fc3e104ae5db9b3723fd1ed073a3b3bf2da682935788c6360',
+        '2adc28c56eedb6203e8d290963023c4435f3a7ff749410df339ea4a02133623b',
       ],
-      ciphertextHash: '0x2f7d57a19b96d0d856b4ed3e274a146b8cacb2762397532069bb946a494703a0',
+      ciphertextHash: '2f7d57a19b96d0d856b4ed3e274a146b8cacb2762397532069bb946a494703a0',
     });
-  }).timeout(60000);
+
+    const erc20TestVectorInvalid = erc20TestVector;
+    erc20TestVectorInvalid.tokenField = '02';
+
+    await expect(prover.prove('erc20small', erc20TestVectorInvalid)).to.eventually.be.rejectedWith('Proof generation failed');
+  }).timeout(120000);
 });
