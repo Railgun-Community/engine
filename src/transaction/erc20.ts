@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { ERC20Note } from '../note';
-import { hash, bytes } from '../utils';
+import { hash, bytes, babyjubjub } from '../utils';
 import { Wallet, TXO } from '../wallet';
 // import type { ERC20Inputs } from '../prover';
 
@@ -77,7 +77,7 @@ class ERC20Transaction {
     if (totalRequired.gt(balance)) throw new Error('Wallet balance too low');
 
     // Loop through each tree with a balance and attempt to find a spending solution
-    const solutions: (TXO[] | false)[] = treeSortedBalances.map((treeBalance) => {
+    const solutions: (TXO[] | false)[] = treeSortedBalances.map((treeBalance, tree) => {
       // If this tree doesn't have enough to cover this transaction, return false
       if (treeBalance.balance.lt(totalRequired)) return false;
 
@@ -113,31 +113,46 @@ class ERC20Transaction {
         utxos.push(treeBalance.utxos[utxos.length]);
       }
 
-      function fillUTXOs(length: number) {
+      const fillUTXOs = (length: number) => {
         if (treeBalance.utxos.length < length) {
           // We don't have enough UTXOs to fill desired length
           // Push what we have and fill to length with dummy notes
           utxos = [...treeBalance.utxos];
 
           while (utxos.length < length) {
-            utxos.push(new ERC20Note(
-              
-            ));
+            utxos.push({
+              tree,
+              position: -1,
+              index: -1,
+              change: false,
+              txid: '',
+              spendtxid: false,
+              note: new ERC20Note(
+                babyjubjub.privateKeyToPublicKey(
+                  babyjubjub.seedToPrivateKey(
+                    bytes.random(32),
+                  ),
+                ),
+                babyjubjub.random(),
+                '00',
+                this.token,
+              ),
+            });
           }
         } else {
           // We have enough UTXOs to fill to desired length
           // Loop and push from end of available until desired length is achieved
-          let cursor = 0;
+          let cursor = 1;
           while (utxos.length < length) {
             utxos.push(treeBalance.utxos[treeBalance.utxos.length - cursor]);
             cursor += 1;
           }
         }
-      }
+      };
 
-      if (utxos.length < 3) {
+      if (utxos.length <= 3) {
         fillUTXOs(3);
-      } else if (utxos.length < 11) {
+      } else if (utxos.length <= 11) {
         fillUTXOs(11);
       }
 
