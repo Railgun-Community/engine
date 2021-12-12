@@ -22,7 +22,6 @@ async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
   if (circuit === 'erc20small') {
     return artifacts.small;
   }
-
   return artifacts.large;
 }
 

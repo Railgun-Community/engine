@@ -22,7 +22,7 @@ export type TXO = {
   change: boolean,
   txid: string,
   spendtxid: string | false,
-  dummyKey: string | undefined, // For dummy notes
+  dummyKey?: string, // For dummy notes
   note: ERC20Note,
 };
 

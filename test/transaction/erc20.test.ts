@@ -2,6 +2,9 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
+// @ts-ignore
+import artifacts from 'railgun-artifacts';
+
 import BN from 'bn.js';
 import memdown from 'memdown';
 import { Database } from '../../src/database';
@@ -10,6 +13,7 @@ import { Wallet } from '../../src/wallet';
 import { ERC20Note } from '../../src/note';
 import { babyjubjub } from '../../src/utils';
 import { ERC20Transaction } from '../../src/transaction';
+import { Prover, Circuits, Artifacts } from '../../src/prover';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -18,6 +22,14 @@ let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
 let transaction: ERC20Transaction;
+let prover: Prover;
+
+async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
+  if (circuit === 'erc20small') {
+    return artifacts.small;
+  }
+  return artifacts.large;
+}
 
 const testMnemonic = 'test test test test test test test test test test test junk';
 const testEncryptionKey = '01';
@@ -110,12 +122,13 @@ const leaves3: Commitment[] = notesPrep3.map((keyIndex) => {
 
 // eslint-disable-next-line func-names
 describe('Transaction/ERC20', function () {
-  this.timeout(30000);
+  this.timeout(120000);
 
   this.beforeAll(async () => {
     db = new Database(memdown());
     merkletree = new MerkleTree(db, 1, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic);
+    prover = new Prover(artifactsGetter);
     wallet.loadTree(merkletree);
     await merkletree.queueLeaves(0, 0, leaves);
     await merkletree.queueLeaves(1, 0, leaves2);
@@ -146,7 +159,25 @@ describe('Transaction/ERC20', function () {
       ),
     ];
 
-    expect(await transaction.generateInputs(wallet, testEncryptionKey)).to.deep.equal('f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b');
+    const inputs = await transaction.generateInputs(wallet, testEncryptionKey);
+
+    expect(inputs.nullifiers.length).to.equal(3);
+    expect(inputs.nullifiers[0]).to.equal('15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0');
+  });
+
+  it('Should create transaction proofs', async () => {
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    const prove = await transaction.prove(prover, wallet, testEncryptionKey);
+
+    expect(prove).to.equal(3);
   });
 
   this.afterAll(() => {
