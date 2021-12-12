@@ -564,4 +564,4 @@ class MerkleTree {
   }
 }
 
-export { MerkleTree };
+export { MerkleTree, depths };

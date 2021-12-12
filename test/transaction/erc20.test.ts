@@ -51,14 +51,14 @@ const keypairsPopulated = keypairs.map((key) => ({
 }));
 
 const notesPrep = [
-  0, 1, 2, 3, 2, 0,
+  0,
 ];
 
 const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   const note = new ERC20Note(
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-    new BN(1000000000000 * (keyIndex + 1)),
+    new BN('11000000000000000000000000', 10),
     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
   );
 
@@ -89,6 +89,25 @@ const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
   };
 });
 
+const notesPrep3 = [
+  0, 1, 0,
+];
+
+const leaves3: Commitment[] = notesPrep3.map((keyIndex) => {
+  const note = new ERC20Note(
+    keypairsPopulated[keyIndex].publicKey,
+    '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+    new BN(2166666666667),
+    '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+  );
+
+  return {
+    hash: note.hash,
+    txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+    data: note.serialize(),
+  };
+});
+
 // eslint-disable-next-line func-names
 describe('Transaction/ERC20', function () {
   this.timeout(30000);
@@ -100,10 +119,7 @@ describe('Transaction/ERC20', function () {
     wallet.loadTree(merkletree);
     await merkletree.queueLeaves(0, 0, leaves);
     await merkletree.queueLeaves(1, 0, leaves2);
-    await merkletree.nullify([{
-      txid: '000001',
-      nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
-    }]);
+    await merkletree.queueLeaves(2, 0, leaves3);
     await wallet.scan(1);
   });
 
