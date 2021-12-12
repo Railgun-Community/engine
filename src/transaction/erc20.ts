@@ -3,11 +3,30 @@ import { ERC20Note } from '../note';
 import { hash, bytes, babyjubjub } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
-import type { ERC20PrivateInputs, Prover } from '../prover';
+import type { ERC20PrivateInputs, Prover, Proof } from '../prover';
 
 export type AdaptID = {
   contract: bytes.BytesData,
   parameters: bytes.BytesData,
+}
+
+export type Commitment = {
+  hash: bytes.BytesData,
+  ciphertext: bytes.BytesData[],
+  senderPublicKey: bytes.BytesData,
+};
+
+export type ERC20TransactionSerialized = {
+  proof: Proof;
+  adaptID: AdaptID;
+  deposit: bytes.BytesData,
+  withdraw: bytes.BytesData,
+  token: bytes.BytesData,
+  withdrawAddress: bytes.BytesData,
+  tree: bytes.BytesData,
+  merkleroot: bytes.BytesData,
+  nullifiers: bytes.BytesData[],
+  commitments: Commitment[],
 }
 
 class ERC20Transaction {
@@ -60,7 +79,10 @@ class ERC20Transaction {
   async generateInputs(
     wallet: Wallet,
     encryptionKey: bytes.BytesData,
-  ): Promise<ERC20PrivateInputs> {
+  ): Promise<{
+    inputs: ERC20PrivateInputs,
+    commitments: Commitment[],
+  }> {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = this.outputs
       .reduce((left, right) => left.add(bytes.numberify(right.amount)), new BN(0))
@@ -238,6 +260,7 @@ class ERC20Transaction {
       this.token,
     ));
 
+    // Pad with dummy notes to outputs length
     while (commitments.length < 3) {
       commitments.push(new ERC20Note(
         babyjubjub.privateKeyToPublicKey(babyjubjub.seedToPrivateKey(
@@ -249,14 +272,15 @@ class ERC20Transaction {
       ));
     }
 
-    const cipherText = commitments.map((commitment) => {
+    // Calculate ciphertext
+    const ciphertext = commitments.map((commitment) => {
       const senderPrivateKey = babyjubjub.seedToPrivateKey(bytes.random(32));
       const senderPublicKey = babyjubjub.privateKeyToPublicKey(senderPrivateKey);
       const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.publicKey);
       const encrypted = commitment.encrypt(sharedKey);
 
       return {
-        senderPubKey: senderPublicKey,
+        senderPublicKey,
         ciphertext: [
           encrypted.iv,
           ...encrypted.data,
@@ -264,13 +288,15 @@ class ERC20Transaction {
       };
     });
 
+    // Calculate ciphertext hash
     const ciphertextHash = hash.sha256(bytes.combine(
-      cipherText.map((commitment) => [
-        ...babyjubjub.unpackPoint(commitment.senderPubKey),
+      ciphertext.map((commitment) => [
+        ...babyjubjub.unpackPoint(commitment.senderPublicKey),
         ...commitment.ciphertext,
       ]).flat(2).map((value) => bytes.padToLength(value, 32)),
     ));
 
+    // Format inputs
     const inputs: ERC20PrivateInputs = {
       type: 'erc20',
       adaptID: this.adaptIDhash,
@@ -296,21 +322,48 @@ class ERC20Transaction {
       ciphertextHash,
     };
 
-    return inputs;
+    return {
+      inputs,
+      commitments: commitments.map((commitment, index) => ({
+        hash: commitment.hash,
+        ciphertext: ciphertext[index].ciphertext,
+        senderPublicKey: ciphertext[index].senderPublicKey,
+      })),
+    };
   }
 
+  /**
+   * Generate proof and return serialized transaction
+   * @param prover - prover to use
+   * @param wallet - wallet to spend from
+   * @param encryptionKey - encryption key for wallet
+   * @returns serialized transaction
+   */
   async prove(
     prover: Prover,
     wallet: Wallet,
     encryptionKey: bytes.BytesData,
-  ) {
+  ): Promise<ERC20TransactionSerialized> {
     // Get inputs
     const inputs = await this.generateInputs(wallet, encryptionKey);
-    const proof = inputs.nullifiers.length === 3
-      ? await prover.prove('erc20small', inputs)
-      : await prover.prove('erc20large', inputs);
 
-    console.log(proof);
+    // Calculate proof
+    const proof = inputs.inputs.nullifiers.length === 3
+      ? await prover.prove('erc20small', inputs.inputs)
+      : await prover.prove('erc20large', inputs.inputs);
+
+    return {
+      proof: proof.proof,
+      adaptID: this.adaptID,
+      deposit: this.deposit,
+      withdraw: this.withdraw,
+      token: this.token,
+      withdrawAddress: this.withdrawAddress || '00',
+      tree: inputs.inputs.treeNumber,
+      merkleroot: inputs.inputs.merkleRoot,
+      nullifiers: inputs.inputs.nullifiers,
+      commitments: inputs.commitments,
+    };
   }
 }
 

@@ -161,8 +161,8 @@ describe('Transaction/ERC20', function () {
 
     const inputs = await transaction.generateInputs(wallet, testEncryptionKey);
 
-    expect(inputs.nullifiers.length).to.equal(3);
-    expect(inputs.nullifiers[0]).to.equal('15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0');
+    expect(inputs.inputs.nullifiers.length).to.equal(3);
+    expect(inputs.inputs.nullifiers[0]).to.equal('15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0');
   });
 
   it('Should create transaction proofs', async () => {
@@ -175,9 +175,9 @@ describe('Transaction/ERC20', function () {
       ),
     ];
 
-    const prove = await transaction.prove(prover, wallet, testEncryptionKey);
+    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
 
-    expect(prove).to.equal(3);
+    expect(tx.nullifiers.length).to.equal(3);
   });
 
   this.afterAll(() => {
