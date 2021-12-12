@@ -5,6 +5,7 @@ import {
   arrayify,
   numberify,
   hexlify,
+  random as randomBytes,
 } from './bytes';
 import { poseidon } from './hash';
 
@@ -119,10 +120,15 @@ function privateKeyToPublicKey(privateKey: BytesData): string {
   return packPoint(publicKey);
 }
 
+function random() {
+  return poseidon([randomBytes(32)]);
+}
+
 export {
   seedToPrivateKey,
   packPoint,
   unpackPoint,
   ecdh,
   privateKeyToPublicKey,
+  random,
 };

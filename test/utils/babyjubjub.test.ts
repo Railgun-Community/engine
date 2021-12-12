@@ -2,7 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import { babyjubjub } from '../../src/utils';
+import { babyjubjub, bytes, constants } from '../../src/utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -136,5 +136,11 @@ describe('Utils/BabyJubJub', () => {
         babyjubjub.privateKeyToPublicKey(vector.privateKey),
       ).to.equal(vector.publicKey);
     });
+  });
+
+  it('Should create random babyjubjub values', () => {
+    expect(
+      bytes.numberify(babyjubjub.random()).lte(constants.SNARK_PRIME),
+    ).to.equal(true);
   });
 });
