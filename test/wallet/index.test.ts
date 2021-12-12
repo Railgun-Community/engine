@@ -262,6 +262,8 @@ describe('Wallet/Index', () => {
     expect(
       balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(655350),
     ).to.equal(true);
+
+    expect((await wallet.balancesByTree(1))['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'][0].utxos.length).to.equal(10);
   }).timeout(60000);
 
   afterEach(() => {

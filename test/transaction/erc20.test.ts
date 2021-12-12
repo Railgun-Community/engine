@@ -2,6 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
+import BN from 'bn.js';
 import memdown from 'memdown';
 import { Database } from '../../src/database';
 import { Commitment, MerkleTree } from '../../src/merkletree';
@@ -57,7 +58,7 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   const note = new ERC20Note(
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-    'ffff',
+    new BN(1000000000000 * (keyIndex + 1)),
     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
   );
 
@@ -70,14 +71,14 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
 });
 
 const notesPrep2 = [
-  0, 1, 2, 3, 2, 0,
+  0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0,
 ];
 
 const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
   const note = new ERC20Note(
     keypairsPopulated[keyIndex].publicKey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-    'ffff',
+    new BN(1000000000000 * (keyIndex + 1)),
     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
   );
 
@@ -99,6 +100,10 @@ describe('Transaction/ERC20', function () {
     wallet.loadTree(merkletree);
     await merkletree.queueLeaves(0, 0, leaves);
     await merkletree.queueLeaves(1, 0, leaves2);
+    await merkletree.nullify([{
+      txid: '000001',
+      nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
+    }]);
     await wallet.scan(1);
   });
 
@@ -106,13 +111,26 @@ describe('Transaction/ERC20', function () {
     transaction = new ERC20Transaction('7f4925cdf66ddf5b88016df1fe915e68eff8f192', 1);
   });
 
-  it('Should calculate adaptID correctly', async () => {
+  it('Should calculate adaptID', async () => {
     expect(transaction.adaptIDhash).to.equal('f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b');
 
     transaction.adaptID.contract = '7f4925cdf66ddf5b88016df1fe915e68eff8f192';
     transaction.adaptID.parameters = '21543ad39bf8f7649d6325e44f53cbc84f501847cf42bd9fb14d63be21dcffc8';
 
     expect(transaction.adaptIDhash).to.equal('b107d2ef47e7d68c13fd053058bafd99807941d5826cb10adf4c0103a8ff81fe');
+  });
+
+  it('Should generate inputs for transaction', async () => {
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    expect(await transaction.generateInputs(wallet, testEncryptionKey)).to.equal('f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b');
   });
 
   this.afterAll(() => {

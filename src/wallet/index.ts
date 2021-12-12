@@ -32,6 +32,13 @@ export type Balances = {
   }
 };
 
+export type BalancesByTree = {
+  [ key: string ]: { // Key: Token
+    balance: BN,
+    utxos: TXO[],
+  }[] // Index = tree
+};
+
 class Wallet {
   private db: Database;
 
@@ -307,11 +314,11 @@ class Wallet {
       // If this UTXO hasn't already been marked as spent, check if it has
       if (!UTXO.spendtxid) {
         // Get nullifier
-        const nullifier = await this.merkletree[chainID].getNullified(UTXO.nullifier);
+        const nullifierTX = await this.merkletree[chainID].getNullified(UTXO.nullifier);
 
         // If it's nullified write spend txid to wallet storage
-        if (nullifier) {
-          UTXO.spendtxid = nullifier;
+        if (nullifierTX) {
+          UTXO.spendtxid = nullifierTX;
 
           // Write nullifier spend txid to db
           await this.db.put(keySplit, msgpack.encode(UTXO));
@@ -365,6 +372,40 @@ class Wallet {
     });
 
     return balances;
+  }
+
+  /**
+   * Sort token balances by tree
+   * @param chainID - chainID of token
+   * @returns balances by tree
+   */
+  async balancesByTree(chainID: number): Promise<BalancesByTree> {
+    // Fetch balances
+    const balances = await this.balances(chainID);
+
+    // Sort token balances by tree
+    const balancesByTree: BalancesByTree = {};
+
+    // Loop through each token
+    Object.keys(balances).forEach((token) => {
+      // Create balances tree array
+      balancesByTree[token] = [];
+
+      // Loop through each UTXO and sort by ree
+      balances[token].utxos.forEach((utxo) => {
+        if (!balancesByTree[token][utxo.tree]) {
+          balancesByTree[token][utxo.tree] = {
+            balance: bytes.numberify(utxo.note.amount),
+            utxos: [utxo],
+          };
+        } else {
+          balancesByTree[token][utxo.tree].balance.iadd(bytes.numberify(utxo.note.amount));
+          balancesByTree[token][utxo.tree].utxos.push(utxo);
+        }
+      });
+    });
+
+    return balancesByTree;
   }
 
   /**
