@@ -146,7 +146,7 @@ describe('Transaction/ERC20', function () {
       ),
     ];
 
-    expect(await transaction.generateInputs(wallet, testEncryptionKey)).to.equal('f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b');
+    expect(await transaction.generateInputs(wallet, testEncryptionKey)).to.deep.equal('f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b');
   });
 
   this.afterAll(() => {

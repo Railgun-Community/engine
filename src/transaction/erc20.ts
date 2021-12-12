@@ -3,7 +3,7 @@ import { ERC20Note } from '../note';
 import { hash, bytes, babyjubjub } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
-import type { ERC20PrivateInputs } from '../prover';
+import type { ERC20PrivateInputs, Prover } from '../prover';
 
 export type AdaptID = {
   contract: bytes.BytesData,
@@ -57,7 +57,10 @@ class ERC20Transaction {
    * @param wallet - wallet to spend from
    * @param encryptionKey - encryption key of wallet
    */
-  async generateInputs(wallet: Wallet, encryptionKey: bytes.BytesData): ERC20PrivateInputs {
+  async generateInputs(
+    wallet: Wallet,
+    encryptionKey: bytes.BytesData,
+  ): Promise<ERC20PrivateInputs> {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = this.outputs
       .reduce((left, right) => left.add(bytes.numberify(right.amount)), new BN(0))
@@ -261,10 +264,12 @@ class ERC20Transaction {
       };
     });
 
-    const ciphertextHash = hash.sha256(cipherText.map((commitment) => [
-      ...babyjubjub.unpackPoint(commitment.senderPubKey),
-      ...commitment.ciphertext,
-    ]).flat(2).map((value) => bytes.padToLength(value, 32)));
+    const ciphertextHash = hash.sha256(bytes.combine(
+      cipherText.map((commitment) => [
+        ...babyjubjub.unpackPoint(commitment.senderPubKey),
+        ...commitment.ciphertext,
+      ]).flat(2).map((value) => bytes.padToLength(value, 32)),
+    ));
 
     const inputs: ERC20PrivateInputs = {
       type: 'erc20',
@@ -292,6 +297,20 @@ class ERC20Transaction {
     };
 
     return inputs;
+  }
+
+  async prove(
+    prover: Prover,
+    wallet: Wallet,
+    encryptionKey: bytes.BytesData,
+  ) {
+    // Get inputs
+    const inputs = await this.generateInputs(wallet, encryptionKey);
+    const proof = inputs.nullifiers.length === 3
+      ? await prover.prove('erc20small', inputs)
+      : await prover.prove('erc20large', inputs);
+
+    console.log(proof);
   }
 }
 
