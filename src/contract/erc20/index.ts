@@ -4,6 +4,7 @@ import {
   BigNumber,
   Event,
 } from 'ethers';
+import BN from 'bn.js';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
@@ -37,6 +38,26 @@ class ERC20RailgunContract {
    */
   async merkleRoot(): Promise<string> {
     return bytes.hexlify((await this.contract.functions.merkleRoot())[0].toHexString());
+  }
+
+  /**
+   * Gets transaction fees
+   * Deposit and withdraw fees are in basis points, transfer is in wei
+   */
+  async fees(): Promise<{
+    deposit: BN;
+    withdraw: BN;
+    transfer: BN;
+  }> {
+    const depositFee = await this.contract.depositFee();
+    const withdrawFee = await this.contract.depositFee();
+    const transferFee = await this.contract.depositFee();
+
+    return {
+      deposit: new BN(depositFee.toHexString(), 'hex'),
+      withdraw: new BN(withdrawFee.toHexString(), 'hex'),
+      transfer: new BN(transferFee.toHexString(), 'hex'),
+    };
   }
 
   /**
@@ -82,6 +103,40 @@ class ERC20RailgunContract {
               hash: note.hash,
               txid: event.transactionHash,
               data: note.serialize(),
+            };
+          }),
+        );
+      },
+    );
+
+    this.contract.on(
+      'CommitmentBatch',
+      (
+        treeNumber: BigNumber,
+        startPosition: BigNumber,
+        commitments: {
+          hash: BigNumber;
+          ciphertext: BigNumber[];
+          senderPubKey: BigNumber[];
+        }[],
+        event: Event,
+      ) => {
+        listener(
+          treeNumber.toNumber(),
+          startPosition.toNumber(),
+          commitments.map((commitment) => {
+            const ciphertexthexlified = commitment.ciphertext.map((el) => el.toHexString());
+
+            return {
+              hash: commitment.hash.toHexString(),
+              txid: event.transactionHash,
+              senderPublicKey: babyjubjub.packPoint(
+                commitment.senderPubKey.map((el) => el.toHexString()),
+              ),
+              ciphertext: {
+                iv: ciphertexthexlified[0],
+                data: ciphertexthexlified.slice(1),
+              },
             };
           }),
         );

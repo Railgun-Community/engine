@@ -35,10 +35,13 @@ class Lepton {
     // Create contract instance
     this.contracts[chainID] = new ERC20RailgunContract(address, provider);
 
-    // Create ERC20
+    // Create tree controllers
     this.merkletree[chainID] = {
       erc20: new MerkleTree(this.db, chainID, 'erc20', this.contracts[chainID].validateRoot),
     };
+
+    // Setup listeners
+    this.contracts[chainID].treeUpdates(this.merkletree[chainID].erc20.queueLeaves);
   }
 
   /**
