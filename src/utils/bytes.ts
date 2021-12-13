@@ -41,11 +41,11 @@ function hexlify(data: BytesData, prefix = false): string {
 
   // Return 0x prefixed hex string if specified
   if (prefix) {
-    return `0x${hexString}`;
+    return `0x${hexString}`.toLowerCase();
   }
 
   // Else return plain hex string
-  return hexString;
+  return hexString.toLowerCase();
 }
 
 /**
@@ -125,11 +125,6 @@ function padToLength(
   if (typeof dataFormatted === 'string') {
     const dataFormattedString = dataFormatted.startsWith('0x') ? dataFormatted.slice(2) : dataFormatted;
 
-    // Check if data length exceeds padding length
-    if (dataFormattedString.length > length * 2) {
-      throw new Error('Data exceeds length');
-    }
-
     // If we're requested to pad to left, pad left and return
     if (side === 'left') {
       return dataFormatted.startsWith('0x')
@@ -141,11 +136,6 @@ function padToLength(
     return dataFormatted.startsWith('0x')
       ? `0x${dataFormattedString.padEnd(length * 2, '0')}`
       : dataFormattedString.padEnd(length * 2, '0');
-  }
-
-  // Check if data length exceeds padding length
-  if (dataFormatted.length > length) {
-    throw new Error('Data exceeds length');
   }
 
   // Coerce data into array

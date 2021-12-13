@@ -119,14 +119,64 @@ class ERC20RailgunContract {
     transactions: ERC20TransactionSerialized[],
   ): Promise<PopulatedTransaction> {
     // Calculate inputs
-    const inputs = transactions.map((transaction) => {
-      return {
-        
-      }
-    });
+    const inputs = transactions.map((transaction) => ({
+      _proof: {
+        a: transaction.proof.a.map((el) => bytes.padToLength(
+          bytes.hexlify(el, true), 32,
+        )),
+        b: transaction.proof.b.map((el) => el.map((el2) => bytes.padToLength(
+          bytes.hexlify(el2, true), 32,
+        ))),
+        c: transaction.proof.c.map((el) => bytes.padToLength(
+          bytes.hexlify(el, true), 32,
+        )),
+      },
+      _adaptIDcontract: bytes.padToLength(
+        bytes.hexlify(transaction.adaptID.contract, true), 20,
+      ),
+      _adaptIDparameters: bytes.padToLength(
+        bytes.hexlify(transaction.adaptID.parameters, true), 32,
+      ),
+      _depositAmount: bytes.padToLength(
+        bytes.hexlify(transaction.deposit, true), 32,
+      ),
+      _withdrawAmount: bytes.padToLength(
+        bytes.hexlify(transaction.withdraw, true), 32,
+      ),
+      _tokenField: bytes.padToLength(
+        bytes.hexlify(transaction.token, true), 20,
+      ),
+      _outputEthAddress: bytes.padToLength(
+        bytes.hexlify(transaction.withdrawAddress, true), 20,
+      ),
+      _treeNumber: bytes.padToLength(
+        bytes.hexlify(transaction.tree, true), 32,
+      ),
+      _merkleRoot: bytes.padToLength(
+        bytes.hexlify(transaction.merkleroot, true), 32,
+      ),
+      _nullifiers: transaction.nullifiers.map(
+        (nullifier) => bytes.padToLength(
+          bytes.hexlify(nullifier, true), 32,
+        ),
+      ),
+      _commitmentsOut: transaction.commitments.map((commitment) => ({
+        hash: bytes.padToLength(
+          bytes.hexlify(commitment.hash, true), 32,
+        ),
+        ciphertext: commitment.ciphertext.map((word) => bytes.padToLength(
+          bytes.hexlify(word, true), 32,
+        )),
+        senderPubKey: babyjubjub.unpackPoint(commitment.senderPublicKey).map(
+          (el) => bytes.padToLength(
+            bytes.hexlify(el, true), 32,
+          ),
+        ),
+      })),
+    }));
 
     // Return populated transaction
-    return this.contract.populateTransaction.generateDeposit(inputs);
+    return this.contract.populateTransaction.transact(inputs);
   }
 
   /**

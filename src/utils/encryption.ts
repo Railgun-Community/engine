@@ -4,6 +4,7 @@ import {
   hexlify,
   padToLength,
   random,
+  trim,
 } from './bytes';
 import type { BytesData } from './bytes';
 
@@ -60,7 +61,7 @@ const aes = {
         (block) => new Uint8Array(arrayify(block)),
       );
       const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
-      const ivFormatted = new Uint8Array(arrayify(ciphertext.iv));
+      const ivFormatted = new Uint8Array(arrayify(trim(ciphertext.iv, 16)));
 
       // Initialize decipher
       const decipher = crypto.createDecipheriv(

@@ -120,6 +120,25 @@ const leaves3: Commitment[] = notesPrep3.map((keyIndex) => {
   };
 });
 
+const notesPrep4 = [
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+const leaves4: Commitment[] = notesPrep4.map((keyIndex) => {
+  const note = new ERC20Note(
+    keypairsPopulated[keyIndex].publicKey,
+    '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+    new BN(343000000000),
+    '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+  );
+
+  return {
+    hash: note.hash,
+    txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+    data: note.serialize(),
+  };
+});
+
 // eslint-disable-next-line func-names
 describe('Transaction/ERC20', function () {
   this.timeout(120000);
@@ -133,6 +152,7 @@ describe('Transaction/ERC20', function () {
     await merkletree.queueLeaves(0, 0, leaves);
     await merkletree.queueLeaves(1, 0, leaves2);
     await merkletree.queueLeaves(2, 0, leaves3);
+    await merkletree.queueLeaves(3, 0, leaves4);
     await wallet.scan(1);
   });
 
@@ -179,6 +199,52 @@ describe('Transaction/ERC20', function () {
 
     expect(tx.nullifiers.length).to.equal(2);
   });
+
+  // it('Generator', async () => {
+  //   const dblocal = new Database(memdown());
+  //   const merkletreelocal = new MerkleTree(dblocal, 1, 'erc20', async () => true);
+  //   const walletlocal = await Wallet.fromMnemonic(dblocal, testEncryptionKey, testMnemonic);
+  //   const proverlocal = new Prover(artifactsGetter);
+
+  //   const note = new ERC20Note(
+  //     'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+  //     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+  //     new BN('11000000000000000000000000', 10),
+  //     '5FbDB2315678afecb367f032d93F642f64180aa3',
+  //   );
+
+  //   walletlocal.loadTree(merkletreelocal);
+
+  //   const encryptionKey = babyjubjub.ecdh(
+  //     '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
+  //     'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+  //   );
+
+  //   await merkletreelocal.queueLeaves(0, 0, [
+  //     {
+  //       hash: note.hash,
+  //       txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+  //       senderPublicKey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+  //       ciphertext: note.encrypt(encryptionKey),
+  //     },
+  //   ]);
+  //   await walletlocal.scan(1);
+
+  //   const transactionlocal = new ERC20Transaction('5FbDB2315678afecb367f032d93F642f64180aa3', 1);
+
+  //   transactionlocal.outputs = [
+  //     new ERC20Note(
+  //       'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+  //       '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+  //       'ffff',
+  //       '5FbDB2315678afecb367f032d93F642f64180aa3',
+  //     ),
+  //   ];
+
+  //   const tx = await transactionlocal.prove(proverlocal, walletlocal, testEncryptionKey);
+
+  //   console.log(JSON.stringify(tx, null, '  '));
+  // });
 
   this.afterAll(() => {
     // Clean up database

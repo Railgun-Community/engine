@@ -244,14 +244,6 @@ describe('Utils/Bytes', () => {
       ).to.deep.equal(vector.right32);
     });
 
-    expect(
-      () => bytes.padToLength('000000', 2),
-    ).to.throw();
-
-    expect(
-      () => bytes.padToLength([0, 0, 0], 2),
-    ).to.throw();
-
     expect(bytes.padToLength('0x00', 4)).to.equal('0x00000000');
   });
 

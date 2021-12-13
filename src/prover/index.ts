@@ -1,3 +1,4 @@
+import BN from 'bn.js';
 // @ts-ignore-next-line
 import { groth16 } from 'snarkjs';
 import {
@@ -82,8 +83,18 @@ class Prover {
     // Get inputs hash
     const hashOfInputs = Prover.hashInputs(inputs);
 
+    // Format proof
+    const proofFormatted = {
+      pi_a: [bytes.numberify(proof.a[0]).toString(10), bytes.numberify(proof.a[1]).toString(10)],
+      pi_b: [
+        [bytes.numberify(proof.b[0][1]).toString(10), bytes.numberify(proof.b[0][0]).toString(10)],
+        [bytes.numberify(proof.b[1][1]).toString(10), bytes.numberify(proof.b[1][0]).toString(10)],
+      ],
+      pi_c: [bytes.numberify(proof.c[0]).toString(10), bytes.numberify(proof.c[1]).toString(10)],
+    };
+
     // Return output of groth16 verify
-    return groth16.verify(artifacts.vkey, [hashOfInputs], proof);
+    return groth16.verify(artifacts.vkey, [hashOfInputs], proofFormatted);
   }
 
   async prove(
@@ -102,12 +113,22 @@ class Prover {
     // Generate proof
     const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 
+    // Format proof
+    const proofFormatted = {
+      a: [new BN(proof.pi_a[0]), new BN(proof.pi_a[1])],
+      b: [
+        [new BN(proof.pi_b[0][1]), new BN(proof.pi_b[0][0])],
+        [new BN(proof.pi_b[1][1]), new BN(proof.pi_b[1][0])],
+      ],
+      c: [new BN(proof.pi_c[0]), new BN(proof.pi_c[1])],
+    };
+
     // Throw if proof is invalid
-    if (!(await this.verify(circuit, publicInputs, proof))) throw new Error('Proof generation failed');
+    if (!(await this.verify(circuit, publicInputs, proofFormatted))) throw new Error('Proof generation failed');
 
     // Return proof with inputs
     return {
-      proof,
+      proof: proofFormatted,
       inputs: publicInputs,
     };
   }

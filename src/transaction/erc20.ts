@@ -108,7 +108,7 @@ class ERC20Transaction {
     this.outputs.forEach((output, index) => { if (output.token !== this.token) throw new Error(`TokenID mismatch on output ${index}`); });
 
     // Get UTXOs sorted by tree
-    const treeSortedBalances = (await wallet.balancesByTree(1))[this.token];
+    const treeSortedBalances = (await wallet.balancesByTree(1))[this.token] || [];
 
     // Sum balances
     const balance: BN = treeSortedBalances.reduce(
@@ -296,7 +296,7 @@ class ERC20Transaction {
       return {
         senderPublicKey,
         ciphertext: [
-          encrypted.iv,
+          bytes.padToLength(encrypted.iv, 32),
           ...encrypted.data,
         ],
       };
@@ -369,10 +369,10 @@ class ERC20Transaction {
     return {
       proof: proof.proof,
       adaptID: this.adaptID,
-      deposit: this.deposit,
-      withdraw: this.withdraw,
-      token: this.token,
-      withdrawAddress: this.withdrawAddress || '00',
+      deposit: inputs.inputs.depositAmount,
+      withdraw: inputs.inputs.withdrawAmount,
+      token: inputs.inputs.outputTokenField,
+      withdrawAddress: inputs.inputs.outputEthAddress,
       tree: inputs.inputs.treeNumber,
       merkleroot: inputs.inputs.merkleRoot,
       nullifiers: inputs.inputs.nullifiers,

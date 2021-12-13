@@ -103,7 +103,7 @@ describe('Note/ERC20', () => {
         },
         sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
         ciphertext: {
-          iv: 'ac1479a356621f493a6d8b3ca99d1a25',
+          iv: '00000000000000000000000000000000ac1479a356621f493a6d8b3ca99d1a25',
           data: [
             '1f7bb778c84a9786dc1beeb1b7cc108834752a386a9921c9c6f26b2312d3ea63',
             '58335f95ae23341654bc45b9e308b16f3945dc7835a99f9fbce44e4aa4544b05',
@@ -122,7 +122,7 @@ describe('Note/ERC20', () => {
         },
         sharedKey: 'c8c2a74bacf6ce3158069f81202d8c2d81fd25d226d7536f26442888c014a755',
         ciphertext: {
-          iv: 'dcad5707d7af6abc9574e6fd8b7a78bc',
+          iv: '00000000000000000000000000000000dcad5707d7af6abc9574e6fd8b7a78bc',
           data: [
             '3eb25c527d434bb07a424f48a061fd00d0f90ee30e9a2f92d07716d12ac498a7',
             '0b09a3d591397034d39f6b1fa6292af8795f20af315b9ab7f0ff1cd42bc1d2b6',
@@ -141,7 +141,7 @@ describe('Note/ERC20', () => {
         },
         sharedKey: '4676adb24e597086894880767f274818f711233eda9d617b348bb1cf92dd35e5',
         ciphertext: {
-          iv: 'becd0762e4c0e44ce4104246431a37e8',
+          iv: '00000000000000000000000000000000becd0762e4c0e44ce4104246431a37e8',
           data: [
             '3709e9d719d12d1c121d73abcf61281e6c0f1278f877546821d2e7e3b7f6be41',
             '40ddbe18f5b3cccf1204b77dcdb5a6e663bf97c76a5604dc9ff94f838cc4f7ec',
