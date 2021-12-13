@@ -120,7 +120,9 @@ class ERC20RailgunContract {
   ): Promise<PopulatedTransaction> {
     // Calculate inputs
     const inputs = transactions.map((transaction) => {
-      
+      return {
+        
+      }
     });
 
     // Return populated transaction

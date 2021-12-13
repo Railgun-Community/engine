@@ -99,8 +99,6 @@ class Prover {
     // Get public inputs
     const publicInputs = Prover.privateToPublicInputs(inputs);
 
-    console.log(formattedInputs);
-
     // Generate proof
     const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 

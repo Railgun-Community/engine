@@ -313,7 +313,7 @@ class ERC20Transaction {
     // Format inputs
     const inputs: ERC20PrivateInputs = {
       type: 'erc20',
-      adaptID: this.adaptIDhash,
+      adaptID: bytes.numberify(this.adaptIDhash).mod(constants.SNARK_PRIME),
       tokenField: this.token,
       depositAmount: this.deposit,
       withdrawAmount: this.withdraw,
@@ -360,8 +360,6 @@ class ERC20Transaction {
   ): Promise<ERC20TransactionSerialized> {
     // Get inputs
     const inputs = await this.generateInputs(wallet, encryptionKey);
-
-    console.log(inputs.inputs);
 
     // Calculate proof
     const proof = inputs.inputs.nullifiers.length === NOTE_INPUTS.small
