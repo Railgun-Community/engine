@@ -1,6 +1,11 @@
 import BN from 'bn.js';
 import { ERC20Note } from '../note';
-import { hash, bytes, babyjubjub } from '../utils';
+import {
+  hash,
+  bytes,
+  babyjubjub,
+  constants,
+} from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
 import type { ERC20PrivateInputs, Prover, Proof } from '../prover';
@@ -28,6 +33,13 @@ export type ERC20TransactionSerialized = {
   nullifiers: bytes.BytesData[],
   commitments: Commitment[],
 }
+
+const NOTE_INPUTS = {
+  small: 2,
+  large: 10,
+};
+
+const NOTE_OUTPUTS = 3;
 
 class ERC20Transaction {
   adaptID: AdaptID = {
@@ -184,10 +196,12 @@ class ERC20Transaction {
         }
       };
 
-      if (utxos.length <= 3) {
-        fillUTXOs(3);
-      } else if (utxos.length <= 11) {
-        fillUTXOs(11);
+      if (utxos.length <= NOTE_INPUTS.small) {
+        fillUTXOs(NOTE_INPUTS.small);
+      } else if (utxos.length <= NOTE_INPUTS.large) {
+        fillUTXOs(NOTE_INPUTS.large);
+      } else {
+        return [];
       }
 
       return utxos;
@@ -261,13 +275,13 @@ class ERC20Transaction {
     ));
 
     // Pad with dummy notes to outputs length
-    while (commitments.length < 3) {
+    while (commitments.length < NOTE_OUTPUTS) {
       commitments.push(new ERC20Note(
         babyjubjub.privateKeyToPublicKey(babyjubjub.seedToPrivateKey(
           bytes.random(32),
         )),
         babyjubjub.random(),
-        change,
+        new BN(0),
         this.token,
       ));
     }
@@ -289,12 +303,12 @@ class ERC20Transaction {
     });
 
     // Calculate ciphertext hash
-    const ciphertextHash = hash.sha256(bytes.combine(
+    const ciphertextHash = bytes.numberify(hash.sha256(bytes.combine(
       ciphertext.map((commitment) => [
         ...babyjubjub.unpackPoint(commitment.senderPublicKey),
         ...commitment.ciphertext,
       ]).flat(2).map((value) => bytes.padToLength(value, 32)),
-    ));
+    ))).mod(constants.SNARK_PRIME);
 
     // Format inputs
     const inputs: ERC20PrivateInputs = {
@@ -347,8 +361,10 @@ class ERC20Transaction {
     // Get inputs
     const inputs = await this.generateInputs(wallet, encryptionKey);
 
+    console.log(inputs.inputs);
+
     // Calculate proof
-    const proof = inputs.inputs.nullifiers.length === 3
+    const proof = inputs.inputs.nullifiers.length === NOTE_INPUTS.small
       ? await prover.prove('erc20small', inputs.inputs)
       : await prover.prove('erc20large', inputs.inputs);
 
@@ -367,4 +383,4 @@ class ERC20Transaction {
   }
 }
 
-export { ERC20Transaction };
+export { ERC20Transaction, NOTE_INPUTS, NOTE_OUTPUTS };

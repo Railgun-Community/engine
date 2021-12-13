@@ -10,6 +10,7 @@ import { abi } from './abi';
 import { ERC20Note } from '../../note';
 import type { Commitment } from '../../merkletree';
 import type { BytesData } from '../../utils/bytes';
+import type { ERC20TransactionSerialized } from '../../transaction/erc20';
 
 // eslint-disable-next-line no-unused-vars
 export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => void;
@@ -108,6 +109,18 @@ class ERC20RailgunContract {
         amount: serialized.amount,
         token: bytes.hexlify(bytes.trim(serialized.token, 20), true),
       };
+    });
+
+    // Return populated transaction
+    return this.contract.populateTransaction.generateDeposit(inputs);
+  }
+
+  transact(
+    transactions: ERC20TransactionSerialized[],
+  ): Promise<PopulatedTransaction> {
+    // Calculate inputs
+    const inputs = transactions.map((transaction) => {
+      
     });
 
     // Return populated transaction
