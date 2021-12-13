@@ -3,30 +3,14 @@ import { ERC20Note } from '../note';
 import { hash, bytes, babyjubjub } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
-import type { ERC20PrivateInputs, Prover, Proof } from '../prover';
+import type {
+  ERC20PrivateInputs, Prover,
+} from '../prover';
+import { SNARK_PRIME } from '../utils/constants';
 
 export type AdaptID = {
   contract: bytes.BytesData,
   parameters: bytes.BytesData,
-}
-
-export type Commitment = {
-  hash: bytes.BytesData,
-  ciphertext: bytes.BytesData[],
-  senderPublicKey: bytes.BytesData,
-};
-
-export type ERC20TransactionSerialized = {
-  proof: Proof;
-  adaptID: AdaptID;
-  deposit: bytes.BytesData,
-  withdraw: bytes.BytesData,
-  token: bytes.BytesData,
-  withdrawAddress: bytes.BytesData,
-  tree: bytes.BytesData,
-  merkleroot: bytes.BytesData,
-  nullifiers: bytes.BytesData[],
-  commitments: Commitment[],
 }
 
 class ERC20Transaction {
@@ -79,10 +63,7 @@ class ERC20Transaction {
   async generateInputs(
     wallet: Wallet,
     encryptionKey: bytes.BytesData,
-  ): Promise<{
-    inputs: ERC20PrivateInputs,
-    commitments: Commitment[],
-  }> {
+  ): Promise<ERC20PrivateInputs> {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = this.outputs
       .reduce((left, right) => left.add(bytes.numberify(right.amount)), new BN(0))
@@ -184,10 +165,10 @@ class ERC20Transaction {
         }
       };
 
-      if (utxos.length <= 3) {
-        fillUTXOs(3);
-      } else if (utxos.length <= 11) {
-        fillUTXOs(11);
+      if (utxos.length <= 2) {
+        fillUTXOs(2);
+      } else if (utxos.length <= 10) {
+        fillUTXOs(10);
       }
 
       return utxos;
@@ -267,20 +248,19 @@ class ERC20Transaction {
           bytes.random(32),
         )),
         babyjubjub.random(),
-        change,
+        new BN(0),
         this.token,
       ));
     }
-
     // Calculate ciphertext
-    const ciphertext = commitments.map((commitment) => {
+    const cipherText = commitments.map((commitment) => {
       const senderPrivateKey = babyjubjub.seedToPrivateKey(bytes.random(32));
       const senderPublicKey = babyjubjub.privateKeyToPublicKey(senderPrivateKey);
       const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.publicKey);
       const encrypted = commitment.encrypt(sharedKey);
 
       return {
-        senderPublicKey,
+        senderPubKey: senderPublicKey,
         ciphertext: [
           encrypted.iv,
           ...encrypted.data,
@@ -288,18 +268,14 @@ class ERC20Transaction {
       };
     });
 
-    // Calculate ciphertext hash
-    const ciphertextHash = hash.sha256(bytes.combine(
-      ciphertext.map((commitment) => [
-        ...babyjubjub.unpackPoint(commitment.senderPublicKey),
-        ...commitment.ciphertext,
-      ]).flat(2).map((value) => bytes.padToLength(value, 32)),
-    ));
+    const ciphertextHash = hash.sha256(bytes.combine(cipherText.map((commitment) => [
+      ...babyjubjub.unpackPoint(commitment.senderPubKey),
+      ...commitment.ciphertext,
+    ]).flat(2).map((value) => bytes.padToLength(value, 32))));
 
-    // Format inputs
     const inputs: ERC20PrivateInputs = {
       type: 'erc20',
-      adaptID: this.adaptIDhash,
+      adaptID: bytes.hexlify(bytes.numberify(this.adaptIDhash).mod(SNARK_PRIME)),
       tokenField: this.token,
       depositAmount: this.deposit,
       withdrawAmount: this.withdraw,
@@ -319,51 +295,24 @@ class ERC20Transaction {
       randomOut: commitments.map((output) => output.random),
       valuesOut: commitments.map((output) => output.amount),
       commitmentsOut: commitments.map((output) => output.hash),
-      ciphertextHash,
+      ciphertextHash: bytes.hexlify(bytes.numberify(ciphertextHash).mod(SNARK_PRIME)),
     };
 
-    return {
-      inputs,
-      commitments: commitments.map((commitment, index) => ({
-        hash: commitment.hash,
-        ciphertext: ciphertext[index].ciphertext,
-        senderPublicKey: ciphertext[index].senderPublicKey,
-      })),
-    };
+    return inputs;
   }
 
-  /**
-   * Generate proof and return serialized transaction
-   * @param prover - prover to use
-   * @param wallet - wallet to spend from
-   * @param encryptionKey - encryption key for wallet
-   * @returns serialized transaction
-   */
   async prove(
     prover: Prover,
     wallet: Wallet,
     encryptionKey: bytes.BytesData,
-  ): Promise<ERC20TransactionSerialized> {
+  ) {
     // Get inputs
     const inputs = await this.generateInputs(wallet, encryptionKey);
+    const proof = inputs.nullifiers.length === 2
+      ? await prover.prove('erc20small', inputs)
+      : await prover.prove('erc20large', inputs);
 
-    // Calculate proof
-    const proof = inputs.inputs.nullifiers.length === 3
-      ? await prover.prove('erc20small', inputs.inputs)
-      : await prover.prove('erc20large', inputs.inputs);
-
-    return {
-      proof: proof.proof,
-      adaptID: this.adaptID,
-      deposit: this.deposit,
-      withdraw: this.withdraw,
-      token: this.token,
-      withdrawAddress: this.withdrawAddress || '00',
-      tree: inputs.inputs.treeNumber,
-      merkleroot: inputs.inputs.merkleRoot,
-      nullifiers: inputs.inputs.nullifiers,
-      commitments: inputs.commitments,
-    };
+    console.log(proof);
   }
 }
 

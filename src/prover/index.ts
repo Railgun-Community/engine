@@ -96,6 +96,8 @@ class Prover {
     // Get formatted inputs
     const formattedInputs = Prover.formatPrivateInputs(inputs);
 
+    console.log(formattedInputs);
+
     // Get public inputs
     const publicInputs = Prover.privateToPublicInputs(inputs);
 

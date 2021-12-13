@@ -121,7 +121,7 @@ const leaves3: Commitment[] = notesPrep3.map((keyIndex) => {
 });
 
 // eslint-disable-next-line func-names
-describe('Transaction/ERC20', function () {
+describe.only('Transaction/ERC20', function () {
   this.timeout(120000);
 
   this.beforeAll(async () => {
@@ -161,8 +161,8 @@ describe('Transaction/ERC20', function () {
 
     const inputs = await transaction.generateInputs(wallet, testEncryptionKey);
 
-    expect(inputs.inputs.nullifiers.length).to.equal(3);
-    expect(inputs.inputs.nullifiers[0]).to.equal('15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0');
+    expect(inputs.nullifiers.length).to.equal(2);
+    expect(inputs.nullifiers[0]).to.equal('15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0');
   });
 
   it('Should create transaction proofs', async () => {
@@ -175,9 +175,7 @@ describe('Transaction/ERC20', function () {
       ),
     ];
 
-    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
-
-    expect(tx.nullifiers.length).to.equal(3);
+    await transaction.prove(prover, wallet, testEncryptionKey);
   });
 
   this.afterAll(() => {
