@@ -183,6 +183,97 @@ describe('Transaction/ERC20', function () {
 
     expect(inputs.inputs.nullifiers.length).to.equal(2);
     expect(inputs.inputs.nullifiers[0]).to.equal('15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0');
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    await expect(transaction.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('Too many outputs specified');
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '000925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    await expect(transaction.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('TokenID mismatch on output 0');
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN('21000000000027360000000000', 10),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    await expect(transaction.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('Wallet balance too low');
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN('11000000000027360000000000', 10),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    await expect(transaction.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('Balances need to be consolidated before being able to spend this amount');
+
+    const transaction2 = new ERC20Transaction('ff', 1);
+
+    transaction2.withdraw = new BN(12);
+
+    await expect(transaction2.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('Wallet balance too low');
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    transaction.withdraw = new BN(2);
+
+    await expect(transaction.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('Withdraw address not set');
+
+    transaction.withdrawAddress = '01';
+
+    expect((await transaction.generateInputs(wallet, testEncryptionKey)).inputs.nullifiers.length)
+      .to.equal(2);
+
+    transaction.withdraw = new BN(0);
+
+    await expect(transaction.generateInputs(wallet, testEncryptionKey))
+      .to.eventually.be.rejectedWith('Withdraw shouldn\'t be set');
   });
 
   it('Should create transaction proofs', async () => {
@@ -198,6 +289,21 @@ describe('Transaction/ERC20', function () {
     const tx = await transaction.prove(prover, wallet, testEncryptionKey);
 
     expect(tx.nullifiers.length).to.equal(2);
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(1715000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    transaction.tree = 3;
+
+    const tx2 = await transaction.prove(prover, wallet, testEncryptionKey);
+
+    expect(tx2.nullifiers.length).to.equal(10);
   });
 
   // it('Generator', async () => {
