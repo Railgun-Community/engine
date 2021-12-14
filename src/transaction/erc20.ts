@@ -108,16 +108,13 @@ class ERC20Transaction {
     this.outputs.forEach((output, index) => { if (output.token !== this.token) throw new Error(`TokenID mismatch on output ${index}`); });
 
     // Get UTXOs sorted by tree
-    const treeSortedBalances = (await wallet.balancesByTree(1))[this.token] || [];
+    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[this.token] || [];
 
     // Sum balances
     const balance: BN = treeSortedBalances.reduce(
       (left, right) => left.add(right.balance),
       new BN(0),
     );
-
-    console.log(this.token);
-    console.log(treeSortedBalances);
 
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired.gt(balance)) throw new Error('Wallet balance too low');
