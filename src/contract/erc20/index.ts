@@ -185,9 +185,9 @@ class ERC20RailgunContract {
           bytes.hexlify(el, true), 32,
         )),
       },
-      _adaptIDcontract: bytes.padToLength(
+      _adaptIDcontract: bytes.trim(bytes.padToLength(
         bytes.hexlify(transaction.adaptID.contract, true), 20,
-      ),
+      ), 20),
       _adaptIDparameters: bytes.padToLength(
         bytes.hexlify(transaction.adaptID.parameters, true), 32,
       ),
@@ -197,12 +197,12 @@ class ERC20RailgunContract {
       _withdrawAmount: bytes.padToLength(
         bytes.hexlify(transaction.withdraw, true), 32,
       ),
-      _tokenField: bytes.padToLength(
+      _tokenField: bytes.trim(bytes.padToLength(
         bytes.hexlify(transaction.token, true), 20,
-      ),
-      _outputEthAddress: bytes.padToLength(
+      ), 20),
+      _outputEthAddress: bytes.trim(bytes.padToLength(
         bytes.hexlify(transaction.withdrawAddress, true), 20,
-      ),
+      ), 20),
       _treeNumber: bytes.padToLength(
         bytes.hexlify(transaction.tree, true), 32,
       ),
