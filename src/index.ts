@@ -3,7 +3,7 @@ import type { ethers } from 'ethers';
 import { ERC20RailgunContract } from './contract';
 import { Database } from './database';
 import { BIP32Node } from './keyderivation';
-import { MerkleTree } from './merkletree';
+import { MerkleTree, Commitment } from './merkletree';
 import { Prover, ArtifactsGetter } from './prover';
 import { ERC20Transaction } from './transaction';
 import { ERC20Note } from './note';
@@ -31,8 +31,14 @@ class Lepton {
     this.prover = new Prover(artifactsGetter);
   }
 
-  async listener() {
-    
+  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
+    // Queue leaves to merkle tree
+    await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
+
+    // Trigger wallet scans
+    Object.values(this.wallets).forEach((wallet) => {
+      wallet.scan(chainID);
+    });
   }
 
   /**
@@ -55,8 +61,13 @@ class Lepton {
       erc20: new MerkleTree(this.db, chainID, 'erc20', this.contracts[chainID].validateRoot),
     };
 
+    // Load merkle tree to wallets
+    Object.values(this.wallets).forEach((wallet) => {
+      wallet.loadTree(this.merkletree[chainID].erc20);
+    });
+
     // Setup listeners
-    this.contracts[chainID].treeUpdates(this.merkletree[chainID].erc20.queueLeaves);
+    this.contracts[chainID].treeUpdates(this.listener.bind(this, chainID));
   }
 
   /**
@@ -67,6 +78,11 @@ class Lepton {
     if (this.contracts[chainID]) {
       // Unload listeners
       this.contracts[chainID].unload();
+
+      // Unlaod tree from wallets
+      Object.values(this.wallets).forEach((wallet) => {
+        wallet.unloadTree(chainID);
+      });
 
       // Delete contract and merkle tree objects
       delete this.contracts[chainID];
@@ -97,8 +113,48 @@ class Lepton {
     return this.contracts.map((element, index) => index);
   }
 
-  loadExistingWallet(encryptionKey: bytes.BytesData, id: bytes.BytesData,) {
-    this.wallets[id] = 
+  /**
+   * Load existing wallet
+   * @param encryptionKey - encryption key of wallet
+   * @param id - wallet ID
+   * @returns id
+   */
+  async loadExistingWallet(encryptionKey: bytes.BytesData, id: bytes.BytesData): Promise<string> {
+    // Instantiate wallet
+    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
+
+    // Store wallet against ID
+    this.wallets[bytes.hexlify(id)] = wallet;
+
+    // Load merkle trees for wallet
+    this.merkletree.forEach((tree) => {
+      wallet.loadTree(tree.erc20);
+    });
+
+    // Return wallet ID
+    return bytes.hexlify(id);
+  }
+
+  /**
+   * Creates wallet from mnemonic
+   * @param encryptionKey - encryption key of wallet
+   * @param mnemonic - mnemonic to load
+   * @returns id
+   */
+  async createFromMnemonic(encryptionKey: bytes.BytesData, mnemonic: string): Promise<string> {
+    // Instantiate wallet
+    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
+
+    // Store wallet against ID
+    this.wallets[wallet.id] = wallet;
+
+    // Load merkle trees for wallet
+    this.merkletree.forEach((tree) => {
+      wallet.loadTree(tree.erc20);
+    });
+
+    // Return wallet ID
+    return wallet.id;
   }
 
   /**
