@@ -85,7 +85,7 @@ describe('Lepton', () => {
         config.contracts.rail,
       ),
     ];
-    transaction.withdraw = new BN(30);
+    transaction.withdraw = new BN(300);
     transaction.withdrawAddress = config.contracts.treasury;
 
     const transact = await lepton.contracts[chainID].transact([
@@ -97,8 +97,10 @@ describe('Lepton', () => {
 
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 
-    expect((await lepton.wallets[walletID].balances(chainID))[config.contracts.rail]).to.equal(300);
-  }).timeout(120000);
+    expect(
+      Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
+    ).to.equal('21999999999999999999999400');
+  }).timeout(240000);
 
   afterEach(async () => {
     lepton.unload();

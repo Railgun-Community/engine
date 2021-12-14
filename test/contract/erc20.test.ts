@@ -49,6 +49,10 @@ describe('Contract/Index', function () {
     expect(await contract.validateRoot(0, '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d')).to.equal(false);
   });
 
+  it('Should return fees', async () => {
+    expect(await contract.fees()).to.be.a('object');
+  });
+
   it('Should create serialized transactions', async () => {
     // Create deposit
     const deposit = await contract.generateDeposit([
