@@ -437,7 +437,7 @@ class MerkleTree {
       // eslint-disable-next-line no-await-in-loop
       const treeLengths = await Promise.all(treeLengthPromises);
 
-      const updatePromises: (Promise<void> | never)[] = [];
+      const updatePromises: (Promise<void> | null)[] = [];
 
       // Loop through each tree and check if there are updates to be made
       this.writeQueue.forEach((tree, treeIndex) => {

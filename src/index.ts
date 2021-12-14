@@ -56,7 +56,7 @@ class Lepton {
 
     // Create tree controllers
     this.merkletree[chainID] = {
-      erc20: new MerkleTree(this.db, chainID, 'erc20', this.contracts[chainID].validateRoot),
+      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root)),
     };
 
     // Load merkle tree to wallets

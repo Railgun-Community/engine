@@ -71,7 +71,7 @@ describe('Lepton', () => {
     ]);
 
     // Send deposit on chain
-    await (await etherswallet.sendTransaction(deposit)).wait();
+    etherswallet.sendTransaction(deposit);
 
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 
@@ -88,12 +88,12 @@ describe('Lepton', () => {
     transaction.withdraw = new BN(30);
     transaction.withdrawAddress = config.contracts.treasury;
 
-    const tx = await lepton.contracts[chainID].transact([
+    const transact = await lepton.contracts[chainID].transact([
       await transaction.prove(lepton.prover, lepton.wallets[walletID], testEncryptionKey),
     ]);
 
     // Send transact on chain
-    await (await etherswallet.sendTransaction(tx)).wait();
+    etherswallet.sendTransaction(transact);
 
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 

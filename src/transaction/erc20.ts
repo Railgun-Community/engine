@@ -116,6 +116,9 @@ class ERC20Transaction {
       new BN(0),
     );
 
+    console.log(this.token);
+    console.log(treeSortedBalances);
+
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired.gt(balance)) throw new Error('Wallet balance too low');
 
