@@ -469,13 +469,13 @@ class Wallet extends EventEmitter {
     // Fetch wallet details
     const walletDetails = await this.getWalletDetails();
 
+    // Get latest tree
+    const latestTree = await this.merkletree[chainID].latestTree();
+
     // Refresh list of trees
-    while (
-      // eslint-disable-next-line no-await-in-loop
-      await this.merkletree[chainID].getTreeLength(walletDetails.treeScannedHeights.length) !== 0
-    ) {
-      // Instantiate new trees in wallet data until we encounter a tree with tree length 0
-      walletDetails.treeScannedHeights[walletDetails.treeScannedHeights.length] = 0;
+    while (walletDetails.treeScannedHeights.length < latestTree + 1) {
+      // Instantiate new trees in wallet data
+      walletDetails.treeScannedHeights.push(0);
     }
 
     // Loop through each tree and scan

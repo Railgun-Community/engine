@@ -39,6 +39,38 @@ class Lepton {
     await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
   }
 
+  async scanHistory(chainID: number) {
+    // Get latest tree
+    const latestTree = await this.merkletree[chainID].erc20.latestTree();
+
+    // Get latest synced event
+    const treeLength = await this.merkletree[chainID].erc20.getTreeLength(latestTree);
+
+    let startScanningBlock = 0;
+
+    if (treeLength > 0) {
+      const latestEvent = await this.merkletree[chainID].erc20.getCommitment(
+        latestTree,
+        treeLength - 1,
+      );
+
+      console.log(await this.contracts[chainID].contract.provider.getTransactionReceipt(
+        bytes.hexlify(latestEvent.txid, true),
+      ));
+
+      startScanningBlock = 1;
+    }
+
+    // Run scan
+    this.contracts[chainID].getHistoricalEvents(startScanningBlock, (
+      tree: number,
+      startingIndex: number,
+      leaves: Commitment[],
+    ) => {
+      this.listener(chainID, tree, startingIndex, leaves);
+    });
+  }
+
   /**
    * Load network
    * @param address - address of railgun instance (proxy contract)
@@ -72,6 +104,8 @@ class Lepton {
     ) => {
       this.listener(chainID, tree, startingIndex, leaves);
     });
+
+    await this.scanHistory(chainID);
   }
 
   /**

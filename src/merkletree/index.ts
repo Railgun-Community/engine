@@ -493,6 +493,16 @@ class MerkleTree {
   }
 
   /**
+   * Gets latest tree
+   * @returns latest tree
+   */
+  async latestTree() {
+    let latestTree = 0;
+    while (await this.getTreeLength(latestTree) > 0) latestTree += 1;
+    return Math.max(0, latestTree - 1);
+  }
+
+  /**
    * Gets merkle proof for leaf
    * @param tree - tree number
    * @param index - index of leaf

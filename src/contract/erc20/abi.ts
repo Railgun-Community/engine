@@ -790,6 +790,71 @@ const abi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'hash',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256[6]',
+            name: 'ciphertext',
+            type: 'uint256[6]',
+          },
+          {
+            internalType: 'uint256[2]',
+            name: 'senderPubKey',
+            type: 'uint256[2]',
+          },
+        ],
+        internalType: 'struct Commitment',
+        name: '_commitment',
+        type: 'tuple',
+      },
+    ],
+    name: 'insertDummyCommitment',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256[2]',
+            name: 'pubkey',
+            type: 'uint256[2]',
+          },
+          {
+            internalType: 'uint256',
+            name: 'random',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'amount',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'token',
+            type: 'address',
+          },
+        ],
+        internalType: 'struct GeneratedCommitment',
+        name: '_commitment',
+        type: 'tuple',
+      },
+    ],
+    name: 'insertGeneratedCommitment',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'merkleRoot',
     outputs: [

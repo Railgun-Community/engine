@@ -486,6 +486,32 @@ describe('MerkleTree/Index', () => {
     expect(await merkletree.getNullified('00')).to.equal('01');
   });
 
+  it('Should return latest tree', async () => {
+    expect(await merkletree.latestTree()).to.equal(0);
+
+    await merkletree.queueLeaves(0, 0, [
+      {
+        hash: '02',
+        txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+    ]);
+
+    expect(await merkletree.latestTree()).to.equal(0);
+
+    await merkletree.queueLeaves(1, 0, [
+      {
+        hash: '02',
+        txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+        senderPublicKey: '',
+        ciphertext: { iv: '', data: [] },
+      },
+    ]);
+
+    expect(await merkletree.latestTree()).to.equal(1);
+  });
+
   afterEach(() => {
     // Clean up database
     db.close();

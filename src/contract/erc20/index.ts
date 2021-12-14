@@ -145,6 +145,26 @@ class ERC20RailgunContract {
     );
   }
 
+  async getHistoricalEvents(startBlock: number, listener: Listener) {
+    const [
+      generatedCommitmentBatch,
+      commitmentBatch,
+      generatedCommitment,
+      commitment,
+    ] = [
+      await this.contract.queryFilter(this.contract.filters.GeneratedCommitmentBatch(), startBlock),
+      await this.contract.queryFilter(this.contract.filters.CommitmentBatch(), startBlock),
+      await this.contract.queryFilter(this.contract.filters.NewGeneratedCommitment(), startBlock),
+      await this.contract.queryFilter(this.contract.filters.NewCommitment(), startBlock),
+    ];
+
+    generatedCommitmentBatch.forEach(console.log);
+    commitmentBatch.forEach(console.log);
+    generatedCommitment.forEach(console.log);
+    commitment.forEach(console.log);
+    console.log(listener);
+  }
+
   /**
    * Get generateDeposit populated transaction
    * @param notes - notes to deposit to
