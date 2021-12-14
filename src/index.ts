@@ -95,9 +95,18 @@ class Lepton {
   }
 
   /**
+   * Unload wallet
+   * @param id - wallet id to unload
+   */
+  unloadWallet(id: string) {
+    delete this.wallets[id];
+  }
+
+  /**
    * Unloads everything and closes DB
    */
   unload() {
+    // Unload chains
     this.contracts.forEach((contract, chainID) => {
       // Unload listeners
       contract.unload();
@@ -105,6 +114,11 @@ class Lepton {
       // Delete contract and merkle tree objects
       delete this.contracts[chainID];
       delete this.merkletree[chainID];
+    });
+
+    // Unload wallets
+    Object.keys(this.wallets).forEach((walletID) => {
+      this.unloadWallet(walletID);
     });
 
     this.db.close();
