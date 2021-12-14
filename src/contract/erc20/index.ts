@@ -10,7 +10,6 @@ import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
 import { ERC20Note } from '../../note';
 import type { Commitment } from '../../merkletree';
-import type { BytesData } from '../../utils/bytes';
 import type { ERC20TransactionSerialized } from '../../transaction/erc20';
 
 // eslint-disable-next-line no-unused-vars
@@ -65,7 +64,7 @@ class ERC20RailgunContract {
    * @param root - root to validate
    * @returns isValid
    */
-  validateRoot(tree: number, root: BytesData): Promise<boolean> {
+  validateRoot(tree: number, root: bytes.BytesData): Promise<boolean> {
     // Return result of root history lookup
     return this.contract.rootHistory(tree, bytes.hexlify(root, true));
   }

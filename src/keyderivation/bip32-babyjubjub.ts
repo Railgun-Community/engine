@@ -1,6 +1,5 @@
 import BN from 'bn.js';
 import { bytes, hash } from '../utils';
-import type { BytesData } from '../utils/bytes';
 
 export type KeyNode = {
   chainKey: string,
@@ -15,7 +14,7 @@ const HARDENED_OFFSET = 0x80000000;
  * @param seed - bip32 seed
  * @returns key node
  */
-function getMasterKeyFromSeed(seed: BytesData): KeyNode {
+function getMasterKeyFromSeed(seed: bytes.BytesData): KeyNode {
   // HMAC with seed to get I
   const I = hash.sha512HMAC(CURVE_SEED, seed);
 

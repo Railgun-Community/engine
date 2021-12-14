@@ -4,6 +4,12 @@ import { ERC20RailgunContract } from './contract';
 import { Database } from './database';
 import { BIP32Node } from './keyderivation';
 import { MerkleTree } from './merkletree';
+import { Prover, ArtifactsGetter } from './prover';
+import { ERC20Transaction } from './transaction';
+import { ERC20Note } from './note';
+import { encode, decode } from './keyderivation/bech32-encode';
+import { bytes } from './utils';
+import { Wallet } from './wallet';
 
 class Lepton {
   readonly db;
@@ -12,12 +18,21 @@ class Lepton {
 
   readonly contracts: ERC20RailgunContract[] = [];
 
+  readonly prover: Prover;
+
+  readonly wallets: {[key: string]: Wallet} = {};
+
   /**
    * Create a lepton instance
    * @param leveldown - abstract-leveldown compatible store
    */
-  constructor(leveldown: AbstractLevelDOWN) {
+  constructor(leveldown: AbstractLevelDOWN, artifactsGetter: ArtifactsGetter) {
     this.db = new Database(leveldown);
+    this.prover = new Prover(artifactsGetter);
+  }
+
+  async listener() {
+    
   }
 
   /**
@@ -49,7 +64,7 @@ class Lepton {
    * @param chainID - chainID of network to unload
    */
   unloadNetwork(chainID: number) {
-    if (this.merkletree[chainID]) {
+    if (this.contracts[chainID]) {
       // Unload listeners
       this.contracts[chainID].unload();
 
@@ -60,10 +75,30 @@ class Lepton {
   }
 
   /**
+   * Unloads everything and closes DB
+   */
+  unload() {
+    this.contracts.forEach((contract, chainID) => {
+      // Unload listeners
+      contract.unload();
+
+      // Delete contract and merkle tree objects
+      delete this.contracts[chainID];
+      delete this.merkletree[chainID];
+    });
+
+    this.db.close();
+  }
+
+  /**
    * Get list of loaded networks
    */
   get networks(): number[] {
     return this.contracts.map((element, index) => index);
+  }
+
+  loadExistingWallet(encryptionKey: bytes.BytesData, id: bytes.BytesData,) {
+    this.wallets[id] = 
   }
 
   /**
@@ -72,6 +107,14 @@ class Lepton {
   static createMnemonic(): string {
     return BIP32Node.createMnemonic();
   }
+
+  static encodeAddress = encode;
+
+  static decodeAddress = decode;
 }
 
-export { Lepton };
+export {
+  Lepton,
+  ERC20Note,
+  ERC20Transaction,
+};

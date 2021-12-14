@@ -5,7 +5,6 @@ import {
   babyjubjub,
   encryption,
 } from '../utils';
-import { BytesData } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
 
 export type ERC20NoteSerialized = {
@@ -31,7 +30,12 @@ class ERC20Note {
    * @param amount - note amount
    * @param token - note token ID
    */
-  constructor(publicKey: BytesData, random: BytesData, amount: BytesData, token: BytesData) {
+  constructor(
+    publicKey: bytes.BytesData,
+    random: bytes.BytesData,
+    amount: bytes.BytesData,
+    token: bytes.BytesData,
+  ) {
     this.publicKey = bytes.hexlify(bytes.padToLength(publicKey, 32));
     this.random = bytes.hexlify(bytes.padToLength(random, 32));
     this.amount = bytes.hexlify(bytes.padToLength(amount, 32));
@@ -54,7 +58,7 @@ class ERC20Note {
    * AES-256-CTR encrypts note data
    * @param sharedKey - key to encrypt with
    */
-  encrypt(sharedKey: BytesData): Ciphertext {
+  encrypt(sharedKey: bytes.BytesData): Ciphertext {
     // Encrypt in order and return
     return encryption.aes.ctr.encrypt([
       ...babyjubjub.unpackPoint(this.publicKey),
@@ -69,7 +73,7 @@ class ERC20Note {
    * @param encryptedNote - encrypted note data
    * @param sharedKey - key to decrypt with
    */
-  static decrypt(encryptedNote: Ciphertext, sharedKey: BytesData): ERC20Note {
+  static decrypt(encryptedNote: Ciphertext, sharedKey: bytes.BytesData): ERC20Note {
     // Decrypt values
     const decryptedValues = encryption.aes.ctr.decrypt(encryptedNote, sharedKey);
 
@@ -121,7 +125,7 @@ class ERC20Note {
    * @param position - position in tree
    * @returns nullifier (hex string)
    */
-  static getNullifier(privateKey: BytesData, tree: number, position: number): string {
+  static getNullifier(privateKey: bytes.BytesData, tree: number, position: number): string {
     return hash.poseidon([
       privateKey,
       new BN(tree),

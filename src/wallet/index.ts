@@ -5,7 +5,6 @@ import { bytes, hash, babyjubjub } from '../utils';
 import { Database } from '../database';
 import { BIP32Node } from '../keyderivation';
 import { mnemonicToSeed } from '../keyderivation/bip39';
-import { BytesData } from '../utils/bytes';
 import { ERC20Note } from '../note';
 import type { MerkleTree, Commitment } from '../merkletree';
 
@@ -45,7 +44,7 @@ class Wallet {
 
   readonly id: string;
 
-  #encryptionKey: BytesData;
+  #encryptionKey: bytes.BytesData;
 
   #addressNode: BIP32Node;
 
@@ -67,7 +66,7 @@ class Wallet {
    */
   constructor(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: bytes.BytesData,
     mnemonic: string,
     derivationPath: string,
     gapLimit: number,
@@ -140,7 +139,7 @@ class Wallet {
    * @returns keypair
    */
   getKeypair(
-    encryptionKey: BytesData,
+    encryptionKey: bytes.BytesData,
     index: number,
     change: boolean,
     chainID: number | undefined = undefined,
@@ -547,7 +546,7 @@ class Wallet {
    */
   static async fromMnemonic(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: bytes.BytesData,
     mnemonic: string,
     derivationPath: string = "m/1984'/0'/0'",
     gapLimit: number = 5,
@@ -580,8 +579,8 @@ class Wallet {
    */
   static async loadExisting(
     db: Database,
-    encryptionKey: BytesData,
-    id: BytesData,
+    encryptionKey: bytes.BytesData,
+    id: bytes.BytesData,
     gapLimit: number = 5,
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB

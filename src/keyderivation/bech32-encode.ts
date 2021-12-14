@@ -1,7 +1,6 @@
 import BN from 'bn.js';
 import { encode as bech32encode, decode as bech32decode } from 'bech32-buffer';
 import { bytes, constants } from '../utils';
-import type { BytesData } from '../utils/bytes';
 
 const prefixes: string[] = [];
 prefixes[1] = 'rgeth';
@@ -16,7 +15,7 @@ prefixes[137] = 'rgpoly';
  * @param version - version
  * @param chainID - chainID to encode
  */
-function encode(publicKey: BytesData, chainID: number | undefined = undefined) {
+function encode(publicKey: bytes.BytesData, chainID: number | undefined = undefined) {
   // TODO: Remove reliance on bech32-buffer
   // TODO: Add bit for chain type (EVM, Solana, etc.)
   // Combine key and version byte

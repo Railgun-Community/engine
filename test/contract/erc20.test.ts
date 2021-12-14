@@ -279,7 +279,7 @@ describe('Contract/Index', function () {
     expect(result.startPosition).to.equal(1);
     // @ts-ignore
     expect(result.leaves.length).to.equal(3);
-  }).timeout(30000);
+  }).timeout(120000);
 
   afterEach(async () => {
     contract.unload();

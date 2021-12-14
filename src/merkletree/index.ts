@@ -3,34 +3,33 @@ import BN from 'bn.js';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { bytes, hash, constants } from '../utils';
 import type { Database } from '../database';
-import type { BytesData } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
 import type { ERC20NoteSerialized } from '../note/erc20';
 
 export type MerkleProof = {
-  leaf: BytesData,
-  elements: BytesData[],
-  indices: BytesData,
-  root: BytesData,
+  leaf: bytes.BytesData,
+  elements: bytes.BytesData[],
+  indices: bytes.BytesData,
+  root: bytes.BytesData,
 };
 
 export type GeneratedCommitment = {
-  hash: BytesData,
-  txid: BytesData,
+  hash: bytes.BytesData,
+  txid: bytes.BytesData,
   data: ERC20NoteSerialized // | ERC721NoteSerialized
 }
 
 export type EncryptedCommitment = {
-  hash: BytesData,
-  txid: BytesData,
-  senderPublicKey: BytesData,
+  hash: bytes.BytesData,
+  txid: bytes.BytesData,
+  senderPublicKey: bytes.BytesData,
   ciphertext: Ciphertext,
 };
 
 export type Commitment = GeneratedCommitment | EncryptedCommitment;
 
 // eslint-disable-next-line no-unused-vars
-export type RootValidator = (tree: number, root: BytesData) => Promise<boolean>;
+export type RootValidator = (tree: number, root: bytes.BytesData) => Promise<boolean>;
 
 // Declare depth
 const depths = {
@@ -64,7 +63,7 @@ class MerkleTree {
   private treeLengthCache: number[] = [];
 
   // tree[level[index]]
-  private nodeWriteCache: BytesData[][][] = [];
+  private nodeWriteCache: bytes.BytesData[][][] = [];
 
   // tree[index]
   private commitmentWriteCache: Commitment[][] = [];
@@ -115,7 +114,7 @@ class MerkleTree {
    * @param right - right element
    * @returns hash
    */
-  static hashLeftRight(left: BytesData, right: BytesData): string {
+  static hashLeftRight(left: bytes.BytesData, right: bytes.BytesData): string {
     return hash.poseidon([left, right]);
   }
 
@@ -176,7 +175,7 @@ class MerkleTree {
    * @param nullifier - nullifier to get path for
    * @returns database path
    */
-  getNullifierDBPath(nullifier: BytesData): string[] {
+  getNullifierDBPath(nullifier: bytes.BytesData): string[] {
     return [
       bytes.fromUTF8String(`merkletree-${this.purpose}`),
       bytes.hexlify(new BN(this.chainID)),
@@ -190,7 +189,7 @@ class MerkleTree {
    * @param nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else false
    */
-  async getNullified(nullifier: BytesData): Promise<string | false> {
+  async getNullified(nullifier: bytes.BytesData): Promise<string | false> {
     // Return if nullifier is set
     try {
       return await this.db.get(this.getNullifierDBPath(
@@ -206,8 +205,8 @@ class MerkleTree {
    * @param nullifiers - nullifiers to add to db
    */
   async nullify(nullifiers: {
-    nullifier: BytesData,
-    txid: BytesData,
+    nullifier: bytes.BytesData,
+    txid: bytes.BytesData,
   }[]): Promise<void> {
     // Build write batch for nullifiers
     const nullifierWriteBatch: AbstractBatch[] = nullifiers.map(

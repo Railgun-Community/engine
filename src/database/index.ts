@@ -4,7 +4,6 @@ import type { AbstractLevelDOWN, AbstractBatch } from 'abstract-leveldown';
 import type { LevelUp } from 'levelup';
 import { bytes, encryption } from '../utils';
 
-import type { BytesData } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
 
 // TODO: Remove JSON encoding and standardize everything as msgpack
@@ -30,7 +29,7 @@ class Database {
    * @param path - path to covert
    * @returns key
    */
-  static pathToKey(path: BytesData[]): string {
+  static pathToKey(path: bytes.BytesData[]): string {
     // Convert to hex string, pad to 32 bytes, and join with :
     return path.map(
       (element) => bytes.hexlify(element).toLowerCase().padStart(64, '0'),
@@ -44,7 +43,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  put(path: BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
+  put(path: bytes.BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.put(key, value, { valueEncoding: encoding });
   }
@@ -55,7 +54,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns value
    */
-  get(path: BytesData[], encoding: Encoding = 'hex'): Promise<any> {
+  get(path: bytes.BytesData[], encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
     return this.level.get(key, { valueEncoding: encoding });
   }
@@ -66,7 +65,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  del(path: BytesData[], encoding: Encoding = 'hex'): Promise<void> {
+  del(path: bytes.BytesData[], encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.del(key, { valueEncoding: encoding });
   }
@@ -87,7 +86,11 @@ class Database {
    * @param encryptionKey - AES-256-CTR encryption key
    * @param value - value to encrypt and set
    */
-  async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData) {
+  async putEncrypted(
+    path: bytes.BytesData[],
+    encryptionKey: bytes.BytesData,
+    value: bytes.BytesData,
+  ) {
     // Encrypt data
     const encrypted = encryption.aes.ctr.encrypt(bytes.chunk(value), encryptionKey);
 
@@ -101,7 +104,10 @@ class Database {
    * @param encryptionKey - AES-256-CTR  encryption key
    * @return decrypted value
    */
-  async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData> {
+  async getEncrypted(
+    path: bytes.BytesData[],
+    encryptionKey: bytes.BytesData,
+  ): Promise<bytes.BytesData> {
     // Read from database
     const encrypted: Ciphertext = await this.get(path, 'json');
 
@@ -117,7 +123,7 @@ class Database {
    * @returns namespace stream
    */
   streamNamespace(
-    namespace: BytesData[],
+    namespace: bytes.BytesData[],
     keys: boolean = true,
     values: boolean = false,
   ) {
@@ -135,7 +141,7 @@ class Database {
    * @param namespace - namespace to delete
    * @returns complete
    */
-  clearNamespace(namespace: BytesData[]): Promise<void> {
+  clearNamespace(namespace: bytes.BytesData[]): Promise<void> {
     return new Promise((resolve) => {
       const deleteOperations: AbstractBatch[] = [];
 
@@ -158,7 +164,7 @@ class Database {
    * @param namespace - namespace to count keys in
    * @returns number of keys in namespace
    */
-  countNamespace(namespace: BytesData[]): Promise<number> {
+  countNamespace(namespace: bytes.BytesData[]): Promise<number> {
     return new Promise((resolve) => {
       let keyNumber = 0;
 
