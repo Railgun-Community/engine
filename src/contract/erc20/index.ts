@@ -48,9 +48,11 @@ class ERC20RailgunContract {
     withdraw: BN;
     transfer: BN;
   }> {
-    const depositFee = await this.contract.depositFee();
-    const withdrawFee = await this.contract.depositFee();
-    const transferFee = await this.contract.depositFee();
+    const [depositFee, withdrawFee, transferFee] = await Promise.all([
+      this.contract.depositFee(),
+      this.contract.withdrawFee(),
+      this.contract.transferFee(),
+    ]);
 
     return {
       deposit: new BN(depositFee.toHexString(), 'hex'),
