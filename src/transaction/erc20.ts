@@ -236,7 +236,7 @@ class ERC20Transaction {
 
       // Push spending key and nullifier
       spendingKeys.push(privateKey);
-      nullifiers.push(ERC20Note.getNullifier(privateKey, tree, 0));
+      nullifiers.push(ERC20Note.getNullifier(privateKey, tree, utxo.position));
 
       // Push path elements
       if (utxo.dummyKey) {
@@ -244,7 +244,7 @@ class ERC20Transaction {
       } else {
         pathElements.push(
           // eslint-disable-next-line no-await-in-loop
-          (await wallet.merkletree[this.chainID].getProof(tree, utxo.index)).elements,
+          (await wallet.merkletree[this.chainID].getProof(tree, utxo.position)).elements,
         );
       }
 
