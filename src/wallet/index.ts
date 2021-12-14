@@ -1,5 +1,6 @@
 import BN from 'bn.js';
 import msgpack from 'msgpack-lite';
+import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { bytes, hash, babyjubjub } from '../utils';
 import { Database } from '../database';
@@ -39,7 +40,7 @@ export type BalancesByTree = {
   }[] // Index = tree
 };
 
-class Wallet {
+class Wallet extends EventEmitter {
   private db: Database;
 
   readonly id: string;
@@ -71,6 +72,7 @@ class Wallet {
     derivationPath: string,
     gapLimit: number,
   ) {
+    super();
     this.db = db;
     this.#encryptionKey = encryptionKey;
     this.gapLimit = gapLimit;
@@ -531,6 +533,9 @@ class Wallet {
       this.#encryptionKey,
       msgpack.encode(walletDetails),
     );
+
+    // Emit scanned event
+    this.emit('scanned');
 
     // Release lock
     this.scanLock = false;

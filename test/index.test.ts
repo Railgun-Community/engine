@@ -36,10 +36,6 @@ async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
   return artifacts.large;
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 describe('Lepton', () => {
   beforeEach(async () => {
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
@@ -77,8 +73,7 @@ describe('Lepton', () => {
     // Send deposit on chain
     await (await etherswallet.sendTransaction(deposit)).wait();
 
-    await new Promise((resolve) => lepton.contracts[chainID].contract.once('GeneratedCommitmentBatch', resolve));
-    await sleep(3000);
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 
     // Create transaction
     const transaction = new ERC20Transaction(config.contracts.rail, chainID);
@@ -100,8 +95,7 @@ describe('Lepton', () => {
     // Send transact on chain
     await (await etherswallet.sendTransaction(tx)).wait();
 
-    await new Promise((resolve) => lepton.contracts[chainID].contract.once('CommitmentBatch', resolve));
-    await sleep(3000);
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 
     expect((await lepton.wallets[walletID].balances(chainID))[config.contracts.rail]).to.equal(300);
   }).timeout(120000);
