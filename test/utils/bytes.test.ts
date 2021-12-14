@@ -295,7 +295,7 @@ describe('Utils/Bytes', () => {
     // Loop through each group and test
     vectors.forEach((vector) => {
       // Test against Buffer output as reference
-      const bytes.BytesData = Buffer.from(vector, 'utf8').toString('hex');
+      const bytesdata = Buffer.from(vector, 'utf8').toString('hex');
 
       // Test bytes -> string
       expect(

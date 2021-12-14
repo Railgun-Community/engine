@@ -36,9 +36,7 @@ class Lepton {
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
 
     // Trigger wallet scans
-    Object.values(this.wallets).forEach((wallet) => {
-      wallet.scan(chainID);
-    });
+    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
   }
 
   /**
@@ -67,7 +65,13 @@ class Lepton {
     });
 
     // Setup listeners
-    this.contracts[chainID].treeUpdates(this.listener.bind(this, chainID));
+    this.contracts[chainID].treeUpdates((
+      tree: number,
+      startingIndex: number,
+      leaves: Commitment[],
+    ) => {
+      this.listener(chainID, tree, startingIndex, leaves);
+    });
   }
 
   /**
@@ -141,7 +145,10 @@ class Lepton {
    * @param mnemonic - mnemonic to load
    * @returns id
    */
-  async createFromMnemonic(encryptionKey: bytes.BytesData, mnemonic: string): Promise<string> {
+  async createWalletFromMnemonic(
+    encryptionKey: bytes.BytesData,
+    mnemonic: string,
+  ): Promise<string> {
     // Instantiate wallet
     const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
 
