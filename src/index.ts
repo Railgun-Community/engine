@@ -81,7 +81,7 @@ class Lepton {
     const chainID = (await provider.getNetwork()).chainId;
 
     // If a network with this chainID exists, unload it and load the provider as a new network
-    if (this.merkletree[chainID]) this.unloadNetwork(chainID);
+    if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
     // Create contract instance
     this.contracts[chainID] = new ERC20RailgunContract(address, provider);
