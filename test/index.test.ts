@@ -106,7 +106,7 @@ describe('Lepton', () => {
     expect(
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
     ).to.equal('21999999999999999999999400');
-  }).timeout(240000);
+  }).timeout(800000);
 
   it('Should sync historical data', async () => {
     // Create deposit

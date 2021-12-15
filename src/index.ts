@@ -142,12 +142,7 @@ class Lepton {
   unload() {
     // Unload chains
     this.contracts.forEach((contract, chainID) => {
-      // Unload listeners
-      contract.unload();
-
-      // Delete contract and merkle tree objects
-      delete this.contracts[chainID];
-      delete this.merkletree[chainID];
+      this.unloadNetwork(chainID);
     });
 
     // Unload wallets
