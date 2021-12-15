@@ -151,18 +151,91 @@ class ERC20RailgunContract {
       commitmentBatch,
       generatedCommitment,
       commitment,
-    ] = [
-      await this.contract.queryFilter(this.contract.filters.GeneratedCommitmentBatch(), startBlock),
-      await this.contract.queryFilter(this.contract.filters.CommitmentBatch(), startBlock),
-      await this.contract.queryFilter(this.contract.filters.NewGeneratedCommitment(), startBlock),
-      await this.contract.queryFilter(this.contract.filters.NewCommitment(), startBlock),
-    ];
+    ] = await Promise.all([
+      this.contract.queryFilter(this.contract.filters.GeneratedCommitmentBatch(), startBlock),
+      this.contract.queryFilter(this.contract.filters.CommitmentBatch(), startBlock),
+      this.contract.queryFilter(this.contract.filters.NewGeneratedCommitment(), startBlock),
+      this.contract.queryFilter(this.contract.filters.NewCommitment(), startBlock),
+    ]);
 
-    generatedCommitmentBatch.forEach(console.log);
-    commitmentBatch.forEach(console.log);
-    generatedCommitment.forEach(console.log);
-    commitment.forEach(console.log);
-    console.log(listener);
+    generatedCommitmentBatch.forEach((event) => {
+      if (event.args) {
+        listener(
+          event.args.treeNumber.toNumber(),
+          event.args.startPosition.toNumber(),
+          event.args.commitments.map((commit: any) => {
+            const note = ERC20Note.deserialize({
+              publicKey: babyjubjub.packPoint(commit.pubkey.map((el: any) => el.toHexString())),
+              random: bytes.hexlify(commit.random.toHexString()),
+              amount: bytes.hexlify(commit.amount.toHexString()),
+              token: bytes.hexlify(commit.token, true),
+            });
+            return {
+              hash: note.hash,
+              txid: event.transactionHash,
+              data: note.serialize(),
+            };
+          }),
+        );
+      }
+    });
+    commitmentBatch.forEach((event) => {
+      if (event.args) {
+        listener(
+          event.args.treeNumber.toNumber(),
+          event.args.startPosition.toNumber(),
+          event.args.commitments.map((commit: any) => {
+            const ciphertexthexlified = commit.ciphertext.map((el: any) => el.toHexString());
+            return {
+              hash: commit.hash.toHexString(),
+              txid: event.transactionHash,
+              senderPublicKey: babyjubjub.packPoint(
+                commit.senderPubKey.map((el: any) => el.toHexString()),
+              ),
+              ciphertext: {
+                iv: ciphertexthexlified[0],
+                data: ciphertexthexlified.slice(1),
+              },
+            };
+          }),
+        );
+      }
+    });
+    const leaves: Commitment[] = [];
+
+    generatedCommitment.forEach((event) => {
+      if (event.args) {
+        const note = ERC20Note.deserialize({
+          publicKey: babyjubjub.packPoint(event.args.pubkey.map((el: any) => el.toHexString())),
+          random: bytes.hexlify(event.args.random.toHexString()),
+          amount: bytes.hexlify(event.args.amount.toHexString()),
+          token: bytes.hexlify(event.args.token, true),
+        });
+        leaves.push({
+          hash: note.hash,
+          txid: event.transactionHash,
+          data: note.serialize(),
+        });
+      }
+    });
+    commitment.forEach((event) => {
+      if (event.args) {
+        const ciphertexthexlified = event.args.ciphertext.map((el: any) => el.toHexString());
+        leaves.push({
+          hash: event.args.hash.toHexString(),
+          txid: event.transactionHash,
+          senderPublicKey: babyjubjub.packPoint(
+            event.args.senderPubKey.map((el: any) => el.toHexString()),
+          ),
+          ciphertext: {
+            iv: ciphertexthexlified[0],
+            data: ciphertexthexlified.slice(1),
+          },
+        });
+      }
+    });
+
+    listener(0, 0, leaves);
   }
 
   /**

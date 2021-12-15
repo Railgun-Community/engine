@@ -62,7 +62,7 @@ class Lepton {
     }
 
     // Run scan
-    this.contracts[chainID].getHistoricalEvents(startScanningBlock, (
+    await this.contracts[chainID].getHistoricalEvents(startScanningBlock, (
       tree: number,
       startingIndex: number,
       leaves: Commitment[],

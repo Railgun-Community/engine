@@ -63,50 +63,50 @@ describe('Lepton', () => {
     expect(lepton.wallets[walletID].id).to.equal(walletID);
   });
 
-  // it('Should deposit, transact and update balance', async () => {
-  //   const address = (await lepton.wallets[walletID].addresses(chainID))[0];
+  it('Should deposit, transact and update balance', async () => {
+    const address = (await lepton.wallets[walletID].addresses(chainID))[0];
 
-  //   // Create deposit
-  //   const deposit = await lepton.contracts[chainID].generateDeposit([
-  //     new ERC20Note(
-  //       Lepton.decodeAddress(address).publicKey,
-  //       '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-  //       new BN('11000000000000000000000000', 10),
-  //       config.contracts.rail,
-  //     ),
-  //   ]);
+    // Create deposit
+    const deposit = await lepton.contracts[chainID].generateDeposit([
+      new ERC20Note(
+        Lepton.decodeAddress(address).publicKey,
+        '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+        new BN('11000000000000000000000000', 10),
+        config.contracts.rail,
+      ),
+    ]);
 
-  //   // Send deposit on chain
-  //   etherswallet.sendTransaction(deposit);
+    // Send deposit on chain
+    etherswallet.sendTransaction(deposit);
 
-  //   await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 
-  //   // Create transaction
-  //   const transaction = new ERC20Transaction(config.contracts.rail, chainID);
-  //   transaction.outputs = [
-  //     new ERC20Note(
-  //       babyjubjub.privateKeyToPublicKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
-  //       '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-  //       new BN('300', 10),
-  //       config.contracts.rail,
-  //     ),
-  //   ];
-  //   transaction.withdraw = new BN(300);
-  //   transaction.withdrawAddress = config.contracts.treasury;
+    // Create transaction
+    const transaction = new ERC20Transaction(config.contracts.rail, chainID);
+    transaction.outputs = [
+      new ERC20Note(
+        babyjubjub.privateKeyToPublicKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
+        '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+        new BN('300', 10),
+        config.contracts.rail,
+      ),
+    ];
+    transaction.withdraw = new BN(300);
+    transaction.withdrawAddress = config.contracts.treasury;
 
-  //   const transact = await lepton.contracts[chainID].transact([
-  //     await transaction.prove(lepton.prover, lepton.wallets[walletID], testEncryptionKey),
-  //   ]);
+    const transact = await lepton.contracts[chainID].transact([
+      await transaction.prove(lepton.prover, lepton.wallets[walletID], testEncryptionKey),
+    ]);
 
-  //   // Send transact on chain
-  //   etherswallet.sendTransaction(transact);
+    // Send transact on chain
+    etherswallet.sendTransaction(transact);
 
-  //   await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
 
-  //   expect(
-  //     Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
-  //   ).to.equal('21999999999999999999999400');
-  // }).timeout(240000);
+    expect(
+      Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
+    ).to.equal('21999999999999999999999400');
+  }).timeout(240000);
 
   it('Should sync historical data', async () => {
     // Create deposit
@@ -244,7 +244,15 @@ describe('Lepton', () => {
     await provider.send('evm_mine', []);
 
     // Load network and sync
-    lepton.loadNetwork(config.contracts.proxy, provider);
+    await lepton.loadNetwork(config.contracts.proxy, provider);
+
+    // Let 3 scanned events trigger
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    expect(
+      Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
+    ).to.equal('44000000000000000000000000');
   }).timeout(240000);
 
   afterEach(async () => {
