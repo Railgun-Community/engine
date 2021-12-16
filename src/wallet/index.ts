@@ -448,7 +448,7 @@ class Wallet extends EventEmitter {
       usedIndexes = await Promise.all(usedIndexes);
 
       // Update the wallet height the the highest index with a detected note
-      height = usedIndexes.lastIndexOf(true);
+      height = usedIndexes.lastIndexOf(true) === -1 ? 0 : usedIndexes.lastIndexOf(true);
     }
 
     // Return new height
