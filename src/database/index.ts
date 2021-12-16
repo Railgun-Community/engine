@@ -169,7 +169,7 @@ class Database {
       let keyNumber = 0;
 
       // Create read stream for namespace*
-      this.streamNamespace(namespace).on('data', (data) => {
+      this.streamNamespace(namespace).on('data', () => {
         // Increment keynumber
         keyNumber += 1;
       }).on('end', () => {
