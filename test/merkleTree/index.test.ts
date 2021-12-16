@@ -208,6 +208,7 @@ describe('MerkleTree/Index', () => {
       },
     ]);
 
+    expect(await merkletree.getTreeLength(0)).to.equal(0);
     expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
 
     await merkletree.queueLeaves(0, 3, [
@@ -219,6 +220,7 @@ describe('MerkleTree/Index', () => {
       },
     ]);
 
+    expect(await merkletree.getTreeLength(0)).to.equal(0);
     expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
 
     await merkletree.queueLeaves(0, 0, [
@@ -242,6 +244,7 @@ describe('MerkleTree/Index', () => {
       },
     ]);
 
+    expect(await merkletree.getTreeLength(0)).to.equal(4);
     expect(await merkletree.getRoot(0)).to.equal('2f4c02f094b5c881b9a2d25539d50bc839652b96acb147b81181922064b25f29');
 
     await Promise.all([
@@ -255,7 +258,7 @@ describe('MerkleTree/Index', () => {
       ]),
       merkletree.queueLeaves(0, 4, [
         {
-          hash: '0000000000000000000000000000000000000000000000000000000000000005',
+          hash: '000000000000000d0000000000000000000000000000000000000000000000005',
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           senderPublicKey: '',
           ciphertext: { iv: '', data: [] },
@@ -272,6 +275,7 @@ describe('MerkleTree/Index', () => {
       },
     ]);
 
+    expect(await merkletree.getTreeLength(0)).to.equal(12);
     expect(await merkletree.getRoot(0)).to.equal('1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c');
   });
 

@@ -256,7 +256,10 @@ class MerkleTree {
    */
   async getTreeLength(tree: number): Promise<number> {
     this.treeLengthCache[tree] = this.treeLengthCache[tree]
-      || await this.db.countNamespace(this.getTreeDBPrefix(tree));
+      || await this.db.countNamespace([
+        ...this.getTreeDBPrefix(tree),
+        bytes.hexlify((new BN(0)).notn(32)), // 2^256-1
+      ]);
 
     return this.treeLengthCache[tree];
   }
