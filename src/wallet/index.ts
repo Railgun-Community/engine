@@ -524,7 +524,7 @@ class Wallet extends EventEmitter {
       walletDetails.changeHeight = await changeHeight;
 
       // Commit new scanned height
-      walletDetails.treeScannedHeights[tree] = leaves.length - 1;
+      walletDetails.treeScannedHeights[tree] = leaves.length > 0 ? leaves.length - 1 : 0;
     }
 
     // Write wallet details to db
