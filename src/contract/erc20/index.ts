@@ -144,19 +144,60 @@ class ERC20RailgunContract {
     );
   }
 
+  /**
+   * Gets historical events from block
+   * @param startBlock - block to scan from
+   * @param listener - listener to call with events
+   */
   async getHistoricalEvents(startBlock: number, listener: Listener) {
-    const [
-      generatedCommitmentBatch,
-      commitmentBatch,
-      generatedCommitment,
-      commitment,
-    ] = await Promise.all([
-      this.contract.queryFilter(this.contract.filters.GeneratedCommitmentBatch(), startBlock),
-      this.contract.queryFilter(this.contract.filters.CommitmentBatch(), startBlock),
-      this.contract.queryFilter(this.contract.filters.NewGeneratedCommitment(), startBlock),
-      this.contract.queryFilter(this.contract.filters.NewCommitment(), startBlock),
-    ]);
+    const SCAN_CHUNKS = 500;
+    const generatedCommitmentBatch = [];
+    const commitmentBatch = [];
+    const generatedCommitment = [];
+    const commitment = [];
 
+    let currentStartBlock = startBlock;
+    const latest = (await this.contract.provider.getBlock('latest')).number;
+
+    // Process chunks of blocks at a time
+    while (currentStartBlock < latest) {
+      // Loop through each list of events and push to array
+      generatedCommitmentBatch.push(
+        // eslint-disable-next-line no-await-in-loop
+        ...await this.contract.queryFilter(
+          this.contract.filters.GeneratedCommitmentBatch(),
+          currentStartBlock,
+          currentStartBlock + SCAN_CHUNKS,
+        ),
+      );
+      commitmentBatch.push(
+        // eslint-disable-next-line no-await-in-loop
+        ...await this.contract.queryFilter(
+          this.contract.filters.CommitmentBatch(),
+          currentStartBlock,
+          currentStartBlock + SCAN_CHUNKS,
+        ),
+      );
+      generatedCommitment.push(
+        // eslint-disable-next-line no-await-in-loop
+        ...await this.contract.queryFilter(
+          this.contract.filters.NewGeneratedCommitment(),
+          currentStartBlock,
+          currentStartBlock + SCAN_CHUNKS,
+        ),
+      );
+      commitment.push(
+        // eslint-disable-next-line no-await-in-loop
+        ...await this.contract.queryFilter(
+          this.contract.filters.NewCommitment(),
+          currentStartBlock,
+          currentStartBlock + SCAN_CHUNKS,
+        ),
+      );
+      currentStartBlock += SCAN_CHUNKS;
+    }
+
+    // Process events
     generatedCommitmentBatch.forEach((event) => {
       if (event.args) {
         listener(
