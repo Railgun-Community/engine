@@ -246,7 +246,7 @@ describe('Transaction/ERC20', function () {
 
     const transaction2 = new ERC20Transaction('ff', 1);
 
-    transaction2.withdraw = new BN(12);
+    transaction2.setWithdraw(new BN(12));
 
     await expect(transaction2.generateInputs(wallet, testEncryptionKey))
       .to.eventually.be.rejectedWith('Wallet balance too low');
@@ -270,7 +270,8 @@ describe('Transaction/ERC20', function () {
     expect((await transaction.generateInputs(wallet, testEncryptionKey)).inputs.nullifiers.length)
       .to.equal(2);
 
-    transaction.withdraw = new BN(0);
+    transaction.setDeposit('00');
+    transaction.setWithdraw('00');
 
     await expect(transaction.generateInputs(wallet, testEncryptionKey))
       .to.eventually.be.rejectedWith('Withdraw shouldn\'t be set');

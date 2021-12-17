@@ -84,6 +84,22 @@ class ERC20Transaction {
   }
 
   /**
+   * Sets withdraw amount
+   * @param amount - withdraw amount
+   */
+  setWithdraw(amount: bytes.BytesData) {
+    this.withdraw = bytes.numberify(amount);
+  }
+
+  /**
+   * Sets deposit amount
+   * @param amount - deposit amount
+   */
+  setDeposit(amount: bytes.BytesData) {
+    this.deposit = bytes.numberify(amount);
+  }
+
+  /**
    * Generates inputs for prover
    * @param wallet - wallet to spend from
    * @param encryptionKey - encryption key of wallet

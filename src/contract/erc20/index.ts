@@ -4,7 +4,6 @@ import {
   BigNumber,
   Event,
 } from 'ethers';
-import BN from 'bn.js';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
@@ -44,9 +43,9 @@ class ERC20RailgunContract {
    * Deposit and withdraw fees are in basis points, transfer is in wei
    */
   async fees(): Promise<{
-    deposit: BN;
-    withdraw: BN;
-    transfer: BN;
+    deposit: string;
+    withdraw: string;
+    transfer: string;
   }> {
     const [depositFee, withdrawFee, transferFee] = await Promise.all([
       this.contract.depositFee(),
@@ -55,9 +54,9 @@ class ERC20RailgunContract {
     ]);
 
     return {
-      deposit: new BN(depositFee.toHexString(), 'hex'),
-      withdraw: new BN(withdrawFee.toHexString(), 'hex'),
-      transfer: new BN(transferFee.toHexString(), 'hex'),
+      deposit: depositFee.toHexString(),
+      withdraw: withdrawFee.toHexString(),
+      transfer: transferFee.toHexString(),
     };
   }
 

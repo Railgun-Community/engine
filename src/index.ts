@@ -22,6 +22,8 @@ class Lepton {
 
   readonly wallets: {[key: string]: Wallet} = {};
 
+  readonly deploymentBlocks: number[] = [];
+
   /**
    * Create a lepton instance
    * @param leveldown - abstract-leveldown compatible store
@@ -39,26 +41,30 @@ class Lepton {
     await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
   }
 
-  async scanHistory(chainID: number) {
+  async scanHistory(
+    chainID: number,
+  ) {
     // Get latest tree
     const latestTree = await this.merkletree[chainID].erc20.latestTree();
 
     // Get latest synced event
     const treeLength = await this.merkletree[chainID].erc20.getTreeLength(latestTree);
 
-    let startScanningBlock = 0;
+    let startScanningBlock: number;
 
     if (treeLength > 0) {
+      // Get block number of last scanned event
       const latestEvent = await this.merkletree[chainID].erc20.getCommitment(
         latestTree,
         treeLength - 1,
       );
 
-      console.log(await this.contracts[chainID].contract.provider.getTransactionReceipt(
+      startScanningBlock = (await this.contracts[chainID].contract.provider.getTransactionReceipt(
         bytes.hexlify(latestEvent.txid, true),
-      ));
-
-      startScanningBlock = 1;
+      )).blockNumber;
+    } else {
+      // If we haven't scanned anything yet, start scanning at deployment block
+      startScanningBlock = this.deploymentBlocks[chainID];
     }
 
     // Run scan
@@ -75,8 +81,13 @@ class Lepton {
    * Load network
    * @param address - address of railgun instance (proxy contract)
    * @param provider - ethers provider for network
+   * @param deploymentBlock - block number to start scanning from
    */
-  async loadNetwork(address: string, provider: ethers.providers.JsonRpcProvider) {
+  async loadNetwork(
+    address: string,
+    provider: ethers.providers.JsonRpcProvider,
+    deploymentBlock: number,
+  ) {
     // Get chainID of this provider
     const chainID = (await provider.getNetwork()).chainId;
 
@@ -90,6 +101,8 @@ class Lepton {
     this.merkletree[chainID] = {
       erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root)),
     };
+
+    this.deploymentBlocks[chainID] = deploymentBlock;
 
     // Load merkle tree to wallets
     Object.values(this.wallets).forEach((wallet) => {
