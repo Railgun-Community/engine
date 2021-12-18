@@ -38,7 +38,7 @@ async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
 
 // eslint-disable-next-line func-names
 describe('Lepton', function () {
-  this.timeout(60000);
+  this.timeout(240000);
 
   beforeEach(async () => {
     provider = new ethers.providers.JsonRpcProvider(config.rpc);

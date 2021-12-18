@@ -165,7 +165,7 @@ describe('Contract/Index', function () {
         startPosition,
         leaves,
       };
-    });
+    }, () => {});
 
     // Create deposit
     const deposit = await contract.generateDeposit([

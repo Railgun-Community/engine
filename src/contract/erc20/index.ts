@@ -13,6 +13,11 @@ import type { ERC20TransactionSerialized } from '../../transaction/erc20';
 
 // eslint-disable-next-line no-unused-vars
 export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => void;
+// eslint-disable-next-line no-unused-vars
+export type NullifierListener = (nullifiers: {
+  nullifier: bytes.BytesData,
+  txid: bytes.BytesData,
+}[]) => void;
 
 class ERC20RailgunContract {
   contract: Contract;
@@ -74,7 +79,7 @@ class ERC20RailgunContract {
    * Listens for tree update events
    * @param listener - listener callback
    */
-  treeUpdates(listener: Listener) {
+  treeUpdates(listener: Listener, nullifierListener: NullifierListener) {
     this.contract.on(
       'GeneratedCommitmentBatch',
       (
@@ -142,6 +147,19 @@ class ERC20RailgunContract {
         );
       },
     );
+
+    this.contract.on(
+      'Nullifier',
+      (
+        nullifier: BigNumber,
+        event: Event,
+      ) => {
+        nullifierListener([{
+          txid: event.transactionHash,
+          nullifier: nullifier.toHexString(),
+        }]);
+      },
+    );
   }
 
   /**
@@ -149,12 +167,17 @@ class ERC20RailgunContract {
    * @param startBlock - block to scan from
    * @param listener - listener to call with events
    */
-  async getHistoricalEvents(startBlock: number, listener: Listener) {
+  async getHistoricalEvents(
+    startBlock: number,
+    listener: Listener,
+    nullifierListener: NullifierListener,
+  ) {
     const SCAN_CHUNKS = 500;
     const generatedCommitmentBatch = [];
     const commitmentBatch = [];
     const generatedCommitment = [];
     const commitment = [];
+    const nullifiers = [];
 
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
@@ -190,6 +213,14 @@ class ERC20RailgunContract {
         // eslint-disable-next-line no-await-in-loop
         ...await this.contract.queryFilter(
           this.contract.filters.NewCommitment(),
+          currentStartBlock,
+          currentStartBlock + SCAN_CHUNKS,
+        ),
+      );
+      nullifiers.push(
+        // eslint-disable-next-line no-await-in-loop
+        ...await this.contract.queryFilter(
+          this.contract.filters.Nullifier(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
         ),
@@ -274,6 +305,12 @@ class ERC20RailgunContract {
         });
       }
     });
+
+    nullifierListener(nullifiers.map((event) => ({
+      txid: event.transactionHash,
+      // @ts-ignore
+      nullifier: event.args.nullifier.toHexString(),
+    })));
 
     if (leaves.length > 0) {
       listener(0, 0, leaves);

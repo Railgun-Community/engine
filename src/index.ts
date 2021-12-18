@@ -33,6 +33,13 @@ class Lepton {
     this.prover = new Prover(artifactsGetter);
   }
 
+  /**
+   * Handle new commitment events and kick off balance scan on wallets
+   * @param chainID - chainID of commitments
+   * @param tree - tree of commitments
+   * @param startingIndex - starting index of commitments
+   * @param leaves - commitments
+   */
   async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
@@ -41,6 +48,23 @@ class Lepton {
     await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
   }
 
+  /**
+   * Handle new nullifiers
+   * @param chainID - chainID of nullifiers
+   * @param nullifier - nullifer
+   * @param txid - txid of nullifier transaction
+   */
+  async nullifierListener(chainID: number, nullifiers: {
+    nullifier: bytes.BytesData,
+    txid: bytes.BytesData,
+  }[]) {
+    await this.merkletree[chainID].erc20.nullify(nullifiers);
+  }
+
+  /**
+   * Scan contract history and sync
+   * @param chainID - chainID to scan
+   */
   async scanHistory(
     chainID: number,
   ) {
@@ -74,6 +98,13 @@ class Lepton {
       leaves: Commitment[],
     ) => {
       this.listener(chainID, tree, startingIndex, leaves);
+    }, (
+      nullifiers: {
+        nullifier: bytes.BytesData,
+        txid: bytes.BytesData,
+      }[],
+    ) => {
+      this.nullifierListener(chainID, nullifiers);
     });
   }
 
@@ -116,6 +147,13 @@ class Lepton {
       leaves: Commitment[],
     ) => {
       this.listener(chainID, tree, startingIndex, leaves);
+    }, (
+      nullifiers: {
+        nullifier: bytes.BytesData,
+        txid: bytes.BytesData,
+      }[],
+    ) => {
+      this.nullifierListener(chainID, nullifiers);
     });
 
     await this.scanHistory(chainID);
