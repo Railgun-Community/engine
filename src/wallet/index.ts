@@ -461,6 +461,7 @@ class Wallet extends EventEmitter {
    */
   async scan(chainID: number) {
     // Don't proceed if scan write is locked
+    // TODO: per chainID scan locks
     if (this.scanLock) return;
 
     // Lock
@@ -535,6 +536,7 @@ class Wallet extends EventEmitter {
     );
 
     // Emit scanned event
+    // TODO: per chainID events
     this.emit('scanned');
 
     // Release lock

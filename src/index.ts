@@ -214,6 +214,7 @@ class Lepton {
     // Load merkle trees for wallet
     this.merkletree.forEach((tree) => {
       wallet.loadTree(tree.erc20);
+      // TODO: trigger tree scan after loading
     });
 
     // Return wallet ID
