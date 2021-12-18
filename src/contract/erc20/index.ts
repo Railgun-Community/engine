@@ -275,7 +275,9 @@ class ERC20RailgunContract {
       }
     });
 
-    listener(0, 0, leaves);
+    if (leaves.length > 0) {
+      listener(0, 0, leaves);
+    }
   }
 
   /**
