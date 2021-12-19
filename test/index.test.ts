@@ -58,7 +58,6 @@ describe('Lepton', function () {
     lepton = new Lepton(memdown(), artifactsGetter);
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     await lepton.loadNetwork(config.contracts.proxy, provider, 0);
-    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
   });
 
   it('Should load existing wallets', async () => {
@@ -81,9 +80,9 @@ describe('Lepton', function () {
     ]);
 
     // Send deposit on chain
+    const awaiter = new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
     etherswallet.sendTransaction(deposit);
-
-    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    await awaiter;
 
     // Create transaction
     const transaction = new ERC20Transaction(config.contracts.rail, chainID);
@@ -103,13 +102,13 @@ describe('Lepton', function () {
     ]);
 
     // Send transact on chain
+    const awaiter2 = new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
     etherswallet.sendTransaction(transact);
-
-    await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    await awaiter2;
 
     expect(
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
-    ).to.equal('21999999999999999999999400');
+    ).to.equal('10999999999999999999999400');
   }).timeout(120000);
 
   it('Should sync historical data', async () => {
@@ -250,13 +249,13 @@ describe('Lepton', function () {
     // Load network and sync
     await lepton.loadNetwork(config.contracts.proxy, provider, 0);
 
-    // Let 3 scanned events trigger
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+
     expect(
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
-    ).to.equal('44000000000000000000000000');
+    ).to.equal('33000000000000000000000000');
   }).timeout(120000);
 
   afterEach(async () => {

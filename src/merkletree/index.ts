@@ -210,7 +210,11 @@ class MerkleTree {
   }[]): Promise<void> {
     // Build write batch for nullifiers
     const nullifierWriteBatch: AbstractBatch[] = nullifiers.map(
-      (nullifier) => ({ type: 'put', key: this.getNullifierDBPath(nullifier.nullifier).join(':'), value: nullifier.txid }),
+      (nullifier) => ({
+        type: 'put',
+        key: this.getNullifierDBPath(bytes.hexlify(nullifier.nullifier)).join(':'),
+        value: bytes.hexlify(nullifier.txid),
+      }),
     );
 
     // Write to DB
