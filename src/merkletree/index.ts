@@ -28,6 +28,11 @@ export type EncryptedCommitment = {
 
 export type Commitment = GeneratedCommitment | EncryptedCommitment;
 
+export type Nullifier = {
+  nullifier: bytes.BytesData;
+  txid: bytes.BytesData;
+};
+
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: bytes.BytesData) => Promise<boolean>;
 
@@ -204,10 +209,7 @@ class MerkleTree {
    * Adds nullifiers to database
    * @param nullifiers - nullifiers to add to db
    */
-  async nullify(nullifiers: {
-    nullifier: bytes.BytesData,
-    txid: bytes.BytesData,
-  }[]): Promise<void> {
+  async nullify(nullifiers: Nullifier[]): Promise<void> {
     // Build write batch for nullifiers
     const nullifierWriteBatch: AbstractBatch[] = nullifiers.map(
       (nullifier) => ({

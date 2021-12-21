@@ -8,16 +8,13 @@ import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
 import { ERC20Note } from '../../note';
-import type { Commitment } from '../../merkletree';
+import type { Commitment, Nullifier } from '../../merkletree';
 import type { ERC20TransactionSerialized } from '../../transaction/erc20';
 
 // eslint-disable-next-line no-unused-vars
 export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => void;
 // eslint-disable-next-line no-unused-vars
-export type NullifierListener = (nullifiers: {
-  nullifier: bytes.BytesData,
-  txid: bytes.BytesData,
-}[]) => void;
+export type NullifierListener = (nullifiers: Nullifier[]) => void;
 
 class ERC20RailgunContract {
   contract: Contract;
@@ -343,6 +340,11 @@ class ERC20RailgunContract {
     return this.contract.populateTransaction.generateDeposit(inputs);
   }
 
+  /**
+   * Create transaction call for ETH
+   * @param transactions - serialized railgun transaction
+   * @returns - populated ETH transaction
+   */
   transact(
     transactions: ERC20TransactionSerialized[],
   ): Promise<PopulatedTransaction> {

@@ -3,13 +3,23 @@ import type { ethers } from 'ethers';
 import { ERC20RailgunContract } from './contract';
 import { Database } from './database';
 import { BIP32Node } from './keyderivation';
-import { MerkleTree, Commitment } from './merkletree';
+import { MerkleTree, Commitment, Nullifier } from './merkletree';
 import { Prover, ArtifactsGetter } from './prover';
 import { ERC20Transaction } from './transaction';
 import { ERC20Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
+
+// eslint-disable-next-line no-unused-vars
+export type QuickSync = (chainID: number, startingBlock: number) => Promise<{
+  commitments: {
+    tree: number;
+    startingIndex: number;
+    leaves: Commitment[];
+  }[];
+  nullifiers: Nullifier[],
+}>;
 
 class Lepton {
   readonly db;
@@ -24,13 +34,22 @@ class Lepton {
 
   readonly deploymentBlocks: number[] = [];
 
+  readonly quickSync: QuickSync | undefined;
+
   /**
    * Create a lepton instance
    * @param leveldown - abstract-leveldown compatible store
+   * @param artifactsGetter - async function to retrieve artifacts, lepton doesn't handle caching
+   * @param quickSync - quick sync function to speed up sync
    */
-  constructor(leveldown: AbstractLevelDOWN, artifactsGetter: ArtifactsGetter) {
+  constructor(
+    leveldown: AbstractLevelDOWN,
+    artifactsGetter: ArtifactsGetter,
+    quickSync?: QuickSync,
+  ) {
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
+    this.quickSync = quickSync;
   }
 
   /**
@@ -91,7 +110,24 @@ class Lepton {
       startScanningBlock = this.deploymentBlocks[chainID];
     }
 
-    // Run scan
+    // Call quicksync
+    if (this.quickSync) {
+      // Fetch events
+      const events = await this.quickSync(chainID, startScanningBlock);
+
+      // Pass events to commitments listener and wait for resolution
+      await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
+        chainID,
+        commitmentEvent.tree,
+        commitmentEvent.startingIndex,
+        commitmentEvent.leaves,
+      )));
+
+      // Pass nullifier events to listener
+      this.nullifierListener(chainID, events.nullifiers);
+    }
+
+    // Run slow scan
     await this.contracts[chainID].getHistoricalEvents(startScanningBlock, (
       tree: number,
       startingIndex: number,
