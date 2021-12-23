@@ -112,19 +112,23 @@ class Lepton {
 
     // Call quicksync
     if (this.quickSync) {
-      // Fetch events
-      const events = await this.quickSync(chainID, startScanningBlock);
+      try {
+        // Fetch events
+        const events = await this.quickSync(chainID, startScanningBlock);
 
-      // Pass events to commitments listener and wait for resolution
-      await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
-        chainID,
-        commitmentEvent.tree,
-        commitmentEvent.startingIndex,
-        commitmentEvent.leaves,
-      )));
+        // Pass events to commitments listener and wait for resolution
+        await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
+          chainID,
+          commitmentEvent.tree,
+          commitmentEvent.startingIndex,
+          commitmentEvent.leaves,
+        )));
 
-      // Pass nullifier events to listener
-      this.nullifierListener(chainID, events.nullifiers);
+        // Pass nullifier events to listener
+        this.nullifierListener(chainID, events.nullifiers);
+      } catch (err) {
+        // no op
+      }
     }
 
     // Run slow scan
