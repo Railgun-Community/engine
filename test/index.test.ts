@@ -57,7 +57,7 @@ describe('Lepton', function () {
 
     lepton = new Lepton(memdown(), artifactsGetter);
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
-    await lepton.loadNetwork(config.contracts.proxy, provider, 0);
+    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
   });
 
   it('Should load existing wallets', async () => {
@@ -247,7 +247,7 @@ describe('Lepton', function () {
     await provider.send('evm_mine', []);
 
     // Load network and sync
-    await lepton.loadNetwork(config.contracts.proxy, provider, 0);
+    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
 
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
     await new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));

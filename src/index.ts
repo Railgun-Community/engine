@@ -151,13 +151,11 @@ class Lepton {
    * @param deploymentBlock - block number to start scanning from
    */
   async loadNetwork(
+    chainID: number,
     address: string,
     provider: ethers.providers.JsonRpcProvider,
     deploymentBlock: number,
   ) {
-    // Get chainID of this provider
-    const chainID = (await provider.getNetwork()).chainId;
-
     // If a network with this chainID exists, unload it and load the provider as a new network
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
