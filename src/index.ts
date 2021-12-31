@@ -143,8 +143,8 @@ class Lepton {
 
         // Pass nullifier events to listener
         await this.nullifierListener(chainID, events.nullifiers);
-      } catch (err) {
-        // no op
+      } catch (err: any) {
+        this.leptonDebugger?.error(err);
       }
     }
 
