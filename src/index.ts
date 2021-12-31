@@ -68,7 +68,7 @@ class Lepton {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
-  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
+  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[], skipWalletScan = false) {
 
     this.leptonDebugger?.log(`trigger listener: chainID ${chainID}, leaves: ${JSON.stringify(leaves)}`);
 
@@ -76,7 +76,9 @@ class Lepton {
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
 
     // Trigger wallet scans
-    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    if (!skipWalletScan) {
+      await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    }
   }
 
   /**
@@ -131,6 +133,8 @@ class Lepton {
         // Fetch events
         const events = await this.quickSync(chainID, startScanningBlock);
 
+        const skipWalletScan = true;
+
         // Pass events to commitments listener and wait for resolution
         for (const commitmentEvent of events.commitments) {
           await this.listener(
@@ -138,11 +142,18 @@ class Lepton {
             commitmentEvent.tree,
             commitmentEvent.startingIndex,
             commitmentEvent.leaves,
+            skipWalletScan,
           )
+        }
+
+        // Scan after all leaves added.
+        if (events.commitments.length) {
+          await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
         }
 
         // Pass nullifier events to listener
         await this.nullifierListener(chainID, events.nullifiers);
+
       } catch (err: any) {
         this.leptonDebugger?.error(err);
       }
