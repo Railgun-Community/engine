@@ -9,6 +9,7 @@
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts",
     "test": "npm run lint && nyc mocha --exit --require ts-node/register 'test/**/*.test.ts'",
+    "test-no-lint": "nyc mocha --exit --require ts-node/register 'test/**/*.test.ts'",
     "compile": "npm run clean && tsc",
     "prepack": "npm install && npm run compile"
   },

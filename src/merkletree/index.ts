@@ -5,7 +5,7 @@ import { bytes, hash, constants } from '../utils';
 import type { Database } from '../database';
 import type { Ciphertext } from '../utils/encryption';
 import type { ERC20NoteSerialized } from '../note/erc20';
-import { LeptonDebugger } from '..';
+import { LeptonDebugger } from '../models/types';
 
 export type MerkleProof = {
   leaf: bytes.BytesData,

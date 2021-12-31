@@ -10,11 +10,7 @@ import { ERC20Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
-
-export type LeptonDebugger = {
-  log: (msg: string) => void;
-  error: (error: Error) => void;
-}
+import { LeptonDebugger } from './models/types';
 
 // eslint-disable-next-line no-unused-vars
 export type QuickSync = (chainID: number, startingBlock: number) => Promise<{
