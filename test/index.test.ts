@@ -8,6 +8,8 @@ import memdown from 'memdown';
 // @ts-ignore
 import artifacts from 'railgun-artifacts';
 
+import mockHistoricalEvents from './mock-historical-events-raw.json';
+
 import { Lepton, ERC20Note, ERC20Transaction } from '../src';
 
 import { abi as erc20abi } from './erc20abi.test';
@@ -257,6 +259,17 @@ describe('Lepton', function () {
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
     ).to.equal('33000000000000000000000000');
   }).timeout(120000);
+
+  it('Should quicksync raw data correctly', async () => {
+    const quickSync = async () => mockHistoricalEvents;
+
+    const leptonQuickSync = new Lepton(memdown(), artifactsGetter, quickSync);
+    await leptonQuickSync.loadNetwork(chainID, config.contracts.proxy, provider, 0);
+
+    expect(
+      await leptonQuickSync.merkletree[chainID].erc20.getTreeLength(0),
+    ).to.equal(49);
+  }).timeout(10000);
 
   afterEach(async () => {
     lepton.unload();

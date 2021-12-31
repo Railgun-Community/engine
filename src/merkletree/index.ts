@@ -353,7 +353,9 @@ class MerkleTree {
     this.leptonDebugger?.log(`insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`);
 
     // Push values to leaves of write index
-    leaves.forEach((leaf) => {
+    leaves.forEach((leaf, leafIndex) => {
+      this.leptonDebugger?.log(`index ${leafIndex}: leaf ${JSON.stringify(leaf)}`);
+
       // Set writecache value
       this.nodeWriteCache[tree][level][index] = bytes.hexlify(leaf.hash);
 
@@ -365,7 +367,7 @@ class MerkleTree {
           ciphertext: {
             iv: bytes.hexlify(leaf.ciphertext.iv),
             data: leaf.ciphertext.data.map(
-              (element) => bytes.hexlify(bytes.padToLength(element, 64)),
+              (element) => bytes.hexlify(element),
             ),
           },
         };
@@ -423,7 +425,6 @@ class MerkleTree {
 
     // Check if new root is valid
     if (await this.validateRoot(tree, this.nodeWriteCache[tree][this.depth][0])) {
-      this.leptonDebugger?.log('Valid root');
       // Commit to DB if valid
       await this.writeTreeCache(tree);
     } else {
@@ -446,9 +447,7 @@ class MerkleTree {
       });
 
       const treeLengths = await Promise.all(treeLengthPromises);
-
       this.leptonDebugger?.log(`treeLengths: ${treeLengths}`);
-      this.leptonDebugger?.log(`writeQueue length: ${this.writeQueue.length}`);
 
       const updatePromises: (Promise<void> | null)[] = [];
 

@@ -66,8 +66,6 @@ class Lepton {
    */
   async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[], skipWalletScan = false) {
 
-    this.leptonDebugger?.log(`trigger listener: chainID ${chainID}, leaves: ${JSON.stringify(leaves)}`);
-
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
 
