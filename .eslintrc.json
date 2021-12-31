@@ -12,9 +12,6 @@
     "ecmaVersion": 12,
     "sourceType": "module"
   },
-  "plugins": [
-    "@typescript-eslint"
-  ],
   "rules": {
     "import/prefer-default-export": "off",
     "import/extensions": [
@@ -26,7 +23,8 @@
         "ts": "never",
         "tsx": "never"
       }
-    ]
+    ],
+    "prettier/prettier": 0
   },
   "ignorePatterns": [
     "dist/*"

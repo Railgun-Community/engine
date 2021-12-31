@@ -34,7 +34,7 @@ export type Nullifier = {
   txid: bytes.BytesData;
 };
 
-// eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 export type RootValidator = (tree: number, root: bytes.BytesData) => Promise<boolean>;
 
 // Declare depth
@@ -364,7 +364,9 @@ class MerkleTree {
           senderPublicKey: bytes.hexlify(leaf.senderPublicKey),
           ciphertext: {
             iv: bytes.hexlify(leaf.ciphertext.iv),
-            data: leaf.ciphertext.data.map((element) => bytes.hexlify(element)),
+            data: leaf.ciphertext.data.map(
+              (element) => bytes.hexlify(bytes.padToLength(element, 64)),
+            ),
           },
         };
       } else {
@@ -421,16 +423,17 @@ class MerkleTree {
 
     // Check if new root is valid
     if (await this.validateRoot(tree, this.nodeWriteCache[tree][this.depth][0])) {
+      this.leptonDebugger?.log('Valid root');
       // Commit to DB if valid
       await this.writeTreeCache(tree);
     } else {
+      this.leptonDebugger?.log('Invalid root');
       // Clear cache if invalid
       this.clearWriteCache(tree);
     }
   }
 
   async updateTrees() {
-
     // Loop until there isn't work to do
     let workToDo = true;
 
@@ -442,10 +445,10 @@ class MerkleTree {
         treeLengthPromises[index] = this.getTreeLength(index);
       });
 
-      // eslint-disable-next-line no-await-in-loop
       const treeLengths = await Promise.all(treeLengthPromises);
 
       this.leptonDebugger?.log(`treeLengths: ${treeLengths}`);
+      this.leptonDebugger?.log(`writeQueue length: ${this.writeQueue.length}`);
 
       const updatePromises: (Promise<void> | null)[] = [];
 
@@ -469,7 +472,6 @@ class MerkleTree {
       });
 
       // Wait for updates to complete
-      // eslint-disable-next-line no-await-in-loop
       await Promise.all(updatePromises);
 
       // If no work was done exit

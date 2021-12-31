@@ -66,7 +66,7 @@ export type FormattedCircuitInputs = {
   [key: string]: string | string[] | string[][];
 }
 
-// eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 export type ArtifactsGetter = (circuit: Circuits) => Promise<Artifacts>;
 
 class Prover {
