@@ -27,7 +27,7 @@ Start hardhat node from the contract repo and leave it running
 
 In another terminal deploy the contracts to the hardhat node network
 
-`npx hardhat run scripts/deploy_test_all.js ---network localhost`
+`npx hardhat deploy:test --network localhost`
 
 The default test config should work fine here as addresses are deterministic on the hardhat node network. If you are running your own test setup you will need to use the config override file. Copy `test/configOverrides.test.ts.example` to `test/configOverrides.test.ts` and enter your own values.
 
