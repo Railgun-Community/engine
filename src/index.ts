@@ -203,14 +203,14 @@ class Lepton {
       startingIndex: number,
       leaves: Commitment[],
     ) => {
-      this.listener(chainID, tree, startingIndex, leaves);
+      await this.listener(chainID, tree, startingIndex, leaves);
     }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,
       }[],
     ) => {
-      this.nullifierListener(chainID, nullifiers);
+      await this.nullifierListener(chainID, nullifiers);
     });
 
     await this.scanHistory(chainID);
