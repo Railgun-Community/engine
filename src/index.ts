@@ -11,6 +11,11 @@ import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
 
+export type LeptonDebugger = {
+  log: (msg: string) => void;
+  error: (error: Error) => void;
+}
+
 // eslint-disable-next-line no-unused-vars
 export type QuickSync = (chainID: number, startingBlock: number) => Promise<{
   commitments: {
@@ -36,6 +41,8 @@ class Lepton {
 
   readonly quickSync: QuickSync | undefined;
 
+  readonly leptonDebugger: LeptonDebugger | undefined;
+
   /**
    * Create a lepton instance
    * @param leveldown - abstract-leveldown compatible store
@@ -46,10 +53,12 @@ class Lepton {
     leveldown: AbstractLevelDOWN,
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
+    leptonDebugger?: LeptonDebugger,
   ) {
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
     this.quickSync = quickSync;
+    this.leptonDebugger = leptonDebugger;
   }
 
   /**
@@ -60,6 +69,9 @@ class Lepton {
    * @param leaves - commitments
    */
   async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
+
+    this.leptonDebugger?.log(`trigger listener: chainID ${chainID}, leaves: ${JSON.stringify(leaves)}`);
+
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
 
@@ -92,6 +104,7 @@ class Lepton {
 
     // Get latest synced event
     const treeLength = await this.merkletree[chainID].erc20.getTreeLength(latestTree);
+    this.leptonDebugger?.log(`scanHistory: treeLength ${treeLength}`);
 
     let startScanningBlock: number;
 
@@ -113,19 +126,23 @@ class Lepton {
     // Call quicksync
     if (this.quickSync) {
       try {
+        this.leptonDebugger?.log(`quickSync: chainID ${chainID}`);
+
         // Fetch events
         const events = await this.quickSync(chainID, startScanningBlock);
 
         // Pass events to commitments listener and wait for resolution
-        await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
-          chainID,
-          commitmentEvent.tree,
-          commitmentEvent.startingIndex,
-          commitmentEvent.leaves,
-        )));
+        for (const commitmentEvent of events.commitments) {
+          await this.listener(
+            chainID,
+            commitmentEvent.tree,
+            commitmentEvent.startingIndex,
+            commitmentEvent.leaves,
+          )
+        }
 
         // Pass nullifier events to listener
-        this.nullifierListener(chainID, events.nullifiers);
+        await this.nullifierListener(chainID, events.nullifiers);
       } catch (err) {
         // no op
       }
@@ -137,14 +154,14 @@ class Lepton {
       startingIndex: number,
       leaves: Commitment[],
     ) => {
-      this.listener(chainID, tree, startingIndex, leaves);
+      await this.listener(chainID, tree, startingIndex, leaves);
     }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,
       }[],
     ) => {
-      this.nullifierListener(chainID, nullifiers);
+      await this.nullifierListener(chainID, nullifiers);
     });
   }
 
@@ -160,6 +177,8 @@ class Lepton {
     provider: ethers.providers.JsonRpcProvider,
     deploymentBlock: number,
   ) {
+    this.leptonDebugger?.log(`loadNetwork: ${chainID}`);
+
     // If a network with this chainID exists, unload it and load the provider as a new network
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
@@ -168,7 +187,7 @@ class Lepton {
 
     // Create tree controllers
     this.merkletree[chainID] = {
-      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root)),
+      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root), this.leptonDebugger),
     };
 
     this.deploymentBlocks[chainID] = deploymentBlock;
@@ -257,7 +276,7 @@ class Lepton {
    */
   async loadExistingWallet(encryptionKey: bytes.BytesData, id: bytes.BytesData): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
+    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id, this.leptonDebugger);
 
     // Store wallet against ID
     this.wallets[bytes.hexlify(id)] = wallet;
@@ -282,7 +301,7 @@ class Lepton {
     mnemonic: string,
   ): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
+    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, this.leptonDebugger);
 
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;

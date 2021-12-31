@@ -5,6 +5,7 @@ import { bytes, hash, constants } from '../utils';
 import type { Database } from '../database';
 import type { Ciphertext } from '../utils/encryption';
 import type { ERC20NoteSerialized } from '../note/erc20';
+import { LeptonDebugger } from '..';
 
 export type MerkleProof = {
   leaf: bytes.BytesData,
@@ -61,6 +62,8 @@ class MerkleTree {
 
   readonly purpose: TreePurpose;
 
+  readonly leptonDebugger: LeptonDebugger | undefined;
+
   readonly depth: number;
 
   readonly zeroValues: string[] = [];
@@ -75,9 +78,6 @@ class MerkleTree {
 
   // tree[startingIndex[leaves]]
   private writeQueue: Commitment[][][] = [];
-
-  // Tree write queue lock to prevent race conditions
-  private queueLock = false;
 
   // Check function to test if merkle root is valid
   private validateRoot: Function;
@@ -94,12 +94,14 @@ class MerkleTree {
     chainID: number,
     purpose: TreePurpose,
     validateRoot: RootValidator,
+    leptonDebugger?: LeptonDebugger,
     depth: number = depths[purpose],
   ) {
     // Set passed values
     this.db = db;
     this.chainID = chainID;
     this.purpose = purpose;
+    this.leptonDebugger = leptonDebugger;
     this.depth = depth;
     this.validateRoot = validateRoot;
 
@@ -348,6 +350,8 @@ class MerkleTree {
     // Ensure writecache array exists
     this.nodeWriteCache[tree][level] = this.nodeWriteCache[tree][level] || [];
 
+    this.leptonDebugger?.log(`insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`);
+
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
       // Set writecache value
@@ -426,11 +430,6 @@ class MerkleTree {
   }
 
   async updateTrees() {
-    // Don't proceed if queue write is locked
-    if (this.queueLock) return;
-
-    // Lock queue
-    this.queueLock = true;
 
     // Loop until there isn't work to do
     let workToDo = true;
@@ -445,6 +444,8 @@ class MerkleTree {
 
       // eslint-disable-next-line no-await-in-loop
       const treeLengths = await Promise.all(treeLengthPromises);
+
+      this.leptonDebugger?.log(`treeLengths: ${treeLengths}`);
 
       const updatePromises: (Promise<void> | null)[] = [];
 
@@ -474,9 +475,6 @@ class MerkleTree {
       // If no work was done exit
       if (updatePromises.length === 0) workToDo = false;
     }
-
-    // Release queue lock
-    this.queueLock = false;
   }
 
   /**
@@ -488,6 +486,8 @@ class MerkleTree {
   async queueLeaves(tree: number, startingIndex: number, leaves: Commitment[]) {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
+
+    this.leptonDebugger?.log(`queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`);
 
     // Ensure write queue for tree exists
     this.writeQueue[tree] = this.writeQueue[tree] || [];
