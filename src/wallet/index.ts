@@ -356,8 +356,6 @@ class Wallet extends EventEmitter {
     const TXOs = await this.TXOs(chainID);
     const balances: Balances = {};
 
-    this.leptonDebugger?.log(`get wallet balances: TXOs ${JSON.stringify(TXOs)}`);
-
     // Loop through each TXO and add to balances if unspent
     TXOs.forEach((txOutput) => {
       // If we don't have an entry for this token yet, create one

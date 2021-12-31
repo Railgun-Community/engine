@@ -447,7 +447,6 @@ class MerkleTree {
       });
 
       const treeLengths = await Promise.all(treeLengthPromises);
-      this.leptonDebugger?.log(`treeLengths: ${treeLengths}`);
 
       const updatePromises: (Promise<void> | null)[] = [];
 
