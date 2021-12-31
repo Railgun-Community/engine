@@ -112,19 +112,23 @@ class Lepton {
 
     // Call quicksync
     if (this.quickSync) {
-      // Fetch events
-      const events = await this.quickSync(chainID, startScanningBlock);
+      try {
+        // Fetch events
+        const events = await this.quickSync(chainID, startScanningBlock);
 
-      // Pass events to commitments listener and wait for resolution
-      await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
-        chainID,
-        commitmentEvent.tree,
-        commitmentEvent.startingIndex,
-        commitmentEvent.leaves,
-      )));
+        // Pass events to commitments listener and wait for resolution
+        await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
+          chainID,
+          commitmentEvent.tree,
+          commitmentEvent.startingIndex,
+          commitmentEvent.leaves,
+        )));
 
-      // Pass nullifier events to listener
-      this.nullifierListener(chainID, events.nullifiers);
+        // Pass nullifier events to listener
+        this.nullifierListener(chainID, events.nullifiers);
+      } catch (err) {
+        // no op
+      }
     }
 
     // Run slow scan
@@ -151,13 +155,11 @@ class Lepton {
    * @param deploymentBlock - block number to start scanning from
    */
   async loadNetwork(
+    chainID: number,
     address: string,
     provider: ethers.providers.JsonRpcProvider,
     deploymentBlock: number,
   ) {
-    // Get chainID of this provider
-    const chainID = (await provider.getNetwork()).chainId;
-
     // If a network with this chainID exists, unload it and load the provider as a new network
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 

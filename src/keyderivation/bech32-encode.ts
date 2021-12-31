@@ -4,8 +4,8 @@ import { bytes, constants } from '../utils';
 
 const prefixes: string[] = [];
 prefixes[1] = 'rgeth';
-prefixes[3] = 'rgTESTropsten';
-prefixes[5] = 'rgTESTgoerli';
+prefixes[3] = 'rgtestropsten';
+prefixes[5] = 'rgtestgoerli';
 prefixes[56] = 'rgbsc';
 prefixes[137] = 'rgpoly';
 
