@@ -132,13 +132,13 @@ class Lepton {
     }
 
     // Run slow scan
-    await this.contracts[chainID].getHistoricalEvents(startScanningBlock, (
+    await this.contracts[chainID].getHistoricalEvents(startScanningBlock, async (
       tree: number,
       startingIndex: number,
       leaves: Commitment[],
     ) => {
       this.listener(chainID, tree, startingIndex, leaves);
-    }, (
+    }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,
@@ -179,13 +179,13 @@ class Lepton {
     });
 
     // Setup listeners
-    this.contracts[chainID].treeUpdates((
+    this.contracts[chainID].treeUpdates(async (
       tree: number,
       startingIndex: number,
       leaves: Commitment[],
     ) => {
       this.listener(chainID, tree, startingIndex, leaves);
-    }, (
+    }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,

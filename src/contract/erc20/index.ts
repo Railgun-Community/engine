@@ -12,9 +12,9 @@ import type { Commitment, Nullifier } from '../../merkletree';
 import type { ERC20TransactionSerialized } from '../../transaction/erc20';
 
 // eslint-disable-next-line no-unused-vars
-export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => void;
+export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => Promise<void>;
 // eslint-disable-next-line no-unused-vars
-export type NullifierListener = (nullifiers: Nullifier[]) => void;
+export type NullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 
 class ERC20RailgunContract {
   contract: Contract;
@@ -225,9 +225,16 @@ class ERC20RailgunContract {
       currentStartBlock += SCAN_CHUNKS;
     }
 
+    console.log(generatedCommitmentBatch);
+    console.log(commitmentBatch);
+    console.log(generatedCommitment);
+    console.log(commitment);
+    console.log(nullifiers);
+
     // Process events
     generatedCommitmentBatch.forEach((event) => {
       if (event.args) {
+        console.log(event.args.commitments);
         listener(
           event.args.treeNumber.toNumber(),
           event.args.startPosition.toNumber(),

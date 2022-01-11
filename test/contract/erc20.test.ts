@@ -159,13 +159,13 @@ describe('Contract/Index', function () {
   it('Should parse tree update events', async () => {
     let result;
 
-    contract.treeUpdates((tree: number, startPosition: number, leaves: Commitment[]) => {
+    contract.treeUpdates(async (tree: number, startPosition: number, leaves: Commitment[]) => {
       result = {
         tree,
         startPosition,
         leaves,
       };
-    }, () => {});
+    }, async () => {});
 
     // Create deposit
     const deposit = await contract.generateDeposit([
