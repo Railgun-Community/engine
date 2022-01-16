@@ -79,7 +79,7 @@ class ERC20RailgunContract {
   treeUpdates(listener: Listener, nullifierListener: NullifierListener) {
     this.contract.on(
       'GeneratedCommitmentBatch',
-      (
+      async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
         commitments: {
@@ -90,7 +90,7 @@ class ERC20RailgunContract {
         }[],
         event: Event,
       ) => {
-        listener(
+        await listener(
           treeNumber.toNumber(),
           startPosition.toNumber(),
           commitments.map((commitment) => {
@@ -113,7 +113,7 @@ class ERC20RailgunContract {
 
     this.contract.on(
       'CommitmentBatch',
-      (
+      async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
         commitments: {
@@ -123,7 +123,7 @@ class ERC20RailgunContract {
         }[],
         event: Event,
       ) => {
-        listener(
+        await listener(
           treeNumber.toNumber(),
           startPosition.toNumber(),
           commitments.map((commitment) => {
@@ -232,10 +232,10 @@ class ERC20RailgunContract {
     console.log(nullifiers);
 
     // Process events
-    generatedCommitmentBatch.forEach((event) => {
+    generatedCommitmentBatch.forEach(async (event) => {
       if (event.args) {
         console.log(event.args.commitments);
-        listener(
+        await listener(
           event.args.treeNumber.toNumber(),
           event.args.startPosition.toNumber(),
           event.args.commitments.map((commit: any) => {
@@ -254,9 +254,9 @@ class ERC20RailgunContract {
         );
       }
     });
-    commitmentBatch.forEach((event) => {
+    commitmentBatch.forEach(async (event) => {
       if (event.args) {
-        listener(
+        await listener(
           event.args.treeNumber.toNumber(),
           event.args.startPosition.toNumber(),
           event.args.commitments.map((commit: any) => {
@@ -310,14 +310,14 @@ class ERC20RailgunContract {
       }
     });
 
-    nullifierListener(nullifiers.map((event) => ({
+    await nullifierListener(nullifiers.map((event) => ({
       txid: event.transactionHash,
       // @ts-ignore
       nullifier: event.args.nullifier.toHexString(),
     })));
 
     if (leaves.length > 0) {
-      listener(0, 0, leaves);
+      await listener(0, 0, leaves);
     }
   }
 

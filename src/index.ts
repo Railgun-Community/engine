@@ -64,15 +64,20 @@ class Lepton {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
-  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
-
-    this.leptonDebugger?.log(`trigger listener: chainID ${chainID}, leaves: ${JSON.stringify(leaves)}`);
-
+  async listener(
+    chainID: number,
+    tree: number,
+    startingIndex: number,
+    leaves: Commitment[],
+    skipWalletScan = false,
+  ) {
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
 
     // Trigger wallet scans
-    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    if (!skipWalletScan) {
+      await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    }
   }
 
   /**
@@ -127,14 +132,22 @@ class Lepton {
         // Fetch events
         const events = await this.quickSync(chainID, startScanningBlock);
 
+        const skipWalletScan = true;
+
         // Pass events to commitments listener and wait for resolution
-        for (const commitmentEvent of events.commitments) {
+        events.commitments.forEach(async (commitmentEvent) => {
           await this.listener(
             chainID,
             commitmentEvent.tree,
             commitmentEvent.startingIndex,
             commitmentEvent.leaves,
-          )
+            skipWalletScan,
+          );
+        });
+
+        // Scan after all leaves added.
+        if (events.commitments.length) {
+          await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
         }
 
         // Pass nullifier events to listener
@@ -199,14 +212,14 @@ class Lepton {
       startingIndex: number,
       leaves: Commitment[],
     ) => {
-      this.listener(chainID, tree, startingIndex, leaves);
+      await this.listener(chainID, tree, startingIndex, leaves);
     }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,
       }[],
     ) => {
-      this.nullifierListener(chainID, nullifiers);
+      await this.nullifierListener(chainID, nullifiers);
     });
 
     await this.scanHistory(chainID);
