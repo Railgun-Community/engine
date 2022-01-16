@@ -170,7 +170,7 @@ class Lepton {
   async loadNetwork(
     chainID: number,
     address: string,
-    provider: ethers.providers.JsonRpcProvider,
+    provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
     this.leptonDebugger?.log(`loadNetwork: ${chainID}`);
