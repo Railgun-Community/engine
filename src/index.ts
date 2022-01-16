@@ -157,7 +157,7 @@ class Lepton {
   async loadNetwork(
     chainID: number,
     address: string,
-    provider: ethers.providers.JsonRpcProvider,
+    provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
     // If a network with this chainID exists, unload it and load the provider as a new network
