@@ -8,6 +8,7 @@ import { BIP32Node } from '../keyderivation';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { ERC20Note } from '../note';
 import type { MerkleTree, Commitment } from '../merkletree';
+import { LeptonDebugger } from '../models/types';
 
 export type WalletDetails = {
   treeScannedHeights: number[],
@@ -55,6 +56,8 @@ class Wallet extends EventEmitter {
 
   readonly merkletree: MerkleTree[] = [];
 
+  readonly leptonDebugger: LeptonDebugger | undefined;
+
   // Lock scanning operations to prevent race conditions
   private scanLock = false;
 
@@ -71,11 +74,13 @@ class Wallet extends EventEmitter {
     mnemonic: string,
     derivationPath: string,
     gapLimit: number,
+    leptonDebugger?: LeptonDebugger,
   ) {
     super();
     this.db = db;
     this.#encryptionKey = encryptionKey;
     this.gapLimit = gapLimit;
+    this.leptonDebugger = leptonDebugger;
 
     // Calculate ID
     this.id = hash.sha256(bytes.combine([
@@ -462,7 +467,11 @@ class Wallet extends EventEmitter {
   async scan(chainID: number) {
     // Don't proceed if scan write is locked
     // TODO: per chainID scan locks
-    if (this.scanLock) return;
+    if (this.scanLock) {
+      this.leptonDebugger?.log(`scan locked: chainID ${chainID}`);
+      return;
+    }
+    this.leptonDebugger?.log(`scan wallet balances: chainID ${chainID}`);
 
     // Lock
     this.scanLock = true;
@@ -555,6 +564,7 @@ class Wallet extends EventEmitter {
     db: Database,
     encryptionKey: bytes.BytesData,
     mnemonic: string,
+    leptonDebugger?: LeptonDebugger,
     derivationPath: string = "m/1984'/0'/0'",
     gapLimit: number = 5,
   ): Promise<Wallet> {
@@ -574,7 +584,7 @@ class Wallet extends EventEmitter {
     ], encryptionKey, mnemonic);
 
     // Create wallet object and return
-    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit);
+    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
   }
 
   /**
@@ -588,6 +598,7 @@ class Wallet extends EventEmitter {
     db: Database,
     encryptionKey: bytes.BytesData,
     id: bytes.BytesData,
+    leptonDebugger?: LeptonDebugger,
     gapLimit: number = 5,
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
@@ -601,7 +612,7 @@ class Wallet extends EventEmitter {
     );
 
     // Create wallet object and return
-    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit);
+    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
   }
 }
 
