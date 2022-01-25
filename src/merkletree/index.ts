@@ -389,7 +389,7 @@ class MerkleTree {
       this.nodeWriteCache[tree][level + 1] = this.nodeWriteCache[tree][level + 1] || [];
 
       // Loop through every pair
-      for (index; index <= endIndex; index += 2) {
+      for (index; index <= endIndex + 1; index += 2) {
         if (index % 2 === 0) {
           // Left
           this.nodeWriteCache[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
