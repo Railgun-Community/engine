@@ -10,6 +10,7 @@ import { ERC20Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
+import { LeptonDebugger } from './models/types';
 
 // eslint-disable-next-line no-unused-vars
 export type QuickSync = (chainID: number, startingBlock: number) => Promise<{
@@ -36,6 +37,8 @@ class Lepton {
 
   readonly quickSync: QuickSync | undefined;
 
+  readonly leptonDebugger: LeptonDebugger | undefined;
+
   /**
    * Create a lepton instance
    * @param leveldown - abstract-leveldown compatible store
@@ -46,10 +49,12 @@ class Lepton {
     leveldown: AbstractLevelDOWN,
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
+    leptonDebugger?: LeptonDebugger,
   ) {
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
     this.quickSync = quickSync;
+    this.leptonDebugger = leptonDebugger;
   }
 
   /**
@@ -59,12 +64,20 @@ class Lepton {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
-  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
+  async listener(
+    chainID: number,
+    tree: number,
+    startingIndex: number,
+    leaves: Commitment[],
+    skipWalletScan = false,
+  ) {
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
 
     // Trigger wallet scans
-    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    if (!skipWalletScan) {
+      await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    }
   }
 
   /**
@@ -92,6 +105,7 @@ class Lepton {
 
     // Get latest synced event
     const treeLength = await this.merkletree[chainID].erc20.getTreeLength(latestTree);
+    this.leptonDebugger?.log(`scanHistory: treeLength ${treeLength}`);
 
     let startScanningBlock: number;
 
@@ -113,21 +127,33 @@ class Lepton {
     // Call quicksync
     if (this.quickSync) {
       try {
+        this.leptonDebugger?.log(`quickSync: chainID ${chainID}`);
+
         // Fetch events
         const events = await this.quickSync(chainID, startScanningBlock);
 
+        const skipWalletScan = true;
+
         // Pass events to commitments listener and wait for resolution
-        await Promise.all(events.commitments.map((commitmentEvent) => this.listener(
-          chainID,
-          commitmentEvent.tree,
-          commitmentEvent.startingIndex,
-          commitmentEvent.leaves,
-        )));
+        events.commitments.forEach(async (commitmentEvent) => {
+          await this.listener(
+            chainID,
+            commitmentEvent.tree,
+            commitmentEvent.startingIndex,
+            commitmentEvent.leaves,
+            skipWalletScan,
+          );
+        });
+
+        // Scan after all leaves added.
+        if (events.commitments.length) {
+          await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+        }
 
         // Pass nullifier events to listener
-        this.nullifierListener(chainID, events.nullifiers);
-      } catch (err) {
-        // no op
+        await this.nullifierListener(chainID, events.nullifiers);
+      } catch (err: any) {
+        this.leptonDebugger?.error(err);
       }
     }
 
@@ -137,14 +163,14 @@ class Lepton {
       startingIndex: number,
       leaves: Commitment[],
     ) => {
-      this.listener(chainID, tree, startingIndex, leaves);
+      await this.listener(chainID, tree, startingIndex, leaves);
     }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,
       }[],
     ) => {
-      this.nullifierListener(chainID, nullifiers);
+      await this.nullifierListener(chainID, nullifiers);
     });
   }
 
@@ -157,9 +183,11 @@ class Lepton {
   async loadNetwork(
     chainID: number,
     address: string,
-    provider: ethers.providers.JsonRpcProvider,
+    provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
+    this.leptonDebugger?.log(`loadNetwork: ${chainID}`);
+
     // If a network with this chainID exists, unload it and load the provider as a new network
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
@@ -168,7 +196,7 @@ class Lepton {
 
     // Create tree controllers
     this.merkletree[chainID] = {
-      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root)),
+      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root), this.leptonDebugger),
     };
 
     this.deploymentBlocks[chainID] = deploymentBlock;
@@ -184,14 +212,14 @@ class Lepton {
       startingIndex: number,
       leaves: Commitment[],
     ) => {
-      this.listener(chainID, tree, startingIndex, leaves);
+      await this.listener(chainID, tree, startingIndex, leaves);
     }, async (
       nullifiers: {
         nullifier: bytes.BytesData,
         txid: bytes.BytesData,
       }[],
     ) => {
-      this.nullifierListener(chainID, nullifiers);
+      await this.nullifierListener(chainID, nullifiers);
     });
 
     await this.scanHistory(chainID);
@@ -257,7 +285,7 @@ class Lepton {
    */
   async loadExistingWallet(encryptionKey: bytes.BytesData, id: bytes.BytesData): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
+    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id, this.leptonDebugger);
 
     // Store wallet against ID
     this.wallets[bytes.hexlify(id)] = wallet;
@@ -282,7 +310,7 @@ class Lepton {
     mnemonic: string,
   ): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
+    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, this.leptonDebugger);
 
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
