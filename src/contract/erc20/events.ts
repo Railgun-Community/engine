@@ -1,94 +1,84 @@
 import type { BigNumber } from 'ethers';
 
 export type GeneratedCommitmentBatchEvent = {
-  transactionHash: string,
+  transactionHash: string;
   args: {
-    treeNumber: BigNumber,
-    startPosition: BigNumber,
+    treeNumber: BigNumber;
+    startPosition: BigNumber;
     commitments: {
-      pubkey: [BigNumber, BigNumber],
-      random: BigNumber,
-      amount: BigNumber,
-      token: string,
-    },
-  },
+      pubkey: [BigNumber, BigNumber];
+      random: BigNumber;
+      amount: BigNumber;
+      token: string;
+    };
+  };
 };
 
 export type CommitmentBatchEvent = {
-  transactionHash: string,
+  transactionHash: string;
   args: {
-    treeNumber: BigNumber,
-    startPosition: BigNumber,
+    treeNumber: BigNumber;
+    startPosition: BigNumber;
     commitments: {
-      pubkey: [BigNumber, BigNumber],
-      random: BigNumber,
-      amount: BigNumber,
-      token: string,
-    },
-  },
+      pubkey: [BigNumber, BigNumber];
+      random: BigNumber;
+      amount: BigNumber;
+      token: string;
+    };
+  };
 };
 
 export type GeneratedCommitmentEvent = {
-  transactionHash: string,
+  transactionHash: string;
   args: {
-    treeNumber: BigNumber,
-    startPosition: BigNumber,
+    treeNumber: BigNumber;
+    startPosition: BigNumber;
     commitments: {
-      pubkey: [BigNumber, BigNumber],
-      random: BigNumber,
-      amount: BigNumber,
-      token: string,
-    },
-  },
+      pubkey: [BigNumber, BigNumber];
+      random: BigNumber;
+      amount: BigNumber;
+      token: string;
+    };
+  };
 };
 
 export type CommitmentEvent = {
-  transactionHash: string,
+  transactionHash: string;
   args: {
-    treeNumber: BigNumber,
-    startPosition: BigNumber,
+    treeNumber: BigNumber;
+    startPosition: BigNumber;
     commitments: {
-      pubkey: [BigNumber, BigNumber],
-      random: BigNumber,
-      amount: BigNumber,
-      token: string,
-    },
-  },
+      pubkey: [BigNumber, BigNumber];
+      random: BigNumber;
+      amount: BigNumber;
+      token: string;
+    };
+  };
 };
 
 export type NullifierEvent = {
-  transactionHash: string,
+  transactionHash: string;
   args: {
-    treeNumber: BigNumber,
-    startPosition: BigNumber,
+    treeNumber: BigNumber;
+    startPosition: BigNumber;
     commitments: {
-      pubkey: [BigNumber, BigNumber],
-      random: BigNumber,
-      amount: BigNumber,
-      token: string,
-    },
-  },
+      pubkey: [BigNumber, BigNumber];
+      random: BigNumber;
+      amount: BigNumber;
+      token: string;
+    };
+  };
 };
 
-function formatGeneratedCommitment(event: GeneratedCommitment) {
+function formatGeneratedCommitment(event: GeneratedCommitmentEvent) {}
 
-}
+function formatGeneratedCommitmentBatch(event: GeneratedCommitmentBatchEvent) {}
 
-function formatGeneratedCommitmentBatch(event: GeneratedCommitmentBatch) {
+function formatCommitment(event: CommitmentEvent) {}
 
-}
+function formatCommitmentBatch(event: CommitmentBatchEvent) {}
 
-function formatCommitment(events: Commitment) {
-
-}
-
-function formatCommitmentBatch(events: CommitmentBatch) {
-
-}
-
-function formatNullifier(event: NullifierEvent) {
-
-}
+function formatNullifier(event: NullifierEvent) {}
 
 export default {
   formatGeneratedCommitment,
