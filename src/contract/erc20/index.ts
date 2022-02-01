@@ -225,16 +225,9 @@ class ERC20RailgunContract {
       currentStartBlock += SCAN_CHUNKS;
     }
 
-    console.log(generatedCommitmentBatch);
-    console.log(commitmentBatch);
-    console.log(generatedCommitment);
-    console.log(commitment);
-    console.log(nullifiers);
-
     // Process events
     generatedCommitmentBatch.forEach(async (event) => {
       if (event.args) {
-        console.log(event.args.commitments);
         await listener(
           event.args.treeNumber.toNumber(),
           event.args.startPosition.toNumber(),

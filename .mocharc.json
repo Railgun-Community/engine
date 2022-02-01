@@ -1,0 +1,4 @@
+{
+  "require": "ts-node/register",
+  "exit": true
+}

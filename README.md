@@ -33,8 +33,11 @@ The default test config should work fine here as addresses are deterministic on 
 
 You can run subsequent test runs against the same hardhat node deployment as the testing suite will use snapshots to restore hardhat back to the initial state after each test. If for some reason the testing suite is interrupted before it can restore to snapshot you will need to terminate the hardhat node process, restart it, and run the deploy test script again.
 
-### Run mocha tests
+### Run mocha tests (non-hardhat)
 `npm test` OR `yarn run test`
+
+### Run all tests (including hardhat)
+`npm run test-hardhat` OR `yarn run test-hardhat`
 
 ### Compile
 `npm compile` OR `yarn run compile`

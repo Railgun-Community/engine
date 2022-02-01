@@ -66,7 +66,12 @@ describe('Lepton', function () {
     expect(lepton.wallets[walletID].id).to.equal(walletID);
   });
 
-  it('Should deposit, transact and update balance', async () => {
+  it('[HH] Should deposit, transact and update balance', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     const address = (await lepton.wallets[walletID].addresses(chainID))[0];
 
     // Create deposit

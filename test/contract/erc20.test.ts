@@ -40,7 +40,12 @@ describe('Contract/Index', function () {
     await token.approve(contract.address, balance);
   });
 
-  it('Should retrieve merkle root from contract', async () => {
+  it('[HH] Should retrieve merkle root from contract', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     expect(await contract.merkleRoot()).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
   });
 
@@ -53,7 +58,12 @@ describe('Contract/Index', function () {
     expect(await contract.fees()).to.be.a('object');
   });
 
-  it('Should create serialized transactions', async () => {
+  it('[HH] Should create serialized transactions', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     // Create deposit
     const deposit = await contract.generateDeposit([
       new ERC20Note(
@@ -156,7 +166,12 @@ describe('Contract/Index', function () {
     expect(await contract.merkleRoot()).to.equal('a443b492ccf3b2362cca069c2d0450f0ffd41286b270470a497a9627c76598');
   });
 
-  it('Should parse tree update events', async () => {
+  it('[HH] Should parse tree update events', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     let result;
 
     contract.treeUpdates(async (tree: number, startPosition: number, leaves: Commitment[]) => {
