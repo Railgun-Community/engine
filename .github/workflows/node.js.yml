@@ -5,9 +5,7 @@ name: Node.js CI
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    branches: [master, release]
 
 jobs:
   unit-tests:
@@ -26,11 +24,16 @@ jobs:
 
   npm-deploy:
     name: 🎉 Deploy
+    if: github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
+    needs: unit-tests
     steps:
-      - name: Upload files
+      - name: Build package
+        run: (cd release && npm pack ..)
+      - name: Upload tarball
         uses: SamKirkland/FTP-Deploy-Action@4.2.0
         with:
           server: 109.106.246.185
           username: u659348553.github
           password: ${{ secrets.ftp_password }}
+          local-dir: release
