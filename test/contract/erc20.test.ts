@@ -26,15 +26,19 @@ describe('Contract/Index', function () {
   this.timeout(60000);
 
   beforeEach(async () => {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      return;
+    }
+
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
+    contract = new ERC20RailgunContract(config.contracts.proxy, provider);
 
-    const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic)
-      .derivePath(ethers.utils.defaultPath);
+    const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
+      ethers.utils.defaultPath,
+    );
     etherswallet = new ethers.Wallet(privateKey, provider);
-
     snapshot = await provider.send('evm_snapshot', []);
     token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet);
-    contract = new ERC20RailgunContract(config.contracts.proxy, provider);
 
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(contract.address, balance);
@@ -49,12 +53,20 @@ describe('Contract/Index', function () {
     expect(await contract.merkleRoot()).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
   });
 
-  it('Should return valid merkle roots', async () => {
+  it('[HH] Should return valid merkle roots', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
     expect(await contract.validateRoot(0, '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90')).to.equal(true);
     expect(await contract.validateRoot(0, '09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d')).to.equal(false);
   });
 
-  it('Should return fees', async () => {
+  it('[HH] Should return fees', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
     expect(await contract.fees()).to.be.a('object');
   });
 
@@ -301,6 +313,9 @@ describe('Contract/Index', function () {
   }).timeout(120000);
 
   afterEach(async () => {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      return;
+    }
     contract.unload();
     await provider.send('evm_revert', [snapshot]);
   });

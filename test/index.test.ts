@@ -41,6 +41,10 @@ describe('Lepton', function () {
   this.timeout(240000);
 
   beforeEach(async () => {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      return;
+    }
+
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
     chainID = (await provider.getNetwork()).chainId;
 
@@ -50,6 +54,7 @@ describe('Lepton', function () {
     etherswallet = new ethers.Wallet(privateKey, provider);
 
     snapshot = await provider.send('evm_snapshot', []);
+
     token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet);
 
     const balance = await token.balanceOf(etherswallet.address);
@@ -60,7 +65,12 @@ describe('Lepton', function () {
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
   });
 
-  it('Should load existing wallets', async () => {
+  it('[HH] Should load existing wallets', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     lepton.unloadWallet(walletID);
     await lepton.loadExistingWallet(testEncryptionKey, walletID);
     expect(lepton.wallets[walletID].id).to.equal(walletID);
@@ -117,6 +127,9 @@ describe('Lepton', function () {
   }).timeout(120000);
 
   afterEach(async () => {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      return;
+    }
     lepton.unload();
     await provider.send('evm_revert', [snapshot]);
   });
