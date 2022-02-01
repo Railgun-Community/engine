@@ -13,11 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v2
+      - name: Cache modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
         with:
-          node-version: 14.x
-          cache: 'npm'
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
       - name: Install dependencies
         run: npm ci
       - run: npm test
@@ -28,12 +34,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit-tests
     steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: npm ci
       - name: Build package
-        run: (mkdir release -p && cd release && npm pack ..)
+        run: npm run release
       - name: Upload tarball
         uses: SamKirkland/FTP-Deploy-Action@4.2.0
         with:
           server: 109.106.246.185
           username: u659348553.github
           password: ${{ secrets.ftp_password }}
-          local-dir: release
+          local-dir: release/

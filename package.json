@@ -11,7 +11,8 @@
     "test": "npm run lint && nyc mocha 'test/**/*.test.ts'",
     "test-hardhat": "env RUN_HARDHAT_TESTS=true && npm test",
     "compile": "npm run clean && tsc",
-    "prepack": "npm install && npm run compile"
+    "prepack": "npm install && npm run compile",
+    "release": "mkdir -p release && npm pack && mv *.tgz ./release"
   },
   "repository": {
     "type": "git",
