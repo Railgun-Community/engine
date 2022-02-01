@@ -31,6 +31,6 @@ jobs:
       - name: Upload files
         uses: SamKirkland/FTP-Deploy-Action@4.2.0
         with:
-          server: 109.106.246.185:21
+          server: 109.106.246.185
           username: u659348553.github
           password: ${{ secrets.ftp_password }}
