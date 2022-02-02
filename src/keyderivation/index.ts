@@ -61,13 +61,13 @@ class BIP32Node {
    */
   getBabyJubJubKey(
     chainID: number | undefined = undefined,
-  ): { privateKey: string, publicKey: string, address: string } {
+  ): { privateKey: string, pubkey: string, address: string } {
     const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
-    const publicKey = babyjubjub.privateKeyToPublicKey(privateKey);
-    const address = encode(publicKey, chainID);
+    const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
+    const address = encode(pubkey, chainID);
     return {
       privateKey,
-      publicKey,
+      pubkey,
       address,
     };
   }

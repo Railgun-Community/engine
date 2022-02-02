@@ -374,7 +374,7 @@ class MerkleTree {
           hash: bytes.hexlify(leaf.hash),
           txid: bytes.hexlify(leaf.txid),
           data: {
-            publicKey: bytes.hexlify(leaf.data.publicKey),
+            pubkey: bytes.hexlify(leaf.data.pubkey),
             random: bytes.hexlify(leaf.data.random),
             amount: bytes.hexlify(leaf.data.amount),
             token: bytes.hexlify(leaf.data.token),

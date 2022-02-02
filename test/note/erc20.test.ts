@@ -9,70 +9,70 @@ const { expect } = chai;
 
 const vectors = [
   {
-    publicKey: '9902564685f24f396263c64f582aa9a87499704509c60862930b1f9f7d258e8e',
+    pubkey: '9902564685f24f396263c64f582aa9a87499704509c60862930b1f9f7d258e8e',
     random: '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
     amount: '000000000000000000000000000000000000000000000000086aa1ade61ccb53',
     token: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
     hash: 'b4b47ab2e634585b186772c51661619bccc02e2e7deedcb3fcc20c250f048f',
   },
   {
-    publicKey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
+    pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
     random: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
     amount: '00000000000000000000000000000000000000000000000007cf6b5ae17ae75a',
     token: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
     hash: '1f1bdc65c7975beadca9261e8dd58f9ea97976056049d54d93f37fdfd2943fad',
   },
   {
-    publicKey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
+    pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
     random: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
     amount: '0000000000000000000000000000000000000000000000000b9df0087cbbd709',
     token: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
     hash: '075bad311db015ceb616614b55a18fcf54f371b42cc7657f197251159636bf5d',
   },
   {
-    publicKey: 'bd0f57ea13604d47c9080859ee96d010496cccbfed2ca2062ee3e2d0fcd24e9e',
+    pubkey: 'bd0f57ea13604d47c9080859ee96d010496cccbfed2ca2062ee3e2d0fcd24e9e',
     random: '08ad9143ae793cdfe94b77e4e52bc4e9f13666966cffa395e3d412ea4e20480f',
     amount: '0000000000000000000000000000000000000000000000000ac76747c40dda3a',
     token: '0000000000000000000000009b71cad96341485290d3f1376fb9e969a632694d',
     hash: '22a1515f97c6c730695d43d3a6f05a669d240789a4886689230d638ee4a38bef',
   },
   {
-    publicKey: 'd7091b2e84b3fcbe1a688b9e08bf45850a1e8ff0f7e2de19971a6d871ae8a186',
+    pubkey: 'd7091b2e84b3fcbe1a688b9e08bf45850a1e8ff0f7e2de19971a6d871ae8a186',
     random: '0c7b2d318b053d48861c471a8e315fb00bf6750e00739619a1a00f9b8f1bc2be',
     amount: '0000000000000000000000000000000000000000000000000475d82f700206b8',
     token: '00000000000000000000000089d21609e4ea344c576d1692ceca0f0e0bf4b771',
     hash: '1356a07aebe2181c6c6100e2bf831ad2f56dbdd4a3b182a0d2d0dadd2915226a',
   },
   {
-    publicKey: 'fd13f6d7000238c3de83582583f3654a1f14de55143191b89415e35ae2abdf90',
+    pubkey: 'fd13f6d7000238c3de83582583f3654a1f14de55143191b89415e35ae2abdf90',
     random: '0584766b6f58473469f22176e4c61526d8c0caf1b041611d408b5f01e7eae957',
     amount: '00000000000000000000000000000000000000000000000003426801bd08640b',
     token: '0000000000000000000000006f2870a30f4ff19f073fe894d6fe881f0c04657f',
     hash: '1f23b3246d242d2ff339a124f7ae4629ff7dc30a0dead309a99f4ca036eb6844',
   },
   {
-    publicKey: '13e865e8f6160ce58efaf5b2f53facb4b5f16249b0411951e8f7e12a3d95d694',
+    pubkey: '13e865e8f6160ce58efaf5b2f53facb4b5f16249b0411951e8f7e12a3d95d694',
     random: '2c14f33de99b1ffe04826a066ff9cb0f44a514b4db4659e8520d570f3252c0cf',
     amount: '00000000000000000000000000000000000000000000000003449e13312815a6',
     token: '0000000000000000000000004224904029a556a7cd0bc78d81b165c391fffb45',
     hash: '0998abf52255ebd5de4152d1f86734c43fc29b1696b88446ff8693bbf1a4a124',
   },
   {
-    publicKey: 'bda28a024a0b77ba51e89b17e7b8d221b2e7c1a818c8e53c78cdc3a8479807a4',
+    pubkey: 'bda28a024a0b77ba51e89b17e7b8d221b2e7c1a818c8e53c78cdc3a8479807a4',
     random: '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     amount: '00000000000000000000000000000000000000000000000008d210fd771f72ab',
     token: '000000000000000000000000480bdc4d52df318db7b458b171540a936dc39a07',
     hash: '0dab736365762dd663d51e5cc43afc79e3987382b377cf70b85471596b42a1e5',
   },
   {
-    publicKey: '6a26fe361ff14ef4c931c82acc8c772d5a349a4d1af75bff27dde944ec713b27',
+    pubkey: '6a26fe361ff14ef4c931c82acc8c772d5a349a4d1af75bff27dde944ec713b27',
     random: '1d629e459c9d76866be24dc759449eb86478eea9c496942f0f25967c11fc4bbd',
     amount: '000000000000000000000000000000000000000000000000060c736c94f022c6',
     token: '0000000000000000000000008afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
     hash: '0931f4cccea5cf227cfdeb66623dc80d53980262c548ace1bac4b14c94eaaa0d',
   },
   {
-    publicKey: 'c103873aa9d88c4c4cbc4cac97f7b57d01ab3587500c1d1c90fe3991b1dab882',
+    pubkey: 'c103873aa9d88c4c4cbc4cac97f7b57d01ab3587500c1d1c90fe3991b1dab882',
     random: '15af83f1c32852bd5f714bb9176a14622e16e1cdda5f94ddb9981d3811924b05',
     amount: '000000000000000000000000000000000000000000000000005589f7d39c59bf',
     token: '0000000000000000000000004f53cbc84f501847cf42bd9fb14d63be21dcffc8',
@@ -84,7 +84,7 @@ describe('Note/ERC20', () => {
   it('Should calculate hashes', () => {
     vectors.forEach((vector) => {
       expect((new ERC20Note(
-        vector.publicKey,
+        vector.pubkey,
         vector.random,
         vector.amount,
         vector.token,
@@ -96,7 +96,7 @@ describe('Note/ERC20', () => {
     const ciphertextVectors = [
       {
         note: {
-          publicKey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
+          pubkey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
           random: '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
           amount: '000000000000000000000000000000000000000000000000086aa1ade61ccb53',
           token: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
@@ -115,7 +115,7 @@ describe('Note/ERC20', () => {
       },
       {
         note: {
-          publicKey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
+          pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
           random: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
           amount: '00000000000000000000000000000000000000000000000007cf6b5ae17ae75a',
           token: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
@@ -134,7 +134,7 @@ describe('Note/ERC20', () => {
       },
       {
         note: {
-          publicKey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
+          pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
           random: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
           amount: '0000000000000000000000000000000000000000000000000b9df0087cbbd709',
           token: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
@@ -156,7 +156,7 @@ describe('Note/ERC20', () => {
     ciphertextVectors.forEach((vector) => {
       // Create Note object
       const note = new ERC20Note(
-        vector.note.publicKey,
+        vector.note.pubkey,
         vector.note.random,
         vector.note.amount,
         vector.note.token,
@@ -182,12 +182,12 @@ describe('Note/ERC20', () => {
       const serialized = note.serialize();
       const serializedContract = note.serialize(true);
 
-      expect(serialized.publicKey).to.equal(vector.publicKey);
+      expect(serialized.pubkey).to.equal(vector.pubkey);
       expect(serialized.random).to.equal(vector.random);
       expect(serialized.amount).to.equal(vector.amount);
       expect(serialized.token).to.equal(vector.token);
 
-      expect(serializedContract.publicKey).to.equal(`0x${vector.publicKey}`);
+      expect(serializedContract.pubkey).to.equal(`0x${vector.pubkey}`);
       expect(serializedContract.random).to.equal(`0x${vector.random}`);
       expect(serializedContract.amount).to.equal(`0x${vector.amount}`);
       expect(serializedContract.token).to.equal(`0x${vector.token}`);

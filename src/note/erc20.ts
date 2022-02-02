@@ -8,14 +8,14 @@ import {
 import { Ciphertext } from '../utils/encryption';
 
 export type ERC20NoteSerialized = {
-  publicKey: string,
+  pubkey: string,
   random: string,
   amount: string,
   token: string,
 };
 
 class ERC20Note {
-  publicKey: string;
+  pubkey: string;
 
   random: string;
 
@@ -25,18 +25,18 @@ class ERC20Note {
 
   /**
    * Create Note object from values
-   * @param publicKey - spending public key
+   * @param pubkey - spending public key
    * @param random - note randomness
    * @param amount - note amount
    * @param token - note token ID
    */
   constructor(
-    publicKey: bytes.BytesData,
+    pubkey: bytes.BytesData,
     random: bytes.BytesData,
     amount: bytes.BytesData,
     token: bytes.BytesData,
   ) {
-    this.publicKey = bytes.hexlify(bytes.padToLength(publicKey, 32));
+    this.pubkey = bytes.hexlify(bytes.padToLength(pubkey, 32));
     this.random = bytes.hexlify(bytes.padToLength(random, 32));
     this.amount = bytes.hexlify(bytes.padToLength(amount, 32));
     this.token = bytes.hexlify(bytes.padToLength(token, 32));
@@ -47,7 +47,7 @@ class ERC20Note {
    */
   get hash(): string {
     return hash.poseidon([
-      ...babyjubjub.unpackPoint(this.publicKey),
+      ...babyjubjub.unpackPoint(this.pubkey),
       this.random,
       this.amount,
       this.token,
@@ -61,7 +61,7 @@ class ERC20Note {
   encrypt(sharedKey: bytes.BytesData): Ciphertext {
     // Encrypt in order and return
     return encryption.aes.ctr.encrypt([
-      ...babyjubjub.unpackPoint(this.publicKey),
+      ...babyjubjub.unpackPoint(this.pubkey),
       this.random,
       this.amount,
       this.token,
@@ -96,7 +96,7 @@ class ERC20Note {
    */
   serialize(forContract: boolean = false): ERC20NoteSerialized {
     return {
-      publicKey: bytes.hexlify(this.publicKey, forContract),
+      pubkey: bytes.hexlify(this.pubkey, forContract),
       random: bytes.hexlify(this.random, forContract),
       amount: bytes.hexlify(this.amount, forContract),
       token: bytes.hexlify(this.token, forContract),
@@ -111,7 +111,7 @@ class ERC20Note {
   static deserialize(noteData: ERC20NoteSerialized): ERC20Note {
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new ERC20Note(
-      bytes.hexlify(noteData.publicKey),
+      bytes.hexlify(noteData.pubkey),
       bytes.hexlify(noteData.random),
       bytes.hexlify(noteData.amount),
       bytes.hexlify(noteData.token),

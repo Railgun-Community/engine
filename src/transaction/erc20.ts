@@ -192,7 +192,7 @@ class ERC20Transaction {
               spendtxid: false,
               dummyKey,
               note: new ERC20Note(
-                babyjubjub.privateKeyToPublicKey(
+                babyjubjub.privateKeyToPubKey(
                   dummyKey,
                 ),
                 babyjubjub.random(),
@@ -284,7 +284,7 @@ class ERC20Transaction {
 
     // Create change output
     commitments.push(new ERC20Note(
-      wallet.getKeypair(encryptionKey, 0, true).publicKey,
+      wallet.getKeypair(encryptionKey, 0, true).pubkey,
       babyjubjub.random(),
       change,
       this.token,
@@ -293,7 +293,7 @@ class ERC20Transaction {
     // Pad with dummy notes to outputs length
     while (commitments.length < NOTE_OUTPUTS) {
       commitments.push(new ERC20Note(
-        babyjubjub.privateKeyToPublicKey(babyjubjub.seedToPrivateKey(
+        babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(
           bytes.random(32),
         )),
         babyjubjub.random(),
@@ -305,8 +305,8 @@ class ERC20Transaction {
     // Calculate ciphertext
     const ciphertext = commitments.map((commitment) => {
       const senderPrivateKey = babyjubjub.seedToPrivateKey(bytes.random(32));
-      const senderPubKey = babyjubjub.privateKeyToPublicKey(senderPrivateKey);
-      const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.publicKey);
+      const senderPubKey = babyjubjub.privateKeyToPubKey(senderPrivateKey);
+      const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.pubkey);
       const encrypted = commitment.encrypt(sharedKey);
 
       return {
@@ -345,7 +345,7 @@ class ERC20Transaction {
       nullifiers,
       pathElements,
       pathIndices,
-      recipientPK: commitments.map((output) => output.publicKey),
+      recipientPK: commitments.map((output) => output.pubkey),
       randomOut: commitments.map((output) => output.random),
       valuesOut: commitments.map((output) => output.amount),
       commitmentsOut: commitments.map((output) => output.hash),

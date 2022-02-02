@@ -258,7 +258,7 @@ class Wallet extends EventEmitter {
       }
 
       // If this note is addressed to us add to write queue
-      if (note.publicKey === key.publicKey) {
+      if (note.pubkey === key.pubkey) {
         writeBatch.push({
           type: 'put',
           key: [

@@ -87,7 +87,7 @@ describe('Lepton', function () {
     // Create deposit
     const deposit = await lepton.contracts[chainID].generateDeposit([
       new ERC20Note(
-        Lepton.decodeAddress(address).publicKey,
+        Lepton.decodeAddress(address).pubkey,
         '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
         new BN('11000000000000000000000000', 10),
         config.contracts.rail,
@@ -103,7 +103,7 @@ describe('Lepton', function () {
     const transaction = new ERC20Transaction(config.contracts.rail, chainID);
     transaction.outputs = [
       new ERC20Note(
-        babyjubjub.privateKeyToPublicKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
+        babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
         '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
         new BN('300', 10),
         config.contracts.rail,
