@@ -18,7 +18,7 @@ export type AdaptID = {
 export type Commitment = {
   hash: bytes.BytesData,
   ciphertext: bytes.BytesData[],
-  senderPublicKey: bytes.BytesData,
+  senderPubKey: bytes.BytesData,
 };
 
 export type ERC20TransactionSerialized = {
@@ -305,12 +305,12 @@ class ERC20Transaction {
     // Calculate ciphertext
     const ciphertext = commitments.map((commitment) => {
       const senderPrivateKey = babyjubjub.seedToPrivateKey(bytes.random(32));
-      const senderPublicKey = babyjubjub.privateKeyToPublicKey(senderPrivateKey);
+      const senderPubKey = babyjubjub.privateKeyToPublicKey(senderPrivateKey);
       const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.publicKey);
       const encrypted = commitment.encrypt(sharedKey);
 
       return {
-        senderPublicKey,
+        senderPubKey,
         ciphertext: [
           bytes.padToLength(encrypted.iv, 32),
           ...encrypted.data,
@@ -321,7 +321,7 @@ class ERC20Transaction {
     // Calculate ciphertext hash
     const ciphertextHash = bytes.numberify(hash.sha256(bytes.combine(
       ciphertext.map((commitment) => [
-        ...babyjubjub.unpackPoint(commitment.senderPublicKey),
+        ...babyjubjub.unpackPoint(commitment.senderPubKey),
         ...commitment.ciphertext,
       ]).flat(2).map((value) => bytes.padToLength(value, 32)),
     ))).mod(constants.SNARK_PRIME);
@@ -357,7 +357,7 @@ class ERC20Transaction {
       commitments: commitments.map((commitment, index) => ({
         hash: commitment.hash,
         ciphertext: ciphertext[index].ciphertext,
-        senderPublicKey: ciphertext[index].senderPublicKey,
+        senderPubKey: ciphertext[index].senderPubKey,
       })),
     };
   }

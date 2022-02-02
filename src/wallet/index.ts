@@ -247,7 +247,7 @@ class Wallet extends EventEmitter {
         // Derive shared secret
         const sharedKey = babyjubjub.ecdh(
           key.privateKey,
-          leaf.senderPublicKey,
+          leaf.senderPubKey,
         );
 
         // Decrypt

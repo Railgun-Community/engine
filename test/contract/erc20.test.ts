@@ -142,7 +142,7 @@ describe('Contract/Index', function () {
             '9c492fc96e871739d7f1f41985c527ffbd0912a1e82b40c89c4a2ac02ab22749',
             '09c77d5004f3f8ef0c18a52651acc10a5863ff7ab22cf4ced3f05f9dfe64f699',
           ],
-          senderPublicKey: '87c4536d7d66880e9845dc92501356e4cef35c08b01d1607c8ef42d718ad271a',
+          senderPubKey: '87c4536d7d66880e9845dc92501356e4cef35c08b01d1607c8ef42d718ad271a',
         },
         {
           hash: '2a3b8277031d4a439233c2e79dd94a84a482e9608fce1c7eeb7e5ee0bace7917',
@@ -154,7 +154,7 @@ describe('Contract/Index', function () {
             '8165f5272781829110fc8cfa88ba6147d05f3bb5efc730097bb4529f26eb9fb1',
             '6003d4743640ad0982fb4d6b41a29aa1eea8716bedd53c82f0cf3a3035691fa4',
           ],
-          senderPublicKey: 'd957924ce81d1b2a6fef3658aadd41bc9ac2142c93f289722cd2f006d4b52c1d',
+          senderPubKey: 'd957924ce81d1b2a6fef3658aadd41bc9ac2142c93f289722cd2f006d4b52c1d',
         },
         {
           hash: '2bc4940dd867f281cfd0c19ca3311def6fb8d9086b9ab59028ac58002f906e0f',
@@ -166,7 +166,7 @@ describe('Contract/Index', function () {
             '4c02d9dbeae3e72aeea7190348efeb94a663b1261f4c0e05099d0b5626d4fc65',
             '5c30564738fef175c47fd4856ff2418d7a62d1cbee47e79fab63199f0a54015a',
           ],
-          senderPublicKey: '1e455cb30b1a973453914b8ba23e567f7bf09dbe07c0c5bae0d108f016f04b04',
+          senderPubKey: '1e455cb30b1a973453914b8ba23e567f7bf09dbe07c0c5bae0d108f016f04b04',
         },
       ],
     }]);
@@ -268,7 +268,7 @@ describe('Contract/Index', function () {
             '9c492fc96e871739d7f1f41985c527ffbd0912a1e82b40c89c4a2ac02ab22749',
             '09c77d5004f3f8ef0c18a52651acc10a5863ff7ab22cf4ced3f05f9dfe64f699',
           ],
-          senderPublicKey: '87c4536d7d66880e9845dc92501356e4cef35c08b01d1607c8ef42d718ad271a',
+          senderPubKey: '87c4536d7d66880e9845dc92501356e4cef35c08b01d1607c8ef42d718ad271a',
         },
         {
           hash: '2a3b8277031d4a439233c2e79dd94a84a482e9608fce1c7eeb7e5ee0bace7917',
@@ -280,7 +280,7 @@ describe('Contract/Index', function () {
             '8165f5272781829110fc8cfa88ba6147d05f3bb5efc730097bb4529f26eb9fb1',
             '6003d4743640ad0982fb4d6b41a29aa1eea8716bedd53c82f0cf3a3035691fa4',
           ],
-          senderPublicKey: 'd957924ce81d1b2a6fef3658aadd41bc9ac2142c93f289722cd2f006d4b52c1d',
+          senderPubKey: 'd957924ce81d1b2a6fef3658aadd41bc9ac2142c93f289722cd2f006d4b52c1d',
         },
         {
           hash: '2bc4940dd867f281cfd0c19ca3311def6fb8d9086b9ab59028ac58002f906e0f',
@@ -292,7 +292,7 @@ describe('Contract/Index', function () {
             '4c02d9dbeae3e72aeea7190348efeb94a663b1261f4c0e05099d0b5626d4fc65',
             '5c30564738fef175c47fd4856ff2418d7a62d1cbee47e79fab63199f0a54015a',
           ],
-          senderPublicKey: '1e455cb30b1a973453914b8ba23e567f7bf09dbe07c0c5bae0d108f016f04b04',
+          senderPubKey: '1e455cb30b1a973453914b8ba23e567f7bf09dbe07c0c5bae0d108f016f04b04',
         },
       ],
     }]);
