@@ -95,7 +95,7 @@ class ERC20RailgunContract {
           startPosition.toNumber(),
           commitments.map((commitment) => {
             const note = ERC20Note.deserialize({
-              publicKey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
+              pubkey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
               random: bytes.hexlify(commitment.random.toHexString()),
               amount: bytes.hexlify(commitment.amount.toHexString()),
               token: bytes.hexlify(commitment.token, true),
@@ -233,7 +233,7 @@ class ERC20RailgunContract {
           event.args.startPosition.toNumber(),
           event.args.commitments.map((commit: any) => {
             const note = ERC20Note.deserialize({
-              publicKey: babyjubjub.packPoint(commit.pubkey.map((el: any) => el.toHexString())),
+              pubkey: babyjubjub.packPoint(commit.pubkey.map((el: any) => el.toHexString())),
               random: bytes.hexlify(commit.random.toHexString()),
               amount: bytes.hexlify(commit.amount.toHexString()),
               token: bytes.hexlify(commit.token, true),
@@ -274,7 +274,7 @@ class ERC20RailgunContract {
     generatedCommitment.forEach((event) => {
       if (event.args) {
         const note = ERC20Note.deserialize({
-          publicKey: babyjubjub.packPoint(event.args.pubkey.map((el: any) => el.toHexString())),
+          pubkey: babyjubjub.packPoint(event.args.pubkey.map((el: any) => el.toHexString())),
           random: bytes.hexlify(event.args.random.toHexString()),
           amount: bytes.hexlify(event.args.amount.toHexString()),
           token: bytes.hexlify(event.args.token, true),
@@ -325,7 +325,7 @@ class ERC20RailgunContract {
     // Serialize for contract
     const inputs = notes.map((note) => {
       const serialized = note.serialize(true);
-      const pubkeyUnpacked = babyjubjub.unpackPoint(serialized.publicKey)
+      const pubkeyUnpacked = babyjubjub.unpackPoint(serialized.pubkey)
         .map((element) => bytes.hexlify(element, true));
 
       return {

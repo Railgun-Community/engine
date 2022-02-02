@@ -292,7 +292,7 @@ describe('MerkleTree/Index', () => {
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         data: {
-          publicKey: '00', random: '01', amount: '02', token: '0x03',
+          pubkey: '00', random: '01', amount: '02', token: '0x03',
         },
       },
     ]);
@@ -308,7 +308,7 @@ describe('MerkleTree/Index', () => {
       hash: '04',
       txid: '1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       data: {
-        publicKey: '00', random: '01', amount: '02', token: '03',
+        pubkey: '00', random: '01', amount: '02', token: '03',
       },
     });
   });

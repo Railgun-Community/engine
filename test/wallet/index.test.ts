@@ -24,22 +24,22 @@ const testEncryptionKey = '01';
 
 const keypairs = [{ // Primary 0
   privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-  publicKey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+  pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
 },
 { // Primary 1
   privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
-  publicKey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
+  pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
   address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
 },
 { // Primary 5
   privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
-  publicKey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
+  pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
   address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
 },
 { // Change 2
   privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
-  publicKey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
+  pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
   address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
 }];
 
@@ -56,7 +56,7 @@ const notesPrep = [
 
 const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   const note = new ERC20Note(
-    keypairsPopulated[keyIndex].publicKey,
+    keypairsPopulated[keyIndex].pubkey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     'ffff',
     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
@@ -76,7 +76,7 @@ const notesPrep2 = [
 
 const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
   const note = new ERC20Note(
-    keypairsPopulated[keyIndex].publicKey,
+    keypairsPopulated[keyIndex].pubkey,
     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
     'ffff',
     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
@@ -123,7 +123,7 @@ describe('Wallet/Index', () => {
     expect(wallet.getKeypair(testEncryptionKey, 0, false)).to.deep.equal({
       address: 'rgany1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapkz2ffkk',
       privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-      publicKey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+      pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
     });
     expect(() => { wallet.getKeypair('111111', 0, false); }).to.throw('Wrong encryption key');
   });

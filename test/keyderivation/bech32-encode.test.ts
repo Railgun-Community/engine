@@ -14,28 +14,28 @@ describe('Key Derivation/Bech32 Encode', () => {
   it('Should encode and decode addresses', () => {
     const vectors = [
       {
-        publicKey: '00000000',
+        pubkey: '00000000',
         chainID: 1,
         address: 'rgeth1qyqqqqqqqz8wnw',
       },
       {
-        publicKey: '01bfd5681c0479be9a8ef8dd8baadd97115899a9af30b3d2455843afb41b',
+        pubkey: '01bfd5681c0479be9a8ef8dd8baadd97115899a9af30b3d2455843afb41b',
         chainID: 56,
         address: 'rgbsc1qyqml4tgrsz8n0563mudmza2mkt3zkye4xhnpv7jg4vy8ta5rvr770qf',
       },
       {
-        publicKey: 'ee6b4c702f8070c8ddea1cbb8b0f6a4a518b77fa8d3f9b68617b664550e75f649ed233',
+        pubkey: 'ee6b4c702f8070c8ddea1cbb8b0f6a4a518b77fa8d3f9b68617b664550e75f649ed233',
         chainID: undefined,
         address: 'rgany1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxvy4unfw',
       },
     ];
 
     vectors.forEach((vector) => {
-      expect(encode(vector.publicKey, vector.chainID))
+      expect(encode(vector.pubkey, vector.chainID))
         .to.equal(vector.address);
 
       expect(decode(vector.address)).to.deep.equal({
-        publicKey: vector.publicKey,
+        pubkey: vector.pubkey,
         chainID: vector.chainID,
       });
     });
