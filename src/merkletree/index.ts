@@ -23,7 +23,7 @@ export type GeneratedCommitment = {
 export type EncryptedCommitment = {
   hash: bytes.BytesData,
   txid: bytes.BytesData,
-  senderPublicKey: bytes.BytesData,
+  senderPubKey: bytes.BytesData,
   ciphertext: Ciphertext,
 };
 
@@ -363,7 +363,7 @@ class MerkleTree {
         this.commitmentWriteCache[tree][index] = {
           hash: bytes.hexlify(leaf.hash),
           txid: bytes.hexlify(leaf.txid),
-          senderPublicKey: bytes.hexlify(leaf.senderPublicKey),
+          senderPubKey: bytes.hexlify(leaf.senderPubKey),
           ciphertext: {
             iv: bytes.hexlify(leaf.ciphertext.iv),
             data: leaf.ciphertext.data.map((element) => bytes.hexlify(element)),

@@ -43,11 +43,11 @@ const keypairs = [{ // Primary 0
   address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
 }];
 
-const senderPublicKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
+const senderPubKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
 
 const keypairsPopulated = keypairs.map((key) => ({
   ...key,
-  sharedKey: babyjubjub.ecdh(key.privateKey, senderPublicKey),
+  sharedKey: babyjubjub.ecdh(key.privateKey, senderPubKey),
 }));
 
 const notesPrep = [
@@ -65,7 +65,7 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   return {
     hash: note.hash,
     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-    senderPublicKey,
+    senderPubKey,
     ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
   };
 });

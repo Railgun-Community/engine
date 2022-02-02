@@ -132,7 +132,7 @@ class ERC20RailgunContract {
             return {
               hash: commitment.hash.toHexString(),
               txid: event.transactionHash,
-              senderPublicKey: babyjubjub.packPoint(
+              senderPubKey: babyjubjub.packPoint(
                 commitment.senderPubKey.map((el) => el.toHexString()),
               ),
               ciphertext: {
@@ -257,7 +257,7 @@ class ERC20RailgunContract {
             return {
               hash: commit.hash.toHexString(),
               txid: event.transactionHash,
-              senderPublicKey: babyjubjub.packPoint(
+              senderPubKey: babyjubjub.packPoint(
                 commit.senderPubKey.map((el: any) => el.toHexString()),
               ),
               ciphertext: {
@@ -292,7 +292,7 @@ class ERC20RailgunContract {
         leaves.push({
           hash: event.args.hash.toHexString(),
           txid: event.transactionHash,
-          senderPublicKey: babyjubjub.packPoint(
+          senderPubKey: babyjubjub.packPoint(
             event.args.senderPubKey.map((el: any) => el.toHexString()),
           ),
           ciphertext: {
@@ -397,7 +397,7 @@ class ERC20RailgunContract {
         ciphertext: commitment.ciphertext.map((word) => bytes.padToLength(
           bytes.hexlify(word, true), 32,
         )),
-        senderPubKey: babyjubjub.unpackPoint(commitment.senderPublicKey).map(
+        senderPubKey: babyjubjub.unpackPoint(commitment.senderPubKey).map(
           (el) => bytes.padToLength(
             bytes.hexlify(el, true), 32,
           ),
