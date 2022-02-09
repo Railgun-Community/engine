@@ -14,6 +14,7 @@ import {
   GeneratedCommitmentArgs,
   EncryptedCommitmentArgs,
 } from './events';
+import { LeptonDebugger } from '../../models/types';
 
 // eslint-disable-next-line no-unused-vars
 export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => Promise<void>;
@@ -160,6 +161,7 @@ class ERC20RailgunContract {
     startBlock: number,
     listener: Listener,
     nullifierListener: NullifierListener,
+    leptonDebugger?: LeptonDebugger,
   ) {
     const SCAN_CHUNKS = 500;
 
@@ -174,10 +176,17 @@ class ERC20RailgunContract {
       this.contract.filters.NewCommitment().topics as string[],
     ];
 
+    leptonDebugger?.log(`Scanning events from block ${currentStartBlock} to ${latest}`);
+
     const events: Event[] = [];
+
+    leptonDebugger?.log(`Scanning commitment events...`);
 
     // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
+      if ((currentStartBlock - startBlock) % 10000 === 0) {
+        leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
+      }
       events.push(
         // eslint-disable-next-line no-await-in-loop
         ...(await this.contract.queryFilter(
@@ -194,10 +203,15 @@ class ERC20RailgunContract {
 
     const nulliferEvents: Event[] = [];
 
+    leptonDebugger?.log(`Scanning nullifier events...`);
+
     // We need a second query because only 4 filters are supported.
     // When contracts are updated, we can merge into a single query.
     let nullifierCurrentStartBlock = startBlock;
     while (nullifierCurrentStartBlock < latest) {
+      if ((currentStartBlock - startBlock) % 10000 === 0) {
+        leptonDebugger?.log(`Scanning next 10,000 nullifiers [${currentStartBlock}]...`);
+      }
       nulliferEvents.push(
         // eslint-disable-next-line no-await-in-loop
         ...(await this.contract.queryFilter(
