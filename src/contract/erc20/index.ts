@@ -179,11 +179,12 @@ class ERC20RailgunContract {
         this.leptonDebugger?.log(
           `Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
         );
+        this.leptonDebugger?.error(err);
         return this.scanEvents(filterTopics, startBlock, retry);
       }
-      const error = new Error(`Scan failed at block ${startBlock}. No longer retrying.`);
-      this.leptonDebugger?.error(error);
-      throw error;
+      this.leptonDebugger?.log(`Scan failed at block ${startBlock}. No longer retrying.`);
+      this.leptonDebugger?.error(err);
+      throw err;
     }
   }
 
