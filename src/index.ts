@@ -163,7 +163,6 @@ class Lepton {
       ) => {
         await this.nullifierListener(chainID, nullifiers);
       },
-      this.leptonDebugger,
     );
 
     // Final scan after all leaves added.
@@ -188,7 +187,7 @@ class Lepton {
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
     // Create contract instance
-    this.contracts[chainID] = new ERC20RailgunContract(address, provider);
+    this.contracts[chainID] = new ERC20RailgunContract(address, provider, this.leptonDebugger);
 
     // Create tree controllers
     this.merkletree[chainID] = {

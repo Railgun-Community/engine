@@ -21,6 +21,9 @@ export type Listener = (tree: number, startingIndex: number, leaves: Commitment[
 // eslint-disable-next-line no-unused-vars
 export type NullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 
+const SCAN_CHUNKS = 500;
+const MAX_SCAN_RETRIES = 5;
+
 // eslint-disable-next-line no-unused-vars
 export enum EventName {
   GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
@@ -36,14 +39,17 @@ class ERC20RailgunContract {
   // Contract address
   address: string;
 
+  readonly leptonDebugger: LeptonDebugger | undefined;
+
   /**
    * Connect to Railgun instance on network
    * @param address - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(address: string, provider: Provider) {
+  constructor(address: string, provider: Provider, leptonDebugger?: LeptonDebugger) {
     this.address = address;
     this.contract = new Contract(address, abi, provider);
+    this.leptonDebugger = leptonDebugger;
   }
 
   /**
@@ -152,6 +158,35 @@ class ERC20RailgunContract {
     return filterTopics;
   }
 
+  private async scanEvents(
+    filterTopics: string[][],
+    startBlock: number,
+    retryCount = 0,
+  ): Promise<Event[]> {
+    try {
+      const events = await this.contract.queryFilter(
+        {
+          address: this.contract.address,
+          topics: filterTopics,
+        },
+        startBlock,
+        startBlock + SCAN_CHUNKS,
+      );
+      return events;
+    } catch (err: any) {
+      if (retryCount < MAX_SCAN_RETRIES) {
+        const retry = retryCount + 1;
+        this.leptonDebugger?.log(
+          `Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
+        );
+        return this.scanEvents(filterTopics, startBlock, retry);
+      }
+      const error = new Error(`Scan failed at block ${startBlock}. No longer retrying.`);
+      this.leptonDebugger?.error(error);
+      throw error;
+    }
+  }
+
   /**
    * Gets historical events from block
    * @param startBlock - block to scan from
@@ -161,10 +196,7 @@ class ERC20RailgunContract {
     startBlock: number,
     listener: Listener,
     nullifierListener: NullifierListener,
-    leptonDebugger?: LeptonDebugger,
   ) {
-    const SCAN_CHUNKS = 500;
-
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
 
@@ -176,49 +208,43 @@ class ERC20RailgunContract {
       this.contract.filters.NewCommitment().topics as string[],
     ];
 
-    leptonDebugger?.log(`Scanning events from block ${currentStartBlock} to ${latest}`);
+    this.leptonDebugger?.log(`Scanning events from block ${currentStartBlock} to ${latest}`);
 
     const events: Event[] = [];
 
-    leptonDebugger?.log(`Scanning commitment events...`);
+    this.leptonDebugger?.log(`Scanning commitment events...`);
 
     // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
       if ((currentStartBlock - startBlock) % 10000 === 0) {
-        leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
+        this.leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
       events.push(
         // eslint-disable-next-line no-await-in-loop
-        ...(await this.contract.queryFilter(
-          {
-            address: this.contract.address,
-            topics: filterTopics,
-          },
-          currentStartBlock,
-          currentStartBlock + SCAN_CHUNKS,
-        )),
+        ...(await this.scanEvents(filterTopics, currentStartBlock)),
       );
       currentStartBlock += SCAN_CHUNKS;
     }
 
     const nulliferEvents: Event[] = [];
 
-    leptonDebugger?.log(`Scanning nullifier events...`);
+    // NOTE: ONLY 4 FILTERS ALLOWED PER QUERY.
+    const nullifierFilterTopics: string[][] = [
+      this.contract.filters.Nullifier().topics as string[],
+    ];
+
+    this.leptonDebugger?.log(`Scanning nullifier events...`);
 
     // We need a second query because only 4 filters are supported.
     // When contracts are updated, we can merge into a single query.
     let nullifierCurrentStartBlock = startBlock;
     while (nullifierCurrentStartBlock < latest) {
       if ((currentStartBlock - startBlock) % 10000 === 0) {
-        leptonDebugger?.log(`Scanning next 10,000 nullifiers [${currentStartBlock}]...`);
+        this.leptonDebugger?.log(`Scanning next 10,000 nullifiers [${currentStartBlock}]...`);
       }
       nulliferEvents.push(
         // eslint-disable-next-line no-await-in-loop
-        ...(await this.contract.queryFilter(
-          this.contract.filters.Nullifier(),
-          nullifierCurrentStartBlock,
-          nullifierCurrentStartBlock + SCAN_CHUNKS,
-        )),
+        ...(await this.scanEvents(nullifierFilterTopics, currentStartBlock)),
       );
       nullifierCurrentStartBlock += SCAN_CHUNKS;
     }
