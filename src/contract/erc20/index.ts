@@ -166,14 +166,18 @@ class ERC20RailgunContract {
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
 
-    const filterTopics = this.getFilterTopics();
+    // NOTE: ONLY 4 FILTERS ALLOWED PER QUERY.
+    const filterTopics: string[][] = [
+      this.contract.filters.GeneratedCommitmentBatch().topics as string[],
+      this.contract.filters.CommitmentBatch().topics as string[],
+      this.contract.filters.NewGeneratedCommitment().topics as string[],
+      this.contract.filters.NewCommitment().topics as string[],
+    ];
 
-    const events = [];
+    const events: Event[] = [];
 
     // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
-      // Loop through each list of events and push to array
-
       events.push(
         // eslint-disable-next-line no-await-in-loop
         ...(await this.contract.queryFilter(
@@ -181,6 +185,22 @@ class ERC20RailgunContract {
             address: this.contract.address,
             topics: filterTopics,
           },
+          currentStartBlock,
+          currentStartBlock + SCAN_CHUNKS,
+        )),
+      );
+      currentStartBlock += SCAN_CHUNKS;
+    }
+
+    const nulliferEvents: Event[] = [];
+
+    // We need a second query because only 4 filters are supported.
+    // When contracts are updated, we can merge into a single query.
+    while (currentStartBlock < latest) {
+      nulliferEvents.push(
+        // eslint-disable-next-line no-await-in-loop
+        ...(await this.contract.queryFilter(
+          this.contract.filters.Nullifier(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
         )),
@@ -223,9 +243,18 @@ class ERC20RailgunContract {
             event as unknown as EncryptedCommitmentArgs,
           ),
         );
-      } else if (eventName === EventName.Nullifier) {
-        nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
       }
+      // TODO: When we combine Nullifier events into the same event query, handle them like this:
+      // else if (eventName === EventName.Nullifier) {
+      //   nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
+      // }
+    });
+
+    nulliferEvents.forEach((event) => {
+      if (!event.args) {
+        return;
+      }
+      nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
     });
 
     await nullifierListener(nullifiers);
