@@ -48,8 +48,9 @@ describe('Lepton', function () {
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
     chainID = (await provider.getNetwork()).chainId;
 
-    const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic)
-      .derivePath(ethers.utils.defaultPath);
+    const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
+      ethers.utils.defaultPath,
+    );
 
     etherswallet = new ethers.Wallet(privateKey, provider);
 

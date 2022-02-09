@@ -13,25 +13,28 @@ import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
 
 // eslint-disable-next-line no-unused-vars
-export type QuickSync = (chainID: number, startingBlock: number) => Promise<{
+export type QuickSync = (
+  chainID: number,
+  startingBlock: number,
+) => Promise<{
   commitments: {
     tree: number;
     startingIndex: number;
     leaves: Commitment[];
   }[];
-  nullifiers: Nullifier[],
+  nullifiers: Nullifier[];
 }>;
 
 class Lepton {
   readonly db;
 
-  readonly merkletree: {erc20: MerkleTree, /* erc721: MerkleTree */}[] = [];
+  readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
 
   readonly contracts: ERC20RailgunContract[] = [];
 
   readonly prover: Prover;
 
-  readonly wallets: {[key: string]: Wallet} = {};
+  readonly wallets: { [key: string]: Wallet } = {};
 
   readonly deploymentBlocks: number[] = [];
 
@@ -86,10 +89,13 @@ class Lepton {
    * @param nullifier - nullifer
    * @param txid - txid of nullifier transaction
    */
-  async nullifierListener(chainID: number, nullifiers: {
-    nullifier: bytes.BytesData,
-    txid: bytes.BytesData,
-  }[]) {
+  async nullifierListener(
+    chainID: number,
+    nullifiers: {
+      nullifier: bytes.BytesData;
+      txid: bytes.BytesData;
+    }[],
+  ) {
     await this.merkletree[chainID].erc20.nullify(nullifiers);
   }
 
@@ -97,9 +103,7 @@ class Lepton {
    * Scan contract history and sync
    * @param chainID - chainID to scan
    */
-  async scanHistory(
-    chainID: number,
-  ) {
+  async scanHistory(chainID: number) {
     // Get latest tree
     const latestTree = await this.merkletree[chainID].erc20.latestTree();
 
@@ -116,9 +120,11 @@ class Lepton {
         treeLength - 1,
       );
 
-      startScanningBlock = (await this.contracts[chainID].contract.provider.getTransactionReceipt(
-        bytes.hexlify(latestEvent.txid, true),
-      )).blockNumber;
+      startScanningBlock = (
+        await this.contracts[chainID].contract.provider.getTransactionReceipt(
+          bytes.hexlify(latestEvent.txid, true),
+        )
+      ).blockNumber;
     } else {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chainID];
@@ -158,20 +164,20 @@ class Lepton {
     }
 
     // Run slow scan
-    await this.contracts[chainID].getHistoricalEvents(startScanningBlock, async (
-      tree: number,
-      startingIndex: number,
-      leaves: Commitment[],
-    ) => {
-      await this.listener(chainID, tree, startingIndex, leaves);
-    }, async (
-      nullifiers: {
-        nullifier: bytes.BytesData,
-        txid: bytes.BytesData,
-      }[],
-    ) => {
-      await this.nullifierListener(chainID, nullifiers);
-    });
+    await this.contracts[chainID].getHistoricalEvents(
+      startScanningBlock,
+      async (tree: number, startingIndex: number, leaves: Commitment[]) => {
+        await this.listener(chainID, tree, startingIndex, leaves);
+      },
+      async (
+        nullifiers: {
+          nullifier: bytes.BytesData;
+          txid: bytes.BytesData;
+        }[],
+      ) => {
+        await this.nullifierListener(chainID, nullifiers);
+      },
+    );
   }
 
   /**
@@ -196,7 +202,13 @@ class Lepton {
 
     // Create tree controllers
     this.merkletree[chainID] = {
-      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root), this.leptonDebugger),
+      erc20: new MerkleTree(
+        this.db,
+        chainID,
+        'erc20',
+        (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root),
+        this.leptonDebugger,
+      ),
     };
 
     this.deploymentBlocks[chainID] = deploymentBlock;
@@ -207,20 +219,19 @@ class Lepton {
     });
 
     // Setup listeners
-    this.contracts[chainID].treeUpdates(async (
-      tree: number,
-      startingIndex: number,
-      leaves: Commitment[],
-    ) => {
-      await this.listener(chainID, tree, startingIndex, leaves);
-    }, async (
-      nullifiers: {
-        nullifier: bytes.BytesData,
-        txid: bytes.BytesData,
-      }[],
-    ) => {
-      await this.nullifierListener(chainID, nullifiers);
-    });
+    this.contracts[chainID].treeUpdates(
+      async (tree: number, startingIndex: number, leaves: Commitment[]) => {
+        await this.listener(chainID, tree, startingIndex, leaves);
+      },
+      async (
+        nullifiers: {
+          nullifier: bytes.BytesData;
+          txid: bytes.BytesData;
+        }[],
+      ) => {
+        await this.nullifierListener(chainID, nullifiers);
+      },
+    );
 
     await this.scanHistory(chainID);
   }
@@ -337,8 +348,4 @@ class Lepton {
   static decodeAddress = decode;
 }
 
-export {
-  Lepton,
-  ERC20Note,
-  ERC20Transaction,
-};
+export { Lepton, ERC20Note, ERC20Transaction };

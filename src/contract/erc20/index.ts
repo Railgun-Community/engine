@@ -1,9 +1,4 @@
-import {
-  Contract,
-  PopulatedTransaction,
-  BigNumber,
-  Event,
-} from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, Event } from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
@@ -145,18 +140,14 @@ class ERC20RailgunContract {
       },
     );
 
-    this.contract.on(
-      'Nullifier',
-      (
-        nullifier: BigNumber,
-        event: Event,
-      ) => {
-        nullifierListener([{
+    this.contract.on('Nullifier', (nullifier: BigNumber, event: Event) => {
+      nullifierListener([
+        {
           txid: event.transactionHash,
           nullifier: nullifier.toHexString(),
-        }]);
-      },
-    );
+        },
+      ]);
+    });
   }
 
   /**
@@ -184,43 +175,43 @@ class ERC20RailgunContract {
       // Loop through each list of events and push to array
       generatedCommitmentBatch.push(
         // eslint-disable-next-line no-await-in-loop
-        ...await this.contract.queryFilter(
+        ...(await this.contract.queryFilter(
           this.contract.filters.GeneratedCommitmentBatch(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
-        ),
+        )),
       );
       commitmentBatch.push(
         // eslint-disable-next-line no-await-in-loop
-        ...await this.contract.queryFilter(
+        ...(await this.contract.queryFilter(
           this.contract.filters.CommitmentBatch(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
-        ),
+        )),
       );
       generatedCommitment.push(
         // eslint-disable-next-line no-await-in-loop
-        ...await this.contract.queryFilter(
+        ...(await this.contract.queryFilter(
           this.contract.filters.NewGeneratedCommitment(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
-        ),
+        )),
       );
       commitment.push(
         // eslint-disable-next-line no-await-in-loop
-        ...await this.contract.queryFilter(
+        ...(await this.contract.queryFilter(
           this.contract.filters.NewCommitment(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
-        ),
+        )),
       );
       nullifiers.push(
         // eslint-disable-next-line no-await-in-loop
-        ...await this.contract.queryFilter(
+        ...(await this.contract.queryFilter(
           this.contract.filters.Nullifier(),
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
-        ),
+        )),
       );
       currentStartBlock += SCAN_CHUNKS;
     }
@@ -303,11 +294,13 @@ class ERC20RailgunContract {
       }
     });
 
-    await nullifierListener(nullifiers.map((event) => ({
-      txid: event.transactionHash,
-      // @ts-ignore
-      nullifier: event.args.nullifier.toHexString(),
-    })));
+    await nullifierListener(
+      nullifiers.map((event) => ({
+        txid: event.transactionHash,
+        // @ts-ignore
+        nullifier: event.args.nullifier.toHexString(),
+      })),
+    );
 
     if (leaves.length > 0) {
       await listener(0, 0, leaves);
@@ -319,13 +312,12 @@ class ERC20RailgunContract {
    * @param notes - notes to deposit to
    * @returns Populated transaction
    */
-  generateDeposit(
-    notes: ERC20Note[],
-  ): Promise<PopulatedTransaction> {
+  generateDeposit(notes: ERC20Note[]): Promise<PopulatedTransaction> {
     // Serialize for contract
     const inputs = notes.map((note) => {
       const serialized = note.serialize(true);
-      const pubkeyUnpacked = babyjubjub.unpackPoint(serialized.pubkey)
+      const pubkeyUnpacked = babyjubjub
+        .unpackPoint(serialized.pubkey)
         .map((element) => bytes.hexlify(element, true));
 
       return {
@@ -345,63 +337,44 @@ class ERC20RailgunContract {
    * @param transactions - serialized railgun transaction
    * @returns - populated ETH transaction
    */
-  transact(
-    transactions: ERC20TransactionSerialized[],
-  ): Promise<PopulatedTransaction> {
+  transact(transactions: ERC20TransactionSerialized[]): Promise<PopulatedTransaction> {
     // Calculate inputs
     const inputs = transactions.map((transaction) => ({
       _proof: {
-        a: transaction.proof.a.map((el) => bytes.padToLength(
-          bytes.hexlify(el, true), 32,
-        )),
-        b: transaction.proof.b.map((el) => el.map((el2) => bytes.padToLength(
-          bytes.hexlify(el2, true), 32,
-        ))),
-        c: transaction.proof.c.map((el) => bytes.padToLength(
-          bytes.hexlify(el, true), 32,
-        )),
-      },
-      _adaptIDcontract: bytes.trim(bytes.padToLength(
-        bytes.hexlify(transaction.adaptID.contract, true), 20,
-      ), 20),
-      _adaptIDparameters: bytes.padToLength(
-        bytes.hexlify(transaction.adaptID.parameters, true), 32,
-      ),
-      _depositAmount: bytes.padToLength(
-        bytes.hexlify(transaction.deposit, true), 32,
-      ),
-      _withdrawAmount: bytes.padToLength(
-        bytes.hexlify(transaction.withdraw, true), 32,
-      ),
-      _tokenField: bytes.trim(bytes.padToLength(
-        bytes.hexlify(transaction.token, true), 20,
-      ), 20),
-      _outputEthAddress: bytes.trim(bytes.padToLength(
-        bytes.hexlify(transaction.withdrawAddress, true), 20,
-      ), 20),
-      _treeNumber: bytes.padToLength(
-        bytes.hexlify(transaction.tree, true), 32,
-      ),
-      _merkleRoot: bytes.padToLength(
-        bytes.hexlify(transaction.merkleroot, true), 32,
-      ),
-      _nullifiers: transaction.nullifiers.map(
-        (nullifier) => bytes.padToLength(
-          bytes.hexlify(nullifier, true), 32,
+        a: transaction.proof.a.map((el) => bytes.padToLength(bytes.hexlify(el, true), 32)),
+        b: transaction.proof.b.map((el) =>
+          el.map((el2) => bytes.padToLength(bytes.hexlify(el2, true), 32)),
         ),
+        c: transaction.proof.c.map((el) => bytes.padToLength(bytes.hexlify(el, true), 32)),
+      },
+      _adaptIDcontract: bytes.trim(
+        bytes.padToLength(bytes.hexlify(transaction.adaptID.contract, true), 20),
+        20,
+      ),
+      _adaptIDparameters: bytes.padToLength(
+        bytes.hexlify(transaction.adaptID.parameters, true),
+        32,
+      ),
+      _depositAmount: bytes.padToLength(bytes.hexlify(transaction.deposit, true), 32),
+      _withdrawAmount: bytes.padToLength(bytes.hexlify(transaction.withdraw, true), 32),
+      _tokenField: bytes.trim(bytes.padToLength(bytes.hexlify(transaction.token, true), 20), 20),
+      _outputEthAddress: bytes.trim(
+        bytes.padToLength(bytes.hexlify(transaction.withdrawAddress, true), 20),
+        20,
+      ),
+      _treeNumber: bytes.padToLength(bytes.hexlify(transaction.tree, true), 32),
+      _merkleRoot: bytes.padToLength(bytes.hexlify(transaction.merkleroot, true), 32),
+      _nullifiers: transaction.nullifiers.map((nullifier) =>
+        bytes.padToLength(bytes.hexlify(nullifier, true), 32),
       ),
       _commitmentsOut: transaction.commitments.map((commitment) => ({
-        hash: bytes.padToLength(
-          bytes.hexlify(commitment.hash, true), 32,
+        hash: bytes.padToLength(bytes.hexlify(commitment.hash, true), 32),
+        ciphertext: commitment.ciphertext.map((word) =>
+          bytes.padToLength(bytes.hexlify(word, true), 32),
         ),
-        ciphertext: commitment.ciphertext.map((word) => bytes.padToLength(
-          bytes.hexlify(word, true), 32,
-        )),
-        senderPubKey: babyjubjub.unpackPoint(commitment.senderPubKey).map(
-          (el) => bytes.padToLength(
-            bytes.hexlify(el, true), 32,
-          ),
-        ),
+        senderPubKey: babyjubjub
+          .unpackPoint(commitment.senderPubKey)
+          .map((el) => bytes.padToLength(bytes.hexlify(el, true), 32)),
       })),
     }));
 
