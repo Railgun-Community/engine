@@ -196,16 +196,17 @@ class ERC20RailgunContract {
 
     // We need a second query because only 4 filters are supported.
     // When contracts are updated, we can merge into a single query.
-    while (currentStartBlock < latest) {
+    let nullifierCurrentStartBlock = startBlock;
+    while (nullifierCurrentStartBlock < latest) {
       nulliferEvents.push(
         // eslint-disable-next-line no-await-in-loop
         ...(await this.contract.queryFilter(
           this.contract.filters.Nullifier(),
-          currentStartBlock,
-          currentStartBlock + SCAN_CHUNKS,
+          nullifierCurrentStartBlock,
+          nullifierCurrentStartBlock + SCAN_CHUNKS,
         )),
       );
-      currentStartBlock += SCAN_CHUNKS;
+      nullifierCurrentStartBlock += SCAN_CHUNKS;
     }
 
     const leaves: Commitment[] = [];
