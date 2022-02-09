@@ -208,96 +208,106 @@ class ERC20RailgunContract {
       this.contract.filters.NewCommitment().topics as string[],
     ];
 
+    // NOTE: ONLY 4 FILTERS ALLOWED PER QUERY.
+    const nullifierFilterTopics: string[][] = [
+      this.contract.filters.Nullifier().topics as string[],
+    ];
+
     this.leptonDebugger?.log(`Scanning events from block ${currentStartBlock} to ${latest}`);
-
-    const events: Event[] = [];
-
-    this.leptonDebugger?.log(`Scanning commitment events...`);
 
     // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
       if ((currentStartBlock - startBlock) % 10000 === 0) {
         this.leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
-      events.push(
-        // eslint-disable-next-line no-await-in-loop
-        ...(await this.scanEvents(filterTopics, currentStartBlock)),
+      // eslint-disable-next-line no-await-in-loop
+      const commitmentEvents: Event[] = await this.scanEvents(filterTopics, currentStartBlock);
+
+      // We need a second query for nullifiers because only 4 filters are supported.
+      // When contracts are updated to combine events, we can merge into a single query.
+      // eslint-disable-next-line no-await-in-loop
+      const nullifierEvents: Event[] = await this.scanEvents(
+        nullifierFilterTopics,
+        currentStartBlock,
+      );
+
+      // eslint-disable-next-line no-await-in-loop
+      await ERC20RailgunContract.processEvents(
+        listener,
+        nullifierListener,
+        commitmentEvents,
+        nullifierEvents,
       );
       currentStartBlock += SCAN_CHUNKS;
     }
+  }
 
-    const nulliferEvents: Event[] = [];
-
-    // NOTE: ONLY 4 FILTERS ALLOWED PER QUERY.
-    const nullifierFilterTopics: string[][] = [
-      this.contract.filters.Nullifier().topics as string[],
-    ];
-
-    this.leptonDebugger?.log(`Scanning nullifier events...`);
-
-    // We need a second query because only 4 filters are supported.
-    // When contracts are updated, we can merge into a single query.
-    let nullifierCurrentStartBlock = startBlock;
-    while (nullifierCurrentStartBlock < latest) {
-      if ((currentStartBlock - startBlock) % 10000 === 0) {
-        this.leptonDebugger?.log(`Scanning next 10,000 nullifiers [${currentStartBlock}]...`);
-      }
-      nulliferEvents.push(
-        // eslint-disable-next-line no-await-in-loop
-        ...(await this.scanEvents(nullifierFilterTopics, currentStartBlock)),
-      );
-      nullifierCurrentStartBlock += SCAN_CHUNKS;
-    }
-
+  private static async processEvents(
+    listener: Listener,
+    nullifierListener: NullifierListener,
+    commitmentEvents: Event[],
+    nullifierEvents: Event[],
+  ) {
     const leaves: Commitment[] = [];
     const nullifiers: Nullifier[] = [];
 
     // Process events
-    events.forEach(async (event) => {
+    commitmentEvents.forEach(async (event) => {
       if (!event.args) {
         return;
       }
-      const eventName = event.event;
-      if (eventName === EventName.GeneratedCommitmentBatch) {
-        await listener(
-          event.args.treeNumber.toNumber(),
-          event.args.startPosition.toNumber(),
-          formatGeneratedCommitmentBatchCommitments(event.transactionHash, event.args.commitments),
-        );
-      } else if (eventName === EventName.EncryptedCommitmentBatch) {
-        await listener(
-          event.args.treeNumber.toNumber(),
-          event.args.startPosition.toNumber(),
-          formatEncryptedCommitmentBatchCommitments(event.transactionHash, event.args.commitments),
-        );
-      } else if (eventName === EventName.GeneratedCommitment) {
-        leaves.push(
-          formatGeneratedCommitment(
-            event.transactionHash,
-            event.args as unknown as GeneratedCommitmentArgs,
-          ),
-        );
-      } else if (eventName === EventName.EncryptedCommitment) {
-        leaves.push(
-          formatEncryptedCommitment(
-            event.transactionHash,
-            event as unknown as EncryptedCommitmentArgs,
-          ),
-        );
+      switch (event.event) {
+        case EventName.GeneratedCommitmentBatch:
+          await listener(
+            event.args.treeNumber.toNumber(),
+            event.args.startPosition.toNumber(),
+            formatGeneratedCommitmentBatchCommitments(
+              event.transactionHash,
+              event.args.commitments,
+            ),
+          );
+          break;
+        case EventName.EncryptedCommitmentBatch:
+          await listener(
+            event.args.treeNumber.toNumber(),
+            event.args.startPosition.toNumber(),
+            formatEncryptedCommitmentBatchCommitments(
+              event.transactionHash,
+              event.args.commitments,
+            ),
+          );
+          break;
+        case EventName.GeneratedCommitment:
+          leaves.push(
+            formatGeneratedCommitment(
+              event.transactionHash,
+              event.args as unknown as GeneratedCommitmentArgs,
+            ),
+          );
+          break;
+        case EventName.EncryptedCommitment:
+          leaves.push(
+            formatEncryptedCommitment(
+              event.transactionHash,
+              event as unknown as EncryptedCommitmentArgs,
+            ),
+          );
+          break;
+        case EventName.Nullifier:
+          // TODO: When we combine Nullifier events into the same event query, handle them like this:
+          // nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
+          break;
+        default:
+          break;
       }
-      // TODO: When we combine Nullifier events into the same event query, handle them like this:
-      // else if (eventName === EventName.Nullifier) {
-      //   nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
-      // }
     });
 
-    nulliferEvents.forEach((event) => {
+    nullifierEvents.forEach((event) => {
       if (!event.args) {
         return;
       }
       nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
     });
-
     await nullifierListener(nullifiers);
 
     if (leaves.length > 0) {
