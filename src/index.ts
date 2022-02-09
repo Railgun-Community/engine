@@ -67,20 +67,9 @@ class Lepton {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
-  async listener(
-    chainID: number,
-    tree: number,
-    startingIndex: number,
-    leaves: Commitment[],
-    skipWalletScan = false,
-  ) {
+  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
-
-    // Trigger wallet scans
-    if (!skipWalletScan) {
-      await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
-    }
   }
 
   /**
@@ -138,8 +127,6 @@ class Lepton {
         // Fetch events
         const events = await this.quickSync(chainID, startScanningBlock);
 
-        const skipWalletScan = true;
-
         // Pass events to commitments listener and wait for resolution
         events.commitments.forEach(async (commitmentEvent) => {
           await this.listener(
@@ -147,13 +134,12 @@ class Lepton {
             commitmentEvent.tree,
             commitmentEvent.startingIndex,
             commitmentEvent.leaves,
-            skipWalletScan,
           );
         });
 
         // Scan after all leaves added.
         if (events.commitments.length) {
-          await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+          await this.scanAllWallets(chainID);
         }
 
         // Pass nullifier events to listener
@@ -178,6 +164,9 @@ class Lepton {
         await this.nullifierListener(chainID, nullifiers);
       },
     );
+
+    // Final scan after all leaves added.
+    await this.scanAllWallets(chainID);
   }
 
   /**
@@ -222,6 +211,7 @@ class Lepton {
     this.contracts[chainID].treeUpdates(
       async (tree: number, startingIndex: number, leaves: Commitment[]) => {
         await this.listener(chainID, tree, startingIndex, leaves);
+        await this.scanAllWallets(chainID);
       },
       async (
         nullifiers: {
@@ -254,6 +244,10 @@ class Lepton {
       delete this.contracts[chainID];
       delete this.merkletree[chainID];
     }
+  }
+
+  private async scanAllWallets(chainID: number) {
+    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
   }
 
   /**

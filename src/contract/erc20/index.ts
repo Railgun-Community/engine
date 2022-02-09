@@ -1,15 +1,33 @@
-import { Contract, PopulatedTransaction, BigNumber, Event } from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, Event, EventFilter } from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
 import { ERC20Note } from '../../note';
 import type { Commitment, Nullifier } from '../../merkletree';
 import type { ERC20TransactionSerialized } from '../../transaction/erc20';
+import {
+  formatGeneratedCommitment,
+  formatEncryptedCommitment,
+  formatNullifier,
+  formatGeneratedCommitmentBatchCommitments,
+  formatEncryptedCommitmentBatchCommitments,
+  GeneratedCommitmentArgs,
+  EncryptedCommitmentArgs,
+} from './events';
 
 // eslint-disable-next-line no-unused-vars
 export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => Promise<void>;
 // eslint-disable-next-line no-unused-vars
 export type NullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
+
+// eslint-disable-next-line no-unused-vars
+export enum EventName {
+  GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
+  EncryptedCommitmentBatch = 'CommitmentBatch',
+  GeneratedCommitment = 'NewGeneratedCommitment',
+  EncryptedCommitment = 'NewCommitment',
+  Nullifier = 'Nullifier',
+}
 
 class ERC20RailgunContract {
   contract: Contract;
@@ -73,74 +91,38 @@ class ERC20RailgunContract {
    */
   treeUpdates(listener: Listener, nullifierListener: NullifierListener) {
     this.contract.on(
-      'GeneratedCommitmentBatch',
+      EventName.GeneratedCommitmentBatch,
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
-        commitments: {
-          pubkey: [BigNumber, BigNumber];
-          random: BigNumber;
-          amount: BigNumber;
-          token: string;
-        }[],
+        commitments: GeneratedCommitmentArgs[],
         event: Event,
       ) => {
         await listener(
           treeNumber.toNumber(),
           startPosition.toNumber(),
-          commitments.map((commitment) => {
-            const note = ERC20Note.deserialize({
-              pubkey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
-              random: bytes.hexlify(commitment.random.toHexString()),
-              amount: bytes.hexlify(commitment.amount.toHexString()),
-              token: bytes.hexlify(commitment.token, true),
-            });
-
-            return {
-              hash: note.hash,
-              txid: event.transactionHash,
-              data: note.serialize(),
-            };
-          }),
+          formatGeneratedCommitmentBatchCommitments(event.transactionHash, commitments),
         );
       },
     );
 
     this.contract.on(
-      'CommitmentBatch',
+      EventName.EncryptedCommitmentBatch,
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
-        commitments: {
-          hash: BigNumber;
-          ciphertext: BigNumber[];
-          senderPubKey: BigNumber[];
-        }[],
+        commitments: EncryptedCommitmentArgs[],
         event: Event,
       ) => {
         await listener(
           treeNumber.toNumber(),
           startPosition.toNumber(),
-          commitments.map((commitment) => {
-            const ciphertexthexlified = commitment.ciphertext.map((el) => el.toHexString());
-
-            return {
-              hash: commitment.hash.toHexString(),
-              txid: event.transactionHash,
-              senderPubKey: babyjubjub.packPoint(
-                commitment.senderPubKey.map((el) => el.toHexString()),
-              ),
-              ciphertext: {
-                iv: ciphertexthexlified[0],
-                data: ciphertexthexlified.slice(1),
-              },
-            };
-          }),
+          formatEncryptedCommitmentBatchCommitments(event.transactionHash, commitments),
         );
       },
     );
 
-    this.contract.on('Nullifier', (nullifier: BigNumber, event: Event) => {
+    this.contract.on(EventName.Nullifier, (nullifier: BigNumber, event: Event) => {
       nullifierListener([
         {
           txid: event.transactionHash,
@@ -148,6 +130,25 @@ class ERC20RailgunContract {
         },
       ]);
     });
+  }
+
+  private getFilterTopics(): (string | string[])[] {
+    const filters: EventFilter[] = [
+      this.contract.filters.GeneratedCommitmentBatch(),
+      this.contract.filters.CommitmentBatch(),
+      this.contract.filters.NewGeneratedCommitment(),
+      this.contract.filters.NewCommitment(),
+      this.contract.filters.Nullifier(),
+    ];
+
+    const filterTopics: (string | string[])[] = [];
+    filters.forEach((filter) => {
+      const { topics } = filter;
+      if (topics) {
+        filterTopics.push(...topics);
+      }
+    });
+    return filterTopics;
   }
 
   /**
@@ -161,54 +162,25 @@ class ERC20RailgunContract {
     nullifierListener: NullifierListener,
   ) {
     const SCAN_CHUNKS = 500;
-    const generatedCommitmentBatch = [];
-    const commitmentBatch = [];
-    const generatedCommitment = [];
-    const commitment = [];
-    const nullifiers = [];
 
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
 
+    const filterTopics = this.getFilterTopics();
+
+    const events = [];
+
     // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
       // Loop through each list of events and push to array
-      generatedCommitmentBatch.push(
+
+      events.push(
         // eslint-disable-next-line no-await-in-loop
         ...(await this.contract.queryFilter(
-          this.contract.filters.GeneratedCommitmentBatch(),
-          currentStartBlock,
-          currentStartBlock + SCAN_CHUNKS,
-        )),
-      );
-      commitmentBatch.push(
-        // eslint-disable-next-line no-await-in-loop
-        ...(await this.contract.queryFilter(
-          this.contract.filters.CommitmentBatch(),
-          currentStartBlock,
-          currentStartBlock + SCAN_CHUNKS,
-        )),
-      );
-      generatedCommitment.push(
-        // eslint-disable-next-line no-await-in-loop
-        ...(await this.contract.queryFilter(
-          this.contract.filters.NewGeneratedCommitment(),
-          currentStartBlock,
-          currentStartBlock + SCAN_CHUNKS,
-        )),
-      );
-      commitment.push(
-        // eslint-disable-next-line no-await-in-loop
-        ...(await this.contract.queryFilter(
-          this.contract.filters.NewCommitment(),
-          currentStartBlock,
-          currentStartBlock + SCAN_CHUNKS,
-        )),
-      );
-      nullifiers.push(
-        // eslint-disable-next-line no-await-in-loop
-        ...(await this.contract.queryFilter(
-          this.contract.filters.Nullifier(),
+          {
+            address: this.contract.address,
+            topics: filterTopics,
+          },
           currentStartBlock,
           currentStartBlock + SCAN_CHUNKS,
         )),
@@ -216,91 +188,47 @@ class ERC20RailgunContract {
       currentStartBlock += SCAN_CHUNKS;
     }
 
-    // Process events
-    generatedCommitmentBatch.forEach(async (event) => {
-      if (event.args) {
-        await listener(
-          event.args.treeNumber.toNumber(),
-          event.args.startPosition.toNumber(),
-          event.args.commitments.map((commit: any) => {
-            const note = ERC20Note.deserialize({
-              pubkey: babyjubjub.packPoint(commit.pubkey.map((el: any) => el.toHexString())),
-              random: bytes.hexlify(commit.random.toHexString()),
-              amount: bytes.hexlify(commit.amount.toHexString()),
-              token: bytes.hexlify(commit.token, true),
-            });
-            return {
-              hash: note.hash,
-              txid: event.transactionHash,
-              data: note.serialize(),
-            };
-          }),
-        );
-      }
-    });
-    commitmentBatch.forEach(async (event) => {
-      if (event.args) {
-        await listener(
-          event.args.treeNumber.toNumber(),
-          event.args.startPosition.toNumber(),
-          event.args.commitments.map((commit: any) => {
-            const ciphertexthexlified = commit.ciphertext.map((el: any) => el.toHexString());
-            return {
-              hash: commit.hash.toHexString(),
-              txid: event.transactionHash,
-              senderPubKey: babyjubjub.packPoint(
-                commit.senderPubKey.map((el: any) => el.toHexString()),
-              ),
-              ciphertext: {
-                iv: ciphertexthexlified[0],
-                data: ciphertexthexlified.slice(1),
-              },
-            };
-          }),
-        );
-      }
-    });
     const leaves: Commitment[] = [];
+    const nullifiers: Nullifier[] = [];
 
-    generatedCommitment.forEach((event) => {
-      if (event.args) {
-        const note = ERC20Note.deserialize({
-          pubkey: babyjubjub.packPoint(event.args.pubkey.map((el: any) => el.toHexString())),
-          random: bytes.hexlify(event.args.random.toHexString()),
-          amount: bytes.hexlify(event.args.amount.toHexString()),
-          token: bytes.hexlify(event.args.token, true),
-        });
-        leaves.push({
-          hash: note.hash,
-          txid: event.transactionHash,
-          data: note.serialize(),
-        });
+    // Process events
+    events.forEach(async (event) => {
+      if (!event.args) {
+        return;
       }
-    });
-    commitment.forEach((event) => {
-      if (event.args) {
-        const ciphertexthexlified = event.args.ciphertext.map((el: any) => el.toHexString());
-        leaves.push({
-          hash: event.args.hash.toHexString(),
-          txid: event.transactionHash,
-          senderPubKey: babyjubjub.packPoint(
-            event.args.senderPubKey.map((el: any) => el.toHexString()),
+      const eventName = event.event;
+      if (eventName === EventName.GeneratedCommitmentBatch) {
+        await listener(
+          event.args.treeNumber.toNumber(),
+          event.args.startPosition.toNumber(),
+          formatGeneratedCommitmentBatchCommitments(event.transactionHash, event.args.commitments),
+        );
+      } else if (eventName === EventName.EncryptedCommitmentBatch) {
+        await listener(
+          event.args.treeNumber.toNumber(),
+          event.args.startPosition.toNumber(),
+          formatEncryptedCommitmentBatchCommitments(event.transactionHash, event.args.commitments),
+        );
+      } else if (eventName === EventName.GeneratedCommitment) {
+        leaves.push(
+          formatGeneratedCommitment(
+            event.transactionHash,
+            event.args as unknown as GeneratedCommitmentArgs,
           ),
-          ciphertext: {
-            iv: ciphertexthexlified[0],
-            data: ciphertexthexlified.slice(1),
-          },
-        });
+        );
+      } else if (eventName === EventName.EncryptedCommitment) {
+        leaves.push(
+          formatEncryptedCommitment(
+            event.transactionHash,
+            event as unknown as EncryptedCommitmentArgs,
+          ),
+        );
+      } else if (eventName === EventName.Nullifier) {
+        nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
       }
     });
 
-    await nullifierListener(
-      nullifiers.map((event) => ({
-        txid: event.transactionHash,
-        // @ts-ignore
-        nullifier: event.args.nullifier.toHexString(),
-      })),
-    );
+    await nullifierListener(nullifiers);
 
     if (leaves.length > 0) {
       await listener(0, 0, leaves);

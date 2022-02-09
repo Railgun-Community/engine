@@ -125,7 +125,7 @@ describe('Lepton', function () {
     expect(
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
     ).to.equal('10999999999999999999999400');
-  }).timeout(120000);
+  }).timeout(90000);
 
   afterEach(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {

@@ -245,7 +245,7 @@ class MerkleTree {
   /**
    * Gets length of tree
    * @param tree - tree to get length of
-   * @retruns tree length
+   * @returns tree length
    */
   async getTreeLength(tree: number): Promise<number> {
     this.treeLengthCache[tree] =
@@ -428,7 +428,7 @@ class MerkleTree {
       const treeLengthPromises: Promise<number>[] = [];
 
       // Loop through each tree present in write queue and get tree length
-      this.writeQueue.forEach((tree, index) => {
+      this.writeQueue.forEach((_tree, index) => {
         treeLengthPromises[index] = this.getTreeLength(index);
       });
 
