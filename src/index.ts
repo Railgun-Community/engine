@@ -163,6 +163,7 @@ class Lepton {
       ) => {
         await this.nullifierListener(chainID, nullifiers);
       },
+      this.leptonDebugger,
     );
 
     // Final scan after all leaves added.
