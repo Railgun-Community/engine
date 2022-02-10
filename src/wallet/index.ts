@@ -11,34 +11,36 @@ import type { MerkleTree, Commitment } from '../merkletree';
 import { LeptonDebugger } from '../models/types';
 
 export type WalletDetails = {
-  treeScannedHeights: number[],
-  primaryHeight: number,
-  changeHeight: number,
+  treeScannedHeights: number[];
+  primaryHeight: number;
+  changeHeight: number;
 };
 
 export type TXO = {
-  tree: number,
-  position: number,
-  index: number,
-  change: boolean,
-  txid: string,
-  spendtxid: string | false,
-  dummyKey?: string, // For dummy notes
-  note: ERC20Note,
+  tree: number;
+  position: number;
+  index: number;
+  change: boolean;
+  txid: string;
+  spendtxid: string | false;
+  dummyKey?: string; // For dummy notes
+  note: ERC20Note;
 };
 
 export type Balances = {
-  [ key: string ]: { // Key: Token
-    balance: BN,
-    utxos: TXO[],
-  }
+  [key: string]: {
+    // Key: Token
+    balance: BN;
+    utxos: TXO[];
+  };
 };
 
 export type BalancesByTree = {
-  [ key: string ]: { // Key: Token
-    balance: BN,
-    utxos: TXO[],
-  }[] // Index = tree
+  [key: string]: {
+    // Key: Token
+    balance: BN;
+    utxos: TXO[];
+  }[]; // Index = tree
 };
 
 class Wallet extends EventEmitter {
@@ -83,22 +85,22 @@ class Wallet extends EventEmitter {
     this.leptonDebugger = leptonDebugger;
 
     // Calculate ID
-    this.id = hash.sha256(bytes.combine([
-      mnemonicToSeed(mnemonic),
-      bytes.fromUTF8String(derivationPath),
-    ]));
+    this.id = hash.sha256(
+      bytes.combine([mnemonicToSeed(mnemonic), bytes.fromUTF8String(derivationPath)]),
+    );
 
     this.#addressNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
     this.#changeNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
 
     // Write encrypted mnemonic to DB
-    this.db.putEncrypted([
-      bytes.fromUTF8String('wallet'),
-      this.id,
-    ], encryptionKey, msgpack.encode({
-      mnemonic,
-      derivationPath,
-    }));
+    this.db.putEncrypted(
+      [bytes.fromUTF8String('wallet'), this.id],
+      encryptionKey,
+      msgpack.encode({
+        mnemonic,
+        derivationPath,
+      }),
+    );
   }
 
   /**
@@ -140,6 +142,7 @@ class Wallet extends EventEmitter {
 
   /**
    * Get keypair at index
+   * @param encryptionKey - encryption key for wallet
    * @param index - index to get keypair at
    * @param change - get change keypair
    * @param chainID - chainID for keypair
@@ -162,17 +165,25 @@ class Wallet extends EventEmitter {
   }
 
   /**
+   * Get view key of wallet.
+   * @param encryptionKey - encryption key for wallet
+   * @returns keypair
+   */
+  getViewKey(encryptionKey: bytes.BytesData): string {
+    const index = 0;
+    const change = false;
+    const keypair = this.getKeypair(encryptionKey, index, change);
+    return hash.sha256(keypair.privateKey);
+  }
+
+  /**
    * Get Address at index
    * @param index - index to get address at
    * @param change - get change address
    * @param chainID - chainID for address
    * @returns address
    */
-  getAddress(
-    index: number,
-    change: boolean,
-    chainID: number | undefined = undefined,
-  ): string {
+  getAddress(index: number, change: boolean, chainID: number | undefined = undefined): string {
     return this.getKeypair(this.#encryptionKey, index, change, chainID).address;
   }
 
@@ -186,10 +197,7 @@ class Wallet extends EventEmitter {
       // Try fetching from database
       walletDetails = msgpack.decode(
         bytes.arrayify(
-          await this.db.getEncrypted(
-            this.getWalletDetailsPath(),
-            this.#encryptionKey,
-          ),
+          await this.db.getEncrypted(this.getWalletDetailsPath(), this.#encryptionKey),
         ),
       );
     } catch {
@@ -213,9 +221,9 @@ class Wallet extends EventEmitter {
     const walletDetails = await this.getWalletDetails();
 
     // Derive addresses up to gas limit
-    return new Array(this.gapLimit).fill(0).map(
-      (value, index) => this.getAddress(walletDetails.primaryHeight + index, false, chainID),
-    );
+    return new Array(this.gapLimit)
+      .fill(0)
+      .map((value, index) => this.getAddress(walletDetails.primaryHeight + index, false, chainID));
   }
 
   /**
@@ -245,10 +253,7 @@ class Wallet extends EventEmitter {
 
       if ('ciphertext' in leaf) {
         // Derive shared secret
-        const sharedKey = babyjubjub.ecdh(
-          key.privateKey,
-          leaf.senderPubKey,
-        );
+        const sharedKey = babyjubjub.ecdh(key.privateKey, leaf.senderPubKey);
 
         // Decrypt
         note = ERC20Note.decrypt(leaf.ciphertext, sharedKey);
@@ -271,11 +276,7 @@ class Wallet extends EventEmitter {
             change,
             spendtxid: false,
             txid: bytes.hexlify(leaf.txid),
-            nullifier: ERC20Note.getNullifier(
-              key.privateKey,
-              tree,
-              position,
-            ),
+            nullifier: ERC20Note.getNullifier(key.privateKey, tree, position),
             decrypted: note.serialize(),
           }),
         });
@@ -303,48 +304,53 @@ class Wallet extends EventEmitter {
       const keyList: string[] = [];
 
       // Stream list of keys and resolve on end
-      this.db.streamNamespace(namespace).on('data', (key) => {
-        keyList.push(key);
-      }).on('end', () => {
-        resolve(keyList);
-      });
+      this.db
+        .streamNamespace(namespace)
+        .on('data', (key) => {
+          keyList.push(key);
+        })
+        .on('end', () => {
+          resolve(keyList);
+        });
     });
 
     // Calculate UTXOs
-    return Promise.all(keys.map(async (key) => {
-      // Split key into path components
-      const keySplit = key.split(':');
+    return Promise.all(
+      keys.map(async (key) => {
+        // Split key into path components
+        const keySplit = key.split(':');
 
-      // Decode UTXO
-      const UTXO = msgpack.decode(bytes.arrayify(await this.db.get((keySplit))));
+        // Decode UTXO
+        const UTXO = msgpack.decode(bytes.arrayify(await this.db.get(keySplit)));
 
-      // If this UTXO hasn't already been marked as spent, check if it has
-      if (!UTXO.spendtxid) {
-        // Get nullifier
-        const nullifierTX = await this.merkletree[chainID].getNullified(UTXO.nullifier);
+        // If this UTXO hasn't already been marked as spent, check if it has
+        if (!UTXO.spendtxid) {
+          // Get nullifier
+          const nullifierTX = await this.merkletree[chainID].getNullified(UTXO.nullifier);
 
-        // If it's nullified write spend txid to wallet storage
-        if (nullifierTX) {
-          UTXO.spendtxid = nullifierTX;
+          // If it's nullified write spend txid to wallet storage
+          if (nullifierTX) {
+            UTXO.spendtxid = nullifierTX;
 
-          // Write nullifier spend txid to db
-          await this.db.put(keySplit, msgpack.encode(UTXO));
+            // Write nullifier spend txid to db
+            await this.db.put(keySplit, msgpack.encode(UTXO));
+          }
         }
-      }
 
-      const tree = bytes.numberify(keySplit[3]).toNumber();
-      const position = bytes.numberify(keySplit[4]).toNumber();
+        const tree = bytes.numberify(keySplit[3]).toNumber();
+        const position = bytes.numberify(keySplit[4]).toNumber();
 
-      return {
-        tree,
-        position,
-        index: UTXO.index,
-        change: UTXO.change,
-        txid: UTXO.txid,
-        spendtxid: UTXO.spendtxid,
-        note: ERC20Note.deserialize(UTXO.decrypted),
-      };
-    }));
+        return {
+          tree,
+          position,
+          index: UTXO.index,
+          change: UTXO.change,
+          txid: UTXO.txid,
+          spendtxid: UTXO.spendtxid,
+          note: ERC20Note.deserialize(UTXO.decrypted),
+        };
+      }),
+    );
   }
 
   /**
@@ -372,9 +378,7 @@ class Wallet extends EventEmitter {
         balances[txOutput.note.token].utxos.push(txOutput);
 
         // Increment balance
-        balances[txOutput.note.token].balance.iadd(
-          bytes.numberify(txOutput.note.amount),
-        );
+        balances[txOutput.note.token].balance.iadd(bytes.numberify(txOutput.note.amount));
       }
     });
 
@@ -569,19 +573,22 @@ class Wallet extends EventEmitter {
     gapLimit: number = 5,
   ): Promise<Wallet> {
     // Calculate ID
-    const id = hash.sha256(bytes.combine([
-      mnemonicToSeed(mnemonic),
-      bytes.fromUTF8String(derivationPath),
-    ]));
+    const id = hash.sha256(
+      bytes.combine([mnemonicToSeed(mnemonic), bytes.fromUTF8String(derivationPath)]),
+    );
 
     // Write encrypted mnemonic to DB
-    db.putEncrypted([
-      bytes.fromUTF8String('wallet'),
-      msgpack.encode({
-        id,
-        derivationPath,
-      }),
-    ], encryptionKey, mnemonic);
+    db.putEncrypted(
+      [
+        bytes.fromUTF8String('wallet'),
+        msgpack.encode({
+          id,
+          derivationPath,
+        }),
+      ],
+      encryptionKey,
+      mnemonic,
+    );
 
     // Create wallet object and return
     return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
@@ -603,12 +610,7 @@ class Wallet extends EventEmitter {
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
     const { mnemonic, derivationPath } = msgpack.decode(
-      bytes.arrayify(
-        await db.getEncrypted([
-          bytes.fromUTF8String('wallet'),
-          id,
-        ], encryptionKey),
-      ),
+      bytes.arrayify(await db.getEncrypted([bytes.fromUTF8String('wallet'), id], encryptionKey)),
     );
 
     // Create wallet object and return

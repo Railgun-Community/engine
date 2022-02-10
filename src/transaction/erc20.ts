@@ -1,38 +1,33 @@
 import BN from 'bn.js';
 import { ERC20Note } from '../note';
-import {
-  hash,
-  bytes,
-  babyjubjub,
-  constants,
-} from '../utils';
+import { hash, bytes, babyjubjub, constants, encryption } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
 import type { ERC20PrivateInputs, Prover, Proof } from '../prover';
 
 export type AdaptID = {
-  contract: bytes.BytesData,
-  parameters: bytes.BytesData,
-}
+  contract: bytes.BytesData;
+  parameters: bytes.BytesData;
+};
 
 export type Commitment = {
-  hash: bytes.BytesData,
-  ciphertext: bytes.BytesData[],
-  senderPubKey: bytes.BytesData,
+  hash: bytes.BytesData;
+  ciphertext: bytes.BytesData[];
+  senderPubKey: bytes.BytesData;
 };
 
 export type ERC20TransactionSerialized = {
   proof: Proof;
   adaptID: AdaptID;
-  deposit: bytes.BytesData,
-  withdraw: bytes.BytesData,
-  token: bytes.BytesData,
-  withdrawAddress: bytes.BytesData,
-  tree: bytes.BytesData,
-  merkleroot: bytes.BytesData,
-  nullifiers: bytes.BytesData[],
-  commitments: Commitment[],
-}
+  deposit: bytes.BytesData;
+  withdraw: bytes.BytesData;
+  token: bytes.BytesData;
+  withdrawAddress: bytes.BytesData;
+  tree: bytes.BytesData;
+  merkleroot: bytes.BytesData;
+  nullifiers: bytes.BytesData[];
+  commitments: Commitment[];
+};
 
 const NOTE_INPUTS = {
   small: 2,
@@ -77,10 +72,12 @@ class ERC20Transaction {
    * Gets adaptID hash
    */
   get adaptIDhash() {
-    return hash.sha256(bytes.combine([
-      bytes.padToLength(this.adaptID.contract, 32),
-      bytes.padToLength(this.adaptID.parameters, 32),
-    ]));
+    return hash.sha256(
+      bytes.combine([
+        bytes.padToLength(this.adaptID.contract, 32),
+        bytes.padToLength(this.adaptID.parameters, 32),
+      ]),
+    );
   }
 
   /**
@@ -108,8 +105,8 @@ class ERC20Transaction {
     wallet: Wallet,
     encryptionKey: bytes.BytesData,
   ): Promise<{
-    inputs: ERC20PrivateInputs,
-    commitments: Commitment[],
+    inputs: ERC20PrivateInputs;
+    commitments: Commitment[];
   }> {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = this.outputs
@@ -121,7 +118,9 @@ class ERC20Transaction {
     if (this.outputs.length > 2) throw new Error('Too many outputs specified');
 
     // Check if output token fields match tokenID for this transaction
-    this.outputs.forEach((output, index) => { if (output.token !== this.token) throw new Error(`TokenID mismatch on output ${index}`); });
+    this.outputs.forEach((output, index) => {
+      if (output.token !== this.token) throw new Error(`TokenID mismatch on output ${index}`);
+    });
 
     // Get UTXOs sorted by tree
     const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[this.token] || [];
@@ -141,33 +140,32 @@ class ERC20Transaction {
       if (treeBalance.balance.lt(totalRequired)) return [];
 
       // Sort UTXOs by size
-      treeBalance.utxos.sort(
-        (left, right) => {
-          const leftNum = bytes.numberify(left.note.amount);
-          const rightNum = bytes.numberify(right.note.amount);
+      treeBalance.utxos.sort((left, right) => {
+        const leftNum = bytes.numberify(left.note.amount);
+        const rightNum = bytes.numberify(right.note.amount);
 
-          if (leftNum.lt(rightNum)) {
-            return 1;
-          }
+        if (leftNum.lt(rightNum)) {
+          return 1;
+        }
 
-          if (leftNum.gt(rightNum)) {
-            return -1;
-          }
+        if (leftNum.gt(rightNum)) {
+          return -1;
+        }
 
-          // leftNum.eq(rightNum)
-          return 0;
-        },
-      );
+        // leftNum.eq(rightNum)
+        return 0;
+      });
 
       // TODO: optimise UTXO selection
       // Accumulate UTXOs until we hit the target value
       let utxos: TXO[] = [];
 
       // Check if sum of UTXOs selected is greater than target
-      while (utxos.reduce(
-        (left, right) => left.add(bytes.numberify(right.note.amount)),
-        new BN(0),
-      ).lt(totalRequired)) {
+      while (
+        utxos
+          .reduce((left, right) => left.add(bytes.numberify(right.note.amount)), new BN(0))
+          .lt(totalRequired)
+      ) {
         // If sum is not greater than target, push the next largest UTXO
         utxos.push(treeBalance.utxos[utxos.length]);
       }
@@ -179,9 +177,7 @@ class ERC20Transaction {
           utxos = [...treeBalance.utxos];
 
           while (utxos.length < length) {
-            const dummyKey = babyjubjub.seedToPrivateKey(
-              bytes.random(32),
-            );
+            const dummyKey = babyjubjub.seedToPrivateKey(bytes.random(32));
 
             utxos.push({
               tree,
@@ -192,9 +188,7 @@ class ERC20Transaction {
               spendtxid: false,
               dummyKey,
               note: new ERC20Note(
-                babyjubjub.privateKeyToPubKey(
-                  dummyKey,
-                ),
+                babyjubjub.privateKeyToPubKey(dummyKey),
                 babyjubjub.random(),
                 '00',
                 this.token,
@@ -227,13 +221,16 @@ class ERC20Transaction {
     const tree = this.tree || solutions.findIndex((value) => value.length > 0);
 
     // Check if tree with spending solution exists
-    if (tree === -1) throw new Error('Balances need to be consolidated before being able to spend this amount');
+    if (tree === -1)
+      throw new Error('Balances need to be consolidated before being able to spend this amount');
 
     // Check if withdraw address isn't set when it should be
-    if (this.withdraw.gtn(0) && this.withdrawAddress === undefined) throw new Error('Withdraw address not set');
+    if (this.withdraw.gtn(0) && this.withdrawAddress === undefined)
+      throw new Error('Withdraw address not set');
 
     // Check if withdraw address is set when it shouldn't be
-    if (this.withdraw.eqn(0) && this.withdrawAddress !== undefined) throw new Error('Withdraw shouldn\'t be set');
+    if (this.withdraw.eqn(0) && this.withdrawAddress !== undefined)
+      throw new Error("Withdraw shouldn't be set");
 
     // Get values
     const spendingKeys: bytes.BytesData[] = [];
@@ -246,9 +243,9 @@ class ERC20Transaction {
       const utxo = solutions[tree][i];
 
       // Get private key (or dummy key if dummy note)
-      const privateKey = utxo.dummyKey || wallet.getKeypair(
-        encryptionKey, utxo.index, utxo.change, this.chainID,
-      ).privateKey;
+      const privateKey =
+        utxo.dummyKey ||
+        wallet.getKeypair(encryptionKey, utxo.index, utxo.change, this.chainID).privateKey;
 
       // Push spending key and nullifier
       spendingKeys.push(privateKey);
@@ -283,23 +280,25 @@ class ERC20Transaction {
     const commitments: ERC20Note[] = [...this.outputs];
 
     // Create change output
-    commitments.push(new ERC20Note(
-      wallet.getKeypair(encryptionKey, 0, true).pubkey,
-      babyjubjub.random(),
-      change,
-      this.token,
-    ));
+    commitments.push(
+      new ERC20Note(
+        wallet.getKeypair(encryptionKey, 0, true).pubkey,
+        babyjubjub.random(),
+        change,
+        this.token,
+      ),
+    );
 
     // Pad with dummy notes to outputs length
     while (commitments.length < NOTE_OUTPUTS) {
-      commitments.push(new ERC20Note(
-        babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(
-          bytes.random(32),
-        )),
-        babyjubjub.random(),
-        new BN(0),
-        this.token,
-      ));
+      commitments.push(
+        new ERC20Note(
+          babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
+          babyjubjub.random(),
+          new BN(0),
+          this.token,
+        ),
+      );
     }
 
     // Calculate ciphertext
@@ -308,23 +307,33 @@ class ERC20Transaction {
       const senderPubKey = babyjubjub.privateKeyToPubKey(senderPrivateKey);
       const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.pubkey);
       const encrypted = commitment.encrypt(sharedKey);
+      const viewKey = wallet.getViewKey(encryptionKey);
+      const revealKey = encryption.aes.ctr.encrypt([sharedKey], viewKey);
 
       return {
         senderPubKey,
-        ciphertext: [
-          bytes.padToLength(encrypted.iv, 32),
-          ...encrypted.data,
-        ],
+        ciphertext: [bytes.padToLength(encrypted.iv, 32), ...encrypted.data],
+        revealKey: [revealKey.iv, revealKey.data].flat(),
       };
     });
 
     // Calculate ciphertext hash
-    const ciphertextHash = bytes.numberify(hash.sha256(bytes.combine(
-      ciphertext.map((commitment) => [
-        ...babyjubjub.unpackPoint(commitment.senderPubKey),
-        ...commitment.ciphertext,
-      ]).flat(2).map((value) => bytes.padToLength(value, 32)),
-    ))).mod(constants.SNARK_PRIME);
+    const ciphertextHash = bytes
+      .numberify(
+        hash.sha256(
+          bytes.combine(
+            ciphertext
+              .map((commitment) => [
+                ...babyjubjub.unpackPoint(commitment.senderPubKey),
+                ...commitment.ciphertext,
+                ...commitment.revealKey,
+              ])
+              .flat(2)
+              .map((value) => bytes.padToLength(value, 32)),
+          ),
+        ),
+      )
+      .mod(constants.SNARK_PRIME);
 
     // Format inputs
     const inputs: ERC20PrivateInputs = {
@@ -333,9 +342,7 @@ class ERC20Transaction {
       tokenField: this.token,
       depositAmount: this.deposit,
       withdrawAmount: this.withdraw,
-      outputTokenField: this.deposit.gtn(0) || this.withdraw.gtn(0)
-        ? this.token
-        : '00',
+      outputTokenField: this.deposit.gtn(0) || this.withdraw.gtn(0) ? this.token : '00',
       outputEthAddress: this.withdrawAddress || '00',
       randomIn: solutions[tree].map((utxo) => utxo.note.random),
       valuesIn: solutions[tree].map((utxo) => utxo.note.amount),
@@ -378,9 +385,10 @@ class ERC20Transaction {
     const inputs = await this.generateInputs(wallet, encryptionKey);
 
     // Calculate proof
-    const proof = inputs.inputs.nullifiers.length === NOTE_INPUTS.small
-      ? await prover.prove('erc20small', inputs.inputs)
-      : await prover.prove('erc20large', inputs.inputs);
+    const proof =
+      inputs.inputs.nullifiers.length === NOTE_INPUTS.small
+        ? await prover.prove('erc20small', inputs.inputs)
+        : await prover.prove('erc20large', inputs.inputs);
 
     return {
       proof: proof.proof,
