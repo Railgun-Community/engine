@@ -569,7 +569,7 @@ class Wallet extends EventEmitter {
     encryptionKey: bytes.BytesData,
     mnemonic: string,
     leptonDebugger?: LeptonDebugger,
-    derivationPath: string = "m/1984'/0'/0'",
+    derivationPath: string = "m/44'/1984'/0'/0'",
     gapLimit: number = 5,
   ): Promise<Wallet> {
     // Calculate ID

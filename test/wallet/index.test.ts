@@ -22,26 +22,32 @@ let wallet: Wallet;
 const testMnemonic = 'test test test test test test test test test test test junk';
 const testEncryptionKey = '01';
 
-const keypairs = [{ // Primary 0
-  privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-  pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-  address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
-},
-{ // Primary 1
-  privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
-  pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
-  address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
-},
-{ // Primary 5
-  privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
-  pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
-  address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
-},
-{ // Change 2
-  privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
-  pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
-  address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
-}];
+const keypairs = [
+  {
+    // Primary 0
+    privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
+    pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+    address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
+  },
+  {
+    // Primary 1
+    privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
+    pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
+    address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
+  },
+  {
+    // Primary 5
+    privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
+    pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
+    address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
+  },
+  {
+    // Change 2
+    privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
+    pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
+    address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
+  },
+];
 
 const senderPubKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
 
@@ -50,9 +56,7 @@ const keypairsPopulated = keypairs.map((key) => ({
   sharedKey: babyjubjub.ecdh(key.privateKey, senderPubKey),
 }));
 
-const notesPrep = [
-  0, 1, 2, 3, 2, 0,
-];
+const notesPrep = [0, 1, 2, 3, 2, 0];
 
 const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   const note = new ERC20Note(
@@ -70,9 +74,7 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
   };
 });
 
-const notesPrep2 = [
-  0, 1, 2, 3, 2, 0,
-];
+const notesPrep2 = [0, 1, 2, 3, 2, 0];
 
 const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
   const note = new ERC20Note(
@@ -94,7 +96,13 @@ describe('Wallet/Index', () => {
     // Create database and wallet
     db = new Database(memdown());
     merkletree = new MerkleTree(db, 1, 'erc20', async () => true);
-    wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic);
+    wallet = await Wallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      undefined,
+      "m/1984'/0'/0'",
+    );
     wallet.loadTree(merkletree);
   });
 
@@ -125,7 +133,9 @@ describe('Wallet/Index', () => {
       privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
       pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
     });
-    expect(() => { wallet.getKeypair('111111', 0, false); }).to.throw('Wrong encryption key');
+    expect(() => {
+      wallet.getKeypair('111111', 0, false);
+    }).to.throw('Wrong encryption key');
   });
 
   it('Should get addresses', async () => {
@@ -185,11 +195,9 @@ describe('Wallet/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(wallet.getAddress(
-        vector.index,
-        vector.change,
-        vector.chainID,
-      )).to.deep.equal(vector.address);
+      expect(wallet.getAddress(vector.index, vector.change, vector.chainID)).to.deep.equal(
+        vector.address,
+      );
     });
   });
 
@@ -228,42 +236,59 @@ describe('Wallet/Index', () => {
 
     const balances = await wallet.balances(1);
 
-    expect(balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length)
-      .to.equal(12);
+    expect(
+      balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
+    ).to.equal(12);
 
     expect(
-      balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(786420),
+      balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
+        786420,
+      ),
     ).to.equal(true);
 
-    await merkletree.nullify([{
-      txid: '000001',
-      nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
-    }]);
+    await merkletree.nullify([
+      {
+        txid: '000001',
+        nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
+      },
+    ]);
 
     const balances2 = await wallet.balances(1);
 
-    expect(balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length)
-      .to.equal(11);
+    expect(
+      balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
+    ).to.equal(11);
 
     expect(
-      balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(720885),
+      balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
+        720885,
+      ),
     ).to.equal(true);
 
-    await merkletree.nullify([{
-      txid: '000001',
-      nullifier: '1c3ba503ad9e144683649756ce1e9a919afb56d836988435c1528ea8942f286e',
-    }]);
+    await merkletree.nullify([
+      {
+        txid: '000001',
+        nullifier: '1c3ba503ad9e144683649756ce1e9a919afb56d836988435c1528ea8942f286e',
+      },
+    ]);
 
     const balances3 = await wallet.balances(1);
 
-    expect(balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length)
-      .to.equal(10);
+    expect(
+      balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
+    ).to.equal(10);
 
     expect(
-      balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(655350),
+      balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
+        655350,
+      ),
     ).to.equal(true);
 
-    expect((await wallet.balancesByTree(1))['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'][0].utxos.length).to.equal(10);
+    expect(
+      (await wallet.balancesByTree(1))[
+        '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'
+      ][0].utxos.length,
+    ).to.equal(10);
   }).timeout(60000);
 
   afterEach(() => {
