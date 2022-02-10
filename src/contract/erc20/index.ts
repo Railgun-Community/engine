@@ -139,25 +139,6 @@ class ERC20RailgunContract {
     });
   }
 
-  private getFilterTopics(): (string | string[])[] {
-    const filters: EventFilter[] = [
-      this.contract.filters.GeneratedCommitmentBatch(),
-      this.contract.filters.CommitmentBatch(),
-      this.contract.filters.NewGeneratedCommitment(),
-      this.contract.filters.NewCommitment(),
-      this.contract.filters.Nullifier(),
-    ];
-
-    const filterTopics: (string | string[])[] = [];
-    filters.forEach((filter) => {
-      const { topics } = filter;
-      if (topics) {
-        filterTopics.push(...topics);
-      }
-    });
-    return filterTopics;
-  }
-
   private async scanEvents(
     filterTopics: string[][],
     startBlock: number,
