@@ -12,7 +12,6 @@ import { bytes } from './utils';
 import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
 
-// eslint-disable-next-line no-unused-vars
 export type QuickSync = (
   chainID: number,
   startingBlock: number,
