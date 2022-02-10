@@ -43,6 +43,10 @@ export type BalancesByTree = {
   }[]; // Index = tree
 };
 
+export type ScannedEventData = {
+  chainID: number;
+};
+
 class Wallet extends EventEmitter {
   private db: Database;
 
@@ -548,9 +552,8 @@ class Wallet extends EventEmitter {
       msgpack.encode(walletDetails),
     );
 
-    // Emit scanned event
-    // TODO: per chainID events
-    this.emit('scanned');
+    // Emit scanned event for this chain
+    this.emit('scanned', { chainID } as ScannedEventData);
 
     // Release lock
     this.scanLock = false;

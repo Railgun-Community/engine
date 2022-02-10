@@ -14,6 +14,7 @@ import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
 import { babyjubjub, bytes } from '../src/utils';
 import type { Artifacts, Circuits } from '../src/prover';
+import { ScannedEventData } from '../src/wallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -96,9 +97,13 @@ describe('Lepton', function () {
     ]);
 
     // Send deposit on chain
-    const awaiter = new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    const awaiterDeposit = new Promise((resolve, reject) =>
+      lepton.wallets[walletID].once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
+        returnedChainID === chainID ? resolve(returnedChainID) : reject(),
+      ),
+    );
     etherswallet.sendTransaction(deposit);
-    await awaiter;
+    await expect(awaiterDeposit).to.be.fulfilled;
 
     // Create transaction
     const transaction = new ERC20Transaction(config.contracts.rail, chainID);
@@ -118,9 +123,13 @@ describe('Lepton', function () {
     ]);
 
     // Send transact on chain
-    const awaiter2 = new Promise((resolve) => lepton.wallets[walletID].once('scanned', resolve));
+    const awaiterTransact = new Promise((resolve, reject) =>
+      lepton.wallets[walletID].once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
+        returnedChainID === chainID ? resolve(returnedChainID) : reject(),
+      ),
+    );
     etherswallet.sendTransaction(transact);
-    await awaiter2;
+    await expect(awaiterTransact).to.be.fulfilled;
 
     expect(
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
