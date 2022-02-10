@@ -20,9 +20,9 @@ export function formatGeneratedCommitmentBatchCommitments(
   transactionHash: string,
   commitments: GeneratedCommitmentArgs[],
 ): GeneratedCommitment[] {
-  return commitments.map((commit: any) => {
+  return commitments.map((commit) => {
     const note = ERC20Note.deserialize({
-      pubkey: babyjubjub.packPoint(commit.pubkey.map((el: any) => el.toHexString())),
+      pubkey: babyjubjub.packPoint(commit.pubkey.map((el) => el.toHexString())),
       random: bytes.hexlify(commit.random.toHexString()),
       amount: bytes.hexlify(commit.amount.toHexString()),
       token: bytes.hexlify(commit.token, true),
@@ -39,12 +39,12 @@ export function formatEncryptedCommitmentBatchCommitments(
   transactionHash: string,
   commitments: EncryptedCommitmentArgs[],
 ): EncryptedCommitment[] {
-  return commitments.map((commit: any) => {
-    const ciphertexthexlified = commit.ciphertext.map((el: any) => el.toHexString());
+  return commitments.map((commit) => {
+    const ciphertexthexlified = commit.ciphertext.map((el) => el.toHexString());
     return {
       hash: commit.hash.toHexString(),
       txid: transactionHash,
-      senderPubKey: babyjubjub.packPoint(commit.senderPubKey.map((el: any) => el.toHexString())),
+      senderPubKey: babyjubjub.packPoint(commit.senderPubKey.map((el) => el.toHexString())),
       ciphertext: {
         iv: ciphertexthexlified[0],
         data: ciphertexthexlified.slice(1),
@@ -58,7 +58,7 @@ export function formatGeneratedCommitment(
   commitment: GeneratedCommitmentArgs,
 ): GeneratedCommitment {
   const note = ERC20Note.deserialize({
-    pubkey: babyjubjub.packPoint(commitment.pubkey.map((el: any) => el.toHexString())),
+    pubkey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
     random: bytes.hexlify(commitment.random.toHexString()),
     amount: bytes.hexlify(commitment.amount.toHexString()),
     token: bytes.hexlify(commitment.token, true),
@@ -74,11 +74,11 @@ export function formatEncryptedCommitment(
   transactionHash: string,
   commitment: EncryptedCommitmentArgs,
 ): EncryptedCommitment {
-  const ciphertexthexlified = commitment.ciphertext.map((el: any) => el.toHexString());
+  const ciphertexthexlified = commitment.ciphertext.map((el) => el.toHexString());
   return {
     hash: commitment.hash.toHexString(),
     txid: transactionHash,
-    senderPubKey: babyjubjub.packPoint(commitment.senderPubKey.map((el: any) => el.toHexString())),
+    senderPubKey: babyjubjub.packPoint(commitment.senderPubKey.map((el) => el.toHexString())),
     ciphertext: {
       iv: ciphertexthexlified[0],
       data: ciphertexthexlified.slice(1),
