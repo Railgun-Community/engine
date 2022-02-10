@@ -1,6 +1,6 @@
 /* eslint-disable no-bitwise, no-await-in-loop */
 import BN from 'bn.js';
-import type { AbstractBatch } from 'abstract-leveldown';
+import type { PutBatch } from 'abstract-leveldown';
 import { bytes, hash, constants } from '../utils';
 import type { Database } from '../database';
 import type { Ciphertext } from '../utils/encryption';
@@ -207,7 +207,7 @@ class MerkleTree {
    */
   async nullify(nullifiers: Nullifier[]): Promise<void> {
     // Build write batch for nullifiers
-    const nullifierWriteBatch: AbstractBatch[] = nullifiers.map((nullifier) => ({
+    const nullifierWriteBatch: PutBatch[] = nullifiers.map((nullifier) => ({
       type: 'put',
       key: this.getNullifierDBPath(bytes.hexlify(nullifier.nullifier)).join(':'),
       value: bytes.hexlify(nullifier.txid),
@@ -273,8 +273,8 @@ class MerkleTree {
    */
   private async writeTreeCache(tree: number): Promise<void> {
     // Build write batch operation
-    const nodeWriteBatch: AbstractBatch[] = [];
-    const commitmentWriteBatch: AbstractBatch[] = [];
+    const nodeWriteBatch: PutBatch[] = [];
+    const commitmentWriteBatch: PutBatch[] = [];
 
     // Get new leaves
     const newTreeLength = this.nodeWriteCache[tree][0].length;
@@ -318,7 +318,11 @@ class MerkleTree {
    * @param leaves - Leaves to insert
    * @param startIndex - Starting index of leaves to insert
    */
-  private async insertLeaves(tree: number, startIndex: number, leaves: Commitment[]) {
+  private async insertLeaves(
+    tree: number,
+    startIndex: number,
+    leaves: Commitment[],
+  ): Promise<void> {
     // Clear write cache before starting to avoid errors from leftover data
     this.clearWriteCache(tree);
 
@@ -421,20 +425,15 @@ class MerkleTree {
     }
   }
 
-  async updateTrees() {
+  async updateTrees(): Promise<void> {
     // Loop until there isn't work to do
     let workToDo = true;
 
     while (workToDo) {
-      const treeLengthPromises: Promise<number>[] = [];
-
       // Loop through each tree present in write queue and get tree length
-      this.writeQueue.forEach((_tree, index) => {
-        treeLengthPromises[index] = this.getTreeLength(index);
-      });
-
-      // eslint-disable-next-line no-await-in-loop
-      const treeLengths = await Promise.all(treeLengthPromises);
+      const treeLengths = await Promise.all(
+        this.writeQueue.map((_tree, index) => this.getTreeLength(index)),
+      );
 
       const updatePromises: (Promise<void> | null)[] = [];
 
@@ -460,11 +459,12 @@ class MerkleTree {
       });
 
       // Wait for updates to complete
-      // eslint-disable-next-line no-await-in-loop
       await Promise.all(updatePromises);
 
       // If no work was done exit
-      if (updatePromises.length === 0) workToDo = false;
+      if (updatePromises.length === 0) {
+        workToDo = false;
+      }
     }
   }
 
@@ -474,7 +474,7 @@ class MerkleTree {
    * @param leaves - leaves to add
    * @param startingIndex - index of first leaf
    */
-  async queueLeaves(tree: number, startingIndex: number, leaves: Commitment[]) {
+  async queueLeaves(tree: number, startingIndex: number, leaves: Commitment[]): Promise<void> {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
@@ -498,7 +498,7 @@ class MerkleTree {
    * Gets latest tree
    * @returns latest tree
    */
-  async latestTree() {
+  async latestTree(): Promise<number> {
     let latestTree = 0;
     while ((await this.getTreeLength(latestTree)) > 0) latestTree += 1;
     return Math.max(0, latestTree - 1);
