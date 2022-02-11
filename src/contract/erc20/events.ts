@@ -7,7 +7,7 @@ export type GeneratedCommitmentArgs = {
   pubkey: [BigNumber, BigNumber];
   random: BigNumber;
   amount: BigNumber;
-  token: string;
+  token: BigNumber;
 };
 
 export type EncryptedCommitmentArgs = {
@@ -25,7 +25,7 @@ export function formatGeneratedCommitmentBatchCommitments(
       pubkey: babyjubjub.packPoint(commit.pubkey.map((el) => el.toHexString())),
       random: bytes.hexlify(commit.random.toHexString()),
       amount: bytes.hexlify(commit.amount.toHexString()),
-      token: bytes.hexlify(commit.token, true),
+      token: bytes.hexlify(commit.token.toHexString(), true),
     });
     return {
       hash: note.hash,
@@ -51,39 +51,6 @@ export function formatEncryptedCommitmentBatchCommitments(
       },
     };
   });
-}
-
-export function formatGeneratedCommitment(
-  transactionHash: string,
-  commitment: GeneratedCommitmentArgs,
-): GeneratedCommitment {
-  const note = ERC20Note.deserialize({
-    pubkey: babyjubjub.packPoint(commitment.pubkey.map((el) => el.toHexString())),
-    random: bytes.hexlify(commitment.random.toHexString()),
-    amount: bytes.hexlify(commitment.amount.toHexString()),
-    token: bytes.hexlify(commitment.token, true),
-  });
-  return {
-    hash: note.hash,
-    txid: transactionHash,
-    data: note.serialize(),
-  };
-}
-
-export function formatEncryptedCommitment(
-  transactionHash: string,
-  commitment: EncryptedCommitmentArgs,
-): EncryptedCommitment {
-  const ciphertexthexlified = commitment.ciphertext.map((el) => el.toHexString());
-  return {
-    hash: commitment.hash.toHexString(),
-    txid: transactionHash,
-    senderPubKey: babyjubjub.packPoint(commitment.senderPubKey.map((el) => el.toHexString())),
-    ciphertext: {
-      iv: ciphertexthexlified[0],
-      data: ciphertexthexlified.slice(1),
-    },
-  };
 }
 
 export function formatNullifier(transactionHash: string, nullifier: BigNumber) {

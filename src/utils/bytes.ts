@@ -4,6 +4,13 @@ import crypto from 'crypto';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
+export enum ByteLength {
+  UINT_8 = 1,
+  UINT_120 = 15,
+  Address = 20,
+  UINT_256 = 32,
+}
+
 /**
  * Generates random bytes
  * @param length - number of bytes to generate
@@ -118,16 +125,14 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
  * @param side - whether to pad left or right
  * @returns padded bytes data
  */
-function padToLength(
-  data: BytesData,
-  length: number,
-  side: 'left' | 'right' = 'left',
-): BytesData {
+function padToLength(data: BytesData, length: number, side: 'left' | 'right' = 'left'): BytesData {
   // Can't pad a number, if we get a number convert to hex string
   const dataFormatted = data instanceof BN ? hexlify(data) : data;
 
   if (typeof dataFormatted === 'string') {
-    const dataFormattedString = dataFormatted.startsWith('0x') ? dataFormatted.slice(2) : dataFormatted;
+    const dataFormattedString = dataFormatted.startsWith('0x')
+      ? dataFormatted.slice(2)
+      : dataFormatted;
 
     // If we're requested to pad to left, pad left and return
     if (side === 'left') {
@@ -307,6 +312,16 @@ function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'):
   return dataFormatted.slice(0, length);
 }
 
+/**
+ * Format through hexlify, trim and padToLength given a number of bytes.
+ * @param data - data to format
+ * @param length - length to format to
+ * @returns formatted data
+ */
+function formatToByteLength(data: BytesData, length: number, prefix = true) {
+  return trim(padToLength(hexlify(data, prefix), length), length);
+}
+
 export {
   random,
   hexlify,
@@ -319,4 +334,5 @@ export {
   chunk,
   combine,
   trim,
+  formatToByteLength,
 };

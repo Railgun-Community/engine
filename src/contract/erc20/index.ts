@@ -1,13 +1,15 @@
-import { Contract, PopulatedTransaction, BigNumber, Event, EventFilter } from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, Event } from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
 import { ERC20Note } from '../../note';
 import type { Commitment, Nullifier } from '../../merkletree';
-import type { ERC20TransactionSerialized } from '../../transaction/erc20';
 import {
-  formatGeneratedCommitment,
-  formatEncryptedCommitment,
+  DEFAULT_ERC20_TOKEN_TYPE,
+  DEFAULT_TOKEN_SUB_ID,
+  ERC20TransactionSerialized,
+} from '../../transaction/erc20';
+import {
   formatNullifier,
   formatGeneratedCommitmentBatchCommitments,
   formatEncryptedCommitmentBatchCommitments,
@@ -15,6 +17,7 @@ import {
   EncryptedCommitmentArgs,
 } from './events';
 import { LeptonDebugger } from '../../models/types';
+import { ByteLength, formatToByteLength } from '../../utils/bytes';
 
 // eslint-disable-next-line no-unused-vars
 export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => Promise<void>;
@@ -28,8 +31,6 @@ const MAX_SCAN_RETRIES = 5;
 export enum EventName {
   GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
   EncryptedCommitmentBatch = 'CommitmentBatch',
-  GeneratedCommitment = 'NewGeneratedCommitment',
-  EncryptedCommitment = 'NewCommitment',
   Nullifier = 'Nullifier',
 }
 
@@ -62,23 +63,23 @@ class ERC20RailgunContract {
 
   /**
    * Gets transaction fees
-   * Deposit and withdraw fees are in basis points, transfer is in wei
+   * Deposit and withdraw fees are in basis points, nft is in wei
    */
   async fees(): Promise<{
     deposit: string;
     withdraw: string;
-    transfer: string;
+    nft: string;
   }> {
-    const [depositFee, withdrawFee, transferFee] = await Promise.all([
+    const [depositFee, withdrawFee, nftFee] = await Promise.all([
       this.contract.depositFee(),
       this.contract.withdrawFee(),
-      this.contract.transferFee(),
+      this.contract.nftFee(),
     ]);
 
     return {
       deposit: depositFee.toHexString(),
       withdraw: withdrawFee.toHexString(),
-      transfer: transferFee.toHexString(),
+      nft: nftFee.toHexString(),
     };
   }
 
@@ -186,12 +187,6 @@ class ERC20RailgunContract {
     const filterTopics: string[][] = [
       this.contract.filters.GeneratedCommitmentBatch().topics as string[],
       this.contract.filters.CommitmentBatch().topics as string[],
-      this.contract.filters.NewGeneratedCommitment().topics as string[],
-      this.contract.filters.NewCommitment().topics as string[],
-    ];
-
-    // NOTE: ONLY 4 FILTERS ALLOWED PER QUERY.
-    const nullifierFilterTopics: string[][] = [
       this.contract.filters.Nullifier().topics as string[],
     ];
 
@@ -203,23 +198,10 @@ class ERC20RailgunContract {
         this.leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
       // eslint-disable-next-line no-await-in-loop
-      const commitmentEvents: Event[] = await this.scanEvents(filterTopics, currentStartBlock);
-
-      // We need a second query for nullifiers because only 4 filters are supported.
-      // When contracts are updated to combine events, we can merge into a single query.
-      // eslint-disable-next-line no-await-in-loop
-      const nullifierEvents: Event[] = await this.scanEvents(
-        nullifierFilterTopics,
-        currentStartBlock,
-      );
+      const events: Event[] = await this.scanEvents(filterTopics, currentStartBlock);
 
       // eslint-disable-next-line no-await-in-loop
-      await ERC20RailgunContract.processEvents(
-        listener,
-        nullifierListener,
-        commitmentEvents,
-        nullifierEvents,
-      );
+      await ERC20RailgunContract.processEvents(listener, nullifierListener, events);
       currentStartBlock += SCAN_CHUNKS;
     }
   }
@@ -228,7 +210,6 @@ class ERC20RailgunContract {
     listener: Listener,
     nullifierListener: NullifierListener,
     commitmentEvents: Event[],
-    nullifierEvents: Event[],
   ) {
     const leaves: Commitment[] = [];
     const nullifiers: Nullifier[] = [];
@@ -259,37 +240,14 @@ class ERC20RailgunContract {
             ),
           );
           break;
-        case EventName.GeneratedCommitment:
-          leaves.push(
-            formatGeneratedCommitment(
-              event.transactionHash,
-              event.args as unknown as GeneratedCommitmentArgs,
-            ),
-          );
-          break;
-        case EventName.EncryptedCommitment:
-          leaves.push(
-            formatEncryptedCommitment(
-              event.transactionHash,
-              event as unknown as EncryptedCommitmentArgs,
-            ),
-          );
-          break;
         case EventName.Nullifier:
-          // TODO: When we combine Nullifier events into the same event query, handle them like this:
-          // nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
+          nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
           break;
         default:
           break;
       }
     });
 
-    nullifierEvents.forEach((event) => {
-      if (!event.args) {
-        return;
-      }
-      nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
-    });
     await nullifierListener(nullifiers);
 
     if (leaves.length > 0) {
@@ -314,7 +272,9 @@ class ERC20RailgunContract {
         pubkey: pubkeyUnpacked,
         random: serialized.random,
         amount: serialized.amount,
-        token: bytes.hexlify(bytes.trim(serialized.token, 20), true),
+        token: formatToByteLength(serialized.token, ByteLength.Address),
+        tokenType: formatToByteLength(DEFAULT_ERC20_TOKEN_TYPE, ByteLength.UINT_8),
+        tokenSubID: formatToByteLength(DEFAULT_TOKEN_SUB_ID, ByteLength.UINT_256),
       };
     });
 
@@ -330,41 +290,35 @@ class ERC20RailgunContract {
   transact(transactions: ERC20TransactionSerialized[]): Promise<PopulatedTransaction> {
     // Calculate inputs
     const inputs = transactions.map((transaction) => ({
-      _proof: {
-        a: transaction.proof.a.map((el) => bytes.padToLength(bytes.hexlify(el, true), 32)),
+      proof: {
+        a: transaction.proof.a.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
         b: transaction.proof.b.map((el) =>
-          el.map((el2) => bytes.padToLength(bytes.hexlify(el2, true), 32)),
+          el.map((el2) => formatToByteLength(el2, ByteLength.UINT_256)),
         ),
-        c: transaction.proof.c.map((el) => bytes.padToLength(bytes.hexlify(el, true), 32)),
+        c: transaction.proof.c.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
       },
-      _adaptIDcontract: bytes.trim(
-        bytes.padToLength(bytes.hexlify(transaction.adaptID.contract, true), 20),
-        20,
+      adaptIDcontract: formatToByteLength(transaction.adaptID.contract, ByteLength.Address),
+      adaptIDparameters: formatToByteLength(transaction.adaptID.parameters, ByteLength.UINT_256),
+      depositAmount: formatToByteLength(transaction.deposit, ByteLength.UINT_120),
+      withdrawAmount: formatToByteLength(transaction.withdraw, ByteLength.UINT_120),
+      tokenType: formatToByteLength(transaction.tokenType, ByteLength.UINT_8),
+      tokenSubID: formatToByteLength(transaction.tokenSubID, ByteLength.UINT_256),
+      tokenField: formatToByteLength(transaction.token, ByteLength.Address),
+      outputEthAddress: formatToByteLength(transaction.withdrawAddress, ByteLength.Address),
+      treeNumber: formatToByteLength(transaction.treeNumber, ByteLength.UINT_256),
+      merkleRoot: formatToByteLength(transaction.merkleRoot, ByteLength.UINT_256),
+      nullifiers: transaction.nullifiers.map((nullifier) =>
+        formatToByteLength(nullifier, ByteLength.UINT_256),
       ),
-      _adaptIDparameters: bytes.padToLength(
-        bytes.hexlify(transaction.adaptID.parameters, true),
-        32,
-      ),
-      _depositAmount: bytes.padToLength(bytes.hexlify(transaction.deposit, true), 32),
-      _withdrawAmount: bytes.padToLength(bytes.hexlify(transaction.withdraw, true), 32),
-      _tokenField: bytes.trim(bytes.padToLength(bytes.hexlify(transaction.token, true), 20), 20),
-      _outputEthAddress: bytes.trim(
-        bytes.padToLength(bytes.hexlify(transaction.withdrawAddress, true), 20),
-        20,
-      ),
-      _treeNumber: bytes.padToLength(bytes.hexlify(transaction.tree, true), 32),
-      _merkleRoot: bytes.padToLength(bytes.hexlify(transaction.merkleroot, true), 32),
-      _nullifiers: transaction.nullifiers.map((nullifier) =>
-        bytes.padToLength(bytes.hexlify(nullifier, true), 32),
-      ),
-      _commitmentsOut: transaction.commitments.map((commitment) => ({
-        hash: bytes.padToLength(bytes.hexlify(commitment.hash, true), 32),
+      commitmentsOut: transaction.commitments.map((commitment) => ({
+        hash: formatToByteLength(commitment.hash, ByteLength.UINT_256),
         ciphertext: commitment.ciphertext.map((word) =>
-          bytes.padToLength(bytes.hexlify(word, true), 32),
+          formatToByteLength(word, ByteLength.UINT_256),
         ),
         senderPubKey: babyjubjub
           .unpackPoint(commitment.senderPubKey)
-          .map((el) => bytes.padToLength(bytes.hexlify(el, true), 32)),
+          .map((el) => formatToByteLength(el, ByteLength.UINT_256)),
+        revealKey: commitment.revealKey.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
       })),
     }));
 

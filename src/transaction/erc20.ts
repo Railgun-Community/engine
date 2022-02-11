@@ -14,6 +14,7 @@ export type Commitment = {
   hash: bytes.BytesData;
   ciphertext: bytes.BytesData[];
   senderPubKey: bytes.BytesData;
+  revealKey: bytes.BytesData[];
 };
 
 export type ERC20TransactionSerialized = {
@@ -21,13 +22,24 @@ export type ERC20TransactionSerialized = {
   adaptID: AdaptID;
   deposit: bytes.BytesData;
   withdraw: bytes.BytesData;
+  tokenType: bytes.BytesData;
+  tokenSubID: bytes.BytesData;
   token: bytes.BytesData;
   withdrawAddress: bytes.BytesData;
-  tree: bytes.BytesData;
-  merkleroot: bytes.BytesData;
+  treeNumber: bytes.BytesData;
+  merkleRoot: bytes.BytesData;
   nullifiers: bytes.BytesData[];
   commitments: Commitment[];
 };
+
+export enum TokenType {
+  ERC20 = '0',
+  ERC721 = '1',
+  ERC1155 = '2',
+}
+
+export const DEFAULT_ERC20_TOKEN_TYPE = TokenType.ERC20;
+export const DEFAULT_TOKEN_SUB_ID = new BN(0);
 
 const NOTE_INPUTS = {
   small: 2,
@@ -51,6 +63,10 @@ class ERC20Transaction {
   deposit: BN = new BN(0);
 
   withdraw: BN = new BN(0);
+
+  tokenType = DEFAULT_ERC20_TOKEN_TYPE;
+
+  tokenSubID: BN = DEFAULT_TOKEN_SUB_ID;
 
   withdrawAddress: string | undefined;
 
@@ -337,11 +353,10 @@ class ERC20Transaction {
 
     // Format inputs
     const inputs: ERC20PrivateInputs = {
-      type: 'erc20',
       adaptID: bytes.numberify(this.adaptIDhash).mod(constants.SNARK_PRIME),
-      tokenField: this.token,
       depositAmount: this.deposit,
       withdrawAmount: this.withdraw,
+      tokenField: this.token,
       outputTokenField: this.deposit.gtn(0) || this.withdraw.gtn(0) ? this.token : '00',
       outputEthAddress: this.withdrawAddress || '00',
       randomIn: solutions[tree].map((utxo) => utxo.note.random),
@@ -365,6 +380,7 @@ class ERC20Transaction {
         hash: commitment.hash,
         ciphertext: ciphertext[index].ciphertext,
         senderPubKey: ciphertext[index].senderPubKey,
+        revealKey: ciphertext[index].revealKey,
       })),
     };
   }
@@ -396,9 +412,11 @@ class ERC20Transaction {
       deposit: inputs.inputs.depositAmount,
       withdraw: inputs.inputs.withdrawAmount,
       token: inputs.inputs.outputTokenField,
+      tokenType: this.tokenType,
+      tokenSubID: this.tokenSubID,
       withdrawAddress: inputs.inputs.outputEthAddress,
-      tree: inputs.inputs.treeNumber,
-      merkleroot: inputs.inputs.merkleRoot,
+      treeNumber: inputs.inputs.treeNumber,
+      merkleRoot: inputs.inputs.merkleRoot,
       nullifiers: inputs.inputs.nullifiers,
       commitments: inputs.commitments,
     };

@@ -52,11 +52,8 @@ describe('Lepton', function () {
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
     );
-
     etherswallet = new ethers.Wallet(privateKey, provider);
-
     snapshot = await provider.send('evm_snapshot', []);
-
     token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet);
 
     const balance = await token.balanceOf(etherswallet.address);

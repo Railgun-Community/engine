@@ -65,7 +65,7 @@ class Wallet extends EventEmitter {
   readonly leptonDebugger: LeptonDebugger | undefined;
 
   // Lock scanning operations to prevent race conditions
-  private scanLock = false;
+  private scanLockPerChain: boolean[] = [];
 
   /**
    * Create Wallet controller
@@ -344,6 +344,8 @@ class Wallet extends EventEmitter {
         const tree = bytes.numberify(keySplit[3]).toNumber();
         const position = bytes.numberify(keySplit[4]).toNumber();
 
+        const note = ERC20Note.deserialize(UTXO.decrypted);
+
         return {
           tree,
           position,
@@ -351,7 +353,7 @@ class Wallet extends EventEmitter {
           change: UTXO.change,
           txid: UTXO.txid,
           spendtxid: UTXO.spendtxid,
-          note: ERC20Note.deserialize(UTXO.decrypted),
+          note,
         };
       }),
     );
@@ -474,15 +476,14 @@ class Wallet extends EventEmitter {
    */
   async scan(chainID: number) {
     // Don't proceed if scan write is locked
-    // TODO: per chainID scan locks
-    if (this.scanLock) {
+    if (this.scanLockPerChain[chainID]) {
       this.leptonDebugger?.log(`scan locked: chainID ${chainID}`);
       return;
     }
     this.leptonDebugger?.log(`scan wallet balances: chainID ${chainID}`);
 
-    // Lock
-    this.scanLock = true;
+    // Lock scan on this chain
+    this.scanLockPerChain[chainID] = true;
 
     // Fetch wallet details
     const walletDetails = await this.getWalletDetails();
@@ -556,7 +557,7 @@ class Wallet extends EventEmitter {
     this.emit('scanned', { chainID } as ScannedEventData);
 
     // Release lock
-    this.scanLock = false;
+    this.scanLockPerChain[chainID] = false;
   }
 
   /**
