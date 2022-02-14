@@ -7,7 +7,20 @@ import { bytes, encryption } from '../utils';
 import type { Ciphertext } from '../utils/encryption';
 
 // TODO: Remove JSON encoding and standardize everything as msgpack
-export type Encoding = 'utf8' | 'json' | 'binary' | 'hex' | 'ascii' | 'base64' | 'ucs2' | 'utf16le' | 'utf-16le';
+export type Encoding =
+  | 'utf8'
+  | 'json'
+  | 'binary'
+  | 'hex'
+  | 'ascii'
+  | 'base64'
+  | 'ucs2'
+  | 'utf16le'
+  | 'utf-16le';
+
+export enum DatabaseNamespace {
+  ChainSyncInfo = 'chain_sync_info',
+}
 
 /** Database class */
 class Database {
@@ -19,9 +32,7 @@ class Database {
    */
   constructor(leveldown: AbstractLevelDOWN) {
     // Create levelDB database from leveldown store
-    this.level = levelup(encode(
-      leveldown,
-    ));
+    this.level = levelup(encode(leveldown));
   }
 
   /**
@@ -31,9 +42,7 @@ class Database {
    */
   static pathToKey(path: bytes.BytesData[]): string {
     // Convert to hex string, pad to 32 bytes, and join with :
-    return path.map(
-      (element) => bytes.hexlify(element).toLowerCase().padStart(64, '0'),
-    ).join(':');
+    return path.map((element) => bytes.hexlify(element).toLowerCase().padStart(64, '0')).join(':');
   }
 
   /**
@@ -112,9 +121,7 @@ class Database {
     const encrypted: Ciphertext = await this.get(path, 'json');
 
     // Decrypt and return
-    return bytes.combine(
-      encryption.aes.ctr.decrypt(encrypted, encryptionKey),
-    );
+    return bytes.combine(encryption.aes.ctr.decrypt(encrypted, encryptionKey));
   }
 
   /**
@@ -122,11 +129,7 @@ class Database {
    * @param namespace - namespace to stream from
    * @returns namespace stream
    */
-  streamNamespace(
-    namespace: bytes.BytesData[],
-    keys: boolean = true,
-    values: boolean = false,
-  ) {
+  streamNamespace(namespace: bytes.BytesData[], keys: boolean = true, values: boolean = false) {
     const pathkey = Database.pathToKey(namespace);
     return this.level.createReadStream({
       gte: `${pathkey}`,
@@ -146,16 +149,18 @@ class Database {
       const deleteOperations: AbstractBatch[] = [];
 
       // Create read stream for namespace*
-      this.streamNamespace(namespace).on('data', (key: string) => {
-        // Push key to batch delete array
-        deleteOperations.push({
-          type: 'del',
-          key,
+      this.streamNamespace(namespace)
+        .on('data', (key: string) => {
+          // Push key to batch delete array
+          deleteOperations.push({
+            type: 'del',
+            key,
+          });
+        })
+        .on('end', () => {
+          // Run batch delete and resolve
+          this.batch(deleteOperations).then(resolve);
         });
-      }).on('end', () => {
-        // Run batch delete and resolve
-        this.batch(deleteOperations).then(resolve);
-      });
     });
   }
 
@@ -169,13 +174,15 @@ class Database {
       let keyNumber = 0;
 
       // Create read stream for namespace*
-      this.streamNamespace(namespace).on('data', () => {
-        // Increment keynumber
-        keyNumber += 1;
-      }).on('end', () => {
-        // Return keynumber
-        resolve(keyNumber);
-      });
+      this.streamNamespace(namespace)
+        .on('data', () => {
+          // Increment keynumber
+          keyNumber += 1;
+        })
+        .on('end', () => {
+          // Return keynumber
+          resolve(keyNumber);
+        });
     });
   }
 

@@ -183,6 +183,7 @@ class ERC20RailgunContract {
     startBlock: number,
     listener: Listener,
     nullifierListener: NullifierListener,
+    setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
@@ -206,6 +207,10 @@ class ERC20RailgunContract {
 
       // eslint-disable-next-line no-await-in-loop
       await ERC20RailgunContract.processEvents(listener, nullifierListener, events);
+
+      // eslint-disable-next-line no-await-in-loop
+      await setLastSyncedBlock(currentStartBlock);
+
       currentStartBlock += SCAN_CHUNKS;
     }
   }

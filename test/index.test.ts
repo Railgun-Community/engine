@@ -42,12 +42,13 @@ describe('Lepton', function () {
   this.timeout(240000);
 
   beforeEach(async () => {
+    lepton = new Lepton(memdown(), artifactsGetter);
+    provider = new ethers.providers.JsonRpcProvider(config.rpc);
+    chainID = (await provider.getNetwork()).chainId;
+
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-
-    provider = new ethers.providers.JsonRpcProvider(config.rpc);
-    chainID = (await provider.getNetwork()).chainId;
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -59,7 +60,6 @@ describe('Lepton', function () {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(config.contracts.proxy, balance);
 
-    lepton = new Lepton(memdown(), artifactsGetter);
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
   });
@@ -132,6 +132,17 @@ describe('Lepton', function () {
       Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
     ).to.equal('10999999999999999999999400');
   }).timeout(90000);
+
+  it('Should set/get last synced block', async () => {
+    let lastSyncedBlock = await lepton.getLastSyncedBlock(chainID);
+    expect(lastSyncedBlock).to.equal(undefined);
+    await lepton.setLastSyncedBlock(100, chainID);
+    lastSyncedBlock = await lepton.getLastSyncedBlock(chainID);
+    expect(lastSyncedBlock).to.equal(100);
+    await lepton.setLastSyncedBlock(100000, chainID);
+    lastSyncedBlock = await lepton.getLastSyncedBlock(chainID);
+    expect(lastSyncedBlock).to.equal(100000);
+  });
 
   afterEach(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {

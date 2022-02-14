@@ -1,7 +1,7 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import { ERC20RailgunContract } from './contract';
-import { Database } from './database';
+import { Database, DatabaseNamespace } from './database';
 import { BIP32Node } from './keyderivation';
 import { MerkleTree, Commitment, Nullifier } from './merkletree';
 import { Prover, ArtifactsGetter } from './prover';
@@ -118,6 +118,11 @@ class Lepton {
       startScanningBlock = this.deploymentBlocks[chainID];
     }
 
+    const lastSyncedBlock = await this.getLastSyncedBlock(chainID);
+    if (lastSyncedBlock && lastSyncedBlock > startScanningBlock) {
+      startScanningBlock = lastSyncedBlock;
+    }
+
     // Call quicksync
     if (this.quickSync) {
       try {
@@ -162,6 +167,7 @@ class Lepton {
       ) => {
         await this.nullifierListener(chainID, nullifiers);
       },
+      (block: number) => this.setLastSyncedBlock(block, chainID),
     );
 
     // Final scan after all leaves added.
@@ -243,6 +249,29 @@ class Lepton {
       delete this.contracts[chainID];
       delete this.merkletree[chainID];
     }
+  }
+
+  /**
+   * Sets last synced block to resume syncing on next load.
+   * @param lastSyncedBlock - last synced block
+   */
+  setLastSyncedBlock(lastSyncedBlock: number, chainID: number): Promise<void> {
+    return this.db.put(
+      [`${DatabaseNamespace.ChainSyncInfo}:last_synced_block:${chainID}`],
+      lastSyncedBlock,
+      'utf8',
+    );
+  }
+
+  /**
+   * Sets last synced block to resume syncing on next load.
+   * @returns lastSyncedBlock - last synced block
+   */
+  getLastSyncedBlock(chainID: number): Promise<number | undefined> {
+    return this.db
+      .get([`${DatabaseNamespace.ChainSyncInfo}:last_synced_block:${chainID}`], 'utf8')
+      .then((val) => parseInt(val, 10))
+      .catch(() => Promise.resolve(undefined));
   }
 
   private async scanAllWallets(chainID: number) {
