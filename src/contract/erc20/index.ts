@@ -146,14 +146,18 @@ class ERC20RailgunContract {
     retryCount = 0,
   ): Promise<Event[]> {
     try {
-      const events = await this.contract.queryFilter(
-        {
-          address: this.contract.address,
-          topics: filterTopics,
-        },
-        startBlock,
-        startBlock + SCAN_CHUNKS,
-      );
+      const events = await this.contract
+        .queryFilter(
+          {
+            address: this.contract.address,
+            topics: filterTopics,
+          },
+          startBlock,
+          startBlock + SCAN_CHUNKS,
+        )
+        .catch((err: any) => {
+          throw err;
+        });
       return events;
     } catch (err: any) {
       if (retryCount < MAX_SCAN_RETRIES) {
