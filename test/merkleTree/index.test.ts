@@ -45,8 +45,7 @@ describe('MerkleTree/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(MerkleTree.hashLeftRight(vector.left, vector.right))
-        .to.equal(vector.result);
+      expect(MerkleTree.hashLeftRight(vector.left, vector.right)).to.equal(vector.result);
     });
   });
 
@@ -95,7 +94,7 @@ describe('MerkleTree/Index', () => {
       level: number;
       index: number;
       result: string[];
-    }
+    };
 
     const vectors: Vector[] = [
       {
@@ -144,24 +143,35 @@ describe('MerkleTree/Index', () => {
 
     vectors.forEach((vector) => {
       const merkletreeVectorTest = new MerkleTree(
-        db, vector.chainID, vector.purpose, async () => true,
+        db,
+        vector.chainID,
+        vector.purpose,
+        async () => true,
       );
 
-      expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber))
-        .to.deep.equal(vector.result.slice(0, 3));
+      expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
+        vector.result.slice(0, 3),
+      );
 
-      expect(merkletreeVectorTest.getNodeDBPath(vector.treeNumber, vector.level, vector.index))
-        .to.deep.equal(vector.result);
+      expect(
+        merkletreeVectorTest.getNodeDBPath(vector.treeNumber, vector.level, vector.index),
+      ).to.deep.equal(vector.result);
     });
   });
 
   it('Should get empty merkle root', async () => {
-    expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
-    expect(await merkletreeNFT.getRoot(0)).to.equal('2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc');
+    expect(await merkletree.getRoot(0)).to.equal(
+      '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
+    );
+    expect(await merkletreeNFT.getRoot(0)).to.equal(
+      '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
+    );
   });
 
   it('Should update merkle tree correctly', async () => {
-    expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+    expect(await merkletree.getRoot(0)).to.equal(
+      '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
+    );
 
     await merkletree.queueLeaves(0, 5, [
       {
@@ -169,47 +179,56 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '8902638fe6fc05e4f1cd7c06940d6217591a0ccb003ed45198782fbff38e9f2d',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '19889087c2ff4c4a164060a832a3ba11cce0c2e2dbd42da10c57101efb966fcd',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '9f5e8310e384c6a0840699951d67810c6d90fd3f265bda66e9385fcb7142373d',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '4c71361b89e9b6b55b094a0f0de4451d8306786b2626d67b3810c9b61fbf45b6',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: 'b2eabd832f0bb9d8b42399a56821a565eec64669d7a55b828c8af2a541b044d6',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '817e6732d170352ea6517c9640757570d4ea71c660603f9d7a060b2f2eb27be6',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
     expect(await merkletree.getTreeLength(0)).to.equal(0);
-    expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+    expect(await merkletree.getRoot(0)).to.equal(
+      '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
+    );
 
     await merkletree.queueLeaves(0, 3, [
       {
@@ -217,11 +236,14 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
     expect(await merkletree.getTreeLength(0)).to.equal(0);
-    expect(await merkletree.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+    expect(await merkletree.getRoot(0)).to.equal(
+      '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
+    );
 
     await merkletree.queueLeaves(0, 0, [
       {
@@ -229,23 +251,28 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '0000000000000000000000000000000000000000000000000000000000000002',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '0000000000000000000000000000000000000000000000000000000000000003',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
     expect(await merkletree.getTreeLength(0)).to.equal(4);
-    expect(await merkletree.getRoot(0)).to.equal('2f4c02f094b5c881b9a2d25539d50bc839652b96acb147b81181922064b25f29');
+    expect(await merkletree.getRoot(0)).to.equal(
+      '2f4c02f094b5c881b9a2d25539d50bc839652b96acb147b81181922064b25f29',
+    );
 
     await Promise.all([
       merkletree.queueLeaves(0, 4, [
@@ -254,6 +281,7 @@ describe('MerkleTree/Index', () => {
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           senderPubKey: '',
           ciphertext: { iv: '', data: [] },
+          revealKey: ['', ''],
         },
       ]),
       merkletree.queueLeaves(0, 4, [
@@ -262,6 +290,7 @@ describe('MerkleTree/Index', () => {
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           senderPubKey: '',
           ciphertext: { iv: '', data: [] },
+          revealKey: ['', ''],
         },
       ]),
     ]);
@@ -272,11 +301,14 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
     expect(await merkletree.getTreeLength(0)).to.equal(12);
-    expect(await merkletree.getRoot(0)).to.equal('1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c');
+    expect(await merkletree.getRoot(0)).to.equal(
+      '1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c',
+    );
   });
 
   it('Should insert and retrieve commitment objects', async () => {
@@ -287,12 +319,16 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '01',
         ciphertext: { iv: '02', data: ['03', '04'] },
+        revealKey: ['05', '06'],
       },
       {
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         data: {
-          pubkey: '00', random: '01', amount: '02', token: '0x03',
+          pubkey: '00',
+          random: '01',
+          amount: '02',
+          token: '0x03',
         },
       },
     ]);
@@ -302,13 +338,17 @@ describe('MerkleTree/Index', () => {
       txid: '1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       senderPubKey: '01',
       ciphertext: { iv: '02', data: ['03', '04'] },
+      revealKey: ['05', '06'],
     });
 
     expect(await merkletree.getCommitment(0, 1)).to.deep.equal({
       hash: '04',
       txid: '1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       data: {
-        pubkey: '00', random: '01', amount: '02', token: '03',
+        pubkey: '00',
+        random: '01',
+        amount: '02',
+        token: '03',
       },
     });
   });
@@ -321,36 +361,42 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '08',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '10',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '20',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '40',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
@@ -394,6 +440,7 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       })),
     );
 
@@ -433,12 +480,14 @@ describe('MerkleTree/Index', () => {
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
   }).timeout(10000);
 
-  it('Shouldn\'t write invalid batches', async () => {
+  it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false
     const merkletreeTest = new MerkleTree(db, 0, 'erc20', async () => false);
 
     // Check root is empty tree root
-    expect(await merkletreeTest.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+    expect(await merkletreeTest.getRoot(0)).to.equal(
+      '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
+    );
 
     // Insert leaves
     await merkletreeTest.queueLeaves(0, 0, [
@@ -447,41 +496,49 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '08',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '10',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '20',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
       {
         hash: '40',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
     // Batch should have been rejected
-    expect(await merkletreeTest.getRoot(0)).to.equal('14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90');
+    expect(await merkletreeTest.getRoot(0)).to.equal(
+      '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
+    );
   });
 
   it('Should store nullifiers', async () => {
@@ -499,6 +556,7 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 
@@ -510,6 +568,7 @@ describe('MerkleTree/Index', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         senderPubKey: '',
         ciphertext: { iv: '', data: [] },
+        revealKey: ['', ''],
       },
     ]);
 

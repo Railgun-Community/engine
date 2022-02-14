@@ -276,9 +276,9 @@ class ERC20RailgunContract {
         pubkey: pubkeyUnpacked,
         random: serialized.random,
         amount: serialized.amount,
-        token: formatToByteLength(serialized.token, ByteLength.Address),
         tokenType: formatToByteLength(DEFAULT_ERC20_TOKEN_TYPE, ByteLength.UINT_8),
         tokenSubID: formatToByteLength(DEFAULT_TOKEN_SUB_ID, ByteLength.UINT_256),
+        token: formatToByteLength(serialized.token, ByteLength.UINT_256),
       };
     });
 
@@ -307,7 +307,7 @@ class ERC20RailgunContract {
       withdrawAmount: formatToByteLength(transaction.withdraw, ByteLength.UINT_120),
       tokenType: formatToByteLength(transaction.tokenType, ByteLength.UINT_8),
       tokenSubID: formatToByteLength(transaction.tokenSubID, ByteLength.UINT_256),
-      tokenField: formatToByteLength(transaction.token, ByteLength.Address),
+      tokenField: formatToByteLength(transaction.token, ByteLength.UINT_256),
       outputEthAddress: formatToByteLength(transaction.withdrawAddress, ByteLength.Address),
       treeNumber: formatToByteLength(transaction.treeNumber, ByteLength.UINT_256),
       merkleRoot: formatToByteLength(transaction.merkleRoot, ByteLength.UINT_256),
