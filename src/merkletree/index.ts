@@ -25,6 +25,7 @@ export type EncryptedCommitment = {
   txid: bytes.BytesData;
   senderPubKey: bytes.BytesData;
   ciphertext: Ciphertext;
+  revealKey: bytes.BytesData[];
 };
 
 export type Commitment = GeneratedCommitment | EncryptedCommitment;
@@ -359,8 +360,9 @@ class MerkleTree {
           senderPubKey: bytes.hexlify(leaf.senderPubKey),
           ciphertext: {
             iv: bytes.hexlify(leaf.ciphertext.iv),
-            data: leaf.ciphertext.data.map((element) => bytes.hexlify(element)),
+            data: leaf.ciphertext.data.map((el) => bytes.hexlify(el)),
           },
+          revealKey: leaf.revealKey.map((el) => bytes.hexlify(el)),
         };
       } else {
         this.commitmentWriteCache[tree][index] = {

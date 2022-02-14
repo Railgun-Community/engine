@@ -14,6 +14,7 @@ export type EncryptedCommitmentArgs = {
   hash: BigNumber;
   ciphertext: BigNumber[];
   senderPubKey: BigNumber[];
+  revealKey: BigNumber[];
 };
 
 export function formatGeneratedCommitmentBatchCommitments(
@@ -49,6 +50,7 @@ export function formatEncryptedCommitmentBatchCommitments(
         iv: ciphertexthexlified[0],
         data: ciphertexthexlified.slice(1),
       },
+      revealKey: commit.revealKey.map((el) => el.toHexString()),
     };
   });
 }

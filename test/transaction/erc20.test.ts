@@ -83,6 +83,7 @@ const leaves: Commitment[] = notesPrep.map((keyIndex) => {
     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
     senderPubKey,
     ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
+    revealKey: ['01', '02'], // TODO
   };
 });
 
