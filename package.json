@@ -22,6 +22,18 @@
   "bugs": {
     "url": "https://github.com/Railgun-Community/lepton/issues"
   },
+  "dependencies": {
+    "bech32-buffer": "^0.1.3",
+    "bip39": "^3.0.4",
+    "bn.js": "^4.12.0",
+    "chai-as-promised": "^7.1.1",
+    "circomlibjs": "^0.0.8",
+    "encoding-down": "^7.0.0",
+    "ethers": "^5.4.4",
+    "levelup": "^5.0.1",
+    "msgpack-lite": "^0.1.26",
+    "snarkjs": "^0.4.10"
+  },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
     "@types/chai": "^4.2.21",
@@ -47,17 +59,5 @@
     "rimraf": "^3.0.2",
     "ts-node": "^10.1.0",
     "typescript": "^4.3.5"
-  },
-  "dependencies": {
-    "bech32-buffer": "^0.1.3",
-    "bip39": "^3.0.4",
-    "bn.js": "^4.12.0",
-    "chai-as-promised": "^7.1.1",
-    "circomlibjs": "^0.0.8",
-    "encoding-down": "^7.0.0",
-    "ethers": "^5.4.4",
-    "levelup": "^5.0.1",
-    "msgpack-lite": "^0.1.26",
-    "snarkjs": "^0.4.10"
   }
 }
