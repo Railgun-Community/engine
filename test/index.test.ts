@@ -43,12 +43,12 @@ describe('Lepton', function () {
 
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter);
-    provider = new ethers.providers.JsonRpcProvider(config.rpc);
-    chainID = (await provider.getNetwork()).chainId;
-
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
+
+    provider = new ethers.providers.JsonRpcProvider(config.rpc);
+    chainID = (await provider.getNetwork()).chainId;
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -134,13 +134,14 @@ describe('Lepton', function () {
   }).timeout(90000);
 
   it('Should set/get last synced block', async () => {
-    let lastSyncedBlock = await lepton.getLastSyncedBlock(chainID);
+    const chainIDForSyncedBlock = 10010;
+    let lastSyncedBlock = await lepton.getLastSyncedBlock(chainIDForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await lepton.setLastSyncedBlock(100, chainID);
-    lastSyncedBlock = await lepton.getLastSyncedBlock(chainID);
+    await lepton.setLastSyncedBlock(100, chainIDForSyncedBlock);
+    lastSyncedBlock = await lepton.getLastSyncedBlock(chainIDForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await lepton.setLastSyncedBlock(100000, chainID);
-    lastSyncedBlock = await lepton.getLastSyncedBlock(chainID);
+    await lepton.setLastSyncedBlock(100000, chainIDForSyncedBlock);
+    lastSyncedBlock = await lepton.getLastSyncedBlock(chainIDForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
