@@ -207,7 +207,9 @@ class ERC20RailgunContract {
       this.contract.filters.Nullifier().topics as string[],
     ];
 
-    this.leptonDebugger?.log(`Scanning events from block ${currentStartBlock} to ${latest}`);
+    this.leptonDebugger?.log(
+      `Scanning historical events from block ${currentStartBlock} to ${latest}`,
+    );
 
     // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
@@ -225,6 +227,8 @@ class ERC20RailgunContract {
 
       currentStartBlock += SCAN_CHUNKS;
     }
+
+    this.leptonDebugger?.log('Finished historical event scan');
   }
 
   private static async processEvents(
