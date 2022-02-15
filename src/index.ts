@@ -15,8 +15,8 @@ import { BytesData } from './utils/bytes';
 
 export type QuickSyncCommitmentEvent = {
   txid: BytesData;
-  tree: number;
-  startingIndex: number;
+  treeNumber: number;
+  startPosition: number;
   commitments: Commitment[];
 };
 
