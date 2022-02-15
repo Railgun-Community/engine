@@ -17,12 +17,13 @@ export type QuickSync = (
   chainID: number,
   startingBlock: number,
 ) => Promise<{
-  commitments: {
-    tree: number;
-    startingIndex: number;
-    leaves: Commitment[];
+  commitmentEvents: {
+    txid: BytesData;
+    treeNumber: number;
+    startPosition: number;
+    commitments: Commitment[];
   }[];
-  nullifiers: Nullifier[];
+  nullifierEvents: Nullifier[];
 }>;
 
 class Lepton {
@@ -130,25 +131,28 @@ class Lepton {
         this.leptonDebugger?.log(`quickSync: chainID ${chainID}`);
 
         // Fetch events
-        const events = await this.quickSync(chainID, startScanningBlock);
+        const { commitmentEvents, nullifierEvents } = await this.quickSync(
+          chainID,
+          startScanningBlock,
+        );
 
         // Pass events to commitments listener and wait for resolution
-        events.commitments.forEach(async (commitmentEvent) => {
+        commitmentEvents.forEach(async (commitmentEvent) => {
           await this.listener(
             chainID,
-            commitmentEvent.tree,
-            commitmentEvent.startingIndex,
-            commitmentEvent.leaves,
+            commitmentEvent.treeNumber,
+            commitmentEvent.startPosition,
+            commitmentEvent.commitments,
           );
         });
 
         // Scan after all leaves added.
-        if (events.commitments.length) {
+        if (commitmentEvents.length) {
           await this.scanAllWallets(chainID);
         }
 
         // Pass nullifier events to listener
-        await this.nullifierListener(chainID, events.nullifiers);
+        await this.nullifierListener(chainID, nullifierEvents);
       } catch (err: any) {
         this.leptonDebugger?.error(err);
       }

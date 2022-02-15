@@ -21,8 +21,8 @@ import { ByteLength, BytesData, formatToByteLength, hexlify } from '../../utils/
 
 export type EventsListener = (
   txid: BytesData,
-  tree: number,
-  startingIndex: number,
+  treeNumber: number,
+  startPosition: number,
   leaves: Commitment[],
 ) => Promise<void>;
 export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
