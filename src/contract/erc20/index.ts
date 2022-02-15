@@ -19,12 +19,14 @@ import {
 import { LeptonDebugger } from '../../models/types';
 import { ByteLength, BytesData, formatToByteLength, hexlify } from '../../utils/bytes';
 
-export type EventsListener = (
-  txid: BytesData,
-  treeNumber: number,
-  startPosition: number,
-  leaves: Commitment[],
-) => Promise<void>;
+export type CommitmentEvent = {
+  txid: BytesData;
+  treeNumber: number;
+  startPosition: number;
+  commitments: Commitment[];
+};
+
+export type EventsListener = (event: CommitmentEvent) => Promise<void>;
 export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 
 const SCAN_CHUNKS = 500;
@@ -108,12 +110,15 @@ class ERC20RailgunContract {
         commitments: GeneratedCommitmentArgs[],
         event: Event,
       ) => {
-        await eventsListener(
-          event.transactionHash,
-          treeNumber.toNumber(),
-          startPosition.toNumber(),
-          formatGeneratedCommitmentBatchCommitments(event.transactionHash, commitments),
-        );
+        await eventsListener({
+          txid: event.transactionHash,
+          treeNumber: treeNumber.toNumber(),
+          startPosition: startPosition.toNumber(),
+          commitments: formatGeneratedCommitmentBatchCommitments(
+            event.transactionHash,
+            commitments,
+          ),
+        });
       },
     );
 
@@ -125,12 +130,15 @@ class ERC20RailgunContract {
         commitments: EncryptedCommitmentArgs[],
         event: Event,
       ) => {
-        await eventsListener(
-          event.transactionHash,
-          treeNumber.toNumber(),
-          startPosition.toNumber(),
-          formatEncryptedCommitmentBatchCommitments(event.transactionHash, commitments),
-        );
+        await eventsListener({
+          txid: event.transactionHash,
+          treeNumber: treeNumber.toNumber(),
+          startPosition: startPosition.toNumber(),
+          commitments: formatEncryptedCommitmentBatchCommitments(
+            event.transactionHash,
+            commitments,
+          ),
+        });
       },
     );
 
@@ -233,26 +241,26 @@ class ERC20RailgunContract {
       }
       switch (event.event) {
         case EventName.GeneratedCommitmentBatch:
-          await eventsListener(
-            hexlify(event.transactionHash),
-            event.args.treeNumber.toNumber(),
-            event.args.startPosition.toNumber(),
-            formatGeneratedCommitmentBatchCommitments(
+          await eventsListener({
+            txid: hexlify(event.transactionHash),
+            treeNumber: event.args.treeNumber.toNumber(),
+            startPosition: event.args.startPosition.toNumber(),
+            commitments: formatGeneratedCommitmentBatchCommitments(
               event.transactionHash,
               event.args.commitments,
             ),
-          );
+          });
           break;
         case EventName.EncryptedCommitmentBatch:
-          await eventsListener(
-            hexlify(event.transactionHash),
-            event.args.treeNumber.toNumber(),
-            event.args.startPosition.toNumber(),
-            formatEncryptedCommitmentBatchCommitments(
+          await eventsListener({
+            txid: hexlify(event.transactionHash),
+            treeNumber: event.args.treeNumber.toNumber(),
+            startPosition: event.args.startPosition.toNumber(),
+            commitments: formatEncryptedCommitmentBatchCommitments(
               event.transactionHash,
               event.args.commitments,
             ),
-          );
+          });
           break;
         case EventName.Nullifier:
           nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));

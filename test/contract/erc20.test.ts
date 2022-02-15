@@ -20,7 +20,7 @@ import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
 import { ScannedEventData } from '../../src/wallet';
 import { babyjubjub, bytes } from '../../src/utils';
-import { EventName } from '../../src/contract/erc20';
+import { CommitmentEvent, EventName } from '../../src/contract/erc20';
 import { BytesData } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
@@ -123,14 +123,10 @@ describe('Contract/Index', function () {
       return;
     }
 
-    let result;
+    let result: CommitmentEvent;
     contract.treeUpdates(
-      async (_txid: BytesData, tree: number, startPosition: number, leaves: Commitment[]) => {
-        result = {
-          tree,
-          startPosition,
-          leaves,
-        };
+      async (commitmentEvent: CommitmentEvent) => {
+        result = commitmentEvent;
       },
       async () => {},
     );
@@ -166,11 +162,11 @@ describe('Contract/Index', function () {
 
     // Check result
     // @ts-ignore
-    expect(result.tree).to.equal(0);
+    expect(result.treeNumber).to.equal(0);
     // @ts-ignore
     expect(result.startPosition).to.equal(0);
     // @ts-ignore
-    expect(result.leaves.length).to.equal(1);
+    expect(result.commitments.length).to.equal(1);
 
     const merkleRootAfterDeposit = await contract.merkleRoot();
 
@@ -212,11 +208,11 @@ describe('Contract/Index', function () {
 
     // Check result
     // @ts-ignore
-    expect(result.tree).to.equal(0);
+    expect(result.treeNumber).to.equal(0);
     // @ts-ignore
     expect(result.startPosition).to.equal(1);
     // @ts-ignore
-    expect(result.leaves.length).to.equal(3);
+    expect(result.commitments.length).to.equal(3);
   });
 
   afterEach(async () => {

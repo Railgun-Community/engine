@@ -11,20 +11,13 @@ import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
-import { BytesData } from './utils/bytes';
-
-export type QuickSyncCommitmentEvent = {
-  txid: BytesData;
-  treeNumber: number;
-  startPosition: number;
-  commitments: Commitment[];
-};
+import { CommitmentEvent } from './contract/erc20';
 
 export type QuickSync = (
   chainID: number,
   startingBlock: number,
 ) => Promise<{
-  commitmentEvents: QuickSyncCommitmentEvent[];
+  commitmentEvents: CommitmentEvent[];
   nullifierEvents: Nullifier[];
 }>;
 
@@ -163,8 +156,8 @@ class Lepton {
     // Run slow scan
     await this.contracts[chainID].getHistoricalEvents(
       startScanningBlock,
-      async (_txid: BytesData, tree: number, startingIndex: number, leaves: Commitment[]) => {
-        await this.listener(chainID, tree, startingIndex, leaves);
+      async ({ treeNumber, startPosition, commitments }: CommitmentEvent) => {
+        await this.listener(chainID, treeNumber, startPosition, commitments);
       },
       async (
         nullifiers: {
@@ -221,8 +214,8 @@ class Lepton {
 
     // Setup listeners
     this.contracts[chainID].treeUpdates(
-      async (_txid: BytesData, tree: number, startingIndex: number, leaves: Commitment[]) => {
-        await this.listener(chainID, tree, startingIndex, leaves);
+      async ({ treeNumber, startPosition, commitments }: CommitmentEvent) => {
+        await this.listener(chainID, treeNumber, startPosition, commitments);
         await this.scanAllWallets(chainID);
       },
       async (
