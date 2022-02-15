@@ -13,16 +13,18 @@ import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
 import { BytesData } from './utils/bytes';
 
+export type QuickSyncCommitmentEvent = {
+  txid: BytesData;
+  tree: number;
+  startingIndex: number;
+  commitments: Commitment[];
+};
+
 export type QuickSync = (
   chainID: number,
   startingBlock: number,
 ) => Promise<{
-  commitmentEvents: {
-    txid: BytesData;
-    treeNumber: number;
-    startPosition: number;
-    commitments: Commitment[];
-  }[];
+  commitmentEvents: QuickSyncCommitmentEvent[];
   nullifierEvents: Nullifier[];
 }>;
 
