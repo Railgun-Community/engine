@@ -17,17 +17,19 @@ import {
   EncryptedCommitmentArgs,
 } from './events';
 import { LeptonDebugger } from '../../models/types';
-import { ByteLength, formatToByteLength } from '../../utils/bytes';
+import { ByteLength, BytesData, formatToByteLength, hexlify } from '../../utils/bytes';
 
-// eslint-disable-next-line no-unused-vars
-export type Listener = (tree: number, startingIndex: number, leaves: Commitment[]) => Promise<void>;
-// eslint-disable-next-line no-unused-vars
-export type NullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
+export type EventsListener = (
+  txid: BytesData,
+  tree: number,
+  startingIndex: number,
+  leaves: Commitment[],
+) => Promise<void>;
+export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 
 const SCAN_CHUNKS = 500;
 const MAX_SCAN_RETRIES = 5;
 
-// eslint-disable-next-line no-unused-vars
 export enum EventName {
   GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
   EncryptedCommitmentBatch = 'CommitmentBatch',
@@ -97,7 +99,7 @@ class ERC20RailgunContract {
    * Listens for tree update events
    * @param listener - listener callback
    */
-  treeUpdates(listener: Listener, nullifierListener: NullifierListener) {
+  treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
     this.contract.on(
       EventName.GeneratedCommitmentBatch,
       async (
@@ -106,7 +108,8 @@ class ERC20RailgunContract {
         commitments: GeneratedCommitmentArgs[],
         event: Event,
       ) => {
-        await listener(
+        await eventsListener(
+          event.transactionHash,
           treeNumber.toNumber(),
           startPosition.toNumber(),
           formatGeneratedCommitmentBatchCommitments(event.transactionHash, commitments),
@@ -122,7 +125,8 @@ class ERC20RailgunContract {
         commitments: EncryptedCommitmentArgs[],
         event: Event,
       ) => {
-        await listener(
+        await eventsListener(
+          event.transactionHash,
           treeNumber.toNumber(),
           startPosition.toNumber(),
           formatEncryptedCommitmentBatchCommitments(event.transactionHash, commitments),
@@ -131,7 +135,7 @@ class ERC20RailgunContract {
     );
 
     this.contract.on(EventName.Nullifier, (nullifier: BigNumber, event: Event) => {
-      nullifierListener([
+      eventsNullifierListener([
         {
           txid: event.transactionHash,
           nullifier: nullifier.toHexString(),
@@ -181,8 +185,8 @@ class ERC20RailgunContract {
    */
   async getHistoricalEvents(
     startBlock: number,
-    listener: Listener,
-    nullifierListener: NullifierListener,
+    eventsListener: EventsListener,
+    eventsNullifierListener: EventsNullifierListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     let currentStartBlock = startBlock;
@@ -206,7 +210,7 @@ class ERC20RailgunContract {
       const events: Event[] = await this.scanEvents(filterTopics, currentStartBlock);
 
       // eslint-disable-next-line no-await-in-loop
-      await ERC20RailgunContract.processEvents(listener, nullifierListener, events);
+      await ERC20RailgunContract.processEvents(eventsListener, eventsNullifierListener, events);
 
       // eslint-disable-next-line no-await-in-loop
       await setLastSyncedBlock(currentStartBlock);
@@ -216,11 +220,10 @@ class ERC20RailgunContract {
   }
 
   private static async processEvents(
-    listener: Listener,
-    nullifierListener: NullifierListener,
+    eventsListener: EventsListener,
+    eventsNullifierListener: EventsNullifierListener,
     commitmentEvents: Event[],
   ) {
-    const leaves: Commitment[] = [];
     const nullifiers: Nullifier[] = [];
 
     // Process events
@@ -230,7 +233,8 @@ class ERC20RailgunContract {
       }
       switch (event.event) {
         case EventName.GeneratedCommitmentBatch:
-          await listener(
+          await eventsListener(
+            hexlify(event.transactionHash),
             event.args.treeNumber.toNumber(),
             event.args.startPosition.toNumber(),
             formatGeneratedCommitmentBatchCommitments(
@@ -240,7 +244,8 @@ class ERC20RailgunContract {
           );
           break;
         case EventName.EncryptedCommitmentBatch:
-          await listener(
+          await eventsListener(
+            hexlify(event.transactionHash),
             event.args.treeNumber.toNumber(),
             event.args.startPosition.toNumber(),
             formatEncryptedCommitmentBatchCommitments(
@@ -257,11 +262,7 @@ class ERC20RailgunContract {
       }
     });
 
-    await nullifierListener(nullifiers);
-
-    if (leaves.length > 0) {
-      await listener(0, 0, leaves);
-    }
+    await eventsNullifierListener(nullifiers);
   }
 
   /**

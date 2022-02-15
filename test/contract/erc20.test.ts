@@ -21,6 +21,7 @@ import { config } from '../config.test';
 import { ScannedEventData } from '../../src/wallet';
 import { babyjubjub, bytes } from '../../src/utils';
 import { EventName } from '../../src/contract/erc20';
+import { BytesData } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -124,7 +125,7 @@ describe('Contract/Index', function () {
 
     let result;
     contract.treeUpdates(
-      async (tree: number, startPosition: number, leaves: Commitment[]) => {
+      async (_txid: BytesData, tree: number, startPosition: number, leaves: Commitment[]) => {
         result = {
           tree,
           startPosition,

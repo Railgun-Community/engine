@@ -11,6 +11,7 @@ import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
+import { BytesData } from './utils/bytes';
 
 export type QuickSync = (
   chainID: number,
@@ -156,7 +157,7 @@ class Lepton {
     // Run slow scan
     await this.contracts[chainID].getHistoricalEvents(
       startScanningBlock,
-      async (tree: number, startingIndex: number, leaves: Commitment[]) => {
+      async (_txid: BytesData, tree: number, startingIndex: number, leaves: Commitment[]) => {
         await this.listener(chainID, tree, startingIndex, leaves);
       },
       async (
@@ -214,7 +215,7 @@ class Lepton {
 
     // Setup listeners
     this.contracts[chainID].treeUpdates(
-      async (tree: number, startingIndex: number, leaves: Commitment[]) => {
+      async (_txid: BytesData, tree: number, startingIndex: number, leaves: Commitment[]) => {
         await this.listener(chainID, tree, startingIndex, leaves);
         await this.scanAllWallets(chainID);
       },
