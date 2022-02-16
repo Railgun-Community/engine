@@ -11,7 +11,6 @@ import artifacts from 'railgun-artifacts';
 import memdown from 'memdown';
 import { ERC20RailgunContract } from '../../src/contract';
 import { ERC20Note } from '../../src/note';
-import type { Commitment } from '../../src/merkletree';
 import { ERC20Transaction } from '../../src/transaction/erc20';
 import { Artifacts, Circuits } from '../../src/prover';
 import { Lepton } from '../../src';
@@ -21,7 +20,8 @@ import { config } from '../config.test';
 import { ScannedEventData } from '../../src/wallet';
 import { babyjubjub, bytes } from '../../src/utils';
 import { CommitmentEvent, EventName } from '../../src/contract/erc20';
-import { BytesData } from '../../src/utils/bytes';
+import { hexlify } from '../../src/utils/bytes';
+import { Nullifier } from '../../src/merkletree';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -117,6 +117,90 @@ describe('Contract/Index', function () {
     expect(fees.nft).to.be.a('string');
   });
 
+  it('[HH] Should find deposit and transact as historical events and nullifiers', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    let startingBlock = await provider.getBlockNumber();
+
+    const address = (await lepton.wallets[walletID].addresses(chainID))[0];
+    const { pubkey } = Lepton.decodeAddress(address);
+
+    const RANDOM = '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9';
+
+    // Create deposit
+    const deposit = await contract.generateDeposit([
+      new ERC20Note(pubkey, RANDOM, new BN('11000000000000000000000000', 10), TOKEN_ADDRESS),
+    ]);
+
+    const awaiterScan = () =>
+      new Promise((resolve, reject) =>
+        lepton.wallets[walletID].once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
+          returnedChainID === chainID ? resolve(returnedChainID) : reject(),
+        ),
+      );
+
+    // Send deposit on chain
+    const tx = await etherswallet.sendTransaction(deposit);
+    const [txResponse] = await Promise.all([tx.wait(), awaiterScan()]);
+
+    let resultEvent: CommitmentEvent;
+    const eventsListener = async (commitmentEvent: CommitmentEvent) => {
+      resultEvent = commitmentEvent;
+    };
+    const resultNullifiers: Nullifier[] = [];
+    const nullifiersListener = async (nullifiers: Nullifier[]) => {
+      resultNullifiers.push(...nullifiers);
+    };
+
+    await contract.getHistoricalEvents(
+      startingBlock,
+      eventsListener,
+      nullifiersListener,
+      async () => {},
+    );
+
+    // @ts-ignore
+    expect(resultEvent).to.be.an('object', 'No event in history for deposit');
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers.length).to.equal(0);
+
+    startingBlock = await provider.getBlockNumber();
+
+    const randomPubKey = babyjubjub.privateKeyToPubKey(
+      babyjubjub.seedToPrivateKey(bytes.random(32)),
+    );
+
+    // Create transaction
+    const transaction = new ERC20Transaction(TOKEN_ADDRESS, chainID);
+    transaction.outputs = [new ERC20Note(randomPubKey, RANDOM, new BN('300', 10), TOKEN_ADDRESS)];
+
+    // Create transact
+    const transact = await contract.transact([
+      await transaction.prove(lepton.prover, lepton.wallets[walletID], testEncryptionKey),
+    ]);
+
+    // Send transact on chain
+    const txTransact = await etherswallet.sendTransaction(transact);
+    const [txResponseTransact] = await Promise.all([txTransact.wait(), awaiterScan()]);
+
+    await contract.getHistoricalEvents(
+      startingBlock,
+      eventsListener,
+      nullifiersListener,
+      async () => {},
+    );
+
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers.length).to.equal(2);
+  }).timeout(120000);
+
   it('[HH] Should create serialized transactions and parse tree updates', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
@@ -134,14 +218,11 @@ describe('Contract/Index', function () {
     const address = (await lepton.wallets[walletID].addresses(chainID))[0];
     const { pubkey } = Lepton.decodeAddress(address);
 
+    const RANDOM = '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9';
+
     // Create deposit
     const deposit = await contract.generateDeposit([
-      new ERC20Note(
-        pubkey,
-        '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-        new BN('11000000000000000000000000', 10),
-        TOKEN_ADDRESS,
-      ),
+      new ERC20Note(pubkey, RANDOM, new BN('11000000000000000000000000', 10), TOKEN_ADDRESS),
     ]);
 
     const awaiterDeposit = new Promise((resolve, reject) =>
@@ -181,14 +262,7 @@ describe('Contract/Index', function () {
 
     // Create transaction
     const transaction = new ERC20Transaction(TOKEN_ADDRESS, chainID);
-    transaction.outputs = [
-      new ERC20Note(
-        randomPubKey,
-        '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-        new BN('300', 10),
-        TOKEN_ADDRESS,
-      ),
-    ];
+    transaction.outputs = [new ERC20Note(randomPubKey, RANDOM, new BN('300', 10), TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([
@@ -213,7 +287,7 @@ describe('Contract/Index', function () {
     expect(result.startPosition).to.equal(1);
     // @ts-ignore
     expect(result.commitments.length).to.equal(3);
-  });
+  }).timeout(120000);
 
   afterEach(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {

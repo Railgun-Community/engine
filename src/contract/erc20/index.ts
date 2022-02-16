@@ -1,4 +1,4 @@
-import { Contract, PopulatedTransaction, BigNumber, Event } from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, Event, EventFilter } from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
@@ -29,7 +29,7 @@ export type CommitmentEvent = {
 export type EventsListener = (event: CommitmentEvent) => Promise<void>;
 export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 
-const SCAN_CHUNKS = 500;
+const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 5;
 
 export enum EventName {
@@ -142,8 +142,8 @@ class ERC20RailgunContract {
       },
     );
 
-    this.contract.on(EventName.Nullifier, (nullifier: BigNumber, event: Event) => {
-      eventsNullifierListener([
+    this.contract.on(EventName.Nullifier, async (nullifier: BigNumber, event: Event) => {
+      await eventsNullifierListener([
         {
           txid: event.transactionHash,
           nullifier: nullifier.toHexString(),
@@ -153,20 +153,14 @@ class ERC20RailgunContract {
   }
 
   private async scanEvents(
-    filterTopics: string[][],
+    eventFilter: EventFilter,
     startBlock: number,
+    endBlock: number,
     retryCount = 0,
   ): Promise<Event[]> {
     try {
       const events = await this.contract
-        .queryFilter(
-          {
-            address: this.contract.address,
-            topics: filterTopics,
-          },
-          startBlock,
-          startBlock + SCAN_CHUNKS,
-        )
+        .queryFilter(eventFilter, startBlock, endBlock)
         .catch((err: any) => {
           throw err;
         });
@@ -178,7 +172,7 @@ class ERC20RailgunContract {
           `Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
         );
         this.leptonDebugger?.error(err);
-        return this.scanEvents(filterTopics, startBlock, retry);
+        return this.scanEvents(eventFilter, startBlock, endBlock, retry);
       }
       this.leptonDebugger?.log(`Scan failed at block ${startBlock}. No longer retrying.`);
       this.leptonDebugger?.error(err);
@@ -200,78 +194,101 @@ class ERC20RailgunContract {
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
 
-    // NOTE: ONLY 4 FILTERS ALLOWED PER QUERY.
-    const filterTopics: string[][] = [
-      this.contract.filters.GeneratedCommitmentBatch().topics as string[],
-      this.contract.filters.CommitmentBatch().topics as string[],
-      this.contract.filters.Nullifier().topics as string[],
-    ];
+    const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
+    const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
+    const eventFilterNullifier = this.contract.filters.Nullifier();
 
     this.leptonDebugger?.log(
       `Scanning historical events from block ${currentStartBlock} to ${latest}`,
     );
 
-    // Process chunks of blocks at a time
     while (currentStartBlock < latest) {
+      // Process chunks of blocks at a time
       if ((currentStartBlock - startBlock) % 10000 === 0) {
         this.leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
-      // eslint-disable-next-line no-await-in-loop
-      const events: Event[] = await this.scanEvents(filterTopics, currentStartBlock);
+      const endBlock = Math.min(latest, currentStartBlock + SCAN_CHUNKS);
+      const [eventsGeneratedCommitment, eventsEncryptedCommitment, eventsNullifier] =
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all([
+          this.scanEvents(eventFilterGeneratedCommitmentBatch, currentStartBlock, endBlock),
+          this.scanEvents(eventFilterEncryptedCommitmentBatch, currentStartBlock, endBlock),
+          this.scanEvents(eventFilterNullifier, currentStartBlock, endBlock),
+        ]);
 
       // eslint-disable-next-line no-await-in-loop
-      await ERC20RailgunContract.processEvents(eventsListener, eventsNullifierListener, events);
+      await Promise.all([
+        ERC20RailgunContract.processGeneratedCommitmentEvents(
+          eventsListener,
+          eventsGeneratedCommitment,
+        ),
+        ERC20RailgunContract.processEncryptedCommitmentEvents(
+          eventsListener,
+          eventsEncryptedCommitment,
+        ),
+        ERC20RailgunContract.processNullifierEvents(eventsNullifierListener, eventsNullifier),
+      ]);
 
       // eslint-disable-next-line no-await-in-loop
       await setLastSyncedBlock(currentStartBlock);
 
-      currentStartBlock += SCAN_CHUNKS;
+      currentStartBlock += SCAN_CHUNKS + 1;
     }
 
     this.leptonDebugger?.log('Finished historical event scan');
   }
 
-  private static async processEvents(
+  private static async processGeneratedCommitmentEvents(
     eventsListener: EventsListener,
-    eventsNullifierListener: EventsNullifierListener,
-    commitmentEvents: Event[],
+    generatedCommitmentEvents: Event[],
   ) {
-    const nullifiers: Nullifier[] = [];
-
-    // Process events
-    commitmentEvents.forEach(async (event) => {
+    generatedCommitmentEvents.forEach(async (event) => {
       if (!event.args) {
         return;
       }
-      switch (event.event) {
-        case EventName.GeneratedCommitmentBatch:
-          await eventsListener({
-            txid: hexlify(event.transactionHash),
-            treeNumber: event.args.treeNumber.toNumber(),
-            startPosition: event.args.startPosition.toNumber(),
-            commitments: formatGeneratedCommitmentBatchCommitments(
-              event.transactionHash,
-              event.args.commitments,
-            ),
-          });
-          break;
-        case EventName.EncryptedCommitmentBatch:
-          await eventsListener({
-            txid: hexlify(event.transactionHash),
-            treeNumber: event.args.treeNumber.toNumber(),
-            startPosition: event.args.startPosition.toNumber(),
-            commitments: formatEncryptedCommitmentBatchCommitments(
-              event.transactionHash,
-              event.args.commitments,
-            ),
-          });
-          break;
-        case EventName.Nullifier:
-          nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
-          break;
-        default:
-          break;
+      await eventsListener({
+        txid: hexlify(event.transactionHash),
+        treeNumber: event.args.treeNumber.toNumber(),
+        startPosition: event.args.startPosition.toNumber(),
+        commitments: formatGeneratedCommitmentBatchCommitments(
+          event.transactionHash,
+          event.args.commitments,
+        ),
+      });
+    });
+  }
+
+  private static async processEncryptedCommitmentEvents(
+    eventsListener: EventsListener,
+    encryptedCommitmentEvents: Event[],
+  ) {
+    encryptedCommitmentEvents.forEach(async (event) => {
+      if (!event.args) {
+        return;
       }
+      await eventsListener({
+        txid: hexlify(event.transactionHash),
+        treeNumber: event.args.treeNumber.toNumber(),
+        startPosition: event.args.startPosition.toNumber(),
+        commitments: formatEncryptedCommitmentBatchCommitments(
+          event.transactionHash,
+          event.args.commitments,
+        ),
+      });
+    });
+  }
+
+  private static async processNullifierEvents(
+    eventsNullifierListener: EventsNullifierListener,
+    nullifierEvents: Event[],
+  ) {
+    const nullifiers: Nullifier[] = [];
+
+    nullifierEvents.forEach(async (event) => {
+      if (!event.args) {
+        return;
+      }
+      nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
     });
 
     await eventsNullifierListener(nullifiers);
