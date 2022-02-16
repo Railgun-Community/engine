@@ -457,6 +457,10 @@ class MerkleTree {
           // Delete the batch after processing it
           // Ensures bad batches are deleted therefore halting update loop if one is found
           delete this.writeQueue[treeIndex][treeLengths[treeIndex]];
+        } else {
+          this.leptonDebugger?.log(
+            `Write queue item for index ${treeIndex} not found. Current tree is likely not in sync.`,
+          );
         }
       });
 
