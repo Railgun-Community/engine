@@ -60,6 +60,4 @@ jobs:
           username: ${{ secrets.ftp_username }}
           password: ${{ secrets.ftp_password }}
           local-dir: release/
-          exclude: |
-            *.tgz
-            !railgun-community-lepton-${{ steps.package-version.outputs.current-version }}.tgz
+          server-dir: ${{ steps.package-version.outputs.current-version }}/
