@@ -254,6 +254,7 @@ class Lepton {
   /**
    * Sets last synced block to resume syncing on next load.
    * @param lastSyncedBlock - last synced block
+   * @param chainID - chain to store value for
    */
   setLastSyncedBlock(lastSyncedBlock: number, chainID: number): Promise<void> {
     return this.db.put(
@@ -264,7 +265,8 @@ class Lepton {
   }
 
   /**
-   * Sets last synced block to resume syncing on next load.
+   * Gets last synced block to resume syncing from.
+   * @param chainID - chain to get value for
    * @returns lastSyncedBlock - last synced block
    */
   getLastSyncedBlock(chainID: number): Promise<number | undefined> {
