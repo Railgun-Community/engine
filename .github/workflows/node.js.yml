@@ -50,6 +50,9 @@ jobs:
         run: npm i
       - name: Build package
         run: npm run release
+      - name: get-npm-version
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@master
       - name: Upload tarball
         uses: SamKirkland/FTP-Deploy-Action@4.2.0
         with:
@@ -57,3 +60,5 @@ jobs:
           username: u659348553.github
           password: ${{ secrets.ftp_password }}
           local-dir: release/
+          server-dir: ${{ steps.package-version.outputs.current-version }}
+          exclude:
