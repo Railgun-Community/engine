@@ -1,6 +1,6 @@
 [![Node.js CI Actions Status](https://github.com/Railgun-Community/lepton/actions/workflows/node.js.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/lepton/actions)
 
-# @railgun-community/lepton
+# Lepton
 Wallet framework for Railgun
 
 ## Installing
