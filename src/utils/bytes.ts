@@ -27,10 +27,6 @@ function random(length: number = 32): string {
  * @returns hex string
  */
 function hexlify(data: BytesData, prefix = false): string {
-  if (data == null) {
-    return '';
-  }
-
   let hexString = '';
 
   if (typeof data === 'string') {
