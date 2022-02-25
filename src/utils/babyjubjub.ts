@@ -47,13 +47,18 @@ function seedToPrivateKey(seed: BytesData): string {
  */
 function packPoint(unpacked: BytesData[]): string {
   // TODO: remove dependance on circomlibjs
+  if (unpacked.length !== 2)
+    throw new Error("Invalid unpacked length (length != 2)");
   // Format point elements
   const unpackedFormatted = unpacked.map(
     (element) => BigInt(numberify(element).toString(10)),
   );
-
   // Pack point
-  return hexlify(babyjub.packPoint(unpackedFormatted));
+  try {
+    return hexlify(babyjub.packPoint(unpackedFormatted));
+  } catch (e: any) {
+    throw new Error(`babyjubjub: Invalid point: ${e?.message}`);
+  }
 }
 
 /**
@@ -66,6 +71,9 @@ function unpackPoint(packed: BytesData): string[] {
   // Unpack point
   const unpacked: BigInt[] = babyjub.unpackPoint(arrayify(packed));
 
+  if (unpacked === null) {
+    throw Error('Invalid point: null');
+  }
   return unpacked.map((element) => {
     // Convert to byte string
     const elementBytes = element.toString(16);

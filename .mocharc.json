@@ -1,4 +1,6 @@
 {
+  "ignore": "fuzz",
+  "spec": "test/**/*.test.ts",
   "require": "ts-node/register",
   "exit": true
 }

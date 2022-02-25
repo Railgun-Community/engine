@@ -12,7 +12,8 @@
     "test-hardhat": "env RUN_HARDHAT_TESTS=1 npm test",
     "compile": "npm run clean && tsc",
     "prepack": "npm install && npm run compile",
-    "release": "mkdir -p release && npm pack && mv *.tgz ./release"
+    "release": "mkdir -p release && npm pack && mv *.tgz ./release",
+    "fuzz": "npm run compile && jsfuzz fuzz/utils/babyjubjub.js corpus"
   },
   "repository": {
     "type": "git",

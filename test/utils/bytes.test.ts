@@ -158,6 +158,14 @@ describe('Utils/Bytes', () => {
     });
   });
 
+  it('Should not numberify bad input', () => {
+    const vectors = [bytes.hexlify(' '), bytes.hexlify('-'), bytes.hexlify('')];
+    vectors.forEach((vector) => {
+      expect(() => bytes.numberify(vector)).to.throw(/Invalid BytesData/);
+    });
+
+  });
+
   it('Should numberify', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string

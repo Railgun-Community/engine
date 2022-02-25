@@ -107,6 +107,9 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
   if (typeof data === 'string') {
     // Remove leading 0x if exists
     const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+    const invalid = [' ', '-', ''];
+    if (invalid.includes(dataFormatted))
+      throw new Error(`Invalid BytesData: ${invalid}`);
 
     return new BN(dataFormatted, 'hex', endian);
   }

@@ -37,6 +37,21 @@ describe('Utils/BabyJubJub', () => {
     });
   });
 
+  it('Should validate babyjubjub point data', () => {
+    // known bad from fuzzing
+    const bad = '3c8ae8f53964d84df43b3d1ec993d4be1731efec6fb1f357ca00de055c450a0100';
+    expect(() => babyjubjub.packPoint([bad, bad])).to.throw(/babyjub/);
+    const invalidLengthVectors: string[][] = [
+      ['1'],
+      ['1', '2', '3'],
+    ];
+    invalidLengthVectors.forEach((vector) => {
+      expect(() => babyjubjub.packPoint(vector)).to.throw(/Invalid unpacked length/);
+    });
+
+    expect(() => babyjubjub.unpackPoint(Buffer.from('ef', 'hex'))).to.throw(/Invalid point: null/);
+  });
+
   it('Should pack and unpack points', () => {
     const vectors = [
       {
