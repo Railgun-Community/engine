@@ -20,7 +20,7 @@ let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
 
-const testMnemonic = 'test test test test test test test test test test test junk';
+const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const keypairs = [
