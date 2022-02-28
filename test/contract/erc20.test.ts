@@ -35,8 +35,8 @@ let token: ethers.Contract;
 let contract: ERC20RailgunContract;
 let walletID: string;
 
-const testMnemonic = 'test test test test test test test test test test test junk';
-const testEncryptionKey = '01';
+const testMnemonic = config.mnemonic;
+const testEncryptionKey = config.encryptionKey;
 
 async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
   if (circuit === 'erc20small') {
@@ -159,7 +159,7 @@ describe('Contract/Index', function () {
       startingBlock,
       eventsListener,
       nullifiersListener,
-      async () => {},
+      async () => { },
     );
 
     // @ts-ignore
@@ -192,7 +192,7 @@ describe('Contract/Index', function () {
       startingBlock,
       eventsListener,
       nullifiersListener,
-      async () => {},
+      async () => { },
     );
 
     // @ts-ignore
@@ -212,7 +212,7 @@ describe('Contract/Index', function () {
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
-      async () => {},
+      async () => { },
     );
 
     const address = (await lepton.wallets[walletID].addresses(chainID))[0];

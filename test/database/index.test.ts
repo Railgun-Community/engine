@@ -5,7 +5,6 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { config } from '../config.test';
 
-
 import { Database } from '../../src/database';
 
 chai.use(chaiAsPromised);

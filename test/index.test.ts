@@ -27,8 +27,8 @@ let snapshot: number;
 let token: ethers.Contract;
 let walletID: string;
 
-const testMnemonic = 'test test test test test test test test test test test junk';
-const testEncryptionKey = '01';
+const testMnemonic = config.mnemonic;
+const testEncryptionKey = config.encryptionKey;
 
 async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
   if (circuit === 'erc20small') {
