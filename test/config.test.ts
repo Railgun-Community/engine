@@ -2,6 +2,7 @@
 let config = {
   rpc: 'http://localhost:8545/',
   mnemonic: 'test test test test test test test test test test test junk',
+  encryptionKey: '0101010101010101010101010101010101010101010101010101010101010101',
   contracts: {
     rail: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
     staking: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
@@ -15,7 +16,8 @@ let config = {
 };
 
 try {
-  config = require('./configOverrides.test').overrides;
-} catch {}
+  const { overrides } = require('./configOverrides.test');
+  config = { ...config, ...overrides };
+} catch { }
 
 export { config };
