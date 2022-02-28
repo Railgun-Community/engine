@@ -10,7 +10,7 @@ import type { BytesData } from './bytes';
 
 export interface Ciphertext {
   iv: BytesData,
-  data: BytesData[]
+  data: BytesData[];
 }
 
 const aes = {
@@ -27,7 +27,10 @@ const aes = {
       const plaintextFormatted = plaintext.map(
         (block) => new Uint8Array(arrayify(block)),
       );
-      const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
+      const keyFormatted = new Uint8Array(arrayify(key));
+      if (keyFormatted.byteLength < 32)
+        throw new Error('Invalid key length');
+
       const ivFormatted = new Uint8Array(arrayify(iv));
 
       // Initialize cipher

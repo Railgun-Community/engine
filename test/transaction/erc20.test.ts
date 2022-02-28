@@ -14,6 +14,7 @@ import { ERC20Note } from '../../src/note';
 import { babyjubjub } from '../../src/utils';
 import { ERC20Transaction } from '../../src/transaction';
 import { Prover, Circuits, Artifacts } from '../../src/prover';
+import { config } from '../config.test';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -32,7 +33,7 @@ async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
 }
 
 const testMnemonic = 'test test test test test test test test test test test junk';
-const testEncryptionKey = '01';
+const testEncryptionKey = config.encryptionKey;
 
 const keypairs = [
   {
