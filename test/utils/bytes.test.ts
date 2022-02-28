@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import { bytes } from '../../src/utils';
-import { ByteLength } from '../../src/utils/bytes';
+import { arrayify, ByteLength } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -158,12 +158,16 @@ describe('Utils/Bytes', () => {
     });
   });
 
+  it('Should not arrayify invalid BytesData', () => {
+    const invalid = 'zzzzza';
+    expect(() => arrayify(invalid)).to.throw('Invalid BytesData');
+  });
+
   it('Should not numberify bad input', () => {
     const vectors = [bytes.hexlify(' '), bytes.hexlify('-'), bytes.hexlify('')];
     vectors.forEach((vector) => {
       expect(() => bytes.numberify(vector)).to.throw(/Invalid BytesData/);
     });
-
   });
 
   it('Should numberify', () => {

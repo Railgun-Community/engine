@@ -80,7 +80,12 @@ function arrayify(data: BytesData): number[] {
 
   // Loop through each byte and push to array
   for (let i = 0; i < dataFormatted.length; i += 2) {
-    bytesArray.push(parseInt(dataFormatted.substr(i, 2), 16));
+    const number = parseInt(dataFormatted.substr(i, 2), 16);
+    if (Number.isNaN(number)) {
+      throw new Error("Invalid BytesData");
+    } else {
+      bytesArray.push(number);
+    }
   }
 
   // Return bytes array
