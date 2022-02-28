@@ -11,6 +11,7 @@ import { babyjubjub } from '../../src/utils';
 import { Wallet } from '../../src/wallet';
 
 import type { Commitment } from '../../src/merkletree';
+import { config } from '../config.test';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -20,7 +21,7 @@ let merkletree: MerkleTree;
 let wallet: Wallet;
 
 const testMnemonic = 'test test test test test test test test test test test junk';
-const testEncryptionKey = '01';
+const testEncryptionKey = config.encryptionKey;
 
 const keypairs = [
   {

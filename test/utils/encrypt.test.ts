@@ -94,4 +94,13 @@ describe('Utils/Encryption', () => {
       )).to.deep.equal(vector.data);
     });
   });
+
+  it('Should reject short encryption keys', () => {
+    const key = '716a1935958ba30b3cdf83dc0df2d14449b8b301b45cfdd05440f37026691c';
+
+    expect(
+      () => encryption.aes.ctr.encrypt(['01'], key)
+    ).to.throw('Invalid key length');
+
+  });
 });

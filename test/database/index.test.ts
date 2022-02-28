@@ -2,8 +2,9 @@
 /* globals describe it beforeEach afterEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
 import memdown from 'memdown';
+import { config } from '../config.test';
+
 
 import { Database } from '../../src/database';
 
@@ -12,6 +13,7 @@ const { expect } = chai;
 
 // Database object for tests
 let db: Database;
+const testEncryptionKey = config.encryptionKey;
 
 describe('Database/Index', () => {
   beforeEach(async () => {
@@ -46,10 +48,10 @@ describe('Database/Index', () => {
 
   it('Should write and read encrypted values', async () => {
     // Put value in database
-    await db.putEncrypted(['a', 'b'], '01', '01');
+    await db.putEncrypted(['a', 'b'], testEncryptionKey, '01');
 
     // Check if value is returned correctly
-    expect(await db.getEncrypted(['a', 'b'], '01')).to.equal('01');
+    expect(await db.getEncrypted(['a', 'b'], testEncryptionKey)).to.equal('01');
   });
 
   it('Should perform batch operations on database', async () => {
