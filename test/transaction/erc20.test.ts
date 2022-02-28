@@ -32,7 +32,7 @@ async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
   return artifacts.large;
 }
 
-const testMnemonic = 'test test test test test test test test test test test junk';
+const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const keypairs = [
