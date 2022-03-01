@@ -153,22 +153,27 @@ class Lepton {
       }
     }
 
-    // Run slow scan
-    await this.contracts[chainID].getHistoricalEvents(
-      startScanningBlock,
-      async ({ treeNumber, startPosition, commitments }: CommitmentEvent) => {
-        await this.listener(chainID, treeNumber, startPosition, commitments);
-      },
-      async (
-        nullifiers: {
-          nullifier: bytes.BytesData;
-          txid: bytes.BytesData;
-        }[],
-      ) => {
-        await this.nullifierListener(chainID, nullifiers);
-      },
-      (block: number) => this.setLastSyncedBlock(block, chainID),
-    );
+    try {
+      // Run slow scan
+      await this.contracts[chainID].getHistoricalEvents(
+        startScanningBlock,
+        async ({ treeNumber, startPosition, commitments }: CommitmentEvent) => {
+          await this.listener(chainID, treeNumber, startPosition, commitments);
+        },
+        async (
+          nullifiers: {
+            nullifier: bytes.BytesData;
+            txid: bytes.BytesData;
+          }[],
+        ) => {
+          await this.nullifierListener(chainID, nullifiers);
+        },
+        (block: number) => this.setLastSyncedBlock(block, chainID),
+      );
+    } catch (err: any) {
+      this.leptonDebugger?.log(`Scan incomplete for chain ${chainID}`);
+      this.leptonDebugger?.error(err);
+    }
 
     // Final scan after all leaves added.
     await this.scanAllWallets(chainID);
