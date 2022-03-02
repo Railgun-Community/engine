@@ -82,7 +82,7 @@ function arrayify(data: BytesData): number[] {
   for (let i = 0; i < dataFormatted.length; i += 2) {
     const number = parseInt(dataFormatted.substr(i, 2), 16);
     if (Number.isNaN(number)) {
-      throw new Error("Invalid BytesData");
+      throw new Error('Invalid BytesData');
     } else {
       bytesArray.push(number);
     }
@@ -109,8 +109,7 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
     // Remove leading 0x if exists
     const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
     const invalid = [' ', '-', ''];
-    if (invalid.includes(dataFormatted))
-      throw new Error(`Invalid BytesData: ${invalid}`);
+    if (invalid.includes(dataFormatted)) throw new Error(`Invalid BytesData: ${invalid}`);
 
     return new BN(dataFormatted, 'hex', endian);
   }

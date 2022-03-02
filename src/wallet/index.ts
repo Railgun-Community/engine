@@ -75,6 +75,7 @@ class Wallet extends EventEmitter {
    * @param encryptionKey - database encryption key
    */
   constructor(
+    id: string,
     db: Database,
     encryptionKey: bytes.BytesData,
     mnemonic: string,
@@ -83,28 +84,14 @@ class Wallet extends EventEmitter {
     leptonDebugger?: LeptonDebugger,
   ) {
     super();
+    this.id = id;
     this.db = db;
     this.#encryptionKey = encryptionKey;
     this.gapLimit = gapLimit;
     this.leptonDebugger = leptonDebugger;
 
-    // Calculate ID
-    this.id = hash.sha256(
-      bytes.combine([mnemonicToSeed(mnemonic), bytes.fromUTF8String(derivationPath)]),
-    );
-
     this.#addressNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
     this.#changeNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
-
-    // Write encrypted mnemonic to DB
-    this.db.putEncrypted(
-      [bytes.fromUTF8String('wallet'), this.id],
-      encryptionKey,
-      msgpack.encode({
-        mnemonic,
-        derivationPath,
-      }),
-    );
   }
 
   /**
@@ -582,20 +569,17 @@ class Wallet extends EventEmitter {
     );
 
     // Write encrypted mnemonic to DB
-    db.putEncrypted(
-      [
-        bytes.fromUTF8String('wallet'),
-        msgpack.encode({
-          id,
-          derivationPath,
-        }),
-      ],
+    await db.putEncrypted(
+      [bytes.fromUTF8String('wallet'), id],
       encryptionKey,
-      mnemonic,
+      msgpack.encode({
+        mnemonic,
+        derivationPath,
+      }),
     );
 
     // Create wallet object and return
-    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
+    return new Wallet(id, db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
   }
 
   /**
@@ -608,7 +592,7 @@ class Wallet extends EventEmitter {
   static async loadExisting(
     db: Database,
     encryptionKey: bytes.BytesData,
-    id: bytes.BytesData,
+    id: string,
     leptonDebugger?: LeptonDebugger,
     gapLimit: number = 5,
   ): Promise<Wallet> {
@@ -618,7 +602,7 @@ class Wallet extends EventEmitter {
     );
 
     // Create wallet object and return
-    return new Wallet(db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
+    return new Wallet(id, db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
   }
 }
 

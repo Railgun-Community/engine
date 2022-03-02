@@ -323,7 +323,7 @@ class Lepton {
    * @param id - wallet ID
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: bytes.BytesData, id: bytes.BytesData): Promise<string> {
+  async loadExistingWallet(encryptionKey: bytes.BytesData, id: string): Promise<string> {
     // Instantiate wallet
     const wallet = await Wallet.loadExisting(this.db, encryptionKey, id, this.leptonDebugger);
 
