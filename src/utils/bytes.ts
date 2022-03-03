@@ -187,13 +187,28 @@ function reverseBytes(data: ArrayLike<number> | string): typeof data {
 }
 
 /**
+ * check each character for commonly unsupported codepoints above 0xD800
+ * @param string - string to check
+ * @throws if invalid character found
+ */
+function checkBytes(string: string) {
+  string.split('').forEach((char) => {
+    if (char.charCodeAt(0) > 0xD800) {
+      throw new Error('Invalid Unicode codepoint > 0xD800');
+    }
+  });
+}
+
+/**
  * Converts bytes to string
  * @param data - bytes data to convert
  * @param encoding - string encoding to use
  */
 function toUTF8String(data: BytesData): string {
   // TODO: Remove reliance on Buffer
-  return Buffer.from(arrayify(data)).toString('utf8');
+  const string = new TextDecoder().decode(Buffer.from(arrayify(data)));
+  checkBytes(string);
+  return string;
 }
 
 /**
@@ -202,46 +217,9 @@ function toUTF8String(data: BytesData): string {
  * @param encoding - string encoding to use
  */
 function fromUTF8String(string: string): string {
-  // Initialize byte array
-  const data: number[] = [];
-
-  // Loop through each char
-  for (let i = 0; i < string.length; i += 1) {
-    // Get code point
-    const codePoint = string.charCodeAt(i);
-
-    if (codePoint < 0x80) {
-      // Single byte codepoint
-      data.push(codePoint);
-    } else if (codePoint < 0x0800) {
-      // 2 byte codepoint
-      data.push((codePoint >> 6) | 0xc0);
-      data.push((codePoint & 0x3f) | 0x80);
-    } else if ((codePoint & 0xfc00) === 0xd800) {
-      // Surrogate pair
-
-      // Increment and get next codepoint
-      i += 1;
-      const codePoint2 = string.charCodeAt(i);
-
-      // Get pair
-      const pair = 0x10000 + ((codePoint & 0x03ff) << 10) + (codePoint2 & 0x03ff);
-
-      // Push each 2 byte
-      data.push((pair >> 18) | 0xf0);
-      data.push(((pair >> 12) & 0x3f) | 0x80);
-      data.push(((pair >> 6) & 0x3f) | 0x80);
-      data.push((pair & 0x3f) | 0x80);
-    } else {
-      // 3 byte codepoint
-      data.push((codePoint >> 12) | 0xe0);
-      data.push(((codePoint >> 6) & 0x3f) | 0x80);
-      data.push((codePoint & 0x3f) | 0x80);
-    }
-  }
-
+  checkBytes(string);
   // Return hexlified string
-  return hexlify(data);
+  return hexlify(new TextEncoder().encode(string));
 }
 
 /**
@@ -332,6 +310,7 @@ export {
   numberify,
   padToLength,
   reverseBytes,
+  checkBytes,
   toUTF8String,
   fromUTF8String,
   chunk,

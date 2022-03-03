@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import { bytes } from '../../src/utils';
-import { arrayify, ByteLength } from '../../src/utils/bytes';
+import { arrayify, ByteLength, fromUTF8String } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -228,7 +228,8 @@ describe('Utils/Bytes', () => {
   });
 
   it('Should convert to/from utf8 string', () => {
-    stringVectors.forEach((vector) => {
+    const validVectors = stringVectors.slice(0, 1);
+    validVectors.forEach((vector) => {
       // Test bytes -> string
       expect(bytes.toUTF8String(vector.hex)).to.equal(vector.utf8);
 
@@ -267,6 +268,15 @@ describe('Utils/Bytes', () => {
 
     // Test string -> bytes
     expect(bytes.fromUTF8String(testString)).to.equal(fullBytes);
+  });
+
+  it('Should throw if utf8 string contains invalid characters', () => {
+    const invalidVectors = stringVectors.slice(2);
+    invalidVectors.forEach((vector) => {
+      expect(() => bytes.toUTF8String(vector.hex)).to.throw(/Invalid/);
+      expect(() => bytes.checkBytes(vector.utf8)).to.throw(/Invalid/);
+      expect(() => bytes.fromUTF8String(vector.utf8)).to.throw(/Invalid/);
+    });
   });
 
   it('Should chunk and combine bytes', () => {
