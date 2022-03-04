@@ -94,7 +94,7 @@ describe('Utils/BabyJubJub', () => {
           private: '0edbfaa1ddc148178b47abac6bb1051b54cdbe8b92ab42e3575696bbefe101a0',
           public: '2e16136258306d0837a3e3c87e329d835f58dac6879e31d41d4690845cb2a914',
         },
-        sharedKey: '053b8632c6a35c58d857beb1b9a7928e28b830cf700a6dbaf141e8391c6cbcf5',
+        sharedKey: 'd513b2bff2937eca2d1febbf4609905e87c42835a80493a0937c8579368c0a83',
       },
       {
         keyA: {
@@ -105,7 +105,7 @@ describe('Utils/BabyJubJub', () => {
           private: '0b1a11822cff763ed1c9b57ebe0399373687c68feafd9f1b67240a6d56a481a0',
           public: '0db982dde20781925565e30034496af26fcfab731dd265a2c9363eb14a0ac89a',
         },
-        sharedKey: '19aa730d1af1b553f6ad56018bc09105e6d53b533abc47de89df8a19bd5c4bde',
+        sharedKey: '25afc1d1fe33addf12b687fe85a22136a5ccb42cca1fc6822914bf2382e9ec00',
       },
       {
         keyA: {
@@ -116,7 +116,7 @@ describe('Utils/BabyJubJub', () => {
           private: '0e44b9ffb6becefddf06edbd717eb3fa740d1a424bcb5003cac2112d71f7eb63',
           public: '5b3619619f75f71b2d113f31227253c6012b6af561f7fa604cafea10f169ee2c',
         },
-        sharedKey: '2643aca561253bc0f506cba9610062e01d698d705d558d823ce070547139c9a3',
+        sharedKey: '421a3b4c0d4f234919d3400a0b02d6652387fddbd7ae2dbc405c5167d2d4d94d',
       },
     ];
 
