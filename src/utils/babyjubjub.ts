@@ -7,7 +7,7 @@ import {
   hexlify,
   random as randomBytes,
 } from './bytes';
-import { poseidon } from './hash';
+import { poseidon, sha256 } from './hash';
 
 import type { BytesData } from './bytes';
 
@@ -98,11 +98,10 @@ function ecdh(privateKey: BytesData, pubkey: BytesData): string {
   // Convert private key to BigInt
   const privateKeyBI = BigInt(`0x${privateKey}`);
 
-  // Perform scalar mul
-  const sharedKey = babyjub.mulPointEscalar(pubkeyUnpacked, privateKeyBI)[0].toString(16);
-
-  // Pad to even length if needed
-  return sharedKey.length % 2 === 0 ? sharedKey : sharedKey.padStart(sharedKey.length + 1, '0');
+  // Perform scalar mul, pack, and hash to return 32 byte shared key
+  return sha256(
+    babyjub.packPoint(babyjub.mulPointEscalar(pubkeyUnpacked, privateKeyBI))
+  );
 }
 
 /**
