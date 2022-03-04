@@ -9,6 +9,7 @@
     "**/*.ts"
   ],
   "exclude": [
+    "fuzz/**",
     "test/**",
     "coverage/**",
     "dist/**",
