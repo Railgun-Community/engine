@@ -1,4 +1,4 @@
-import { Contract, PopulatedTransaction, BigNumber} from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, abiCoder} from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes} from '../../utils';
 import {
@@ -38,8 +38,16 @@ class adapt {
   * @param
   * @returns
   */
-  wrapAllETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _calls: Call[]): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_calls);
+  wrapAllETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _amount: BigNumber, _to: bytes.BytesData, _data:bytes.BytesData): Promise<PopulatedTransaction> {
+    const _call: Call = {
+      to: _to,
+      data: abiCoder.encode(_data),
+      value: _amount
+    };
+    
+    abiCoder.encode(_call);
+    
+    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_call);
   }
 
 /**
@@ -47,16 +55,19 @@ class adapt {
   * @param
   * @returns
   */
-  unwrapAllWETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _calls: Call[]): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_calls);
+  unwrapAllWETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _amount: BigNumber, _to: bytes.BytesData, _data:bytes.BytesData): Promise<PopulatedTransaction> {
+    const _call: Call = {
+      to: _to,
+      data: abiCoder.encode(_data),
+      value: _amount
+    };
+    
+    abiCoder.encode(_call);
+    
+    
+    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_call);
   }
 
-  /**
-   * Remove all listeners and shutdown contract instance
-   */
-  unload() {
-    this.contract.removeAllListeners();
-  }
 }
 
 export {adapt}
