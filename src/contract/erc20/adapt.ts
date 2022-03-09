@@ -1,4 +1,4 @@
-import { Contract, PopulatedTransaction, BigNumber, abiCoder} from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, ethers} from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes} from '../../utils';
 import {
@@ -6,11 +6,11 @@ import {
 } from '../../transaction/erc20';
 import { abi } from './abi';
 import { LeptonDebugger } from '../../models/types';
-import { ByteLength, BytesData, formatToByteLength, hexlify } from '../../utils/bytes';
+import {BytesData} from '../../utils/bytes';
 
 export type Call = {
-  to: bytes.BytesData;
-  data: bytes.BytesData;
+  to: BytesData;
+  data: BytesData;
   value: BigNumber;
 }
 
@@ -39,13 +39,14 @@ class adapt {
   * @returns
   */
   wrapAllETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _amount: BigNumber, _to: bytes.BytesData, _data:bytes.BytesData): Promise<PopulatedTransaction> {
+    const abiCoder = ethers.utils.defaultAbiCoder;
     const _call: Call = {
       to: _to,
-      data: abiCoder.encode(_data),
+      data: abiCoder.encode(["BytesData"], [_data]),
       value: _amount
     };
     
-    abiCoder.encode(_call);
+    abiCoder.encode(["BytesData"], [_call]);
     
     return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_call);
   }
@@ -56,15 +57,16 @@ class adapt {
   * @returns
   */
   unwrapAllWETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _amount: BigNumber, _to: bytes.BytesData, _data:bytes.BytesData): Promise<PopulatedTransaction> {
+    const abiCoder = ethers.utils.defaultAbiCoder;
+
     const _call: Call = {
       to: _to,
-      data: abiCoder.encode(_data),
+      data: abiCoder.encode(["BytesData"], [_data]),
       value: _amount
     };
     
-    abiCoder.encode(_call);
-    
-    
+    abiCoder.encode(["BytesData"], [_call]);
+        
     return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_call);
   }
 
