@@ -3,10 +3,11 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import {
-  getMasterKeyFromSeed,
-  childKeyDerivationHardened,
-  getPathSegments,
+  BjjNode,
+  // childKeyDerivationHardened,
+  // getPathSegments,
 } from '../../src/keyderivation/bip32-babyjubjub';
+import { childKeyDerivationHardened, getPathSegments } from '../../src/utils/bip32';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -37,14 +38,14 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      const masterKey = getMasterKeyFromSeed(vector.seed);
+      const masterKey = BjjNode.getMasterKeyFromSeed(vector.seed).keyNode;
 
       expect(masterKey.chainCode).to.equal(vector.chainCode);
       expect(masterKey.chainKey).to.equal(vector.chainKey);
     });
   });
 
-  it('Should child keys directly', () => {
+  it('Should derive child keys directly', () => {
     const vectors = [
       {
         parent: {

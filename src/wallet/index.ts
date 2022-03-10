@@ -4,11 +4,12 @@ import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { bytes, hash, babyjubjub } from '../utils';
 import { Database } from '../database';
-import { BIP32Node } from '../keyderivation';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { ERC20Note } from '../note';
 import type { MerkleTree, Commitment } from '../merkletree';
 import { LeptonDebugger } from '../models/types';
+import { BjjNode } from '../keyderivation/bip32-babyjubjub';
+import { EdNode } from '../keyderivation/bip32-ed25519';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -54,9 +55,11 @@ class Wallet extends EventEmitter {
 
   #encryptionKey: bytes.BytesData;
 
-  #addressNode: BIP32Node;
+  #addressNode: BjjNode;
 
-  #changeNode: BIP32Node;
+  #changeNode: BjjNode;
+
+  edNode: EdNode;
 
   readonly gapLimit: number;
 
@@ -90,8 +93,9 @@ class Wallet extends EventEmitter {
     this.gapLimit = gapLimit;
     this.leptonDebugger = leptonDebugger;
 
-    this.#addressNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
-    this.#changeNode = BIP32Node.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
+    this.#addressNode = BjjNode.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
+    this.#changeNode = BjjNode.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
+    this.edNode = EdNode.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
   }
 
   /**

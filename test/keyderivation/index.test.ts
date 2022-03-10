@@ -3,6 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import { BIP32Node } from '../../src/keyderivation';
+import { BjjNode } from '../../src/keyderivation/bip32-babyjubjub';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -44,7 +45,7 @@ describe('Key Derivation/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      const node = BIP32Node.fromMnemonic(vector.mnemonic);
+      const node = BjjNode.fromMnemonic(vector.mnemonic);
       expect(node.derive(vector.path).getBabyJubJubKey()).to.deep.equal(vector.keyPair);
     });
   });
