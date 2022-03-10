@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { encode as bech32encode, decode as bech32decode } from 'bech32-buffer';
+import { bech32 } from '@scure/base';
 import { bytes, constants } from '../utils';
 
 const prefixes: string[] = [];
@@ -16,26 +16,24 @@ prefixes[137] = 'rgpoly';
  * @param chainID - chainID to encode
  */
 function encode(pubkey: bytes.BytesData, chainID: number | undefined = undefined) {
-  // TODO: Remove reliance on bech32-buffer
   // TODO: Add bit for chain type (EVM, Solana, etc.)
   // Combine key and version byte
-  const data = new Uint8Array(
-    bytes.arrayify(bytes.combine([new BN(constants.VERSION), pubkey])),
-  );
+  const data = bech32.toWords(new Uint8Array(
+    bytes.arrayify(bytes.combine([new BN(constants.VERSION), pubkey]))
+  ));
 
   // Prefix exists, encode and return with prefix
-  if (chainID && prefixes[chainID]) return bech32encode(prefixes[chainID], data);
+  if (chainID && prefixes[chainID]) return bech32.encode(prefixes[chainID], data);
 
   // No chainID specified, throw error
-  return bech32encode('rgany', data);
+  return bech32.encode('rgany', data);
 }
 
 function decode(address: string) {
-  // TODO: Remove reliance on bech32-buffer
-  const decoded = bech32decode(address);
+  const decoded = bech32.decode(address);
 
   // Hexlify data
-  const data = bytes.hexlify(decoded.data);
+  const data = bytes.hexlify(bech32.fromWords(decoded.words));
 
   // Get version
   const version = bytes.numberify(data.slice(0, 2));

@@ -1,28 +1,25 @@
-import * as bip39 from 'bip39';
+import * as bip39 from 'ethereum-cryptography/bip39';
+import { wordlist } from 'ethereum-cryptography/bip39/wordlists/english';
+import { hexToBytes, toHex } from 'ethereum-cryptography/utils';
 
-function generateMnemonic(strength: 128 | 192 | 256 = 128) {
-  // TODO: Remove dependency on bip39 lib
-  return bip39.generateMnemonic(strength);
+function generateMnemonic(strength: 128 | 192 | 256 = 128): string {
+  return bip39.generateMnemonic(wordlist, strength);
 }
 
-function validateMnemonic(mnemonic: string) {
-  // TODO: Remove dependency on bip39 lib
-  return bip39.validateMnemonic(mnemonic);
+function validateMnemonic(mnemonic: string): boolean {
+  return bip39.validateMnemonic(mnemonic, wordlist);
 }
 
-function mnemonicToSeed(mnemonic: string, password: string = '') {
-  // TODO: Remove dependency on bip39 lib
-  return bip39.mnemonicToSeedSync(mnemonic, password).toString('hex');
+function mnemonicToSeed(mnemonic: string, password: string = ''): string {
+  return toHex(bip39.mnemonicToSeedSync(mnemonic, password));
 }
 
-function mnemonicToEntropy(mnemonic: string) {
-  // TODO: Remove dependency on bip39 lib
-  return bip39.mnemonicToEntropy(mnemonic);
+function mnemonicToEntropy(mnemonic: string): string {
+  return toHex(bip39.mnemonicToEntropy(mnemonic, wordlist));
 }
 
-function entropyToMnemonic(mnemonic: string) {
-  // TODO: Remove dependency on bip39 lib
-  return bip39.entropyToMnemonic(mnemonic);
+function entropyToMnemonic(entropy: string): string {
+  return bip39.entropyToMnemonic(hexToBytes(entropy), wordlist);
 }
 
 export {
