@@ -24,6 +24,7 @@
     "url": "https://github.com/Railgun-Community/lepton/issues"
   },
   "dependencies": {
+    "@noble/ed25519": "^1.6.0",
     "@scure/base": "^1.0.0",
     "bn.js": "^4.12.0",
     "chai-as-promised": "^7.1.1",

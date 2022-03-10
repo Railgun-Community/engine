@@ -1,42 +1,38 @@
-import { mnemonicToSeed, generateMnemonic } from './bip39';
-import { getMasterKeyFromSeed, getPathSegments, childKeyDerivationHardened } from './bip32-babyjubjub';
-import { encode } from './bech32-encode';
-import { babyjubjub } from '../utils';
+import { generateMnemonic } from './bip39';
+import {
+  HARDENED_OFFSET,
+  childKeyDerivationHardened,
+  getPathSegments
+} from '../utils/bip32';
+import { KeyNode } from '../models/types';
 
-import type { KeyNode } from './bip32-babyjubjub';
 
-class BIP32Node {
+export class BIP32Node {
   #chainKey: string;
 
   #chainCode: string;
+
+  static HARDENED_OFFSET = HARDENED_OFFSET;
 
   constructor(keyNode: KeyNode) {
     this.#chainKey = keyNode.chainKey;
     this.#chainCode = keyNode.chainCode;
   }
 
-  /**
-   * Constructs BIP32Node from mnemonic
-   * @param mnemonic - mnemonic to construct from
-   * @returns BIP32 Node
-   */
-  static fromMnemonic(mnemonic: string): BIP32Node {
-    // Calcualte seed
-    const seed = mnemonicToSeed(mnemonic);
+  get keyNode() {
+    return { chainKey: this.#chainKey, chainCode: this.#chainCode };
+  }
 
-    // Calculate keynode
-    const keyNode = getMasterKeyFromSeed(seed);
-
-    // Return BIP32Node
-    return new BIP32Node(keyNode);
+  static create<T extends typeof BIP32Node>(this: T, keyNode: KeyNode): InstanceType<T> {
+    return (new this(keyNode)) as InstanceType<T>;
   }
 
   /**
    * Derives new BIP32Node along path
-   * @param path - path to derive along
-   * @returns new BIP32 Node
+   * @param {string} path - path to derive along
+   * @returns {BIP32Node} - new BIP32 implementation Node
    */
-  derive(path: string) {
+  derive(path: string): BIP32Node {
     // Get path segments
     const segments = getPathSegments(path);
 
@@ -45,31 +41,12 @@ class BIP32Node {
       (parentKeys: KeyNode, segment: number) => childKeyDerivationHardened(
         parentKeys, segment,
       ),
-      {
-        chainCode: this.#chainCode,
-        chainKey: this.#chainKey,
-      },
+      this.keyNode
     );
 
-    // Return new BIP32Node
-    return new BIP32Node(keyNode);
-  }
-
-  /**
-   * Gets babyjubjub key pair of this BIP32 Node
-   * @returns keypair
-   */
-  getBabyJubJubKey(
-    chainID: number | undefined = undefined,
-  ): { privateKey: string, pubkey: string, address: string } {
-    const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
-    const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
-    const address = encode(pubkey, chainID);
-    return {
-      privateKey,
-      pubkey,
-      address,
-    };
+    // Return new BIP32Node subclass
+    const Cstr = Object.getPrototypeOf(this).constructor;
+    return new Cstr(keyNode);
   }
 
   /**
@@ -79,5 +56,3 @@ class BIP32Node {
     return generateMnemonic();
   }
 }
-
-export { BIP32Node };
