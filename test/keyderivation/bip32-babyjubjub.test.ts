@@ -4,8 +4,6 @@ import chaiAsPromised from 'chai-as-promised';
 
 import {
   BjjNode,
-  // childKeyDerivationHardened,
-  // getPathSegments,
 } from '../../src/keyderivation/bip32-babyjubjub';
 import { childKeyDerivationHardened, getPathSegments } from '../../src/utils/bip32';
 
