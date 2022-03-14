@@ -15,6 +15,10 @@
     "release": "mkdir -p release && npm pack && mv *.tgz ./release",
     "fuzz": "npm run compile && jsfuzz fuzz/utils/babyjubjub.js corpus"
   },
+  "files": [
+    "/dist",
+    "/*.md"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Railgun-Community/lepton.git"

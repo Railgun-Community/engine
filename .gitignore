@@ -30,3 +30,4 @@ test/configOverrides.test.ts
 release/
 corpus
 crash-*
+*.tgz
