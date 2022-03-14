@@ -3,7 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import {
-  BjjNode,
+  BjjNode, getMasterKeyFromSeed,
 } from '../../src/keyderivation/bip32-babyjubjub';
 import { childKeyDerivationHardened, getPathSegments } from '../../src/utils/bip32';
 
@@ -36,7 +36,7 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      const masterKey = BjjNode.getMasterKeyFromSeed(vector.seed).keyNode;
+      const masterKey = getMasterKeyFromSeed(vector.seed);
 
       expect(masterKey.chainCode).to.equal(vector.chainCode);
       expect(masterKey.chainKey).to.equal(vector.chainKey);
@@ -82,7 +82,7 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
 
     vectors.forEach((vector) => {
       expect(
-        childKeyDerivationHardened(vector.parent, vector.index),
+        childKeyDerivationHardened(vector.parent, vector.index, BjjNode.HARDENED_OFFSET)
       ).to.deep.equal(vector.child);
     });
   });

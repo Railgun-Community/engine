@@ -2,7 +2,6 @@ import BN from "bn.js";
 import { bytes, hash } from ".";
 import { KeyNode } from "../models/types";
 
-export const HARDENED_OFFSET = 0x80000000;
 /**
  * Tests derivation path to see if it's valid
  * @param path - bath to test
@@ -37,9 +36,13 @@ export function getPathSegments(path: string): number[] {
  * @param node - KeyNode to derive from
  * @param index - index of child
  */
-export function childKeyDerivationHardened(node: KeyNode, index: number): KeyNode {
+export function childKeyDerivationHardened(
+  node: KeyNode,
+  index: number,
+  offset: number = 0x80000000
+): KeyNode {
   // Convert index to bytes as 32bit big endian
-  const indexFormatted = bytes.padToLength(new BN(index + HARDENED_OFFSET), 4);
+  const indexFormatted = bytes.padToLength(new BN(index + offset), 4);
 
   // Calculate HMAC preimage
   const preimage = `00${node.chainKey}${indexFormatted}`;

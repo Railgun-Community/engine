@@ -59,7 +59,7 @@ class Wallet extends EventEmitter {
 
   #changeNode: BjjNode;
 
-  edNode: EdNode;
+  #edNode: EdNode;
 
   readonly gapLimit: number;
 
@@ -95,7 +95,7 @@ class Wallet extends EventEmitter {
 
     this.#addressNode = BjjNode.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
     this.#changeNode = BjjNode.fromMnemonic(mnemonic).derive(`${derivationPath}/1'`);
-    this.edNode = EdNode.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
+    this.#edNode = EdNode.fromMnemonic(mnemonic).derive(`${derivationPath}/0'`);
   }
 
   /**
@@ -136,6 +136,17 @@ class Wallet extends EventEmitter {
   }
 
   /**
+   * Validate encryption key
+   * @param encryptionKey - encryption key for wallet
+   * @throws
+   */
+  validateEncryptionKey(encryptionKey: bytes.BytesData) {
+    if (bytes.hexlify(encryptionKey) !== bytes.hexlify(this.#encryptionKey)) {
+      throw new Error('Wrong encryption key');
+    }
+  }
+
+  /**
    * Get keypair at index
    * @param encryptionKey - encryption key for wallet
    * @param index - index to get keypair at
@@ -149,14 +160,37 @@ class Wallet extends EventEmitter {
     change: boolean,
     chainID: number | undefined = undefined,
   ) {
-    if (bytes.hexlify(encryptionKey) !== bytes.hexlify(this.#encryptionKey)) {
-      throw new Error('Wrong encryption key');
-    }
+    this.validateEncryptionKey(encryptionKey);
 
     if (change) {
       return this.#changeNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
     }
     return this.#addressNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
+  }
+
+  getEdNode(
+    encryptionKey: bytes.BytesData,
+    index: number = 0,
+  ) {
+    this.validateEncryptionKey(encryptionKey);
+    return this.#edNode.derive(`m/${index}'`);
+  }
+
+  /**
+   * Sign message with ed25519 node derived at path index
+   * @param message - hex or Uint8 bytes of message to sign
+   * @param encryptionKey - encryption key for wallet
+   * @param index - index to get keypair at
+   */
+  async sign(
+    message: string | Uint8Array,
+    index: number = 0,
+  ) {
+    return await (this.getEdNode(this.#encryptionKey, index)).sign(message);
+  }
+
+  async getSigningPublicKey(index: number = 0) {
+    return await this.getEdNode(this.#encryptionKey, index).getPublicKey();
   }
 
   /**
