@@ -12,6 +12,7 @@ pnpm-debug.log*
 # Editor directories and files
 .idea
 .vscode
+*.code-workspace
 *.suo
 *.ntvs*
 *.njsproj
@@ -28,3 +29,4 @@ test
 .gitignore
 .eslintrc.json
 tsconfig.json
+fuzz
