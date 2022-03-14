@@ -3,6 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import {
   EdNode,
+  getMasterKeyFromSeed,
   verify,
 } from '../../src/keyderivation/bip32-ed25519';
 import { config } from '../config.test';
@@ -49,41 +50,28 @@ describe('Key Derivation/BIP32 ed25519', async () => {
         publicKey: '3c24da049451555d51a7014a37337aa4e12d41e485abccfa46b47dfb2af54b7a',
       },
     ];
-    const node = EdNode.getMasterKeyFromSeed(seed);
-    const { keyNode } = node;
+    const keyNode = getMasterKeyFromSeed(seed);
+    const node = new EdNode(keyNode);
     it('should derive master key from seed', () => {
-      expect(node.keyNode).to.deep.equal(
+      expect(keyNode).to.deep.equal(
         {
           chainKey: '2b4be7f19ee27bbf30c667b642d5f4aa69fd169872f8fc3059c08ebae2eb19e7',
           chainCode: '90046a93de5380a72b5e45010748567d5ea02bbf6522f979e05c0d8d8ca9fffb',
         }
       );
-      expect(keyNode.chainKey).to.equal(
-        '2b4be7f19ee27bbf30c667b642d5f4aa69fd169872f8fc3059c08ebae2eb19e7',
-      );
-      expect(keyNode.chainCode).to.equal(
-        '90046a93de5380a72b5e45010748567d5ea02bbf6522f979e05c0d8d8ca9fffb',
-      );
     });
     vectors.forEach(vector => {
       it(`should be valid for ${vector.path}`, async () => {
         const childNode = node.derive(vector.path);
-        const { chainKey, chainCode } = childNode.keyNode;
-        const publicKey = await childNode.getPublicKey();
-        const res = {
-          path: vector.path,
-          key: chainKey,
-          chainCode,
-          publicKey
-        };
-        expect(res).to.deep.equal(vector);
+        expect(await childNode.getPublicKey()).to.equal(vector.publicKey);
       });
     });
   });
 
   describe('Message signing and verification', () => {
     it('Should verify a ed25519 signature it just created', async () => {
-      const node = EdNode.getMasterKeyFromSeed(PRIVATE_KEY);
+      const keyNode = getMasterKeyFromSeed(PRIVATE_KEY);
+      const node = new EdNode(keyNode);
       const message = bytes.fromUTF8String('hello');
       const signature = await node.sign(message);
       const isValid = await verify(signature, message, await node.getPublicKey());

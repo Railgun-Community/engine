@@ -2,16 +2,12 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import { BIP32Node } from '../../src/keyderivation';
 import { BjjNode } from '../../src/keyderivation/bip32-babyjubjub';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/Index', () => {
-  it('Should create mnemonic', () => {
-    expect(BIP32Node.createMnemonic().split(' ').length).to.equal(12);
-  });
 
   it('Should derive keys', () => {
     const vectors = [

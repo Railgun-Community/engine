@@ -2,7 +2,7 @@ import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import { ERC20RailgunContract } from './contract';
 import { Database, DatabaseNamespace } from './database';
-import { BIP32Node } from './keyderivation';
+import { bip39 } from './keyderivation';
 import { MerkleTree, Commitment, Nullifier } from './merkletree';
 import { Prover, ArtifactsGetter } from './prover';
 import { ERC20Transaction } from './transaction';
@@ -24,13 +24,13 @@ export type QuickSync = (
 class Lepton {
   readonly db;
 
-  readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
+  readonly merkletree: { erc20: MerkleTree; /* erc721: MerkleTree */ }[] = [];
 
   readonly contracts: ERC20RailgunContract[] = [];
 
   readonly prover: Prover;
 
-  readonly wallets: { [key: string]: Wallet } = {};
+  readonly wallets: { [key: string]: Wallet; } = {};
 
   readonly deploymentBlocks: number[] = [];
 
@@ -369,7 +369,7 @@ class Lepton {
    * Generate mnemonic
    */
   static createMnemonic(): string {
-    return BIP32Node.createMnemonic();
+    return bip39.generateMnemonic();
   }
 
   static encodeAddress = encode;
