@@ -7,7 +7,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "sourceMap": true
+  },
+  "typeAcquisition": {
+    "exclude": ["mocha"]
   },
   "exclude": ["dist/*", "test/*"]
 }
