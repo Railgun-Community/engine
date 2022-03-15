@@ -421,6 +421,33 @@ class ERC20Transaction {
       commitments: inputs.commitments,
     };
   }
+
+  async EstimateTXGas(
+    wallet: Wallet,
+    encryptionKey: bytes.BytesData,
+  ): Promise<ERC20TransactionSerialized> {
+    // Get inputs
+    const inputs = await this.generateInputs(wallet, encryptionKey);
+
+    return {
+      proof: {
+        a: ['0','0'],
+        b:  [ ['0','0'] , ['0','0'] ] ,
+        c: ['0','0'] 
+      },
+      adaptID: this.adaptID,
+      deposit: inputs.inputs.depositAmount,
+      withdraw: inputs.inputs.withdrawAmount,
+      token: inputs.inputs.outputTokenField,
+      tokenType: this.tokenType,
+      tokenSubID: this.tokenSubID,
+      withdrawAddress: inputs.inputs.outputEthAddress,
+      treeNumber: inputs.inputs.treeNumber,
+      merkleRoot: inputs.inputs.merkleRoot,
+      nullifiers: inputs.inputs.nullifiers,
+      commitments: inputs.commitments,
+    };
+  }
 }
 
 export { ERC20Transaction, NOTE_INPUTS, NOTE_OUTPUTS };
