@@ -1,4 +1,4 @@
-import { Contract, PopulatedTransaction, BigNumber, ethers} from 'ethers';
+import { Contract, PopulatedTransaction, BigNumber, ethers, Overrides, PayableOverrides, CallOverrides} from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes} from '../../utils';
 import {
@@ -7,12 +7,6 @@ import {
 import { abi } from './abi';
 import { LeptonDebugger } from '../../models/types';
 import {BytesData} from '../../utils/bytes';
-
-export type Call = {
-  to: BytesData;
-  data: BytesData;
-  value: BigNumber;
-}
 
 class adapt {
   contract: Contract;
@@ -38,38 +32,68 @@ class adapt {
   * @param
   * @returns
   */
-  wrapAllETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _amount: BigNumber, _to: bytes.BytesData, _data:bytes.BytesData): Promise<PopulatedTransaction> {
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const _call: Call = {
-      to: _to,
-      data: abiCoder.encode(["BytesData"], [_data]),
-      value: _amount
-    };
+  relay(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: Boolean, calls:PopulatedTransaction[], overrides?: CallOverrides): Promise<PopulatedTransaction> {
+
+    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,calls.map((call) => {
+      if (!call.to) {
+        throw new Error('Must specify to address');
+      }
     
-    abiCoder.encode(["BytesData"], [_call]);
-    
-    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_call);
+      return {
+        to: call.to,
+        data: call.data || '',
+        value: call.value || '0'
+      }
+    }), overrides);
   }
 
-/**
-  *                          
-  * @param
-  * @returns
+  /**
+  * ERC20TransactionSerialized proof fields should be set to '0'
   */
-  unwrapAllWETH(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: String, _amount: BigNumber, _to: bytes.BytesData, _data:bytes.BytesData): Promise<PopulatedTransaction> {
-    const abiCoder = ethers.utils.defaultAbiCoder;
+  estimateGas(transactions: ERC20TransactionSerialized[], random: BigNumber, requireSucccess: Boolean, calls:PopulatedTransaction[], overrides?: CallOverrides): Promise<BigNumber> {
 
-    const _call: Call = {
-      to: _to,
-      data: abiCoder.encode(["BytesData"], [_data]),
-      value: _amount
-    };
+    const overridesFormatted = overrides || {}
+    overridesFormatted.from = "0x0000000000000000000000000000000000000000";
     
-    abiCoder.encode(["BytesData"], [_call]);
-        
-    return this.contract.populateTransaction.relay(transactions,random,requireSucccess,_call);
+    return this.contract.estimateGas.relay(transactions,random,requireSucccess,calls.map((call) => {
+      if (!call.to) {
+        throw new Error('Must specify to address');
+      }
+    
+      return {
+        to: call.to,
+        data: call.data || '',
+        value: call.value || '0'
+      }
+    }), overridesFormatted);
   }
+
+  depositEth(amount:BigNumber, random:BigNumber, wethAddress: String, pubKey: String[]): Promise<PopulatedTransaction> {
+
+    const calls = [this.contract.interface.encodeFunctionData("wrapAllEth"), 
+    this.contract.interface.encodeFunctionData("deposit", [[wethAddress], random, pubKey])];
+    
+    return this.relay([], random, true, calls.map((call) => {
+      return {
+        to: this.contract.address,
+        data: call,
+      }
+    }), {value : amount});
+  }
+
+  withdrawEth(transactions: ERC20TransactionSerialized[], random:BigNumber, to:String): Promise<PopulatedTransaction> {
+
+    const calls = [this.contract.interface.encodeFunctionData("unWrapEth"), 
+    this.contract.interface.encodeFunctionData("send", [["0x0000000000000000000000000000000000000000"], to])];
+    
+    return this.relay([], random, true, calls.map((call) => {
+      return {
+        to: this.contract.address,
+        data: call,
+      }
+    }));
+  }
+
 
 }
-
 export {adapt}
