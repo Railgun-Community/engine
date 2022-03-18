@@ -1,4 +1,11 @@
-import { Contract, PopulatedTransaction, BigNumber, Event, EventFilter } from 'ethers';
+import {
+  Contract,
+  PopulatedTransaction,
+  BigNumber,
+  Event,
+  EventFilter,
+  CallOverrides,
+} from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
@@ -363,6 +370,120 @@ class ERC20RailgunContract {
 
     // Return populated transaction
     return this.contract.populateTransaction.transact(inputs);
+  }
+
+  /**
+   *
+   * @param
+   * @returns
+   */
+  relay(
+    transactions: ERC20TransactionSerialized[],
+    random: BigNumber,
+    requireSuccess: boolean,
+    calls: PopulatedTransaction[],
+    overrides?: CallOverrides,
+  ): Promise<PopulatedTransaction> {
+    return this.contract.populateTransaction.relay(
+      transactions,
+      random,
+      requireSuccess,
+      calls.map((call) => {
+        if (!call.to) {
+          throw new Error('Must specify to address');
+        }
+
+        return {
+          to: call.to,
+          data: call.data || '',
+          value: call.value || '0',
+        };
+      }),
+      overrides,
+    );
+  }
+
+  /**
+   * ERC20TransactionSerialized proof fields should be set to '0'
+   */
+  estimateGas(
+    transactions: ERC20TransactionSerialized[],
+    random: BigNumber,
+    requireSuccess: boolean,
+    calls: PopulatedTransaction[],
+    overrides?: CallOverrides,
+  ): Promise<BigNumber> {
+    const overridesFormatted = overrides || {};
+    overridesFormatted.from = '0x0000000000000000000000000000000000000000';
+
+    return this.contract.estimateGas.relay(
+      transactions,
+      random,
+      requireSuccess,
+      calls.map((call) => {
+        if (!call.to) {
+          throw new Error('Must specify to address');
+        }
+
+        return {
+          to: call.to,
+          data: call.data || '',
+          value: call.value || '0',
+        };
+      }),
+      overridesFormatted,
+    );
+  }
+
+  depositEth(
+    amount: BigNumber,
+    random: BigNumber,
+    wethAddress: String,
+    pubKey: String[],
+  ): Promise<PopulatedTransaction> {
+    const calls = [
+      this.contract.interface.encodeFunctionData('wrapAllEth'),
+      this.contract.interface.encodeFunctionData('deposit', [[wethAddress], random, pubKey]),
+    ];
+
+    const requireSuccess = true;
+
+    return this.relay(
+      [],
+      random,
+      requireSuccess,
+      calls.map((call) => ({
+        to: this.contract.address,
+        data: call,
+      })),
+      { value: amount },
+    );
+  }
+
+  withdrawEth(
+    transactions: ERC20TransactionSerialized[],
+    random: BigNumber,
+    to: String,
+  ): Promise<PopulatedTransaction> {
+    const calls = [
+      this.contract.interface.encodeFunctionData('unWrapEth'),
+      this.contract.interface.encodeFunctionData('send', [
+        ['0x0000000000000000000000000000000000000000'],
+        to,
+      ]),
+    ];
+
+    const requireSuccess = true;
+
+    return this.relay(
+      [],
+      random,
+      requireSuccess,
+      calls.map((call) => ({
+        to: this.contract.address,
+        data: call,
+      })),
+    );
   }
 
   /**
