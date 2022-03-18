@@ -398,27 +398,60 @@ class ERC20Transaction {
     encryptionKey: bytes.BytesData,
   ): Promise<ERC20TransactionSerialized> {
     // Get inputs
-    const inputs = await this.generateInputs(wallet, encryptionKey);
+    const { inputs, commitments } = await this.generateInputs(wallet, encryptionKey);
 
     // Calculate proof
-    const proof =
-      inputs.inputs.nullifiers.length === NOTE_INPUTS.small
-        ? await prover.prove('erc20small', inputs.inputs)
-        : await prover.prove('erc20large', inputs.inputs);
+    const { proof } =
+      inputs.nullifiers.length === NOTE_INPUTS.small
+        ? await prover.prove('erc20small', inputs)
+        : await prover.prove('erc20large', inputs);
 
+    return this.generateSerializedTransaction(proof, inputs, commitments);
+  }
+
+  /**
+   * Return serialized transaction with zero'd proof for gas estimates.
+   * @param wallet - wallet to spend from
+   * @param encryptionKey - encryption key for wallet
+   * @returns serialized transaction
+   */
+  async dummyProve(
+    wallet: Wallet,
+    encryptionKey: bytes.BytesData,
+  ): Promise<ERC20TransactionSerialized> {
+    // Get inputs
+    const { inputs, commitments } = await this.generateInputs(wallet, encryptionKey);
+
+    const dummyProof: Proof = {
+      a: [new BN(0), new BN(0)],
+      b: [
+        [new BN(0), new BN(0)],
+        [new BN(0), new BN(0)],
+      ],
+      c: [new BN(0), new BN(0)],
+    };
+
+    return this.generateSerializedTransaction(dummyProof, inputs, commitments);
+  }
+
+  private generateSerializedTransaction(
+    proof: Proof,
+    inputs: ERC20PrivateInputs,
+    commitments: Commitment[],
+  ): ERC20TransactionSerialized {
     return {
-      proof: proof.proof,
+      proof,
       adaptID: this.adaptID,
-      deposit: inputs.inputs.depositAmount,
-      withdraw: inputs.inputs.withdrawAmount,
-      token: inputs.inputs.outputTokenField,
+      deposit: inputs.depositAmount,
+      withdraw: inputs.withdrawAmount,
+      token: inputs.outputTokenField,
       tokenType: this.tokenType,
       tokenSubID: this.tokenSubID,
-      withdrawAddress: inputs.inputs.outputEthAddress,
-      treeNumber: inputs.inputs.treeNumber,
-      merkleRoot: inputs.inputs.merkleRoot,
-      nullifiers: inputs.inputs.nullifiers,
-      commitments: inputs.commitments,
+      withdrawAddress: inputs.outputEthAddress,
+      treeNumber: inputs.treeNumber,
+      merkleRoot: inputs.merkleRoot,
+      nullifiers: inputs.nullifiers,
+      commitments,
     };
   }
 
@@ -431,9 +464,12 @@ class ERC20Transaction {
 
     return {
       proof: {
-        a: ['0','0'],
-        b:  [ ['0','0'] , ['0','0'] ] ,
-        c: ['0','0'] 
+        a: ['0', '0'],
+        b: [
+          ['0', '0'],
+          ['0', '0'],
+        ],
+        c: ['0', '0'],
       },
       adaptID: this.adaptID,
       deposit: inputs.inputs.depositAmount,

@@ -411,9 +411,9 @@ class ERC20RailgunContract {
     random: BigNumber,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
-    overrides?: CallOverrides,
+    overrides: CallOverrides = {},
   ): Promise<BigNumber> {
-    const overridesFormatted = overrides || {};
+    const overridesFormatted = overrides;
     overridesFormatted.from = '0x0000000000000000000000000000000000000000';
 
     return this.contract.estimateGas.relay(

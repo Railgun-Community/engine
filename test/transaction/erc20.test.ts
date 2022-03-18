@@ -330,6 +330,36 @@ describe('Transaction/ERC20', function () {
     expect(tx2.nullifiers.length).to.equal(10);
   });
 
+  it.only('Should create dummy transaction proofs', async () => {
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(6500000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
+
+    expect(tx.nullifiers.length).to.equal(2);
+
+    transaction.outputs = [
+      new ERC20Note(
+        'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+        '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+        new BN(1715000000000),
+        '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      ),
+    ];
+
+    transaction.tree = 3;
+
+    const tx2 = await transaction.dummyProve(wallet, testEncryptionKey);
+
+    expect(tx2.nullifiers.length).to.equal(10);
+  });
+
   // it('Generator', async () => {
   //   const dblocal = new Database(memdown());
   //   const merkletreelocal = new MerkleTree(dblocal, 1, 'erc20', async () => true);
