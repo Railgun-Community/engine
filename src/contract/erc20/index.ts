@@ -408,13 +408,14 @@ class ERC20RailgunContract {
    */
   estimateGas(
     transactions: ERC20TransactionSerialized[],
-    random: BytesData,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
     overrides: CallOverrides = {},
   ): Promise<BigNumber> {
     const overridesFormatted = overrides;
     overridesFormatted.from = '0x0000000000000000000000000000000000000000';
+
+    const random = babyjubjub.random();
 
     return this.contract.estimateGas.relay(
       transactions,
@@ -437,10 +438,11 @@ class ERC20RailgunContract {
 
   depositEth(
     amount: BigNumber,
-    random: BytesData,
     wethAddress: String,
     pubKey: String[],
   ): Promise<PopulatedTransaction> {
+    const random = babyjubjub.random();
+
     const calls = [
       this.contract.interface.encodeFunctionData('wrapAllEth'),
       this.contract.interface.encodeFunctionData('deposit', [[wethAddress], random, pubKey]),
@@ -462,9 +464,10 @@ class ERC20RailgunContract {
 
   withdrawEth(
     transactions: ERC20TransactionSerialized[],
-    random: BytesData,
     to: String,
   ): Promise<PopulatedTransaction> {
+    const random = babyjubjub.random();
+
     const calls = [
       this.contract.interface.encodeFunctionData('unWrapEth'),
       this.contract.interface.encodeFunctionData('send', [
