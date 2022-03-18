@@ -379,7 +379,7 @@ class ERC20RailgunContract {
    */
   relay(
     transactions: ERC20TransactionSerialized[],
-    random: BigNumber,
+    random: BytesData,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
     overrides?: CallOverrides,
@@ -408,7 +408,7 @@ class ERC20RailgunContract {
    */
   estimateGas(
     transactions: ERC20TransactionSerialized[],
-    random: BigNumber,
+    random: BytesData,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
     overrides: CallOverrides = {},
@@ -437,7 +437,7 @@ class ERC20RailgunContract {
 
   depositEth(
     amount: BigNumber,
-    random: BigNumber,
+    random: BytesData,
     wethAddress: String,
     pubKey: String[],
   ): Promise<PopulatedTransaction> {
