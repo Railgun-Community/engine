@@ -382,7 +382,7 @@ class ERC20RailgunContract {
     random: BytesData,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
-    overrides?: CallOverrides,
+    overrides: CallOverrides = {},
   ): Promise<PopulatedTransaction> {
     return this.contract.populateTransaction.relay(
       transactions,
@@ -400,39 +400,6 @@ class ERC20RailgunContract {
         };
       }),
       overrides,
-    );
-  }
-
-  /**
-   * ERC20TransactionSerialized proof fields should be set to '0'
-   */
-  estimateGas(
-    transactions: ERC20TransactionSerialized[],
-    requireSuccess: boolean,
-    calls: PopulatedTransaction[],
-    overrides: CallOverrides = {},
-  ): Promise<BigNumber> {
-    const overridesFormatted = overrides;
-    overridesFormatted.from = '0x0000000000000000000000000000000000000000';
-
-    const random = babyjubjub.random();
-
-    return this.contract.estimateGas.relay(
-      transactions,
-      random,
-      requireSuccess,
-      calls.map((call) => {
-        if (!call.to) {
-          throw new Error('Must specify to address');
-        }
-
-        return {
-          to: call.to,
-          data: call.data || '',
-          value: call.value || '0',
-        };
-      }),
-      overridesFormatted,
     );
   }
 
