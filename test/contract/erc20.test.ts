@@ -27,7 +27,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
-let hardHatProvider: ethers.providers.signer
+let hardHatProvider: ethers.providers.signer;
 let chainID: number;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
