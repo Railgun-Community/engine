@@ -462,11 +462,7 @@ class ERC20RailgunContract {
     );
   }
 
-  withdrawEth(
-    transactions: ERC20TransactionSerialized[],
-    amount: BigNumber,
-    to: String,
-  ): Promise<PopulatedTransaction> {
+  withdrawEth(amount: BigNumber, to: String): Promise<PopulatedTransaction> {
     const random = babyjubjub.random();
 
     const calls = [
