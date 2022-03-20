@@ -3,7 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import BN from 'bn.js';
-import { ethers } from 'ethers';
+import {BigNumber, CallOverrides, ethers } from 'ethers';
 
 // @ts-ignore
 import artifacts from 'railgun-artifacts';
@@ -27,7 +27,6 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
-let hardHatProvider: ethers.providers.signer;
 let chainID: number;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
@@ -85,6 +84,47 @@ describe('Contract/Index', function () {
     expect(await contract.merkleRoot()).to.equal(
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     );
+  });
+  
+  it('[HH] Should return gas estimate number', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+   
+    const transaction = new ERC20Transaction(TOKEN_ADDRESS, chainID);
+    const dummyTx = await transaction.dummyProve(lepton.wallets[walletID], testEncryptionKey);4
+    const call = await contract.transact([
+      dummyTx,
+    ]);
+
+    const random = babyjubjub.random();
+
+    let overrides : CallOverrides = {
+      from : '0x0000000000000000000000000000000000000000'
+    };
+
+    expect(await (await contract.relay([dummyTx], random, true,[call], overrides)).gasLimit).to.greaterThanOrEqual(0);
+  });
+
+  it('[HH] Should return deposit weth amount', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+   
+    const amount = BigNumber.from(1);
+    const wethAddress = "0x0a180A76e4466bF68A7F86fB029BEd3cCcFaAac5";
+
+    const randomPubKey1 = babyjubjub.privateKeyToPubKey(
+      babyjubjub.seedToPrivateKey(bytes.random(32)),
+    );
+    const randomPubKey2 = babyjubjub.privateKeyToPubKey(
+      babyjubjub.seedToPrivateKey(bytes.random(32)),
+    );
+
+    expect(await (await contract.depositEth(amount, wethAddress, [randomPubKey1, randomPubKey2])).value).to.greaterThanOrEqual(1);
+
   });
 
   it('[HH] Should return valid merkle roots', async function run() {
