@@ -330,7 +330,7 @@ describe('Transaction/ERC20', function () {
     expect(tx2.nullifiers.length).to.equal(10);
   });
 
-  it.only('Should create dummy transaction proofs', async () => {
+  it('Should create dummy transaction proofs', async () => {
     transaction.outputs = [
       new ERC20Note(
         'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
