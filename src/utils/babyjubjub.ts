@@ -6,6 +6,8 @@ import {
   numberify,
   hexlify,
   random as randomBytes,
+  formatToByteLength,
+  ByteLength,
 } from './bytes';
 import { poseidon, sha256 } from './hash';
 
@@ -29,8 +31,8 @@ function seedToPrivateKey(seed: BytesData): string {
   const seedHash = arrayify(poseidon([seed]));
 
   // Prune seed hash
-  seedHash[0] &= 0xF8;
-  seedHash[31] &= 0x7F;
+  seedHash[0] &= 0xf8;
+  seedHash[31] &= 0x7f;
   seedHash[31] |= 0x40;
 
   // Convert from little endian bytes to number and shift right
@@ -47,12 +49,9 @@ function seedToPrivateKey(seed: BytesData): string {
  */
 function packPoint(unpacked: BytesData[]): string {
   // TODO: remove dependance on circomlibjs
-  if (unpacked.length !== 2)
-    throw new Error("Invalid unpacked length (length != 2)");
+  if (unpacked.length !== 2) throw new Error('Invalid unpacked length (length != 2)');
   // Format point elements
-  const unpackedFormatted = unpacked.map(
-    (element) => BigInt(numberify(element).toString(10)),
-  );
+  const unpackedFormatted = unpacked.map((element) => BigInt(numberify(element).toString(10)));
   // Pack point
   try {
     return hexlify(babyjub.packPoint(unpackedFormatted));
@@ -79,7 +78,9 @@ function unpackPoint(packed: BytesData): string[] {
     const elementBytes = element.toString(16);
 
     // Pad to even length if needed
-    return elementBytes.length % 2 === 0 ? elementBytes : elementBytes.padStart(elementBytes.length + 1, '0');
+    return elementBytes.length % 2 === 0
+      ? elementBytes
+      : elementBytes.padStart(elementBytes.length + 1, '0');
   });
 }
 
@@ -99,9 +100,7 @@ function ecdh(privateKey: BytesData, pubkey: BytesData): string {
   const privateKeyBI = BigInt(`0x${privateKey}`);
 
   // Perform scalar mul, pack, and hash to return 32 byte shared key
-  return sha256(
-    babyjub.packPoint(babyjub.mulPointEscalar(pubkeyUnpacked, privateKeyBI))
-  );
+  return sha256(babyjub.packPoint(babyjub.mulPointEscalar(pubkeyUnpacked, privateKeyBI)));
 }
 
 /**
@@ -115,7 +114,8 @@ function privateKeyToPubKey(privateKey: BytesData): string {
   const privateKeyFormatted = numberify(privateKey).toString(10);
 
   // Calculate pubkey
-  const pubkey = babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted)
+  const pubKey = babyjub
+    .mulPointEscalar(babyjub.Base8, privateKeyFormatted)
     .map((element: BigInt) => {
       const elementString = element.toString(16);
       return elementString.length % 2 === 0
@@ -124,18 +124,20 @@ function privateKeyToPubKey(privateKey: BytesData): string {
     });
 
   // Pack and return
-  return packPoint(pubkey);
+  return packPoint(pubKey);
+}
+
+/**
+ * Unpack pubKey string into 2 element array.
+ * @param pubKey - public key
+ * @returns unpacked public key
+ */
+function unpackPubKey(pubKey: BytesData): BytesData[] {
+  return unpackPoint(pubKey).map((element) => formatToByteLength(element, ByteLength.UINT_256));
 }
 
 function random() {
   return poseidon([randomBytes(32)]);
 }
 
-export {
-  seedToPrivateKey,
-  packPoint,
-  unpackPoint,
-  ecdh,
-  privateKeyToPubKey,
-  random,
-};
+export { seedToPrivateKey, packPoint, unpackPoint, ecdh, privateKeyToPubKey, unpackPubKey, random };

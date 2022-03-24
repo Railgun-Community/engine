@@ -310,9 +310,7 @@ class ERC20RailgunContract {
     // Serialize for contract
     const inputs = notes.map((note) => {
       const serialized = note.serialize(true);
-      const pubkeyUnpacked = babyjubjub
-        .unpackPoint(serialized.pubkey)
-        .map((element) => bytes.hexlify(element, true));
+      const pubkeyUnpacked = babyjubjub.unpackPubKey(serialized.pubkey);
 
       return {
         pubkey: pubkeyUnpacked,
@@ -361,9 +359,7 @@ class ERC20RailgunContract {
         ciphertext: commitment.ciphertext.map((word) =>
           formatToByteLength(word, ByteLength.UINT_256),
         ),
-        senderPubKey: babyjubjub
-          .unpackPoint(commitment.senderPubKey)
-          .map((el) => formatToByteLength(el, ByteLength.UINT_256)),
+        senderPubKey: babyjubjub.unpackPubKey(commitment.senderPubKey),
         revealKey: commitment.revealKey.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
       })),
     }));
@@ -405,14 +401,19 @@ class ERC20RailgunContract {
 
   depositEth(
     amount: BigNumber,
-    wethAddress: String,
-    pubKey: String[],
+    wethAddress: BytesData,
+    pubKey: BytesData,
   ): Promise<PopulatedTransaction> {
     const random = babyjubjub.random();
+    const pubkeyUnpacked = babyjubjub.unpackPubKey(pubKey);
 
     const calls = [
       this.contract.interface.encodeFunctionData('wrapAllEth'),
-      this.contract.interface.encodeFunctionData('deposit', [[wethAddress], random, pubKey]),
+      this.contract.interface.encodeFunctionData('deposit', [
+        [wethAddress],
+        random,
+        pubkeyUnpacked,
+      ]),
     ];
 
     const requireSuccess = true;
@@ -429,7 +430,7 @@ class ERC20RailgunContract {
     );
   }
 
-  withdrawEth(amount: BigNumber, to: String): Promise<PopulatedTransaction> {
+  withdrawEth(amount: BigNumber, to: BytesData): Promise<PopulatedTransaction> {
     const random = babyjubjub.random();
 
     const calls = [
