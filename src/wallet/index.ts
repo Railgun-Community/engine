@@ -168,6 +168,12 @@ class Wallet extends EventEmitter {
     return this.#addressNode.derive(`m/${index}'`).getBabyJubJubKey(chainID);
   }
 
+  /**
+   * Get ed25519 viewing key node at index
+   * @param encryptionKey - encryption key for wallet
+   * @param index - index to get keypair at
+   * @returns EdNode
+   */
   getEdNode(
     encryptionKey: bytes.BytesData,
     index: number = 0,
@@ -181,6 +187,7 @@ class Wallet extends EventEmitter {
    * @param message - hex or Uint8 bytes of message to sign
    * @param encryptionKey - encryption key for wallet
    * @param index - index to get keypair at
+   * @returns Promise<Uint8Array>
    */
   async sign(
     message: string | Uint8Array,
@@ -189,6 +196,11 @@ class Wallet extends EventEmitter {
     return await (this.getEdNode(this.#encryptionKey, index)).sign(message);
   }
 
+  /**
+   * Get public key from ed25519 node at index
+   * @param index - index to get keypair at
+   * @returns Promise<Uint8Array>
+   */
   async getSigningPublicKey(index: number = 0) {
     return await this.getEdNode(this.#encryptionKey, index).getPublicKey();
   }
