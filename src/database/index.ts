@@ -1,10 +1,10 @@
-import levelup from 'levelup';
+import type { AbstractBatch, AbstractLevelDOWN } from 'abstract-leveldown';
 import encode from 'encoding-down';
-import type { AbstractLevelDOWN, AbstractBatch } from 'abstract-leveldown';
 import type { LevelUp } from 'levelup';
+import levelup from 'levelup';
 import { bytes, encryption } from '../utils';
-
 import type { Ciphertext } from '../utils/encryption';
+
 
 // TODO: Remove JSON encoding and standardize everything as msgpack
 export type Encoding =
@@ -92,7 +92,7 @@ class Database {
   /**
    * Set encrypted value in database
    * @param path - database path
-   * @param encryptionKey - AES-256-CTR encryption key
+   * @param encryptionKey - AES-256-GCM encryption key
    * @param value - value to encrypt and set
    */
   async putEncrypted(
@@ -101,7 +101,7 @@ class Database {
     value: bytes.BytesData,
   ) {
     // Encrypt data
-    const encrypted = encryption.aes.ctr.encrypt(bytes.chunk(value), encryptionKey);
+    const encrypted = encryption.aes.gcm.encrypt(bytes.chunk(value), encryptionKey);
 
     // Write to database
     await this.put(path, encrypted, 'json');
@@ -110,7 +110,7 @@ class Database {
   /**
    * Get encrypted value in database
    * @param path - database path
-   * @param encryptionKey - AES-256-CTR  encryption key
+   * @param encryptionKey - AES-256-GCM  encryption key
    * @return decrypted value
    */
   async getEncrypted(
@@ -121,7 +121,7 @@ class Database {
     const encrypted: Ciphertext = await this.get(path, 'json');
 
     // Decrypt and return
-    return bytes.combine(encryption.aes.ctr.decrypt(encrypted, encryptionKey));
+    return bytes.combine(encryption.aes.gcm.decrypt(encrypted, encryptionKey));
   }
 
   /**

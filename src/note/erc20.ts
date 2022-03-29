@@ -1,10 +1,7 @@
 import BN from 'bn.js';
 import { AbiCoder, solidityPack } from 'ethers/lib/utils';
 import {
-  bytes,
-  hash,
-  babyjubjub,
-  encryption,
+  babyjubjub, bytes, encryption, hash
 } from '../utils';
 import { ByteLength } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
@@ -67,7 +64,7 @@ class ERC20Note {
    */
   encrypt(sharedKey: bytes.BytesData): Ciphertext {
     // Encrypt in order and return
-    return encryption.aes.ctr.encrypt([
+    return encryption.aes.gcm.encrypt([
       ...babyjubjub.unpackPoint(this.pubkey),
       this.random,
       this.amount,
@@ -82,7 +79,7 @@ class ERC20Note {
    */
   static decrypt(encryptedNote: Ciphertext, sharedKey: bytes.BytesData): ERC20Note {
     // Decrypt values
-    const decryptedValues = encryption.aes.ctr.decrypt(encryptedNote, sharedKey);
+    const decryptedValues = encryption.aes.gcm.decrypt(encryptedNote, sharedKey);
 
     // Create new note object and return
     return new ERC20Note(

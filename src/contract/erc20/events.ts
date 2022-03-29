@@ -56,6 +56,7 @@ export function formatEncryptedCommitmentBatchCommitments(
       senderPubKey: babyjubjub.packPoint(commit.senderPubKey.map((el) => el.toHexString())),
       ciphertext: {
         iv: ciphertexthexlified[0],
+        tag: 'null',
         data: ciphertexthexlified.slice(1),
       },
       revealKey: commit.revealKey.map((el) => el.toHexString()),

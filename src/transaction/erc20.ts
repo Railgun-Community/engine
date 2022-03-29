@@ -320,13 +320,14 @@ class ERC20Transaction {
     }
 
     // Calculate ciphertext
+    // TODO: Fix ciphertext
     const ciphertext = commitments.map((commitment) => {
       const senderPrivateKey = babyjubjub.seedToPrivateKey(bytes.random(32));
       const senderPubKey = babyjubjub.privateKeyToPubKey(senderPrivateKey);
       const sharedKey = babyjubjub.ecdh(senderPrivateKey, commitment.pubkey);
       const encrypted = commitment.encrypt(sharedKey);
       const viewKey = wallet.getViewKey(encryptionKey);
-      const revealKey = encryption.aes.ctr.encrypt([sharedKey], viewKey);
+      const revealKey = encryption.aes.gcm.encrypt([sharedKey], viewKey);
 
       return {
         senderPubKey,

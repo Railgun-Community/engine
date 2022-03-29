@@ -1,11 +1,11 @@
 /* eslint-disable no-bitwise, no-await-in-loop */
-import BN from 'bn.js';
 import type { PutBatch } from 'abstract-leveldown';
-import { bytes, hash, constants } from '../utils';
+import BN from 'bn.js';
 import type { Database } from '../database';
-import type { Ciphertext } from '../utils/encryption';
-import type { ERC20NoteSerialized } from '../note/erc20';
 import { LeptonDebugger } from '../models/types';
+import type { ERC20NoteSerialized } from '../note/erc20';
+import { bytes, constants, hash } from '../utils';
+import type { Ciphertext } from '../utils/encryption';
 
 export type MerkleProof = {
   leaf: bytes.BytesData;
@@ -360,6 +360,7 @@ class MerkleTree {
           senderPubKey: bytes.hexlify(leaf.senderPubKey),
           ciphertext: {
             iv: bytes.hexlify(leaf.ciphertext.iv),
+            tag: bytes.hexlify(leaf.ciphertext.tag),
             data: leaf.ciphertext.data.map((el) => bytes.hexlify(el)),
           },
           revealKey: leaf.revealKey.map((el) => bytes.hexlify(el)),
