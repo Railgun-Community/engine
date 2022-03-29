@@ -4,42 +4,56 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "AddToBlacklist",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "internalType": "uint256",
         "name": "treeNumber",
         "type": "uint256"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256",
         "name": "startPosition",
         "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "hash",
+        "type": "uint256[]"
+      },
+      {
         "components": [
           {
-            "internalType": "uint256",
-            "name": "hash",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256[6]",
+            "internalType": "uint256[4]",
             "name": "ciphertext",
-            "type": "uint256[6]"
+            "type": "uint256[4]"
           },
           {
             "internalType": "uint256[2]",
-            "name": "senderPubKey",
+            "name": "ephemeralKeys",
             "type": "uint256[2]"
           },
           {
-            "internalType": "uint256[2]",
-            "name": "revealKey",
-            "type": "uint256[2]"
+            "internalType": "bytes32[]",
+            "name": "memo",
+            "type": "bytes32[]"
           }
         ],
         "indexed": false,
-        "internalType": "struct Commitment[]",
-        "name": "commitments",
+        "internalType": "struct CommitmentCiphertext[]",
+        "name": "ciphertext",
         "type": "tuple[]"
       }
     ],
@@ -75,13 +89,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256",
         "name": "treeNumber",
         "type": "uint256"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256",
         "name": "startPosition",
         "type": "uint256"
@@ -89,28 +103,50 @@
       {
         "components": [
           {
-            "internalType": "uint256[2]",
-            "name": "pubkey",
-            "type": "uint256[2]"
+            "internalType": "uint256",
+            "name": "ypubkey",
+            "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "random",
-            "type": "uint256"
+            "internalType": "bool",
+            "name": "sign",
+            "type": "bool"
           },
           {
             "internalType": "uint120",
-            "name": "amount",
+            "name": "value",
             "type": "uint120"
           },
           {
-            "internalType": "uint256",
+            "internalType": "uint128",
+            "name": "random",
+            "type": "uint128"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "tokenType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "address",
+                "name": "tokenAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenSubID",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct TokenData",
             "name": "token",
-            "type": "uint256"
+            "type": "tuple"
           }
         ],
         "indexed": false,
-        "internalType": "struct GeneratedCommitment[]",
+        "internalType": "struct CommitmentPreimage[]",
         "name": "commitments",
         "type": "tuple[]"
       }
@@ -122,113 +158,19 @@
     "anonymous": false,
     "inputs": [
       {
-        "components": [
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point",
-            "name": "alpha1",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "beta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "gamma2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "delta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point[2]",
-            "name": "ic",
-            "type": "tuple[2]"
-          }
-        ],
         "indexed": false,
-        "internalType": "struct VerifyingKey",
-        "name": "vkey",
-        "type": "tuple"
-      }
-    ],
-    "name": "LargeVerificationKeyChange",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
         "internalType": "uint256",
-        "name": "nullifier",
+        "name": "treeNumber",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256[]",
+        "name": "nullifier",
+        "type": "uint256[]"
       }
     ],
-    "name": "Nullifier",
+    "name": "Nullifiers",
     "type": "event"
   },
   {
@@ -254,7 +196,50 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "RemoveFromBlacklist",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "treasury",
+        "type": "address"
+      }
+    ],
+    "name": "TreasuryChange",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "nullifiers",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "commitments",
+        "type": "uint256"
+      },
+      {
         "components": [
+          {
+            "internalType": "string",
+            "name": "artifactsIPFSHash",
+            "type": "string"
+          },
           {
             "components": [
               {
@@ -336,65 +321,39 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct G1Point[2]",
+            "internalType": "struct G1Point[]",
             "name": "ic",
-            "type": "tuple[2]"
+            "type": "tuple[]"
           }
         ],
         "indexed": false,
         "internalType": "struct VerifyingKey",
-        "name": "vkey",
+        "name": "verifyingKey",
         "type": "tuple"
       }
     ],
-    "name": "SmallVerificationKeyChange",
+    "name": "VerifyingKeySet",
     "type": "event"
   },
   {
-    "anonymous": false,
-    "inputs": [
+    "inputs": [],
+    "name": "ZERO_VALUE",
+    "outputs": [
       {
-        "indexed": true,
         "internalType": "uint256",
-        "name": "token",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "TokenDelisting",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "token",
-        "type": "uint256"
-      }
-    ],
-    "name": "TokenListing",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "treasury",
-        "type": "address"
-      }
-    ],
-    "name": "TreasuryChange",
-    "type": "event"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "uint256[]",
+        "internalType": "address[]",
         "name": "_tokens",
-        "type": "uint256[]"
+        "type": "address[]"
       }
     ],
     "name": "addToBlacklist",
@@ -405,14 +364,14 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
+        "internalType": "uint120",
         "name": "_depositFee",
-        "type": "uint256"
+        "type": "uint120"
       },
       {
-        "internalType": "uint256",
+        "internalType": "uint120",
         "name": "_withdrawFee",
-        "type": "uint256"
+        "type": "uint120"
       },
       {
         "internalType": "uint256",
@@ -443,9 +402,9 @@
     "name": "depositFee",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "uint120",
         "name": "",
-        "type": "uint256"
+        "type": "uint120"
       }
     ],
     "stateMutability": "view",
@@ -456,38 +415,50 @@
       {
         "components": [
           {
-            "internalType": "uint256[2]",
-            "name": "pubkey",
-            "type": "uint256[2]"
+            "internalType": "uint256",
+            "name": "ypubkey",
+            "type": "uint256"
           },
           {
-            "internalType": "uint256",
-            "name": "random",
-            "type": "uint256"
+            "internalType": "bool",
+            "name": "sign",
+            "type": "bool"
           },
           {
             "internalType": "uint120",
-            "name": "amount",
+            "name": "value",
             "type": "uint120"
           },
           {
-            "internalType": "uint8",
-            "name": "tokenType",
-            "type": "uint8"
+            "internalType": "uint128",
+            "name": "random",
+            "type": "uint128"
           },
           {
-            "internalType": "uint256",
-            "name": "tokenSubID",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "tokenType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "address",
+                "name": "tokenAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenSubID",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct TokenData",
             "name": "token",
-            "type": "uint256"
+            "type": "tuple"
           }
         ],
-        "internalType": "struct GenerateDepositTX[]",
-        "name": "_transactions",
+        "internalType": "struct CommitmentPreimage[]",
+        "name": "_notes",
         "type": "tuple[]"
       }
     ],
@@ -499,9 +470,9 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
+        "internalType": "uint120",
         "name": "_amount",
-        "type": "uint256"
+        "type": "uint120"
       },
       {
         "internalType": "bool",
@@ -509,16 +480,29 @@
         "type": "bool"
       }
     ],
-    "name": "getBaseAndFee",
+    "name": "getFee",
+    "outputs": [
+      {
+        "internalType": "uint120",
+        "name": "",
+        "type": "uint120"
+      },
+      {
+        "internalType": "uint120",
+        "name": "",
+        "type": "uint120"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMerkleRoot",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
+        "name": "result",
         "type": "uint256"
       }
     ],
@@ -530,206 +514,203 @@
       {
         "components": [
           {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point",
-            "name": "alpha1",
-            "type": "tuple"
+            "internalType": "uint8",
+            "name": "tokenType",
+            "type": "uint8"
           },
           {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "beta2",
-            "type": "tuple"
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
           },
           {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "gamma2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "delta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point[2]",
-            "name": "ic",
-            "type": "tuple[2]"
+            "internalType": "uint256",
+            "name": "tokenSubID",
+            "type": "uint256"
           }
         ],
-        "internalType": "struct VerifyingKey",
-        "name": "_vKeySmall",
+        "internalType": "struct TokenData",
+        "name": "_tokenData",
         "type": "tuple"
-      },
+      }
+    ],
+    "name": "getTokenField",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {
         "components": [
           {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point",
-            "name": "alpha1",
-            "type": "tuple"
+            "internalType": "uint16",
+            "name": "treeNumber",
+            "type": "uint16"
+          },
+          {
+            "internalType": "bool",
+            "name": "withdraw",
+            "type": "bool"
+          },
+          {
+            "internalType": "address",
+            "name": "adaptContract",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "adaptParams",
+            "type": "bytes32"
           },
           {
             "components": [
               {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
+                "internalType": "uint256[4]",
+                "name": "ciphertext",
+                "type": "uint256[4]"
               },
               {
                 "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "beta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
+                "name": "ephemeralKeys",
                 "type": "uint256[2]"
               },
               {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
+                "internalType": "bytes32[]",
+                "name": "memo",
+                "type": "bytes32[]"
               }
             ],
-            "internalType": "struct G2Point",
-            "name": "gamma2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "delta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point[2]",
-            "name": "ic",
-            "type": "tuple[2]"
+            "internalType": "struct CommitmentCiphertext[]",
+            "name": "commitmentCiphertext",
+            "type": "tuple[]"
           }
         ],
-        "internalType": "struct VerifyingKey",
-        "name": "_vKeyLarge",
+        "internalType": "struct BoundParams",
+        "name": "_boundParams",
         "type": "tuple"
+      }
+    ],
+    "name": "hashBoundParams",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "ypubkey",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "sign",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint120",
+            "name": "value",
+            "type": "uint120"
+          },
+          {
+            "internalType": "uint128",
+            "name": "random",
+            "type": "uint128"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint8",
+                "name": "tokenType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "address",
+                "name": "tokenAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenSubID",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct TokenData",
+            "name": "token",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct CommitmentPreimage",
+        "name": "_commitmentPreimage",
+        "type": "tuple"
+      }
+    ],
+    "name": "hashCommitment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_left",
+        "type": "uint256"
       },
       {
-        "internalType": "uint256[]",
-        "name": "_tokenBlacklist",
-        "type": "uint256[]"
-      },
+        "internalType": "uint256",
+        "name": "_right",
+        "type": "uint256"
+      }
+    ],
+    "name": "hashLeftRight",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {
         "internalType": "address payable",
         "name": "_treasury",
         "type": "address"
       },
       {
-        "internalType": "uint256",
+        "internalType": "uint120",
         "name": "_depositFee",
-        "type": "uint256"
+        "type": "uint120"
       },
       {
-        "internalType": "uint256",
+        "internalType": "uint120",
         "name": "_withdrawFee",
-        "type": "uint256"
+        "type": "uint120"
       },
       {
         "internalType": "uint256",
@@ -779,6 +760,11 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "name": "nullifiers",
@@ -808,9 +794,9 @@
   {
     "inputs": [
       {
-        "internalType": "uint256[]",
+        "internalType": "address[]",
         "name": "_tokens",
-        "type": "uint256[]"
+        "type": "address[]"
       }
     ],
     "name": "removeFromBlacklist",
@@ -852,209 +838,124 @@
   {
     "inputs": [
       {
-        "components": [
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point",
-            "name": "alpha1",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "beta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "gamma2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "delta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point[2]",
-            "name": "ic",
-            "type": "tuple[2]"
-          }
-        ],
-        "internalType": "struct VerifyingKey",
-        "name": "_vKey",
-        "type": "tuple"
-      }
-    ],
-    "name": "setVKeyLarge",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point",
-            "name": "alpha1",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "beta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "gamma2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256[2]",
-                "name": "x",
-                "type": "uint256[2]"
-              },
-              {
-                "internalType": "uint256[2]",
-                "name": "y",
-                "type": "uint256[2]"
-              }
-            ],
-            "internalType": "struct G2Point",
-            "name": "delta2",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "x",
-                "type": "uint256"
-              },
-              {
-                "internalType": "uint256",
-                "name": "y",
-                "type": "uint256"
-              }
-            ],
-            "internalType": "struct G1Point[2]",
-            "name": "ic",
-            "type": "tuple[2]"
-          }
-        ],
-        "internalType": "struct VerifyingKey",
-        "name": "_vKey",
-        "type": "tuple"
-      }
-    ],
-    "name": "setVKeySmall",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
+        "internalType": "uint256",
+        "name": "_nullifiers",
+        "type": "uint256"
+      },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "_commitments",
         "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "artifactsIPFSHash",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "x",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "y",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct G1Point",
+            "name": "alpha1",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "beta2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "gamma2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "delta2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "x",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "y",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct G1Point[]",
+            "name": "ic",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct VerifyingKey",
+        "name": "_verifyingKey",
+        "type": "tuple"
+      }
+    ],
+    "name": "setVerificationKey",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "name": "tokenBlacklist",
@@ -1131,51 +1032,6 @@
             "type": "tuple"
           },
           {
-            "internalType": "address",
-            "name": "adaptIDcontract",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "adaptIDparameters",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint120",
-            "name": "depositAmount",
-            "type": "uint120"
-          },
-          {
-            "internalType": "uint120",
-            "name": "withdrawAmount",
-            "type": "uint120"
-          },
-          {
-            "internalType": "uint8",
-            "name": "tokenType",
-            "type": "uint8"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenSubID",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenField",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "outputEthAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "treeNumber",
-            "type": "uint256"
-          },
-          {
             "internalType": "uint256",
             "name": "merkleRoot",
             "type": "uint256"
@@ -1186,31 +1042,112 @@
             "type": "uint256[]"
           },
           {
+            "internalType": "uint256[]",
+            "name": "commitments",
+            "type": "uint256[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint16",
+                "name": "treeNumber",
+                "type": "uint16"
+              },
+              {
+                "internalType": "bool",
+                "name": "withdraw",
+                "type": "bool"
+              },
+              {
+                "internalType": "address",
+                "name": "adaptContract",
+                "type": "address"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "adaptParams",
+                "type": "bytes32"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint256[4]",
+                    "name": "ciphertext",
+                    "type": "uint256[4]"
+                  },
+                  {
+                    "internalType": "uint256[2]",
+                    "name": "ephemeralKeys",
+                    "type": "uint256[2]"
+                  },
+                  {
+                    "internalType": "bytes32[]",
+                    "name": "memo",
+                    "type": "bytes32[]"
+                  }
+                ],
+                "internalType": "struct CommitmentCiphertext[]",
+                "name": "commitmentCiphertext",
+                "type": "tuple[]"
+              }
+            ],
+            "internalType": "struct BoundParams",
+            "name": "boundParams",
+            "type": "tuple"
+          },
+          {
             "components": [
               {
                 "internalType": "uint256",
-                "name": "hash",
+                "name": "ypubkey",
                 "type": "uint256"
               },
               {
-                "internalType": "uint256[6]",
-                "name": "ciphertext",
-                "type": "uint256[6]"
+                "internalType": "bool",
+                "name": "sign",
+                "type": "bool"
               },
               {
-                "internalType": "uint256[2]",
-                "name": "senderPubKey",
-                "type": "uint256[2]"
+                "internalType": "uint120",
+                "name": "value",
+                "type": "uint120"
               },
               {
-                "internalType": "uint256[2]",
-                "name": "revealKey",
-                "type": "uint256[2]"
+                "internalType": "uint128",
+                "name": "random",
+                "type": "uint128"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint8",
+                    "name": "tokenType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "tokenAddress",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "tokenSubID",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct TokenData",
+                "name": "token",
+                "type": "tuple"
               }
             ],
-            "internalType": "struct Commitment[3]",
-            "name": "commitmentsOut",
-            "type": "tuple[3]"
+            "internalType": "struct CommitmentPreimage",
+            "name": "withdraw",
+            "type": "tuple"
+          },
+          {
+            "internalType": "address",
+            "name": "overrideOutput",
+            "type": "address"
           }
         ],
         "internalType": "struct Transaction[]",
@@ -1251,84 +1188,37 @@
   },
   {
     "inputs": [],
-    "name": "vKeyLarge",
+    "name": "treeNumber",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "x",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "y",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct G1Point",
-        "name": "alpha1",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256[2]",
-            "name": "x",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "y",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct G2Point",
-        "name": "beta2",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256[2]",
-            "name": "x",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "y",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct G2Point",
-        "name": "gamma2",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256[2]",
-            "name": "x",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "y",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct G2Point",
-        "name": "delta2",
-        "type": "tuple"
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "vKeySmall",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "verificationKeys",
     "outputs": [
+      {
+        "internalType": "string",
+        "name": "artifactsIPFSHash",
+        "type": "string"
+      },
       {
         "components": [
           {
@@ -1403,6 +1293,300 @@
   },
   {
     "inputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "components": [
+                  {
+                    "internalType": "uint256",
+                    "name": "x",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "y",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct G1Point",
+                "name": "a",
+                "type": "tuple"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint256[2]",
+                    "name": "x",
+                    "type": "uint256[2]"
+                  },
+                  {
+                    "internalType": "uint256[2]",
+                    "name": "y",
+                    "type": "uint256[2]"
+                  }
+                ],
+                "internalType": "struct G2Point",
+                "name": "b",
+                "type": "tuple"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint256",
+                    "name": "x",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "y",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct G1Point",
+                "name": "c",
+                "type": "tuple"
+              }
+            ],
+            "internalType": "struct SnarkProof",
+            "name": "proof",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint256",
+            "name": "merkleRoot",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "nullifiers",
+            "type": "uint256[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "commitments",
+            "type": "uint256[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint16",
+                "name": "treeNumber",
+                "type": "uint16"
+              },
+              {
+                "internalType": "bool",
+                "name": "withdraw",
+                "type": "bool"
+              },
+              {
+                "internalType": "address",
+                "name": "adaptContract",
+                "type": "address"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "adaptParams",
+                "type": "bytes32"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint256[4]",
+                    "name": "ciphertext",
+                    "type": "uint256[4]"
+                  },
+                  {
+                    "internalType": "uint256[2]",
+                    "name": "ephemeralKeys",
+                    "type": "uint256[2]"
+                  },
+                  {
+                    "internalType": "bytes32[]",
+                    "name": "memo",
+                    "type": "bytes32[]"
+                  }
+                ],
+                "internalType": "struct CommitmentCiphertext[]",
+                "name": "commitmentCiphertext",
+                "type": "tuple[]"
+              }
+            ],
+            "internalType": "struct BoundParams",
+            "name": "boundParams",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "ypubkey",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "sign",
+                "type": "bool"
+              },
+              {
+                "internalType": "uint120",
+                "name": "value",
+                "type": "uint120"
+              },
+              {
+                "internalType": "uint128",
+                "name": "random",
+                "type": "uint128"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "uint8",
+                    "name": "tokenType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "tokenAddress",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "tokenSubID",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct TokenData",
+                "name": "token",
+                "type": "tuple"
+              }
+            ],
+            "internalType": "struct CommitmentPreimage",
+            "name": "withdraw",
+            "type": "tuple"
+          },
+          {
+            "internalType": "address",
+            "name": "overrideOutput",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct Transaction",
+        "name": "_transaction",
+        "type": "tuple"
+      }
+    ],
+    "name": "verify",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "artifactsIPFSHash",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "x",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "y",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct G1Point",
+            "name": "alpha1",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "beta2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "gamma2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "delta2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "x",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "y",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct G1Point[]",
+            "name": "ic",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct VerifyingKey",
+        "name": "_verifyingKey",
+        "type": "tuple"
+      },
       {
         "components": [
           {
@@ -1462,76 +1646,9 @@
         "type": "tuple"
       },
       {
-        "internalType": "address",
-        "name": "_adaptIDcontract",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_adaptIDparameters",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_depositAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_withdrawAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_tokenField",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "_outputEthAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_treeNumber",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_merkleRoot",
-        "type": "uint256"
-      },
-      {
         "internalType": "uint256[]",
-        "name": "_nullifiers",
+        "name": "_inputs",
         "type": "uint256[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "hash",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256[6]",
-            "name": "ciphertext",
-            "type": "uint256[6]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "senderPubKey",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "revealKey",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct Commitment[3]",
-        "name": "_commitmentsOut",
-        "type": "tuple[3]"
       }
     ],
     "name": "verifyProof",
@@ -1548,6 +1665,25 @@
   {
     "inputs": [],
     "name": "withdrawFee",
+    "outputs": [
+      {
+        "internalType": "uint120",
+        "name": "",
+        "type": "uint120"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "zeros",
     "outputs": [
       {
         "internalType": "uint256",

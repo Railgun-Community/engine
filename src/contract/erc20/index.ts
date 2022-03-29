@@ -42,7 +42,7 @@ const MAX_SCAN_RETRIES = 5;
 export enum EventName {
   GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
   EncryptedCommitmentBatch = 'CommitmentBatch',
-  Nullifier = 'Nullifier',
+  Nullifiers = 'Nullifiers',
 }
 
 class ERC20RailgunContract {
@@ -69,7 +69,7 @@ class ERC20RailgunContract {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return bytes.hexlify((await this.contract.functions.merkleRoot())[0].toHexString());
+    return bytes.hexlify((await this.contract.getMerkleRoot()).toHexString());
   }
 
   /**
@@ -149,7 +149,7 @@ class ERC20RailgunContract {
       },
     );
 
-    this.contract.on(EventName.Nullifier, async (nullifier: BigNumber, event: Event) => {
+    this.contract.on(EventName.Nullifiers, async (nullifier: BigNumber, event: Event) => {
       await eventsNullifierListener([
         {
           txid: event.transactionHash,
