@@ -69,7 +69,7 @@ class ERC20RailgunContract {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return bytes.hexlify((await this.contract.getMerkleRoot()).toHexString());
+    return bytes.hexlify((await this.contract.merkleRoot()).toHexString());
   }
 
   /**
