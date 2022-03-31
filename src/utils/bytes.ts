@@ -7,6 +7,7 @@ export type BytesData = ArrayLike<number> | string | BN;
 export enum ByteLength {
   UINT_8 = 1,
   UINT_120 = 15,
+  UINT_128 = 16,
   Address = 20,
   UINT_256 = 32,
 }

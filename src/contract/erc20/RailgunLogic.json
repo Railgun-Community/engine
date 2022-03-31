@@ -497,19 +497,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "getMerkleRoot",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "result",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "components": [
@@ -543,6 +530,122 @@
       }
     ],
     "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_nullifiers",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_commitments",
+        "type": "uint256"
+      }
+    ],
+    "name": "getVerificationKey",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "artifactsIPFSHash",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "x",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "y",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct G1Point",
+            "name": "alpha1",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "beta2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "gamma2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256[2]",
+                "name": "x",
+                "type": "uint256[2]"
+              },
+              {
+                "internalType": "uint256[2]",
+                "name": "y",
+                "type": "uint256[2]"
+              }
+            ],
+            "internalType": "struct G2Point",
+            "name": "delta2",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "x",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "y",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct G1Point[]",
+            "name": "ic",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct VerifyingKey",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1194,98 +1297,6 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "verificationKeys",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "artifactsIPFSHash",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "x",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "y",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct G1Point",
-        "name": "alpha1",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256[2]",
-            "name": "x",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "y",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct G2Point",
-        "name": "beta2",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256[2]",
-            "name": "x",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "y",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct G2Point",
-        "name": "gamma2",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint256[2]",
-            "name": "x",
-            "type": "uint256[2]"
-          },
-          {
-            "internalType": "uint256[2]",
-            "name": "y",
-            "type": "uint256[2]"
-          }
-        ],
-        "internalType": "struct G2Point",
-        "name": "delta2",
-        "type": "tuple"
       }
     ],
     "stateMutability": "view",

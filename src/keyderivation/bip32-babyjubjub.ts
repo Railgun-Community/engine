@@ -1,11 +1,14 @@
+import * as ed25519 from '@noble/ed25519';
 import { babyjubjub, bytes, hash } from '../utils';
-import { encode } from './bech32-encode';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
 
 const CURVE_SEED = bytes.fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
+
+export type KeyPair = { privateKey: string, pubkey: string; };
+export type Hex = Uint8Array | string;
 
 /**
  * Creates KeyNode from seed
@@ -73,16 +76,51 @@ export class BjjNode {
   * Gets babyjubjub key pair of this BIP32 Node
   * @returns keypair
   */
-  getBabyJubJubKey(
-    chainID: number | undefined = undefined,
-  ): { privateKey: string, pubkey: string, address: string; } {
+  getBabyJubJubKey(): KeyPair {
     const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
     const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
-    const address = encode(pubkey, chainID);
     return {
       privateKey,
       pubkey,
-      address,
     };
+  }
+
+  getBabyJubJubPublicKey() {
+    const { pubkey } = this.getBabyJubJubKey();
+    return pubkey;
+  }
+
+  async getEd25519Key(): Promise<KeyPair> {
+
+    const pubkey = bytes.hexlify(await ed25519.getPublicKey(bytes.hexlify(this.#chainKey)));
+    const privateKey = this.#chainKey;
+
+    return { privateKey, pubkey };
+  };
+
+  /**
+ * Get public portion of key
+ * @returns {Promise<string>}
+ */
+  async getEd25519PublicKey(): Promise<string> {
+    const { pubkey } = await this.getEd25519Key();
+    return pubkey;
+  };
+
+  /**
+   * @todo
+   */
+  // eslint-disable-next-line class-methods-use-this
+  signBabyJubJub() {
+    throw new Error("not implemented");
+  }
+
+  /**
+   * Sign a message with private key
+   * @param {Hex} message
+   * @returns {Promise<Uint8Array>} - signature
+   */
+  async signEd25519(message: Hex): Promise<Uint8Array> {
+    return await ed25519.sign(message, this.#chainKey);
   }
 }

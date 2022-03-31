@@ -2,5 +2,6 @@
   "ignore": "fuzz",
   "spec": "test/**/*.test.ts",
   "require": "ts-node/register",
-  "exit": true
+  "exit": true,
+  "timeout": 0
 }

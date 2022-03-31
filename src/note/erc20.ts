@@ -1,56 +1,63 @@
 import BN from 'bn.js';
+import { AbiCoder, solidityPack } from 'ethers/lib/utils';
 import {
   bytes,
   hash,
   babyjubjub,
   encryption,
 } from '../utils';
+import { ByteLength } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
 
 export type ERC20NoteSerialized = {
-  pubkey: string,
+  ypubkey: string,
+  sign: boolean;
   random: string,
-  amount: string,
+  value: string,
   token: string,
 };
 
 class ERC20Note {
-  pubkey: string;
+  ypubkey: string;
+
+  sign: boolean;
 
   random: string;
 
-  amount: string;
+  value: string;
 
   token: string;
 
   /**
    * Create Note object from values
-   * @param pubkey - spending public key
+   * @param ypubkey - spending public key
    * @param random - note randomness
    * @param amount - note amount
    * @param token - note token ID
    */
   constructor(
-    pubkey: bytes.BytesData,
+    ypubkey: bytes.BytesData,
+    sign: boolean,
     random: bytes.BytesData,
-    amount: bytes.BytesData,
+    value: bytes.BytesData,
     token: bytes.BytesData,
   ) {
-    this.pubkey = bytes.hexlify(bytes.padToLength(pubkey, 32));
-    this.random = bytes.hexlify(bytes.padToLength(random, 32));
-    this.amount = bytes.hexlify(bytes.padToLength(amount, 32));
-    this.token = bytes.hexlify(bytes.padToLength(token, 32));
+    this.ypubkey = bytes.hexlify(bytes.padToLength(ypubkey, ByteLength.UINT_256));
+    this.sign = sign;
+    this.random = bytes.hexlify(bytes.padToLength(random, ByteLength.UINT_128));
+    this.value = bytes.hexlify(bytes.padToLength(value, ByteLength.UINT_120));
+    this.token = bytes.hexlify(bytes.padToLength(token, ByteLength.Address));
   }
 
   /**
    * Get note hash
    */
   get hash(): string {
+    const abiCoder = new AbiCoder();
     return hash.poseidon([
-      ...babyjubjub.unpackPoint(this.pubkey),
-      this.random,
-      this.amount,
-      this.token,
+      this.ypubkey,
+      abiCoder.encode(['bool', 'uint120', 'uint128',], [this.sign, this.value, this.random,]),
+      '01',// getTokenField(this.token)
     ]);
   }
 

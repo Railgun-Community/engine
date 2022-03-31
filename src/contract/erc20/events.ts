@@ -3,11 +3,18 @@ import { EncryptedCommitment, GeneratedCommitment } from '../../merkletree';
 import { ERC20Note } from '../../note/erc20';
 import { babyjubjub, bytes } from '../../utils';
 
+export type CommitmentTokenData = {
+  tokenType: BigNumber;
+  address: BigNumber;
+  tokenSubID: BigNumber;
+};
+
 export type GeneratedCommitmentArgs = {
-  pubkey: [BigNumber, BigNumber];
+  ypubkey: BigNumber;
+  sign: boolean;
+  value: BigNumber;
   random: BigNumber;
-  amount: BigNumber;
-  token: BigNumber;
+  tokenData: CommitmentTokenData;
 };
 
 export type EncryptedCommitmentArgs = {
@@ -23,10 +30,11 @@ export function formatGeneratedCommitmentBatchCommitments(
 ): GeneratedCommitment[] {
   return commitments.map((commit) => {
     const note = ERC20Note.deserialize({
-      pubkey: babyjubjub.packPoint(commit.pubkey.map((el) => el.toHexString())),
+      ypubkey: bytes.hexlify(commit.ypubkey.toHexString()),
+      sign: commit.sign,
       random: bytes.hexlify(commit.random.toHexString()),
-      amount: bytes.hexlify(commit.amount.toHexString()),
-      token: bytes.hexlify(commit.token.toHexString(), true),
+      value: bytes.hexlify(commit.value.toHexString()),
+      token: bytes.hexlify(commit.tokenData.address.toHexString(), true),
     });
     return {
       hash: note.hash,

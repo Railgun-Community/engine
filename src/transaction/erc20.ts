@@ -237,7 +237,7 @@ class ERC20Transaction {
     const tree = this.tree || solutions.findIndex((value) => value.length > 0);
 
     // Check if tree with spending solution exists
-    if (tree === -1)
+    if (tree === -1 || solutions[tree] === undefined)
       throw new Error('Balances need to be consolidated before being able to spend this amount');
 
     // Check if withdraw address isn't set when it should be
@@ -283,11 +283,11 @@ class ERC20Transaction {
 
     // Calculate change amount
     const totalIn = solutions[tree]
-      .reduce((left, right) => left.add(bytes.numberify(right.note.amount)), new BN(0))
+      .reduce((left, right) => left.add(bytes.numberify(right.note.value)), new BN(0))
       .add(this.deposit);
 
     const totalOut = this.outputs
-      .reduce((left, right) => left.add(bytes.numberify(right.amount)), new BN(0))
+      .reduce((left, right) => left.add(bytes.numberify(right.value)), new BN(0))
       .add(this.withdraw);
 
     const change = totalIn.sub(totalOut);
@@ -298,7 +298,8 @@ class ERC20Transaction {
     // Create change output
     commitments.push(
       new ERC20Note(
-        wallet.getKeypair(encryptionKey, 0, true).pubkey,
+        wallet.spendingPublicKey,
+        false, // @todo how is this actually determined?
         babyjubjub.random(),
         change,
         this.token,
@@ -309,7 +310,8 @@ class ERC20Transaction {
     while (commitments.length < NOTE_OUTPUTS) {
       commitments.push(
         new ERC20Note(
-          babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
+          babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(bytes.random(32)))[1],
+          false, // @todo
           babyjubjub.random(),
           new BN(0),
           this.token,
@@ -360,16 +362,16 @@ class ERC20Transaction {
       outputTokenField: this.deposit.gtn(0) || this.withdraw.gtn(0) ? this.token : '00',
       outputEthAddress: this.withdrawAddress || '00',
       randomIn: solutions[tree].map((utxo) => utxo.note.random),
-      valuesIn: solutions[tree].map((utxo) => utxo.note.amount),
+      valuesIn: solutions[tree].map((utxo) => utxo.note.value),
       spendingKeys,
       treeNumber: new BN(tree),
       merkleRoot: await wallet.merkletree[this.chainID].getRoot(tree),
       nullifiers,
       pathElements,
       pathIndices,
-      recipientPK: commitments.map((output) => output.pubkey),
+      recipientPK: commitments.map((output) => output.value),
       randomOut: commitments.map((output) => output.random),
-      valuesOut: commitments.map((output) => output.amount),
+      valuesOut: commitments.map((output) => output.value),
       commitmentsOut: commitments.map((output) => output.hash),
       ciphertextHash,
     };

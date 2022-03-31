@@ -3,7 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
 import BN from 'bn.js';
-import { BigNumber, CallOverrides, ethers } from 'ethers';
+import { BigNumber, CallOverrides, Contract, ethers } from 'ethers';
 
 // @ts-ignore
 import artifacts from 'railgun-artifacts';
@@ -70,7 +70,7 @@ describe('Contract/Index', function () {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(contract.address, balance);
 
-    lepton = new Lepton(memdown(), artifactsGetter);
+    lepton = new Lepton(memdown(), artifactsGetter, undefined, console);
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
   });
@@ -92,7 +92,7 @@ describe('Contract/Index', function () {
       return;
     }
 
-    const transaction = new ERC20Transaction(TOKEN_ADDRESS, chainID);
+    const transaction = new ERC20Transaction(TOKEN_ADDRESS, chainID, 1);
     const dummyTx = await transaction.dummyProve(lepton.wallets[walletID], testEncryptionKey);
     const call = await contract.transact([dummyTx]);
 
@@ -168,14 +168,14 @@ describe('Contract/Index', function () {
 
     let startingBlock = await provider.getBlockNumber();
 
-    const address = (await lepton.wallets[walletID].addresses(chainID))[0];
+    const address = (await lepton.wallets[walletID].getAddress(chainID));
     const { pubkey } = Lepton.decodeAddress(address);
 
-    const RANDOM = '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9';
+    const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
 
     // Create deposit
     const deposit = await contract.generateDeposit([
-      new ERC20Note(pubkey, RANDOM, new BN('11000000000000000000000000', 10), TOKEN_ADDRESS),
+      new ERC20Note(pubkey, false, RANDOM, new BN('11000000000000000000000000', 10), TOKEN_ADDRESS),
     ]);
 
     const awaiterScan = () =>
@@ -185,9 +185,15 @@ describe('Contract/Index', function () {
         ),
       );
 
+    const { log } = console;
     // Send deposit on chain
     const tx = await etherswallet.sendTransaction(deposit);
-    const [txResponse] = await Promise.all([tx.wait(), awaiterScan()]);
+    const txResponse = await tx.wait();
+
+    log('did tx, now awaiterScan');
+    await awaiterScan();
+    // const [txResponse] = await Promise.all([tx.wait(), awaiterScan()]);
+    log('awaitScanned');
 
     let resultEvent: CommitmentEvent;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
@@ -202,7 +208,7 @@ describe('Contract/Index', function () {
       startingBlock,
       eventsListener,
       nullifiersListener,
-      async () => {},
+      async () => { },
     );
 
     // @ts-ignore
@@ -220,7 +226,7 @@ describe('Contract/Index', function () {
 
     // Create transaction
     const transaction = new ERC20Transaction(TOKEN_ADDRESS, chainID);
-    transaction.outputs = [new ERC20Note(randomPubKey, RANDOM, new BN('300', 10), TOKEN_ADDRESS)];
+    transaction.outputs = [new ERC20Note(randomPubKey, false, RANDOM, new BN('300', 10), TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([
@@ -235,7 +241,7 @@ describe('Contract/Index', function () {
       startingBlock,
       eventsListener,
       nullifiersListener,
-      async () => {},
+      async () => { },
     );
 
     // @ts-ignore
@@ -255,7 +261,7 @@ describe('Contract/Index', function () {
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
-      async () => {},
+      async () => { },
     );
 
     const address = (await lepton.wallets[walletID].addresses(chainID))[0];
@@ -265,7 +271,7 @@ describe('Contract/Index', function () {
 
     // Create deposit
     const deposit = await contract.generateDeposit([
-      new ERC20Note(pubkey, RANDOM, new BN('11000000000000000000000000', 10), TOKEN_ADDRESS),
+      new ERC20Note(pubkey, false, RANDOM, new BN('11000000000000000000000000', 10), TOKEN_ADDRESS),
     ]);
 
     const awaiterDeposit = new Promise((resolve, reject) =>

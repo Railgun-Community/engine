@@ -149,14 +149,19 @@ class ERC20RailgunContract {
       },
     );
 
-    this.contract.on(EventName.Nullifiers, async (nullifier: BigNumber, event: Event) => {
-      await eventsNullifierListener([
-        {
-          txid: event.transactionHash,
-          nullifier: nullifier.toHexString(),
-        },
-      ]);
-    });
+    this.contract.on(
+      EventName.Nullifiers,
+      async (
+        nullifier: BigNumber,
+        event: Event
+      ) => {
+        await eventsNullifierListener([
+          {
+            txid: event.transactionHash,
+            nullifier: nullifier.toHexString()
+          },
+        ]);
+      });
   }
 
   private async scanEvents(
@@ -203,7 +208,7 @@ class ERC20RailgunContract {
 
     const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
     const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
-    const eventFilterNullifier = this.contract.filters.Nullifier();
+    const eventFilterNullifier = this.contract.filters.Nullifiers();
 
     this.leptonDebugger?.log(
       `Scanning historical events from block ${currentStartBlock} to ${latest}`,
@@ -310,15 +315,19 @@ class ERC20RailgunContract {
     // Serialize for contract
     const inputs = notes.map((note) => {
       const serialized = note.serialize(true);
-      const pubkeyUnpacked = babyjubjub.unpackPubKey(serialized.pubkey);
+      // const pubkeyUnpacked = babyjubjub.unpackPubKey(serialized.pubkey);
 
       return {
-        pubkey: pubkeyUnpacked,
+        ypubkey: note.ypubkey,
+        sign: false,
+        value: serialized.value,
         random: serialized.random,
-        amount: serialized.amount,
-        tokenType: formatToByteLength(DEFAULT_ERC20_TOKEN_TYPE, ByteLength.UINT_8),
-        tokenSubID: formatToByteLength(DEFAULT_TOKEN_SUB_ID, ByteLength.UINT_256),
-        token: formatToByteLength(serialized.token, ByteLength.UINT_256),
+        token: { // TokenData
+          tokenType: formatToByteLength(DEFAULT_ERC20_TOKEN_TYPE, ByteLength.UINT_8),
+          // tokenAddress: formatToByteLength(serialized.token, ByteLength.Address),
+          tokenAddress: serialized.token,
+          tokenSubID: formatToByteLength(DEFAULT_TOKEN_SUB_ID, ByteLength.UINT_256),
+        }
       };
     });
 
