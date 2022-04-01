@@ -1,7 +1,6 @@
-import BN from 'bn.js';
 // @ts-ignore-next-line
-import { groth16 } from 'snarkjs';
-import { bytes, hash, babyjubjub, constants } from '../utils';
+import { groth16 } from "snarkjs";
+import { bytes } from "../utils";
 
 export type Artifacts = {
   zkey: ArrayLike<number>;
@@ -9,54 +8,42 @@ export type Artifacts = {
   vkey: object;
 };
 
-export type Circuits = 'erc20small' | 'erc20large';
+const enum Circuits {
+  OneTwo,
+  OneThree,
+  TwoTwo,
+  TwoThree,
+  EightTwo
+}
 
 export type Proof = {
-  a: bytes.BytesData[];
-  b: bytes.BytesData[][];
-  c: bytes.BytesData[];
+  a: string[];
+  b: string[][];
+  c: string[];
 };
 
-export type ERC20PrivateInputs = {
-  adaptID: bytes.BytesData;
-  depositAmount: bytes.BytesData;
-  withdrawAmount: bytes.BytesData;
-  tokenField: bytes.BytesData;
-  outputTokenField: bytes.BytesData;
-  outputEthAddress: bytes.BytesData;
+export type PublicInputs = {
+  merkleRoot: bytes.BytesData;
+  boundParamsHash: bytes.BytesData;
+  nullifiers: bytes.BytesData[];
+  commitmentsOut: bytes.BytesData[];
+};
+
+export type PrivateInputs = {
+  token: bytes.BytesData;
+  publicKey: [bytes.BytesData, bytes.BytesData]; // Unpacked public key
+  signature: [bytes.BytesData, bytes.BytesData, bytes.BytesData]; // R[0], R[1], S
   randomIn: bytes.BytesData[];
-  valuesIn: bytes.BytesData[];
-  spendingKeys: bytes.BytesData[];
-  treeNumber: bytes.BytesData;
-  merkleRoot: bytes.BytesData;
-  nullifiers: bytes.BytesData[];
+  valueIn: bytes.BytesData[];
   pathElements: bytes.BytesData[][];
-  pathIndices: bytes.BytesData[];
-  recipientPK: bytes.BytesData[];
-  randomOut: bytes.BytesData[];
-  valuesOut: bytes.BytesData[];
-  commitmentsOut: bytes.BytesData[];
-  ciphertextHash: bytes.BytesData;
+  leavesIndices: bytes.BytesData[];
+  nullifyingKey: bytes.BytesData;
+  npkOut: bytes.BytesData[];
+  valueOut: bytes.BytesData[];
 };
-
-export type ERC20PublicInputs = {
-  adaptID: bytes.BytesData;
-  depositAmount: bytes.BytesData;
-  withdrawAmount: bytes.BytesData;
-  outputTokenField: bytes.BytesData;
-  outputEthAddress: bytes.BytesData;
-  treeNumber: bytes.BytesData;
-  merkleRoot: bytes.BytesData;
-  nullifiers: bytes.BytesData[];
-  commitmentsOut: bytes.BytesData[];
-  ciphertextHash: bytes.BytesData;
-};
-
-export type PrivateInputs = ERC20PrivateInputs; // | ERC721PrivateInputs
-export type PublicInputs = ERC20PublicInputs; // | ERC721PublicInputs
 
 export type FormattedCircuitInputs = {
-  [key: string]: string | string[] | string[][];
+  [key: string]: string | string[];
 };
 
 // eslint-disable-next-line no-unused-vars
@@ -69,125 +56,81 @@ class Prover {
     this.artifactsGetter = artifactsGetter;
   }
 
-  async verify(circuit: Circuits, inputs: PublicInputs, proof: Proof): Promise<boolean> {
+  async verify(
+    circuit: Circuits,
+    inputs: PublicInputs,
+    proof: Proof
+  ): Promise<boolean> {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(circuit);
-
-    // Get inputs hash
-    const hashOfInputs = Prover.hashInputs(inputs);
-
-    // Format proof
-    const proofFormatted = {
-      pi_a: [bytes.numberify(proof.a[0]).toString(10), bytes.numberify(proof.a[1]).toString(10)],
-      pi_b: [
-        [bytes.numberify(proof.b[0][1]).toString(10), bytes.numberify(proof.b[0][0]).toString(10)],
-        [bytes.numberify(proof.b[1][1]).toString(10), bytes.numberify(proof.b[1][0]).toString(10)],
-      ],
-      pi_c: [bytes.numberify(proof.c[0]).toString(10), bytes.numberify(proof.c[1]).toString(10)],
-    };
-
     // Return output of groth16 verify
-    return groth16.verify(artifacts.vkey, [hashOfInputs], proofFormatted);
+    return groth16.verify(artifacts.vkey, inputs, proof);
   }
 
   async prove(
     circuit: Circuits,
-    inputs: PrivateInputs,
+    publicInputs: PublicInputs,
+    privateInputs: PrivateInputs
   ): Promise<{ proof: Proof; inputs: PublicInputs }> {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(circuit);
 
     // Get formatted inputs
-    const formattedInputs = Prover.formatPrivateInputs(inputs);
-
-    // Get public inputs
-    const publicInputs = Prover.privateToPublicInputs(inputs);
+    const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
     // Generate proof
-    const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
+    const { proof } = await groth16.fullProve(
+      formattedInputs,
+      artifacts.wasm,
+      artifacts.zkey
+    );
 
     // Format proof
     const proofFormatted = {
-      a: [new BN(proof.pi_a[0]), new BN(proof.pi_a[1])],
+      a: [bytes.hexlify(proof.pi_a[0], true), bytes.hexlify(proof.pi_a[1], true)],
       b: [
-        [new BN(proof.pi_b[0][1]), new BN(proof.pi_b[0][0])],
-        [new BN(proof.pi_b[1][1]), new BN(proof.pi_b[1][0])],
+        [bytes.hexlify(proof.pi_b[0][1], true), bytes.hexlify(proof.pi_b[0][0], true)],
+        [bytes.hexlify(proof.pi_b[1][1], true), bytes.hexlify(proof.pi_b[1][0], true)]
       ],
-      c: [new BN(proof.pi_c[0]), new BN(proof.pi_c[1])],
+      c: [bytes.hexlify(proof.pi_c[0], true), bytes.hexlify(proof.pi_c[1], true)]
     };
 
     // Throw if proof is invalid
     if (!(await this.verify(circuit, publicInputs, proofFormatted)))
-      throw new Error('Proof generation failed');
+      throw new Error("Proof generation failed");
 
     // Return proof with inputs
     return {
       proof: proofFormatted,
-      inputs: publicInputs,
+      inputs: publicInputs
     };
   }
 
-  static hashInputs(inputs: PublicInputs): string {
-    const preimage = bytes.combine(
-      [
-        inputs.adaptID,
-        inputs.depositAmount,
-        inputs.withdrawAmount,
-        inputs.outputTokenField,
-        inputs.outputEthAddress,
-        inputs.treeNumber,
-        inputs.merkleRoot,
-        ...inputs.nullifiers,
-        ...inputs.commitmentsOut,
-        inputs.ciphertextHash,
-      ].map((el) => bytes.padToLength(el, 32)),
-    );
-
-    return bytes.hexlify(bytes.numberify(hash.sha256(preimage)).mod(constants.SNARK_PRIME));
-  }
-
-  static privateToPublicInputs(inputs: PrivateInputs): PublicInputs {
+  static formatInputs(
+    publicInputs: PublicInputs,
+    privateInputs: PrivateInputs
+  ): FormattedCircuitInputs {
     return {
-      adaptID: inputs.adaptID,
-      depositAmount: inputs.depositAmount,
-      withdrawAmount: inputs.withdrawAmount,
-      outputTokenField: inputs.outputTokenField,
-      outputEthAddress: inputs.outputEthAddress,
-      treeNumber: inputs.treeNumber,
-      merkleRoot: inputs.merkleRoot,
-      nullifiers: inputs.nullifiers,
-      commitmentsOut: inputs.commitmentsOut,
-      ciphertextHash: inputs.ciphertextHash,
-    };
-  }
-
-  static formatPrivateInputs(inputs: PrivateInputs): FormattedCircuitInputs {
-    const publicInputs = Prover.privateToPublicInputs(inputs);
-    const hashOfInputs = Prover.hashInputs(publicInputs);
-
-    return {
-      hashOfInputs: bytes.hexlify(hashOfInputs, true),
-      adaptID: bytes.hexlify(inputs.adaptID, true),
-      depositAmount: bytes.hexlify(inputs.depositAmount, true),
-      withdrawAmount: bytes.hexlify(inputs.withdrawAmount, true),
-      tokenField: bytes.hexlify(inputs.tokenField, true),
-      outputTokenField: bytes.hexlify(inputs.outputTokenField, true),
-      outputEthAddress: bytes.hexlify(inputs.outputEthAddress, true),
-      randomIn: inputs.randomIn.map((el) => bytes.hexlify(el, true)),
-      valuesIn: inputs.valuesIn.map((el) => bytes.hexlify(el, true)),
-      spendingKeys: inputs.spendingKeys.map((el) => bytes.hexlify(el, true)),
-      treeNumber: bytes.hexlify(inputs.treeNumber, true),
-      merkleRoot: bytes.hexlify(inputs.merkleRoot, true),
-      nullifiers: inputs.nullifiers.map((el) => bytes.hexlify(el, true)),
-      pathElements: inputs.pathElements.map((el) => el.map((el2) => bytes.hexlify(el2, true))),
-      pathIndices: inputs.pathIndices.map((el) => bytes.hexlify(el, true)),
-      recipientPK: inputs.recipientPK.map((el) =>
-        babyjubjub.unpackPoint(el).map((el2) => bytes.hexlify(el2, true)),
+      merkleRoot: bytes.hexlify(publicInputs.merkleRoot, true),
+      boundParamsHash: bytes.hexlify(publicInputs.boundParamsHash, true),
+      nullifiers: publicInputs.nullifiers.map((el) => bytes.hexlify(el, true)),
+      commitmentsOut: publicInputs.commitmentsOut.map((el) =>
+        bytes.hexlify(el, true)
       ),
-      randomOut: inputs.randomOut.map((el) => bytes.hexlify(el, true)),
-      valuesOut: inputs.valuesOut.map((el) => bytes.hexlify(el, true)),
-      commitmentsOut: inputs.commitmentsOut.map((el) => bytes.hexlify(el, true)),
-      ciphertextHash: bytes.hexlify(inputs.ciphertextHash, true),
+      token: bytes.hexlify(privateInputs.token, true),
+      publicKey: privateInputs.publicKey.map((el) => bytes.hexlify(el, true)),
+      signature: privateInputs.signature.map((el) => bytes.hexlify(el, true)),
+      randomIn: privateInputs.randomIn.map((el) => bytes.hexlify(el, true)),
+      valueIn: privateInputs.valueIn.map((el) => bytes.hexlify(el, true)),
+      pathElements: privateInputs.pathElements
+        .flat(2)
+        .map((el) => bytes.hexlify(el, true)),
+      leavesIndices: privateInputs.leavesIndices.map((el) =>
+        bytes.hexlify(el, true)
+      ),
+      nullifyingKey: bytes.hexlify(privateInputs.nullifyingKey, true),
+      npkOut: privateInputs.npkOut.map((el) => bytes.hexlify(el, true)),
+      valueOut: privateInputs.valueOut.map((el) => bytes.hexlify(el, true))
     };
   }
 }
