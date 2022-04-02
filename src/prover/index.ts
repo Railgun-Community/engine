@@ -1,6 +1,5 @@
 // @ts-ignore-next-line
 import { groth16 } from "snarkjs";
-import { bytes } from "../utils";
 
 export type Artifacts = {
   zkey: ArrayLike<number>;
@@ -23,27 +22,27 @@ export type Proof = {
 };
 
 export type PublicInputs = {
-  merkleRoot: bytes.BytesData;
-  boundParamsHash: bytes.BytesData;
-  nullifiers: bytes.BytesData[];
-  commitmentsOut: bytes.BytesData[];
+  merkleRoot: bigint;
+  boundParamsHash: bigint;
+  nullifiers: bigint[];
+  commitmentsOut: bigint[];
 };
 
 export type PrivateInputs = {
-  token: bytes.BytesData;
-  publicKey: [bytes.BytesData, bytes.BytesData]; // Unpacked public key
-  signature: [bytes.BytesData, bytes.BytesData, bytes.BytesData]; // R[0], R[1], S
-  randomIn: bytes.BytesData[];
-  valueIn: bytes.BytesData[];
-  pathElements: bytes.BytesData[][];
-  leavesIndices: bytes.BytesData[];
-  nullifyingKey: bytes.BytesData;
-  npkOut: bytes.BytesData[];
-  valueOut: bytes.BytesData[];
+  token: bigint;
+  publicKey: [bigint, bigint]; 
+  signature: [bigint, bigint, bigint];
+  randomIn: bigint[];
+  valueIn: bigint[];
+  pathElements: bigint[][];
+  leavesIndices: bigint[];
+  nullifyingKey: bigint;
+  npkOut: bigint[];
+  valueOut: bigint[];
 };
 
 export type FormattedCircuitInputs = {
-  [key: string]: string | string[];
+  [key: string]: bigint | bigint[];
 };
 
 // eslint-disable-next-line no-unused-vars
@@ -71,7 +70,7 @@ class Prover {
     circuit: Circuits,
     publicInputs: PublicInputs,
     privateInputs: PrivateInputs
-  ): Promise<{ proof: Proof; inputs: PublicInputs }> {
+  ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(circuit);
 
@@ -85,24 +84,14 @@ class Prover {
       artifacts.zkey
     );
 
-    // Format proof
-    const proofFormatted = {
-      a: [bytes.hexlify(proof.pi_a[0], true), bytes.hexlify(proof.pi_a[1], true)],
-      b: [
-        [bytes.hexlify(proof.pi_b[0][1], true), bytes.hexlify(proof.pi_b[0][0], true)],
-        [bytes.hexlify(proof.pi_b[1][1], true), bytes.hexlify(proof.pi_b[1][0], true)]
-      ],
-      c: [bytes.hexlify(proof.pi_c[0], true), bytes.hexlify(proof.pi_c[1], true)]
-    };
-
     // Throw if proof is invalid
-    if (!(await this.verify(circuit, publicInputs, proofFormatted)))
+    if (!(await this.verify(circuit, publicInputs, proof)))
       throw new Error("Proof generation failed");
 
     // Return proof with inputs
     return {
-      proof: proofFormatted,
-      inputs: publicInputs
+      proof,
+      publicInputs
     };
   }
 
@@ -111,26 +100,20 @@ class Prover {
     privateInputs: PrivateInputs
   ): FormattedCircuitInputs {
     return {
-      merkleRoot: bytes.hexlify(publicInputs.merkleRoot, true),
-      boundParamsHash: bytes.hexlify(publicInputs.boundParamsHash, true),
-      nullifiers: publicInputs.nullifiers.map((el) => bytes.hexlify(el, true)),
-      commitmentsOut: publicInputs.commitmentsOut.map((el) =>
-        bytes.hexlify(el, true)
-      ),
-      token: bytes.hexlify(privateInputs.token, true),
-      publicKey: privateInputs.publicKey.map((el) => bytes.hexlify(el, true)),
-      signature: privateInputs.signature.map((el) => bytes.hexlify(el, true)),
-      randomIn: privateInputs.randomIn.map((el) => bytes.hexlify(el, true)),
-      valueIn: privateInputs.valueIn.map((el) => bytes.hexlify(el, true)),
-      pathElements: privateInputs.pathElements
-        .flat(2)
-        .map((el) => bytes.hexlify(el, true)),
-      leavesIndices: privateInputs.leavesIndices.map((el) =>
-        bytes.hexlify(el, true)
-      ),
-      nullifyingKey: bytes.hexlify(privateInputs.nullifyingKey, true),
-      npkOut: privateInputs.npkOut.map((el) => bytes.hexlify(el, true)),
-      valueOut: privateInputs.valueOut.map((el) => bytes.hexlify(el, true))
+      merkleRoot: publicInputs.merkleRoot,
+      boundParamsHash: publicInputs.boundParamsHash,
+      nullifiers: publicInputs.nullifiers,
+      commitmentsOut: publicInputs.commitmentsOut,
+      token: privateInputs.token,
+      publicKey: privateInputs.publicKey,
+      signature: privateInputs.signature,
+      randomIn: privateInputs.randomIn,
+      valueIn: privateInputs.valueIn,
+      pathElements: privateInputs.pathElements.flat(2),
+      leavesIndices: privateInputs.leavesIndices,
+      nullifyingKey: privateInputs.nullifyingKey,
+      npkOut: privateInputs.npkOut,
+      valueOut: privateInputs.valueOut
     };
   }
 }
