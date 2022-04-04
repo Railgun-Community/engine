@@ -1,6 +1,6 @@
 /* eslint-disable no-bitwise */
 // @ts-ignore
-import { babyjub } from 'circomlibjs';
+import { babyjub, eddsa } from 'circomlibjs';
 import {
   arrayify,
   numberify,
@@ -140,4 +140,17 @@ function random() {
   return poseidon([randomBytes(32)]);
 }
 
-export { seedToPrivateKey, packPoint, unpackPoint, ecdh, privateKeyToPubKey, unpackPubKey, random };
+
+/**
+ * EdDSA signs a message with babyjubjub private key
+ * @param privateKey - private key to sign with
+ * @param data - array byte chunks to sign
+ * @returns signed data
+ */
+function sign(privateKey:string, data: BytesData[]): object {
+  const msghash = poseidon(data);
+
+  return eddsa.signPoseidon(privateKey, msghash);
+}
+
+export { seedToPrivateKey, packPoint, unpackPoint, ecdh, privateKeyToPubKey, unpackPubKey, random, sign };

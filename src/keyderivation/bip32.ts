@@ -118,15 +118,19 @@ export class Node {
   }
 
   /**
-   * @todo
+   * Sign a message with BabyJubJub key
+   * 
+   * @param data - data to sign
+   * @returns signed data
    */
-  // eslint-disable-next-line class-methods-use-this
-  signBabyJubJub() {
-    throw new Error("not implemented");
+  signBabyJubJub(data: Hex[]): object {
+    const keyPair = this.getBabyJubJubKeyPair();
+
+    return babyjubjub.sign(keyPair.privateKey, data);
   }
 
   /**
-   * Sign a message with private key
+   * Sign a message with ed25519 private key
    * @param {Hex} message
    * @returns {Promise<Uint8Array>} - signature
    */
