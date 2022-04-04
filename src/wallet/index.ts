@@ -5,10 +5,10 @@ import type { AbstractBatch } from 'abstract-leveldown';
 import { bytes, hash } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
-import { ERC20Note } from '../note';
+import { Note } from '../note';
 import type { MerkleTree, } from '../merkletree';
 import { LeptonDebugger } from '../models/types';
-import { BjjNode } from '../keyderivation/bip32';
+import { Node } from '../keyderivation/bip32';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -24,7 +24,7 @@ export type TXO = {
   txid: string;
   spendtxid: string | false;
   dummyKey?: string; // For dummy notes
-  note: ERC20Note;
+  note: Note;
 };
 
 export type Balances = {
@@ -47,20 +47,26 @@ export type ScannedEventData = {
   chainID: number;
 };
 
-const derivationPathSpendingKey = "m/44'/1984'/0'/0'";
-const derivationPathViewingKey = "m/420'/1984'/0'/0'";
+const DERIVATION_PATH_PREFIXES = {
+  SPENDING: "m/44'/1984'/0'/",
+  VIEWING: "m/420'/1984'/0'/",
+}
+
+function derivePathsForIndex(index: number = 0) {
+  return {
+    spending: `${DERIVATION_PATH_PREFIXES.SPENDING}${index}'`,
+    viewing: `${DERIVATION_PATH_PREFIXES.VIEWING}${index}'`,
+  }
+}
+
 class Wallet extends EventEmitter {
   private db: Database;
 
   readonly id: string;
 
-  #encryptionKey: bytes.BytesData;
-
-  #viewingKey: BjjNode;
+  #viewingKey: Node;
 
   readonly spendingPublicKey: string;
-
-  readonly gapLimit: number;
 
   readonly merkletree: MerkleTree[] = [];
 
@@ -80,22 +86,15 @@ class Wallet extends EventEmitter {
   constructor(
     id: string,
     db: Database,
-    encryptionKey: bytes.BytesData,
-    mnemonic: string,
-    derivationPath: string,
-    gapLimit: number,
-    leptonDebugger?: LeptonDebugger,
+    spendingKey: Node,
+    viewingKey: Node,
   ) {
     super();
     this.id = id;
     this.db = db;
-    this.#encryptionKey = encryptionKey;
-    this.gapLimit = gapLimit;
-    this.leptonDebugger = leptonDebugger;
 
-    const spendingKey = BjjNode.fromMnemonic(mnemonic).derive(derivationPathSpendingKey);
-    this.spendingPublicKey = spendingKey.getBabyJubJubKey().pubkey;
-    this.#viewingKey = BjjNode.fromMnemonic(mnemonic).derive(derivationPathViewingKey);
+    this.spendingPublicKey = spendingKey.babyJubJubKeyPair.pubkey;
+    this.#viewingKey = viewingKey;
   }
 
   /**
@@ -136,20 +135,8 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Validate encryption key
-   * @param encryptionKey - encryption key for wallet
-   * @throws
-   */
-  validateEncryptionKey(encryptionKey: bytes.BytesData) {
-    if (bytes.hexlify(encryptionKey) !== bytes.hexlify(this.#encryptionKey)) {
-      throw new Error('Wrong encryption key');
-    }
-  }
-
-  /**
    * Sign message with ed25519 node derived at path index
    * @param message - hex or Uint8 bytes of message to sign
-   * @param encryptionKey - encryption key for wallet
    * @param index - index to get keypair at
    * @returns Promise<Uint8Array>
    */
@@ -163,7 +150,16 @@ class Wallet extends EventEmitter {
    * @returns Promise<Uint8Array>
    */
   async getSigningPublicKey(): Promise<String> {
-    return await this.#viewingKey.getEd25519PublicKey();
+    return await this.#viewingKey.getViewingPublicKey();
+  }
+
+  /**
+   * Load encrypted spending key Node from database and return babyjubjub private key
+   * @returns Promise<String>
+   */
+  async getSpendingPrivateKey(encryptionKey: bytes.BytesData): Promise<String> {
+    const node = await this.loadSpendingKey(encryptionKey);
+    return node.babyJubJubKeyPair.privateKey;
   }
 
   /**
@@ -180,16 +176,16 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Gets wallet details for this wallet
+   * Get encrypted wallet details for this wallet
    */
-  async getWalletDetails(): Promise<WalletDetails> {
+  async getWalletDetails(encryptionKey: bytes.BytesData): Promise<WalletDetails> {
     let walletDetails: WalletDetails;
 
     try {
       // Try fetching from database
       walletDetails = msgpack.decode(
         bytes.arrayify(
-          await this.db.getEncrypted(this.getWalletDetailsPath(), this.#encryptionKey),
+          await this.db.getEncrypted(this.getWalletDetailsPath(), encryptionKey),
         ),
       );
     } catch {
@@ -276,6 +272,9 @@ class Wallet extends EventEmitter {
   async TXOs(chainID: number): Promise<TXO[]> {
     // Get chain namespace
     const namespace = this.getWalletDBPrefix(chainID);
+    const viewingKeyPrivate = await this.#viewingKey.getNullifyingKey();
+    const { masterPublicKey } = this.#viewingKey;
+
 
     // Stream list of keys out
     const keys: string[] = await new Promise((resolve) => {
@@ -318,7 +317,7 @@ class Wallet extends EventEmitter {
         const tree = bytes.numberify(keySplit[3]).toNumber();
         const position = bytes.numberify(keySplit[4]).toNumber();
 
-        const note = ERC20Note.deserialize(UTXO.decrypted);
+        const note = Note.deserialize(UTXO.decrypted, viewingKeyPrivate, masterPublicKey);
 
         return {
           tree,
@@ -504,13 +503,12 @@ class Wallet extends EventEmitter {
     db: Database,
     encryptionKey: bytes.BytesData,
     mnemonic: string,
-    leptonDebugger?: LeptonDebugger,
-    derivationPath: string = "m/44'/1984'/0'/0'",
-    gapLimit: number = 5,
+    index: number = 0,
   ): Promise<Wallet> {
     // Calculate ID
+    const paths = derivePathsForIndex(index);
     const id = hash.sha256(
-      bytes.combine([mnemonicToSeed(mnemonic), bytes.fromUTF8String(derivationPath)]),
+      bytes.combine([mnemonicToSeed(mnemonic), bytes.fromUTF8String(paths.spending)]),
     );
 
     // Write encrypted mnemonic to DB
@@ -519,12 +517,15 @@ class Wallet extends EventEmitter {
       encryptionKey,
       msgpack.encode({
         mnemonic,
-        derivationPath,
+        derivationPath: paths.spending,
       }),
     );
 
+    const spendingKey = Node.fromMnemonic(mnemonic).derive(paths.spending);
+    const viewingKey = Node.fromMnemonic(mnemonic).derive(paths.viewing);
+
     // Create wallet object and return
-    return new Wallet(id, db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
+    return new Wallet(id, db, spendingKey, viewingKey);
   }
 
   /**
@@ -538,16 +539,27 @@ class Wallet extends EventEmitter {
     db: Database,
     encryptionKey: bytes.BytesData,
     id: string,
-    leptonDebugger?: LeptonDebugger,
-    gapLimit: number = 5,
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
     const { mnemonic, derivationPath } = msgpack.decode(
       bytes.arrayify(await db.getEncrypted([bytes.fromUTF8String('wallet'), id], encryptionKey)),
     );
 
+    // extract last index of derivation path viewing key path matches
+    const index = derivationPath.split('/').pop().split('\'')[0];
+    const paths = derivePathsForIndex(index);
+    const spendingKey = Node.fromMnemonic(mnemonic).derive(paths.spending);
+    const viewingKey = Node.fromMnemonic(mnemonic).derive(paths.viewing);
     // Create wallet object and return
-    return new Wallet(id, db, encryptionKey, mnemonic, derivationPath, gapLimit, leptonDebugger);
+    return new Wallet(id, db, spendingKey, viewingKey);
+  }
+
+  async loadSpendingKey(encryptionKey: bytes.BytesData): Promise<Node> {
+    const { mnemonic, derivationPath } = msgpack.decode(
+      bytes.arrayify(await this.db.getEncrypted([bytes.fromUTF8String('wallet'), this.id], encryptionKey)),
+    );
+
+    return Node.fromMnemonic(mnemonic).derive(derivationPath);
   }
 }
 
