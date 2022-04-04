@@ -1,4 +1,4 @@
-import * as ed25519 from '@noble/ed25519';
+import * as curve25519 from '@noble/ed25519';
 import { babyjubjub, bytes, hash } from '../utils';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
@@ -30,7 +30,7 @@ export function getMasterKeyFromSeed(seed: bytes.BytesData): KeyNode {
   };
 }
 
-export class BjjNode {
+export class Node {
 
   static CURVE_SEED = CURVE_SEED;
 
@@ -45,9 +45,9 @@ export class BjjNode {
     this.#chainCode = keyNode.chainCode;
   }
 
-  static fromMnemonic(mnemonic: string): BjjNode {
+  static fromMnemonic(mnemonic: string): Node {
     const seed = mnemonicToSeed(mnemonic);
-    return new BjjNode(getMasterKeyFromSeed(seed));
+    return new Node(getMasterKeyFromSeed(seed));
   }
 
   /**
@@ -55,28 +55,28 @@ export class BjjNode {
    * @param {string} path - path to derive along
    * @returns {BIP32Node} - new BIP32 implementation Node
    */
-  derive(path: string): BjjNode {
+  derive(path: string): Node {
     // Get path segments
     const segments = getPathSegments(path);
 
     // Calculate new key node
     const keyNode = segments.reduce(
       (parentKeys: KeyNode, segment: number) => childKeyDerivationHardened(
-        parentKeys, segment, BjjNode.HARDENED_OFFSET
+        parentKeys, segment, Node.HARDENED_OFFSET
       ),
       {
         chainKey: this.#chainKey,
         chainCode: this.#chainCode
       }
     );
-    return new BjjNode(keyNode);
+    return new Node(keyNode);
   }
 
   /**
   * Gets babyjubjub key pair of this BIP32 Node
   * @returns keypair
   */
-  getBabyJubJubKey(): KeyPair {
+  getBabyJubJubKeyPair(): KeyPair {
     const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
     const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
     return {
@@ -86,15 +86,20 @@ export class BjjNode {
   }
 
   getBabyJubJubPublicKey() {
-    const { pubkey } = this.getBabyJubJubKey();
+    const { pubkey } = this.getBabyJubJubKeyPair();
     return pubkey;
   }
 
-  async getEd25519Key(): Promise<KeyPair> {
+  getMasterPublicKey() {
+    const unpacked = babyjubjub.unpackPubKey(this.getBabyJubJubPublicKey());
+    return hash.poseidon(unpacked);
+  }
 
-    const pubkey = bytes.hexlify(await ed25519.getPublicKey(bytes.hexlify(this.#chainKey)));
-    const privateKey = this.#chainKey;
 
+  async getViewingKeyPair(): Promise<KeyPair> {
+    // the private key is also used as the nullyfing key
+    const privateKey = hash.poseidon([this.#chainKey]);
+    const pubkey = bytes.hexlify(await curve25519.getPublicKey(privateKey));
     return { privateKey, pubkey };
   };
 
@@ -102,10 +107,15 @@ export class BjjNode {
  * Get public portion of key
  * @returns {Promise<string>}
  */
-  async getEd25519PublicKey(): Promise<string> {
-    const { pubkey } = await this.getEd25519Key();
+  async getViewingPublicKey(): Promise<string> {
+    const { pubkey } = await this.getViewingKeyPair();
     return pubkey;
   };
+
+  async getNullifyingKey(): Promise<string> {
+    const {privateKey} = await this.getViewingKeyPair();
+    return privateKey;
+  }
 
   /**
    * @todo
@@ -121,6 +131,7 @@ export class BjjNode {
    * @returns {Promise<Uint8Array>} - signature
    */
   async signEd25519(message: Hex): Promise<Uint8Array> {
-    return await ed25519.sign(message, this.#chainKey);
+    const {privateKey} = await this.getViewingKeyPair();
+    return await curve25519.sign(message, privateKey);
   }
 }

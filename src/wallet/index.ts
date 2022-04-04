@@ -8,7 +8,7 @@ import { mnemonicToSeed } from '../keyderivation/bip39';
 import { ERC20Note } from '../note';
 import type { MerkleTree, } from '../merkletree';
 import { LeptonDebugger } from '../models/types';
-import { BjjNode } from '../keyderivation/bip32-babyjubjub';
+import { BjjNode } from '../keyderivation/bip32';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
