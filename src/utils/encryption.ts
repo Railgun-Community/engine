@@ -1,17 +1,29 @@
 import crypto from 'crypto';
+import * as curve25519 from '@noble/ed25519';
 import type { BytesData } from './bytes';
 import {
   arrayify,
   hexlify,
   padToLength,
   random,
-  trim
+  trim,
 } from './bytes';
 
 export interface Ciphertext {
   iv: BytesData,
   tag: BytesData,
   data: BytesData[];
+}
+
+/**
+ * Derive symmetric shared key
+ * @param privateViewingKey - private viewing key to derive shared key from
+ * @param publicKey - public key to derive shared key from
+ * @returns shared key
+ */
+ async function getSharedKey(privateViewingKey: BytesData, publicKey: BytesData): Promise<string> {
+   const shared = await curve25519.getSharedSecret(hexlify(privateViewingKey), hexlify(publicKey))
+   return hexlify(shared);
 }
 
 const aes = {
@@ -99,4 +111,5 @@ const aes = {
 
 export {
   aes,
+  getSharedKey
 };
