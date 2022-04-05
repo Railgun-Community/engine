@@ -140,17 +140,30 @@ function random() {
   return poseidon([randomBytes(32)]);
 }
 
-
 /**
  * EdDSA signs a message with babyjubjub private key
  * @param privateKey - private key to sign with
  * @param data - array byte chunks to sign
  * @returns signed data
  */
-function sign(privateKey:string, data: BytesData[]): object {
+function sign(privateKey: string, data: BytesData[]): object {
   const msghash = poseidon(data);
 
   return eddsa.signPoseidon(privateKey, msghash);
 }
 
-export { seedToPrivateKey, packPoint, unpackPoint, ecdh, privateKeyToPubKey, unpackPubKey, random, sign };
+function randomPubkey(): string {
+  return privateKeyToPubKey(seedToPrivateKey(randomBytes(32)))[1];
+}
+
+export {
+  seedToPrivateKey,
+  packPoint,
+  unpackPoint,
+  ecdh,
+  privateKeyToPubKey,
+  unpackPubKey,
+  random,
+  sign,
+  randomPubkey,
+};

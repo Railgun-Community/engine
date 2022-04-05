@@ -7,7 +7,7 @@ import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
 const CURVE_SEED = bytes.fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
 
-export type KeyPair = { privateKey: string, pubkey: string; };
+export type KeyPair = { privateKey: string; pubkey: string };
 export type Hex = Uint8Array | string;
 
 /**
@@ -31,7 +31,6 @@ export function getMasterKeyFromSeed(seed: bytes.BytesData): KeyNode {
 }
 
 export class Node {
-
   static CURVE_SEED = CURVE_SEED;
 
   static HARDENED_OFFSET = HARDENED_OFFSET;
@@ -65,45 +64,35 @@ export class Node {
 
     // Calculate new key node
     const keyNode = segments.reduce(
-      (parentKeys: KeyNode, segment: number) => childKeyDerivationHardened(
-        parentKeys, segment, Node.HARDENED_OFFSET
-      ),
+      (parentKeys: KeyNode, segment: number) =>
+        childKeyDerivationHardened(parentKeys, segment, Node.HARDENED_OFFSET),
       {
         chainKey: this.#chainKey,
-        chainCode: this.#chainCode
-      }
+        chainCode: this.#chainCode,
+      },
     );
     return new Node(keyNode);
   }
 
   /**
-  * Gets babyjubjub key pair of this BIP32 Node
-  * @returns {KeyPair} keypair
-  */
+   * Gets babyjubjub key pair of this BIP32 Node
+   * @returns {KeyPair} keypair
+   */
   get babyJubJubKeyPair(): KeyPair {
     const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
     const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
     return {
-      privateKey,
-      pubkey
+      privateKey, // sk
+      pubkey, // PK
     };
   }
 
   /**
-   * Shortcut to return public portion of BabyJubJub key
+   * Shortcut to return public portion (PK) BabyJubJub key
    * @returns {string} pubkey
    */
   get babyJubJubPublicKey(): string {
     return this.babyJubJubKeyPair.pubkey;
-  }
-
-  /**
-   * Derive Master Public Key (MPK) which is used as the user's address
-   * @returns {string}
-   */
-  get masterPublicKey(): string {
-    const unpacked = babyjubjub.unpackPubKey(this.babyJubJubPublicKey);
-    return hash.poseidon(unpacked);
   }
 
   async getViewingKeyPair(): Promise<KeyPair> {
@@ -111,7 +100,7 @@ export class Node {
     const privateKey = hash.poseidon([this.#chainKey]);
     const pubkey = bytes.hexlify(await curve25519.getPublicKey(privateKey));
     return { privateKey, pubkey };
-  };
+  }
 
   /**
    * Get viewing public key (VK) from ed25519 viewing keypair
@@ -120,7 +109,7 @@ export class Node {
   async getViewingPublicKey(): Promise<string> {
     const { pubkey } = await this.getViewingKeyPair();
     return pubkey;
-  };
+  }
 
   /**
    * Get private Nullifying (aka Viewing) Key (n) from ed25519 viewing keypair

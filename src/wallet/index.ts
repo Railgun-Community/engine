@@ -2,13 +2,14 @@ import BN from 'bn.js';
 import msgpack from 'msgpack-lite';
 import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
-import { bytes, hash } from '../utils';
+import { babyjubjub, bytes, hash } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
-import type { MerkleTree, } from '../merkletree';
+import type { MerkleTree } from '../merkletree';
 import { LeptonDebugger } from '../models/types';
 import { Node } from '../keyderivation/bip32';
+import { bech32 } from '../keyderivation';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -45,7 +46,7 @@ export type ScannedEventData = {
   chainID: number;
 };
 
-export type WalletData = { mnemonic: string, index: number };
+export type WalletData = { mnemonic: string; index: number };
 /**
  * constant defining the derivation path prefixes for spending and viewing keys
  * must be appended with index' to form a complete path
@@ -53,7 +54,7 @@ export type WalletData = { mnemonic: string, index: number };
 const DERIVATION_PATH_PREFIXES = {
   SPENDING: "m/44'/1984'/0'/0'/",
   VIEWING: "m/420'/1984'/0'/0'/",
-}
+};
 
 /**
  * Helper to append DERIVATION_PATH_PREFIXES with index'
@@ -62,15 +63,24 @@ function derivePathsForIndex(index: number = 0) {
   return {
     spending: `${DERIVATION_PATH_PREFIXES.SPENDING}${index}'`,
     viewing: `${DERIVATION_PATH_PREFIXES.VIEWING}${index}'`,
-  }
+  };
 }
 
 function deriveNodes(mnemonic: string, index: number = 0) {
   const paths = derivePathsForIndex(index);
   return {
     spendingKey: Node.fromMnemonic(mnemonic).derive(paths.spending),
-    viewingKey: Node.fromMnemonic(mnemonic).derive(paths.viewing)
-  }
+    viewingKey: Node.fromMnemonic(mnemonic).derive(paths.viewing),
+  };
+}
+
+/**
+ * Derive Master Public Key (MPK) which is used as the user's address
+ * @returns {string}
+ */
+export async function getMasterPublicKey(spendingKey: Node, viewingKey: Node): Promise<string> {
+  const unpacked = babyjubjub.unpackPubKey(spendingKey.babyJubJubPublicKey);
+  return hash.poseidon([...unpacked, await viewingKey.getNullifyingKey()]);
 }
 
 class Wallet extends EventEmitter {
@@ -80,34 +90,28 @@ class Wallet extends EventEmitter {
 
   #viewingKey: Node;
 
-  readonly spendingPublicKey: string;
+  readonly masterPublicKey: string;
 
   readonly merkletree: MerkleTree[] = [];
 
   readonly leptonDebugger: LeptonDebugger | undefined;
-
 
   // Lock scanning operations to prevent race conditions
   private scanLockPerChain: boolean[] = [];
 
   /**
    * Create Wallet controller
-   * @param db - database
-   * @param merkletree - merkle tree to use
    * @param id - wallet ID
-   * @param encryptionKey - database encryption key
+   * @param db - database
+   * @param masterPublicKey - Master Public Key mpk
+   * @param viewingKey - viewing key
    */
-  constructor(
-    id: string,
-    db: Database,
-    spendingKey: Node,
-    viewingKey: Node,
-  ) {
+  constructor(id: string, db: Database, masterPublicKey: string, viewingKey: Node) {
     super();
     this.id = id;
     this.db = db;
 
-    this.spendingPublicKey = spendingKey.babyJubJubKeyPair.pubkey;
+    this.masterPublicKey = masterPublicKey;
     this.#viewingKey = viewingKey;
   }
 
@@ -169,24 +173,40 @@ class Wallet extends EventEmitter {
 
   /**
    * Load encrypted spending key Node from database and return babyjubjub private key
-   * @returns Promise<String>
+   * @returns Promise<string>
    */
   async getSpendingPrivateKey(encryptionKey: bytes.BytesData): Promise<string> {
     const node = await this.loadSpendingKey(encryptionKey);
     return node.babyJubJubKeyPair.privateKey;
   }
 
+  async getViewingPrivateKey(): Promise<string> {
+    return (await this.#viewingKey.getViewingKeyPair()).privateKey;
+  }
+
   /**
-   * Get Address at index
-   * @param index - index to get address at
-   * @param change - get change address
-   * @param chainID - chainID for address
-   * @returns address
-   * @todo hisham
+   * Get Viewing Public Key (VK)
+   * @returns Promise<string>
    */
-  // eslint-disable-next-line class-methods-use-this
-  getAddress(chainID: number | undefined = undefined): string {
-    return `${chainID} notimplemented`;
+  async getViewingPublicKey(): Promise<string> {
+    return this.#viewingKey.getViewingPublicKey();
+  }
+
+  /**
+   * Get Address which is 64 bytes (MPK, VK)
+   */
+  async getAddressKeys(): Promise<[string, string]> {
+    const viewingPublicKey = await this.getViewingPublicKey();
+    return [this.masterPublicKey, viewingPublicKey];
+  }
+
+  /**
+   * Encode address from (MPK, VK) + chainID
+   * @returns address
+   */
+  async getAddress(chainID: number | undefined): Promise<string> {
+    const [masterPublicKey, viewingPublicKey] = await this.getAddressKeys();
+    return bech32.encode({ masterPublicKey, viewingPublicKey, chainID });
   }
 
   /**
@@ -215,17 +235,12 @@ class Wallet extends EventEmitter {
   /**
    * Scans wallet at index for new balances
    * @param index - index of address to scan
-   * @param change - whether we're scanning the change address
-   * @param leaves - sparse array of commitments to scan
    * Commitment index in array should be same as commitment index in tree
    * @param tree - tree number we're scanning
    * @param chainID - chainID we're scanning
    */
-  private async scan(
-    // leaves: Commitment[],
-    // tree: number,
-    // chainID: number,
-  ): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async scan(tree: number, chainID: number): Promise<boolean> {
     // const decryptionKey = this.#viewingKey.getEd25519Key();
     // const nullifierKey = this.#viewingKey.getBabyJubJubKey();
 
@@ -285,8 +300,6 @@ class Wallet extends EventEmitter {
     // Get chain namespace
     const namespace = this.getWalletDBPrefix(chainID);
     const viewingKeyPrivate = await this.#viewingKey.getNullifyingKey();
-    const { masterPublicKey } = this.#viewingKey;
-
 
     // Stream list of keys out
     const keys: string[] = await new Promise((resolve) => {
@@ -329,7 +342,7 @@ class Wallet extends EventEmitter {
         const tree = bytes.numberify(keySplit[3]).toNumber();
         const position = bytes.numberify(keySplit[4]).toNumber();
 
-        const note = Note.deserialize(UTXO.decrypted, viewingKeyPrivate, masterPublicKey);
+        const note = Note.deserialize(UTXO.decrypted, viewingKeyPrivate, this.masterPublicKey);
 
         return {
           tree,
@@ -507,27 +520,17 @@ class Wallet extends EventEmitter {
     return [bytes.fromUTF8String('wallet'), id];
   }
 
-  static async read(
-    db: Database,
-    id: string,
-    encryptionKey: bytes.BytesData
-  ): Promise<WalletData> {
-    return msgpack.decode(
-      bytes.arrayify(await db.getEncrypted(Wallet.dbPath(id), encryptionKey)),
-    );
+  static async read(db: Database, id: string, encryptionKey: bytes.BytesData): Promise<WalletData> {
+    return msgpack.decode(bytes.arrayify(await db.getEncrypted(Wallet.dbPath(id), encryptionKey)));
   }
 
   static async write(
     db: Database,
     id: string,
     encryptionKey: bytes.BytesData,
-    data: WalletData
+    data: WalletData,
   ): Promise<void> {
-    await db.putEncrypted(
-      Wallet.dbPath(id),
-      encryptionKey,
-      msgpack.encode(data)
-    );
+    await db.putEncrypted(Wallet.dbPath(id), encryptionKey, msgpack.encode(data));
   }
 
   /**
@@ -545,17 +548,16 @@ class Wallet extends EventEmitter {
     index: number = 0,
   ): Promise<Wallet> {
     // Calculate ID
-    const id = hash.sha256(
-      bytes.combine([mnemonicToSeed(mnemonic), index.toString(16)]),
-    );
+    const id = hash.sha256(bytes.combine([mnemonicToSeed(mnemonic), index.toString(16)]));
 
     // Write encrypted mnemonic to DB
     await Wallet.write(db, id, encryptionKey, { mnemonic, index });
 
-    const { spendingKey, viewingKey } = deriveNodes(mnemonic, index)
+    const { spendingKey, viewingKey } = deriveNodes(mnemonic, index);
+    const masterPublicKey = await getMasterPublicKey(spendingKey, viewingKey);
 
     // Create wallet object and return
-    return new Wallet(id, db, spendingKey, viewingKey);
+    return new Wallet(id, db, masterPublicKey, viewingKey);
   }
 
   /**
@@ -572,15 +574,14 @@ class Wallet extends EventEmitter {
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
     const { mnemonic, index } = await Wallet.read(db, id, encryptionKey);
-
     const { spendingKey, viewingKey } = deriveNodes(mnemonic, index);
-
+    const masterPublicKey = await getMasterPublicKey(spendingKey, viewingKey);
     // Create wallet object and return
-    return new Wallet(id, db, spendingKey, viewingKey);
+    return new Wallet(id, db, masterPublicKey, viewingKey);
   }
 
   async loadSpendingKey(encryptionKey: bytes.BytesData): Promise<Node> {
-    const { mnemonic, index } = await Wallet.read(this.db, this.id, encryptionKey)
+    const { mnemonic, index } = await Wallet.read(this.db, this.id, encryptionKey);
 
     return deriveNodes(mnemonic, index).spendingKey;
   }

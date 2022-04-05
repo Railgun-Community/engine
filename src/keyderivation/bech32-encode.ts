@@ -9,62 +9,71 @@ prefixes[5] = 'rgtestgoerli';
 prefixes[56] = 'rgbsc';
 prefixes[137] = 'rgpoly';
 
+export type AddressData = {
+  masterPublicKey: string;
+  viewingPublicKey: string;
+  chainID?: number;
+  version?: number;
+};
+
 /**
  * Bech32 encodes address
  * @param pubkey - public key to encode
  * @param version - version
  * @param chainID - chainID to encode
  */
-function encode(pubkey: bytes.BytesData, chainID: number | undefined = undefined) {
-  // TODO: Add bit for chain type (EVM, Solana, etc.)
+function encode(data: AddressData): string {
+  const { masterPublicKey, viewingPublicKey, chainID } = data;
   // Combine key and version byte
-  const data = bech32.toWords(new Uint8Array(
-    bytes.arrayify(bytes.combine([new BN(constants.VERSION), pubkey]))
-  ));
+  const words = bech32.toWords(
+    new Uint8Array(
+      bytes.arrayify(bytes.combine([new BN(constants.VERSION), masterPublicKey, viewingPublicKey])),
+    ),
+  );
 
   // Prefix exists, encode and return with prefix
-  if (chainID && prefixes[chainID]) return bech32.encode(prefixes[chainID], data);
+  if (chainID && prefixes[chainID]) {
+    return bech32.encode(prefixes[chainID], words);
+  }
 
   // No chainID specified, throw error
-  return bech32.encode('rgany', data);
+  return bech32.encode('rgany', words);
 }
 
-function decode(address: string) {
+function decode(address: string): AddressData {
   const decoded = bech32.decode(address);
 
   // Hexlify data
   const data = bytes.hexlify(bech32.fromWords(decoded.words));
 
   // Get version
-  const version = bytes.numberify(data.slice(0, 2));
+  const version = parseInt(data.slice(0, 2), 16);
+  const masterPublicKey = data.slice(2, 34);
+  const viewingPublicKey = data.slice(34, 66);
 
   // Throw if address version is not supported
-  if (!version.eq(constants.VERSION)) throw new Error('Incorrect address version');
+  if (version !== constants.VERSION) throw new Error('Incorrect address version');
 
-  // Get key
-  const pubkey = data.slice(2);
+  const result: Partial<AddressData> = {
+    masterPublicKey,
+    viewingPublicKey,
+    version,
+  };
 
   if (prefixes.includes(decoded.prefix)) {
     // If we know this prefix, then return with chainID
-    return {
-      chainID: prefixes.indexOf(decoded.prefix),
-      pubkey,
-    };
+    result.chainID = prefixes.indexOf(decoded.prefix);
   }
 
   if (decoded.prefix === 'rgany') {
     // If this is the generic prefix, return undefined
-    return {
-      chainID: undefined,
-      pubkey,
-    };
+    result.chainID = undefined;
   }
+
+  if ('chainID' in result) return result as AddressData;
 
   // Don't know what this prefix is, throw
   throw new Error('Address prefix unrecognized');
 }
 
-export {
-  encode,
-  decode,
-};
+export { encode, decode };
