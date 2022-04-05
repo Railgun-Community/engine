@@ -12,8 +12,6 @@ import { Node } from '../keyderivation/bip32';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
-  primaryHeight: number;
-  changeHeight: number;
 };
 
 export type TXO = {
@@ -47,15 +45,31 @@ export type ScannedEventData = {
   chainID: number;
 };
 
+export type WalletData = { mnemonic: string, index: number };
+/**
+ * constant defining the derivation path prefixes for spending and viewing keys
+ * must be appended with index' to form a complete path
+ */
 const DERIVATION_PATH_PREFIXES = {
-  SPENDING: "m/44'/1984'/0'/",
-  VIEWING: "m/420'/1984'/0'/",
+  SPENDING: "m/44'/1984'/0'/0'/",
+  VIEWING: "m/420'/1984'/0'/0'/",
 }
 
+/**
+ * Helper to append DERIVATION_PATH_PREFIXES with index'
+ */
 function derivePathsForIndex(index: number = 0) {
   return {
     spending: `${DERIVATION_PATH_PREFIXES.SPENDING}${index}'`,
     viewing: `${DERIVATION_PATH_PREFIXES.VIEWING}${index}'`,
+  }
+}
+
+function deriveNodes(mnemonic: string, index: number = 0) {
+  const paths = derivePathsForIndex(index);
+  return {
+    spendingKey: Node.fromMnemonic(mnemonic).derive(paths.spending),
+    viewingKey: Node.fromMnemonic(mnemonic).derive(paths.viewing)
   }
 }
 
@@ -130,8 +144,8 @@ class Wallet extends EventEmitter {
    * Construct DB path from chainID
    * @returns wallet DB path
    */
-  getWalletDetailsPath(): string[] {
-    return this.getWalletDBPrefix(0);
+  getWalletDetailsPath(chainID: number): string[] {
+    return this.getWalletDBPrefix(chainID);
   }
 
   /**
@@ -149,7 +163,7 @@ class Wallet extends EventEmitter {
    * @param index - index to get keypair at
    * @returns Promise<Uint8Array>
    */
-  async getSigningPublicKey(): Promise<String> {
+  async getSigningPublicKey(): Promise<string> {
     return await this.#viewingKey.getViewingPublicKey();
   }
 
@@ -157,7 +171,7 @@ class Wallet extends EventEmitter {
    * Load encrypted spending key Node from database and return babyjubjub private key
    * @returns Promise<String>
    */
-  async getSpendingPrivateKey(encryptionKey: bytes.BytesData): Promise<String> {
+  async getSpendingPrivateKey(encryptionKey: bytes.BytesData): Promise<string> {
     const node = await this.loadSpendingKey(encryptionKey);
     return node.babyJubJubKeyPair.privateKey;
   }
@@ -178,22 +192,20 @@ class Wallet extends EventEmitter {
   /**
    * Get encrypted wallet details for this wallet
    */
-  async getWalletDetails(encryptionKey: bytes.BytesData): Promise<WalletDetails> {
+  async getWalletDetails(encryptionKey: bytes.BytesData, chainID: number): Promise<WalletDetails> {
     let walletDetails: WalletDetails;
 
     try {
       // Try fetching from database
       walletDetails = msgpack.decode(
         bytes.arrayify(
-          await this.db.getEncrypted(this.getWalletDetailsPath(), encryptionKey),
+          await this.db.getEncrypted(this.getWalletDetailsPath(chainID), encryptionKey),
         ),
       );
     } catch {
       // If details don't exist yet, return defaults
       walletDetails = {
         treeScannedHeights: [],
-        primaryHeight: 0,
-        changeHeight: 0,
       };
     }
 
@@ -491,6 +503,33 @@ class Wallet extends EventEmitter {
   }
   */
 
+  static dbPath(id: string): bytes.BytesData[] {
+    return [bytes.fromUTF8String('wallet'), id];
+  }
+
+  static async read(
+    db: Database,
+    id: string,
+    encryptionKey: bytes.BytesData
+  ): Promise<WalletData> {
+    return msgpack.decode(
+      bytes.arrayify(await db.getEncrypted(Wallet.dbPath(id), encryptionKey)),
+    );
+  }
+
+  static async write(
+    db: Database,
+    id: string,
+    encryptionKey: bytes.BytesData,
+    data: WalletData
+  ): Promise<void> {
+    await db.putEncrypted(
+      Wallet.dbPath(id),
+      encryptionKey,
+      msgpack.encode(data)
+    );
+  }
+
   /**
    * Create a wallet from mnemonic
    * @param db - database
@@ -506,23 +545,14 @@ class Wallet extends EventEmitter {
     index: number = 0,
   ): Promise<Wallet> {
     // Calculate ID
-    const paths = derivePathsForIndex(index);
     const id = hash.sha256(
-      bytes.combine([mnemonicToSeed(mnemonic), bytes.fromUTF8String(paths.spending)]),
+      bytes.combine([mnemonicToSeed(mnemonic), index.toString(16)]),
     );
 
     // Write encrypted mnemonic to DB
-    await db.putEncrypted(
-      [bytes.fromUTF8String('wallet'), id],
-      encryptionKey,
-      msgpack.encode({
-        mnemonic,
-        derivationPath: paths.spending,
-      }),
-    );
+    await Wallet.write(db, id, encryptionKey, { mnemonic, index });
 
-    const spendingKey = Node.fromMnemonic(mnemonic).derive(paths.spending);
-    const viewingKey = Node.fromMnemonic(mnemonic).derive(paths.viewing);
+    const { spendingKey, viewingKey } = deriveNodes(mnemonic, index)
 
     // Create wallet object and return
     return new Wallet(id, db, spendingKey, viewingKey);
@@ -541,25 +571,18 @@ class Wallet extends EventEmitter {
     id: string,
   ): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
-    const { mnemonic, derivationPath } = msgpack.decode(
-      bytes.arrayify(await db.getEncrypted([bytes.fromUTF8String('wallet'), id], encryptionKey)),
-    );
+    const { mnemonic, index } = await Wallet.read(db, id, encryptionKey);
 
-    // extract last index of derivation path viewing key path matches
-    const index = derivationPath.split('/').pop().split('\'')[0];
-    const paths = derivePathsForIndex(index);
-    const spendingKey = Node.fromMnemonic(mnemonic).derive(paths.spending);
-    const viewingKey = Node.fromMnemonic(mnemonic).derive(paths.viewing);
+    const { spendingKey, viewingKey } = deriveNodes(mnemonic, index);
+
     // Create wallet object and return
     return new Wallet(id, db, spendingKey, viewingKey);
   }
 
   async loadSpendingKey(encryptionKey: bytes.BytesData): Promise<Node> {
-    const { mnemonic, derivationPath } = msgpack.decode(
-      bytes.arrayify(await this.db.getEncrypted([bytes.fromUTF8String('wallet'), this.id], encryptionKey)),
-    );
+    const { mnemonic, index } = await Wallet.read(this.db, this.id, encryptionKey)
 
-    return Node.fromMnemonic(mnemonic).derive(derivationPath);
+    return deriveNodes(mnemonic, index).spendingKey;
   }
 }
 
