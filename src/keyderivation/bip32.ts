@@ -45,6 +45,10 @@ export class Node {
     this.#chainCode = keyNode.chainCode;
   }
 
+  /**
+   * Create BIP32 node from mnemonic
+   * @returns {Node}
+   */
   static fromMnemonic(mnemonic: string): Node {
     const seed = mnemonicToSeed(mnemonic);
     return new Node(getMasterKeyFromSeed(seed));
@@ -74,57 +78,67 @@ export class Node {
 
   /**
   * Gets babyjubjub key pair of this BIP32 Node
-  * @returns keypair
+  * @returns {KeyPair} keypair
   */
-  getBabyJubJubKeyPair(): KeyPair {
+  get babyJubJubKeyPair(): KeyPair {
     const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
     const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
     return {
       privateKey,
-      pubkey,
+      pubkey
     };
   }
 
-  getBabyJubJubPublicKey() {
-    const { pubkey } = this.getBabyJubJubKeyPair();
-    return pubkey;
+  /**
+   * Shortcut to return public portion of BabyJubJub key
+   * @returns {string} pubkey
+   */
+  get babyJubJubPublicKey(): string {
+    return this.babyJubJubKeyPair.pubkey;
   }
 
-  getMasterPublicKey() {
-    const unpacked = babyjubjub.unpackPubKey(this.getBabyJubJubPublicKey());
+  /**
+   * Derive Master Public Key (MPK) which is used as the user's address
+   * @returns {string}
+   */
+  get masterPublicKey(): string {
+    const unpacked = babyjubjub.unpackPubKey(this.babyJubJubPublicKey);
     return hash.poseidon(unpacked);
   }
 
-
   async getViewingKeyPair(): Promise<KeyPair> {
-    // the private key is also used as the nullyfing key
+    // the private key is also used as the nullifying key
     const privateKey = hash.poseidon([this.#chainKey]);
     const pubkey = bytes.hexlify(await curve25519.getPublicKey(privateKey));
     return { privateKey, pubkey };
   };
 
   /**
- * Get public portion of key
- * @returns {Promise<string>}
- */
+   * Get viewing public key (VK) from ed25519 viewing keypair
+   * @returns {Promise<string>}
+   */
   async getViewingPublicKey(): Promise<string> {
     const { pubkey } = await this.getViewingKeyPair();
     return pubkey;
   };
 
+  /**
+   * Get private Nullifying (aka Viewing) Key (n) from ed25519 viewing keypair
+   * @returns {Promise<string>}
+   */
   async getNullifyingKey(): Promise<string> {
-    const {privateKey} = await this.getViewingKeyPair();
+    const { privateKey } = await this.getViewingKeyPair();
     return privateKey;
   }
 
   /**
    * Sign a message with BabyJubJub key
-   * 
+   *
    * @param data - data to sign
    * @returns signed data
    */
   signBabyJubJub(data: Hex[]): object {
-    const keyPair = this.getBabyJubJubKeyPair();
+    const keyPair = this.babyJubJubKeyPair;
 
     return babyjubjub.sign(keyPair.privateKey, data);
   }
@@ -135,7 +149,7 @@ export class Node {
    * @returns {Promise<Uint8Array>} - signature
    */
   async signEd25519(message: Hex): Promise<Uint8Array> {
-    const {privateKey} = await this.getViewingKeyPair();
+    const { privateKey } = await this.getViewingKeyPair();
     return await curve25519.sign(message, privateKey);
   }
 }
