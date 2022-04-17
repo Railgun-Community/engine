@@ -1,18 +1,10 @@
 /* globals describe it beforeEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { artifactsGetter } from '../helper';
 
-// @ts-ignore
-import artifacts from 'railgun-artifacts';
-
-import {
-  Prover,
-  Artifacts,
-  Circuits,
-  ERC20PrivateInputs,
-  FormattedCircuitInputs,
-  PublicInputs,
-} from '../../src/prover';
+/*
+import { Prover, PrivateInputs, FormattedCircuitInputs, PublicInputs } from '../../src/prover';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -20,14 +12,7 @@ const { expect } = chai;
 // eslint-disable-next-line no-unused-vars
 let prover: Prover;
 
-async function artifactsGetter(circuit: Circuits): Promise<Artifacts> {
-  if (circuit === 'erc20small') {
-    return artifacts.small;
-  }
-  return artifacts.large;
-}
-
-const erc20TestVector: ERC20PrivateInputs = {
+const erc20TestVector: PrivateInputs = {
   adaptID: '03b075046b71ff5f8e0792de4b82ddc979fcb3b8c03abe12972e65c57759fb46',
   depositAmount: '03',
   withdrawAmount: '00',
@@ -261,3 +246,4 @@ describe('Prover/Index', () => {
     );
   }).timeout(120000);
 });
+*/

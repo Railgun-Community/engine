@@ -146,7 +146,7 @@ function random() {
  * @param data - array byte chunks to sign
  * @returns signed data
  */
-function sign(privateKey: string, data: BytesData[]): object {
+function sign(privateKey: bigint, data: BytesData[]): object {
   const msghash = poseidon(data);
 
   return eddsa.signPoseidon(privateKey, msghash);

@@ -2,11 +2,7 @@ import crypto from 'crypto';
 import { utils as ethersutils } from 'ethers';
 // @ts-ignore
 import { poseidon as poseidonHash } from 'circomlibjs';
-import {
-  arrayify,
-  hexlify,
-  numberify,
-} from './bytes';
+import { arrayify, hexlify, numberify, padEven } from './bytes';
 
 import type { BytesData } from './bytes';
 
@@ -115,11 +111,9 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
   const dataFormatted = arrayify(data);
 
   // Hash HMAC and return
-  return ethersutils.computeHmac(
-    ethersutils.SupportedAlgorithm.sha512,
-    keyFormatted,
-    dataFormatted,
-  ).slice(2);
+  return ethersutils
+    .computeHmac(ethersutils.SupportedAlgorithm.sha512, keyFormatted, dataFormatted)
+    .slice(2);
 }
 
 /**
@@ -143,14 +137,14 @@ function keccak256(preimage: BytesData): string {
  */
 function poseidon(preimage: BytesData[]): string {
   // TODO: Remove reliance on circomlibjs
-  // Convert all bytes into number strings
-  const preimageFormatted = preimage.map((bytedata) => numberify(bytedata).toString(10));
+  // Convert all bytes into bigints (typing issue)
+  const preimageFormatted = preimage.map((bytedata) => BigInt(numberify(bytedata).toString(10)));
 
   // Hash
   const hash = poseidonHash(preimageFormatted).toString(16);
 
   // Pad to even length if needed
-  return hash.length % 2 === 0 ? hash : hash.padStart(hash.length + 1, '0');
+  return padEven(hash);
 }
 
 /**
@@ -171,20 +165,7 @@ function pbkdf2(
   const secretFormatted = new Uint8Array(arrayify(secret));
   const saltFormatted = new Uint8Array(arrayify(salt));
 
-  return hexlify(crypto.pbkdf2Sync(
-    secretFormatted,
-    saltFormatted,
-    iterations,
-    keyLength,
-    digest,
-  ));
+  return hexlify(crypto.pbkdf2Sync(secretFormatted, saltFormatted, iterations, keyLength, digest));
 }
 
-export {
-  sha256,
-  sha512,
-  sha512HMAC,
-  keccak256,
-  poseidon,
-  pbkdf2,
-};
+export { sha256, sha512, sha512HMAC, keccak256, poseidon, pbkdf2 };

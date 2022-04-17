@@ -9,22 +9,21 @@ import {
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
-import { ERC20Note } from '../../note';
 import type { Commitment, Nullifier } from '../../merkletree';
 import {
-  DEFAULT_ERC20_TOKEN_TYPE,
-  DEFAULT_TOKEN_SUB_ID,
-  ERC20TransactionSerialized,
-} from '../../transaction/erc20';
+  CommitmentPreimage,
+  EncryptedRandom,
+  SerializedTransaction,
+} from '../../transaction/types';
 import {
   formatNullifier,
   formatGeneratedCommitmentBatchCommitments,
   formatEncryptedCommitmentBatchCommitments,
-  GeneratedCommitmentArgs,
-  EncryptedCommitmentArgs,
+  CommitmentPreimageArgs,
+  CommitmentCiphertextArgs,
 } from './events';
 import { LeptonDebugger } from '../../models/types';
-import { ByteLength, BytesData, formatToByteLength, hexlify } from '../../utils/bytes';
+import { BytesData, hexlify } from '../../utils/bytes';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -41,7 +40,7 @@ const MAX_SCAN_RETRIES = 5;
 
 export enum EventName {
   GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
-  EncryptedCommitmentBatch = 'CommitmentBatch',
+  CommitmentBatch = 'CommitmentBatch',
   Nullifiers = 'Nullifiers',
 }
 
@@ -99,9 +98,9 @@ class ERC20RailgunContract {
    * @param root - root to validate
    * @returns isValid
    */
-  validateRoot(tree: number, root: bytes.BytesData): Promise<boolean> {
+  validateRoot(tree: number, root: string): Promise<boolean> {
     // Return result of root history lookup
-    return this.contract.rootHistory(tree, bytes.hexlify(root, true));
+    return this.contract.rootHistory(tree, hexlify(root, true));
   }
 
   /**
@@ -114,9 +113,13 @@ class ERC20RailgunContract {
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
-        commitments: GeneratedCommitmentArgs[],
+        commitments: CommitmentPreimageArgs[],
+        encryptedRandom: [BigNumber, BigNumber][],
         event: Event,
       ) => {
+        this.leptonDebugger?.log(
+          `treeUpdates ${EventName.GeneratedCommitmentBatch} tree ${treeNumber} ${startPosition}`,
+        );
         await eventsListener({
           txid: event.transactionHash,
           treeNumber: treeNumber.toNumber(),
@@ -124,44 +127,47 @@ class ERC20RailgunContract {
           commitments: formatGeneratedCommitmentBatchCommitments(
             event.transactionHash,
             commitments,
+            encryptedRandom,
           ),
         });
+        this.leptonDebugger?.log('treeupdates GeneratedCommitmentBatch awaited');
       },
     );
 
     this.contract.on(
-      EventName.EncryptedCommitmentBatch,
+      EventName.CommitmentBatch,
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
-        commitments: EncryptedCommitmentArgs[],
+        hash: BigNumber[],
+        ciphertext: CommitmentCiphertextArgs[],
         event: Event,
       ) => {
+        this.leptonDebugger?.log('treeupdates CommitmentBatch start await');
         await eventsListener({
           txid: event.transactionHash,
           treeNumber: treeNumber.toNumber(),
           startPosition: startPosition.toNumber(),
           commitments: formatEncryptedCommitmentBatchCommitments(
             event.transactionHash,
-            commitments,
+            hash,
+            ciphertext,
           ),
         });
+        this.leptonDebugger?.log('treeupdates CommitmentBatch awaited');
       },
     );
 
-    this.contract.on(
-      EventName.Nullifiers,
-      async (
-        nullifier: BigNumber,
-        event: Event
-      ) => {
-        await eventsNullifierListener([
-          {
-            txid: event.transactionHash,
-            nullifier: nullifier.toHexString()
-          },
-        ]);
-      });
+    this.contract.on(EventName.Nullifiers, async (nullifier: BigNumber, event: Event) => {
+      this.leptonDebugger?.log('treeupdates Nullifiers start await');
+      await eventsNullifierListener([
+        {
+          txid: event.transactionHash,
+          nullifier: nullifier.toHexString(),
+        },
+      ]);
+      this.leptonDebugger?.log('treeupdates Nullifiers awaited');
+    });
   }
 
   private async scanEvents(
@@ -265,6 +271,7 @@ class ERC20RailgunContract {
         commitments: formatGeneratedCommitmentBatchCommitments(
           event.transactionHash,
           event.args.commitments,
+          event.args.encryptedRandom,
         ),
       });
     });
@@ -284,7 +291,8 @@ class ERC20RailgunContract {
         startPosition: event.args.startPosition.toNumber(),
         commitments: formatEncryptedCommitmentBatchCommitments(
           event.transactionHash,
-          event.args.commitments,
+          event.args.hash,
+          event.args.ciphertext,
         ),
       });
     });
@@ -311,28 +319,12 @@ class ERC20RailgunContract {
    * @param notes - notes to deposit to
    * @returns Populated transaction
    */
-  generateDeposit(notes: ERC20Note[]): Promise<PopulatedTransaction> {
-    // Serialize for contract
-    const inputs = notes.map((note) => {
-      const serialized = note.serialize(true);
-      // const pubkeyUnpacked = babyjubjub.unpackPubKey(serialized.pubkey);
-
-      return {
-        ypubkey: note.ypubkey,
-        sign: false,
-        value: serialized.value,
-        random: serialized.random,
-        token: { // TokenData
-          tokenType: formatToByteLength(DEFAULT_ERC20_TOKEN_TYPE, ByteLength.UINT_8),
-          // tokenAddress: formatToByteLength(serialized.token, ByteLength.Address),
-          tokenAddress: serialized.token,
-          tokenSubID: formatToByteLength(DEFAULT_TOKEN_SUB_ID, ByteLength.UINT_256),
-        }
-      };
-    });
-
+  generateDeposit(
+    inputs: Partial<CommitmentPreimage>[],
+    encryptedRandom: EncryptedRandom[],
+  ): Promise<PopulatedTransaction> {
     // Return populated transaction
-    return this.contract.populateTransaction.generateDeposit(inputs);
+    return this.contract.populateTransaction.generateDeposit(inputs, encryptedRandom);
   }
 
   /**
@@ -340,41 +332,11 @@ class ERC20RailgunContract {
    * @param transactions - serialized railgun transaction
    * @returns - populated ETH transaction
    */
-  transact(transactions: ERC20TransactionSerialized[]): Promise<PopulatedTransaction> {
+  transact(transactions: SerializedTransaction[]): Promise<PopulatedTransaction> {
     // Calculate inputs
-    const inputs = transactions.map((transaction) => ({
-      proof: {
-        a: transaction.proof.a.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
-        b: transaction.proof.b.map((el) =>
-          el.map((el2) => formatToByteLength(el2, ByteLength.UINT_256)),
-        ),
-        c: transaction.proof.c.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
-      },
-      adaptIDcontract: formatToByteLength(transaction.adaptID.contract, ByteLength.Address),
-      adaptIDparameters: formatToByteLength(transaction.adaptID.parameters, ByteLength.UINT_256),
-      depositAmount: formatToByteLength(transaction.deposit, ByteLength.UINT_120),
-      withdrawAmount: formatToByteLength(transaction.withdraw, ByteLength.UINT_120),
-      tokenType: formatToByteLength(transaction.tokenType, ByteLength.UINT_8),
-      tokenSubID: formatToByteLength(transaction.tokenSubID, ByteLength.UINT_256),
-      tokenField: formatToByteLength(transaction.token, ByteLength.UINT_256),
-      outputEthAddress: formatToByteLength(transaction.withdrawAddress, ByteLength.Address),
-      treeNumber: formatToByteLength(transaction.treeNumber, ByteLength.UINT_256),
-      merkleRoot: formatToByteLength(transaction.merkleRoot, ByteLength.UINT_256),
-      nullifiers: transaction.nullifiers.map((nullifier) =>
-        formatToByteLength(nullifier, ByteLength.UINT_256),
-      ),
-      commitmentsOut: transaction.commitments.map((commitment) => ({
-        hash: formatToByteLength(commitment.hash, ByteLength.UINT_256),
-        ciphertext: commitment.ciphertext.map((word) =>
-          formatToByteLength(word, ByteLength.UINT_256),
-        ),
-        senderPubKey: babyjubjub.unpackPubKey(commitment.senderPubKey),
-        revealKey: commitment.revealKey.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
-      })),
-    }));
 
     // Return populated transaction
-    return this.contract.populateTransaction.transact(inputs);
+    return this.contract.populateTransaction.transact(transactions);
   }
 
   /**
@@ -383,7 +345,7 @@ class ERC20RailgunContract {
    * @returns
    */
   relay(
-    transactions: ERC20TransactionSerialized[],
+    transactions: SerializedTransaction[],
     random: BytesData,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],

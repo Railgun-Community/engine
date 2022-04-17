@@ -2,9 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import {
-  BjjNode, getMasterKeyFromSeed,
-} from '../../src/keyderivation/bip32-babyjubjub';
+import { getMasterKeyFromSeed } from '../../src/keyderivation/bip32';
 import { childKeyDerivationHardened, getPathSegments } from '../../src/utils/bip32';
 
 chai.use(chaiAsPromised);
@@ -81,9 +79,7 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(
-        childKeyDerivationHardened(vector.parent, vector.index, BjjNode.HARDENED_OFFSET)
-      ).to.deep.equal(vector.child);
+      expect(childKeyDerivationHardened(vector.parent, vector.index)).to.deep.equal(vector.child);
     });
   });
 
@@ -103,11 +99,7 @@ describe('Key Derivation/BIP32 BabyJubJub', () => {
       },
     ];
 
-    const invalid = [
-      'm/0/0',
-      'railgun',
-      "m/0'/0'/x",
-    ];
+    const invalid = ['m/0/0', 'railgun', "m/0'/0'/x"];
 
     valid.forEach((vector) => {
       expect(getPathSegments(vector.path)).to.deep.equal(vector.segments);

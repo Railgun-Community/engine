@@ -1,15 +1,60 @@
 /* eslint-disable no-bitwise */
 import BN from 'bn.js';
 import crypto from 'crypto';
+import { hexToBytes } from 'ethereum-cryptography/utils';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
+export type BigIntish = string | number | bigint | boolean;
+
+export type Hex = Uint8Array | string;
 export enum ByteLength {
   UINT_8 = 1,
   UINT_120 = 15,
   UINT_128 = 16,
   Address = 20,
   UINT_256 = 32,
+}
+
+// pad hex string to even length with 0 if it is not even
+export const padEven = (str: string): string => (str.length % 2 === 0 ? str : `0${str}`);
+
+// returns true if string is prefixed with '0x'
+const isPrefixed = (str: string): boolean => str.startsWith('0x');
+
+// add 0x if it str isn't already prefixed
+const prefix0x = (str: string): string => (isPrefixed(str) ? str : `0x${str}`);
+
+// remove 0x prefix if it exists
+const strip0x = (str: string): string => (isPrefixed(str) ? str.slice(2) : str);
+
+/**
+ * Convert bigint to hex string, 0-padded to even length
+ * @param {bigint} n - a bigint
+ * @param {boolean} prefix - prefix hex with 0x
+ * @return {string} even-length hex
+ */
+export function nToHex(n: bigint, prefix: boolean = false): string {
+  if (n < 0) throw new Error('bigint must be positive');
+  const hex = padEven(n.toString(16));
+  return prefix ? prefix0x(hex) : hex;
+}
+
+/**
+ * convert hex string to BigInt, prefixing with 0x if necessary
+ * @param {string} str
+ * @returns {bigint}
+ */
+export function hexToBigInt(str: string): bigint {
+  return BigInt(prefix0x(str));
+}
+/**
+ * Convert bigint to Uint8Array
+ * @param {bigint} value
+ * @returns {Uint8Array}
+ */
+export function nToBytes(n: bigint): Uint8Array {
+  return hexToBytes(nToHex(n));
 }
 
 /**
@@ -33,7 +78,7 @@ function hexlify(data: BytesData, prefix = false): string {
   if (typeof data === 'string') {
     // If we're already a string return the string
     // Strip leading 0x if it exists before returning
-    hexString = data.startsWith('0x') ? data.slice(2) : data;
+    hexString = strip0x(data);
   } else if (data instanceof BN) {
     // If we're a BN object convert to string
     // Return hex string 0 padded to even length, if length is 0 then set to 2
@@ -74,7 +119,7 @@ function arrayify(data: BytesData): number[] {
   }
 
   // Remove leading 0x if exists
-  const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+  const dataFormatted = strip0x(data);
 
   // Create empty array
   const bytesArray: number[] = [];
@@ -108,7 +153,7 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
   // If we're a hex string create a BN object from it and return
   if (typeof data === 'string') {
     // Remove leading 0x if exists
-    const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+    const dataFormatted = strip0x(data);
     const invalid = [' ', '-', ''];
     if (invalid.includes(dataFormatted)) throw new Error(`Invalid BytesData: ${invalid}`);
 
@@ -134,9 +179,7 @@ function padToLength(data: BytesData, length: number, side: 'left' | 'right' = '
   const dataFormatted = data instanceof BN ? hexlify(data) : data;
 
   if (typeof dataFormatted === 'string') {
-    const dataFormattedString = dataFormatted.startsWith('0x')
-      ? dataFormatted.slice(2)
-      : dataFormatted;
+    const dataFormattedString = strip0x(dataFormatted);
 
     // If we're requested to pad to left, pad left and return
     if (side === 'left') {
@@ -194,7 +237,7 @@ function reverseBytes(data: ArrayLike<number> | string): typeof data {
  */
 function checkBytes(string: string) {
   string.split('').forEach((char) => {
-    if (char.charCodeAt(0) > 0xD800) {
+    if (char.charCodeAt(0) > 0xd800) {
       throw new Error('Invalid Unicode codepoint > 0xD800');
     }
   });
@@ -300,8 +343,8 @@ function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'):
  * @param length - length to format to
  * @returns formatted data
  */
-function formatToByteLength(data: BytesData, length: number, prefix = true) {
-  return trim(padToLength(hexlify(data, prefix), length), length);
+function formatToByteLength(data: BytesData, length: number, prefix = true): string {
+  return trim(padToLength(hexlify(data, prefix), length), length) as string;
 }
 
 export {

@@ -5,8 +5,8 @@ import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
 import { MerkleTree, Commitment, Nullifier } from './merkletree';
 import { Prover, ArtifactsGetter } from './prover';
-import { ERC20Transaction } from './transaction';
-import { ERC20Note } from './note';
+import { Transaction } from './transaction';
+import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
@@ -24,13 +24,13 @@ export type QuickSync = (
 class Lepton {
   readonly db;
 
-  readonly merkletree: { erc20: MerkleTree; /* erc721: MerkleTree */ }[] = [];
+  readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
 
   readonly contracts: ERC20RailgunContract[] = [];
 
   readonly prover: Prover;
 
-  readonly wallets: { [key: string]: Wallet; } = {};
+  readonly wallets: { [key: string]: Wallet } = {};
 
   readonly deploymentBlocks: number[] = [];
 
@@ -48,7 +48,7 @@ class Lepton {
     leveldown: AbstractLevelDOWN,
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
-    leptonDebugger?: LeptonDebugger,
+    leptonDebugger: LeptonDebugger = console,
   ) {
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
@@ -63,9 +63,13 @@ class Lepton {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
-  async listener(chainID: number, tree: number, startingIndex: number, leaves: Commitment[]) {
+  async listener(chainID: number, startingIndex: number, leaves: Commitment[]) {
     // Queue leaves to merkle tree
-    await this.merkletree[chainID].erc20.queueLeaves(tree, startingIndex, leaves);
+    const latestTree = await this.merkletree[chainID].erc20.latestTree();
+    await this.merkletree[chainID].erc20.queueLeaves(latestTree, startingIndex, leaves);
+    this.leptonDebugger?.log(
+      `lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`,
+    );
   }
 
   /**
@@ -74,13 +78,7 @@ class Lepton {
    * @param nullifier - nullifer
    * @param txid - txid of nullifier transaction
    */
-  async nullifierListener(
-    chainID: number,
-    nullifiers: {
-      nullifier: bytes.BytesData;
-      txid: bytes.BytesData;
-    }[],
-  ) {
+  async nullifierListener(chainID: number, nullifiers: Nullifier[]) {
     await this.merkletree[chainID].erc20.nullify(nullifiers);
   }
 
@@ -133,12 +131,7 @@ class Lepton {
 
         // Pass events to commitments listener and wait for resolution
         commitmentEvents.forEach(async (commitmentEvent) => {
-          await this.listener(
-            chainID,
-            commitmentEvent.treeNumber,
-            commitmentEvent.startPosition,
-            commitmentEvent.commitments,
-          );
+          await this.listener(chainID, commitmentEvent.startPosition, commitmentEvent.commitments);
         });
 
         // Scan after all leaves added.
@@ -157,15 +150,10 @@ class Lepton {
       // Run slow scan
       await this.contracts[chainID].getHistoricalEvents(
         startScanningBlock,
-        async ({ treeNumber, startPosition, commitments }: CommitmentEvent) => {
-          await this.listener(chainID, treeNumber, startPosition, commitments);
+        async ({ startPosition, commitments }: CommitmentEvent) => {
+          await this.listener(chainID, startPosition, commitments);
         },
-        async (
-          nullifiers: {
-            nullifier: bytes.BytesData;
-            txid: bytes.BytesData;
-          }[],
-        ) => {
+        async (nullifiers: Nullifier[]) => {
           await this.nullifierListener(chainID, nullifiers);
         },
         (block: number) => this.setLastSyncedBlock(block, chainID),
@@ -176,7 +164,7 @@ class Lepton {
     }
 
     // Final scan after all leaves added.
-    await this.scanAllWallets(chainID);
+    await this.scanAllWallets(chainID); // @todo tree hardcoded to 0
   }
 
   /**
@@ -197,17 +185,13 @@ class Lepton {
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
     // Create contract instance
-    this.contracts[chainID] = new ERC20RailgunContract(address, provider, this.leptonDebugger);
+    const contract = new ERC20RailgunContract(address, provider, this.leptonDebugger);
+    this.contracts[chainID] = contract;
 
+    const validateRoot = (tree: number, root: string) => contract.validateRoot(tree, root);
     // Create tree controllers
     this.merkletree[chainID] = {
-      erc20: new MerkleTree(
-        this.db,
-        chainID,
-        'erc20',
-        (tree: number, root: bytes.BytesData) => this.contracts[chainID].validateRoot(tree, root),
-        this.leptonDebugger,
-      ),
+      erc20: new MerkleTree(this.db, chainID, 'erc20', validateRoot),
     };
 
     this.deploymentBlocks[chainID] = deploymentBlock;
@@ -217,21 +201,18 @@ class Lepton {
       wallet.loadTree(this.merkletree[chainID].erc20);
     });
 
+    const eventsListener = async ({ startPosition, commitments }: CommitmentEvent) => {
+      await this.listener(chainID, startPosition, commitments);
+      this.leptonDebugger?.log('eventslistener.listener done');
+      await this.scanAllWallets(chainID);
+      this.leptonDebugger?.log('eventslistener.scanAllWallets done');
+    };
+    const nullifierListener = async (nullifiers: Nullifier[]) => {
+      await this.nullifierListener(chainID, nullifiers);
+      this.leptonDebugger?.log('nullifierlistener done');
+    };
     // Setup listeners
-    this.contracts[chainID].treeUpdates(
-      async ({ treeNumber, startPosition, commitments }: CommitmentEvent) => {
-        await this.listener(chainID, treeNumber, startPosition, commitments);
-        await this.scanAllWallets(chainID);
-      },
-      async (
-        nullifiers: {
-          nullifier: bytes.BytesData;
-          txid: bytes.BytesData;
-        }[],
-      ) => {
-        await this.nullifierListener(chainID, nullifiers);
-      },
-    );
+    this.contracts[chainID].treeUpdates(eventsListener, nullifierListener);
 
     await this.scanHistory(chainID);
   }
@@ -299,6 +280,7 @@ class Lepton {
   unload() {
     // Unload chains
     this.contracts.forEach((contract, chainID) => {
+      this.leptonDebugger?.log(`unload contract for ${chainID}`);
       this.unloadNetwork(chainID);
     });
 
@@ -325,7 +307,7 @@ class Lepton {
    */
   async loadExistingWallet(encryptionKey: bytes.BytesData, id: string): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id, this.leptonDebugger);
+    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
 
     // Store wallet against ID
     this.wallets[bytes.hexlify(id)] = wallet;
@@ -350,7 +332,7 @@ class Lepton {
     mnemonic: string,
   ): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, this.leptonDebugger);
+    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
 
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
@@ -377,4 +359,4 @@ class Lepton {
   static decodeAddress = decode;
 }
 
-export { Lepton, ERC20Note, ERC20Transaction };
+export { Lepton, Note, Transaction };

@@ -1,6 +1,9 @@
 {
+  "ts-node": {
+    "files": true
+  },
   "compilerOptions": {
-    "target": "es2019",
+    "target": "es2020",
     "module": "commonjs",
     "esModuleInterop": true,
     "declaration": true,
@@ -13,5 +16,11 @@
   "typeAcquisition": {
     "exclude": ["mocha"]
   },
-  "exclude": ["dist/*", "test/*"]
+  "include": [
+    "src/*"
+  ],
+  "exclude": [
+    "dist/*",
+    "test/*"
+  ]
 }

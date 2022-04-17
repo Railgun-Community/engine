@@ -2,14 +2,15 @@ import BN from 'bn.js';
 import msgpack from 'msgpack-lite';
 import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
-import { babyjubjub, bytes, hash } from '../utils';
+import { HDNode } from '@ethersproject/hdnode';
+import { babyjubjub, bytes, encryption, hash } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
-import type { MerkleTree } from '../merkletree';
+import type { Commitment, MerkleTree } from '../merkletree';
+import { bech32, Node } from '../keyderivation';
 import { LeptonDebugger } from '../models/types';
-import { Node } from '../keyderivation/bip32';
-import { bech32 } from '../keyderivation';
+import { NoteSerialized } from '../transaction/types';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -19,27 +20,25 @@ export type TXO = {
   tree: number;
   position: number;
   index: number;
-  change: boolean;
   txid: string;
   spendtxid: string | false;
   dummyKey?: string; // For dummy notes
   note: Note;
 };
 
+export type TreeBalance = {
+  balance: bigint;
+  utxos: TXO[];
+};
+
 export type Balances = {
-  [key: string]: {
-    // Key: Token
-    balance: BN;
-    utxos: TXO[];
-  };
+  [key: string]: TreeBalance;
+  // Key: Token
 };
 
 export type BalancesByTree = {
-  [key: string]: {
-    // Key: Token
-    balance: BN;
-    utxos: TXO[];
-  }[]; // Index = tree
+  [key: string]: TreeBalance[];
+  // Index = tree
 };
 
 export type ScannedEventData = {
@@ -94,10 +93,10 @@ class Wallet extends EventEmitter {
 
   readonly merkletree: MerkleTree[] = [];
 
-  readonly leptonDebugger: LeptonDebugger | undefined;
-
   // Lock scanning operations to prevent race conditions
   private scanLockPerChain: boolean[] = [];
+
+  private leptonDebugger: LeptonDebugger = console;
 
   /**
    * Create Wallet controller
@@ -133,15 +132,20 @@ class Wallet extends EventEmitter {
 
   /**
    * Construct DB path from chainID
+   * Prefix consists of ['wallet', id, chainID]
+   * May be appended with tree and position
    * @param chainID - chainID
    * @returns wallet DB prefix
    */
-  getWalletDBPrefix(chainID: number): string[] {
-    return [
+  getWalletDBPrefix(chainID: number, tree?: number, position?: number): string[] {
+    const path = [
       bytes.fromUTF8String('wallet'),
       bytes.hexlify(this.id),
       bytes.hexlify(new BN(chainID)),
     ].map((element) => element.padStart(64, '0'));
+    if (tree) path.push(bytes.hexlify(bytes.padToLength(new BN(tree), 32)));
+    if (position) path.push(bytes.hexlify(bytes.padToLength(new BN(position), 32)));
+    return path;
   }
 
   /**
@@ -205,21 +209,22 @@ class Wallet extends EventEmitter {
    * @returns address
    */
   async getAddress(chainID: number | undefined): Promise<string> {
-    const [masterPublicKey, viewingPublicKey] = await this.getAddressKeys();
-    return bech32.encode({ masterPublicKey, viewingPublicKey, chainID });
+    const [masterPublicKey] = await this.getAddressKeys();
+    return bech32.encode({ masterPublicKey, chainID });
   }
 
   /**
    * Get encrypted wallet details for this wallet
    */
-  async getWalletDetails(encryptionKey: bytes.BytesData, chainID: number): Promise<WalletDetails> {
+  async getWalletDetails(chainID: number): Promise<WalletDetails> {
     let walletDetails: WalletDetails;
 
     try {
       // Try fetching from database
       walletDetails = msgpack.decode(
         bytes.arrayify(
-          await this.db.getEncrypted(this.getWalletDetailsPath(chainID), encryptionKey),
+          // @todo use different key?
+          await this.db.getEncrypted(this.getWalletDetailsPath(chainID), this.masterPublicKey),
         ),
       );
     } catch {
@@ -240,49 +245,65 @@ class Wallet extends EventEmitter {
    * @param chainID - chainID we're scanning
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private async scan(tree: number, chainID: number): Promise<boolean> {
+  async scanLeaves(leaves: Commitment[], tree: number, chainID: number): Promise<boolean> {
     // const decryptionKey = this.#viewingKey.getEd25519Key();
-    // const nullifierKey = this.#viewingKey.getBabyJubJubKey();
+    const key = this.#viewingKey.babyJubJubKeyPair;
+    const viewingPrivateKey = await this.getViewingPrivateKey();
 
     const writeBatch: AbstractBatch[] = [];
 
     // Loop through passed commitments
-    /*
-  leaves.forEach((leaf, position) => {
-    let note: ERC20Note;
+    for (let position = 0; position < leaves.length; position += 1) {
+      let note: Note;
+      const leaf = leaves[position];
 
-    if ('ciphertext' in leaf) {
-      // Derive shared secret
-      const sharedKey = babyjubjub.ecdh(key.privateKey, leaf.senderPubKey);
+      if ('ciphertext' in leaf) {
+        // Derive shared secret
+        // eslint-disable-next-line no-await-in-loop
+        const sharedKey = await encryption.getSharedKey(
+          key.privateKey,
+          leaf.ciphertext.ephemeralKeys[0],
+        );
 
-      // Decrypt
-      note = ERC20Note.decrypt(leaf.ciphertext, sharedKey);
-    } else {
-      // Deserialize
-      note = ERC20Note.deserialize(leaf.data);
+        // Decrypt
+        note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
+      } else {
+        // Deserialize
+        const serialized: NoteSerialized = {
+          npk: leaf.data.npk,
+          encryptedRandom: leaf.data.encryptedRandom,
+          token: leaf.data.token.tokenAddress,
+          value: leaf.data.value,
+        };
+        try {
+          note = Note.deserialize(serialized, viewingPrivateKey, this.masterPublicKey);
+        } catch (e: any) {
+          this.leptonDebugger?.error(e);
+          throw e;
+        }
+      }
+
+      // If this note is addressed to us add to write queue
+      if (note.masterPublicKey === this.masterPublicKey) {
+        writeBatch.push({
+          type: 'put',
+          /*
+          key: [
+            ...this.getWalletDBPrefix(chainID),
+            bytes.hexlify(bytes.padToLength(new BN(tree), 32)),
+            bytes.hexlify(bytes.padToLength(new BN(position), 32)),
+          ].join(':'),
+          */
+          key: this.getWalletDBPrefix(chainID, tree, position),
+          value: msgpack.encode({
+            spendtxid: false,
+            txid: bytes.hexlify(leaf.txid),
+            nullifier: Note.getNullifier(key.privateKey, position),
+            decrypted: note.serialize(viewingPrivateKey),
+          }),
+        });
+      }
     }
-
-    // If this note is addressed to us add to write queue
-    if (note.ypubkey === key.pubkey) {
-      writeBatch.push({
-        type: 'put',
-        key: [
-          ...this.getWalletDBPrefix(chainID),
-          bytes.hexlify(bytes.padToLength(new BN(tree), 32)),
-          bytes.hexlify(bytes.padToLength(new BN(position), 32)),
-        ].join(':'),
-        value: msgpack.encode({
-          index,
-          change,
-          spendtxid: false,
-          txid: bytes.hexlify(leaf.txid),
-          nullifier: ERC20Note.getNullifier(key.privateKey, tree, position),
-          decrypted: note.serialize(),
-        }),
-      });
-    }
-  });
-    */
 
     // Write to DB
     await this.db.batch(writeBatch);
@@ -299,7 +320,7 @@ class Wallet extends EventEmitter {
   async TXOs(chainID: number): Promise<TXO[]> {
     // Get chain namespace
     const namespace = this.getWalletDBPrefix(chainID);
-    const viewingKeyPrivate = await this.#viewingKey.getNullifyingKey();
+    const viewingKeyPrivate = await this.getViewingPrivateKey();
 
     // Stream list of keys out
     const keys: string[] = await new Promise((resolve) => {
@@ -348,7 +369,6 @@ class Wallet extends EventEmitter {
           tree,
           position,
           index: UTXO.index,
-          change: UTXO.change,
           txid: UTXO.txid,
           spendtxid: UTXO.spendtxid,
           note,
@@ -368,10 +388,11 @@ class Wallet extends EventEmitter {
 
     // Loop through each TXO and add to balances if unspent
     TXOs.forEach((txOutput) => {
+      const { token } = txOutput.note;
       // If we don't have an entry for this token yet, create one
-      if (!balances[txOutput.note.token]) {
-        balances[txOutput.note.token] = {
-          balance: new BN(0),
+      if (!balances[token]) {
+        balances[token] = {
+          balance: BigInt(0),
           utxos: [],
         };
       }
@@ -379,10 +400,10 @@ class Wallet extends EventEmitter {
       // If txOutput is unspent process it
       if (!txOutput.spendtxid) {
         // Store txo
-        balances[txOutput.note.token].utxos.push(txOutput);
+        balances[token].utxos.push(txOutput);
 
         // Increment balance
-        balances[txOutput.note.token].balance.iadd(bytes.numberify(txOutput.note.value));
+        balances[token].balance += txOutput.note.value;
       }
     });
 
@@ -410,11 +431,11 @@ class Wallet extends EventEmitter {
       balances[token].utxos.forEach((utxo) => {
         if (!balancesByTree[token][utxo.tree]) {
           balancesByTree[token][utxo.tree] = {
-            balance: bytes.numberify(utxo.note.value),
+            balance: utxo.note.value,
             utxos: [utxo],
           };
         } else {
-          balancesByTree[token][utxo.tree].balance.iadd(bytes.numberify(utxo.note.value));
+          balancesByTree[token][utxo.tree].balance += utxo.note.value;
           balancesByTree[token][utxo.tree].utxos.push(utxo);
         }
       });
@@ -427,7 +448,6 @@ class Wallet extends EventEmitter {
    * Scans for new balances
    * @param chainID - chainID to scan
    */
-  /*
   async scan(chainID: number) {
     // Don't proceed if scan write is locked
     if (this.scanLockPerChain[chainID]) {
@@ -440,7 +460,7 @@ class Wallet extends EventEmitter {
     this.scanLockPerChain[chainID] = true;
 
     // Fetch wallet details
-    const walletDetails = await this.getWalletDetails();
+    const walletDetails = await this.getWalletDetails(chainID);
 
     // Get latest tree
     const latestTree = await this.merkletree[chainID].latestTree();
@@ -467,34 +487,19 @@ class Wallet extends EventEmitter {
 
       // Wait till all leaves are fetched
       // eslint-disable-next-line no-await-in-loop
-      const leaves = await Promise.all(fetcher);
+      const leaves: Commitment[] = await Promise.all(fetcher);
 
       // Delete undefined values and return sparse array
       leaves.forEach((value, index) => {
         if (value === undefined) delete leaves[index];
       });
+      const { log } = console;
+      log(leaves);
 
       // Start scanning primary and change
-      const primaryHeight = this.scanLeaves(
-        leaves,
-        false,
-        walletDetails.primaryHeight,
-        tree,
-        this.merkletree[chainID].chainID,
-      );
-      const changeHeight = this.scanLeaves(
-        leaves,
-        true,
-        walletDetails.primaryHeight,
-        tree,
-        this.merkletree[chainID].chainID,
-      );
-
-      // Set new height values
       // eslint-disable-next-line no-await-in-loop
-      walletDetails.primaryHeight = await primaryHeight;
-      // eslint-disable-next-line no-await-in-loop
-      walletDetails.changeHeight = await changeHeight;
+      const height = await this.scanLeaves(leaves, tree, chainID);
+      this.leptonDebugger.log(`height ${height}`);
 
       // Commit new scanned height
       walletDetails.treeScannedHeights[tree] = leaves.length > 0 ? leaves.length - 1 : 0;
@@ -502,8 +507,8 @@ class Wallet extends EventEmitter {
 
     // Write wallet details to db
     await this.db.putEncrypted(
-      this.getWalletDetailsPath(),
-      this.#encryptionKey,
+      this.getWalletDetailsPath(chainID),
+      this.masterPublicKey,
       msgpack.encode(walletDetails),
     );
 
@@ -514,7 +519,6 @@ class Wallet extends EventEmitter {
     // Release lock
     this.scanLockPerChain[chainID] = false;
   }
-  */
 
   static dbPath(id: string): bytes.BytesData[] {
     return [bytes.fromUTF8String('wallet'), id];
@@ -584,6 +588,13 @@ class Wallet extends EventEmitter {
     const { mnemonic, index } = await Wallet.read(this.db, this.id, encryptionKey);
 
     return deriveNodes(mnemonic, index).spendingKey;
+  }
+
+  async getChainAddress(encryptionKey: bytes.BytesData): Promise<string> {
+    const { mnemonic, index } = await Wallet.read(this.db, this.id, encryptionKey);
+    const path = `m/44'/60'/0'/0/${index}`;
+    const hdnode = HDNode.fromMnemonic(mnemonic).derivePath(path);
+    return hdnode.address;
   }
 }
 

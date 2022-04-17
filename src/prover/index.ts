@@ -1,5 +1,5 @@
 // @ts-ignore-next-line
-import { groth16 } from "snarkjs";
+import { groth16 } from 'snarkjs';
 
 export type Artifacts = {
   zkey: ArrayLike<number>;
@@ -7,12 +7,12 @@ export type Artifacts = {
   vkey: object;
 };
 
-const enum Circuits {
+export const enum Circuits {
   OneTwo,
   OneThree,
   TwoTwo,
   TwoThree,
-  EightTwo
+  EightTwo,
 }
 
 export type Proof = {
@@ -30,7 +30,7 @@ export type PublicInputs = {
 
 export type PrivateInputs = {
   token: bigint;
-  publicKey: [bigint, bigint]; 
+  publicKey: [bigint, bigint];
   signature: [bigint, bigint, bigint];
   randomIn: bigint[];
   valueIn: bigint[];
@@ -46,8 +46,8 @@ export type FormattedCircuitInputs = {
 };
 
 // eslint-disable-next-line no-unused-vars
-export type ArtifactsGetter = (circuit: Circuits) => Promise<Artifacts>;
-
+// export type ArtifactsGetter = (Circuits) => Promise<Artifacts>;
+export type ArtifactsGetter = (publicInputs: PublicInputs) => Promise<Artifacts>;
 class Prover {
   artifactsGetter: ArtifactsGetter;
 
@@ -55,49 +55,39 @@ class Prover {
     this.artifactsGetter = artifactsGetter;
   }
 
-  async verify(
-    circuit: Circuits,
-    inputs: PublicInputs,
-    proof: Proof
-  ): Promise<boolean> {
+  async verify(inputs: PublicInputs, proof: Proof): Promise<boolean> {
     // Fetch artifacts
-    const artifacts = await this.artifactsGetter(circuit);
+    const artifacts = await this.artifactsGetter(inputs);
     // Return output of groth16 verify
     return groth16.verify(artifacts.vkey, inputs, proof);
   }
 
   async prove(
-    circuit: Circuits,
     publicInputs: PublicInputs,
-    privateInputs: PrivateInputs
+    privateInputs: PrivateInputs,
   ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
     // Fetch artifacts
-    const artifacts = await this.artifactsGetter(circuit);
+    const artifacts = await this.artifactsGetter(publicInputs);
 
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
     // Generate proof
-    const { proof } = await groth16.fullProve(
-      formattedInputs,
-      artifacts.wasm,
-      artifacts.zkey
-    );
+    const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 
     // Throw if proof is invalid
-    if (!(await this.verify(circuit, publicInputs, proof)))
-      throw new Error("Proof generation failed");
+    if (!(await this.verify(publicInputs, proof))) throw new Error('Proof generation failed');
 
     // Return proof with inputs
     return {
       proof,
-      publicInputs
+      publicInputs,
     };
   }
 
   static formatInputs(
     publicInputs: PublicInputs,
-    privateInputs: PrivateInputs
+    privateInputs: PrivateInputs,
   ): FormattedCircuitInputs {
     return {
       merkleRoot: publicInputs.merkleRoot,
@@ -113,7 +103,7 @@ class Prover {
       leavesIndices: privateInputs.leavesIndices,
       nullifyingKey: privateInputs.nullifyingKey,
       npkOut: privateInputs.npkOut,
-      valueOut: privateInputs.valueOut
+      valueOut: privateInputs.valueOut,
     };
   }
 }

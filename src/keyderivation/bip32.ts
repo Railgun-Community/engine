@@ -1,5 +1,7 @@
 import * as curve25519 from '@noble/ed25519';
+import { poseidon } from 'circomlibjs';
 import { babyjubjub, bytes, hash } from '../utils';
+import { BytesData, hexlify, Hex, hexToBigInt, nToHex } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
@@ -8,14 +10,13 @@ const CURVE_SEED = bytes.fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
 
 export type KeyPair = { privateKey: string; pubkey: string };
-export type Hex = Uint8Array | string;
 
 /**
  * Creates KeyNode from seed
  * @param seed - bip32 seed
  * @returns BjjNode - babyjubjub BIP32Node
  */
-export function getMasterKeyFromSeed(seed: bytes.BytesData): KeyNode {
+export function getMasterKeyFromSeed(seed: BytesData): KeyNode {
   // HMAC with seed to get I
   const I = hash.sha512HMAC(CURVE_SEED, seed);
 
@@ -97,8 +98,8 @@ export class Node {
 
   async getViewingKeyPair(): Promise<KeyPair> {
     // the private key is also used as the nullifying key
-    const privateKey = hash.poseidon([this.#chainKey]);
-    const pubkey = bytes.hexlify(await curve25519.getPublicKey(privateKey));
+    const privateKey = hexlify(nToHex(poseidon([hexToBigInt(this.#chainKey)])));
+    const pubkey = hexlify(await curve25519.getPublicKey(privateKey));
     return { privateKey, pubkey };
   }
 
@@ -129,7 +130,7 @@ export class Node {
   signBabyJubJub(data: Hex[]): object {
     const keyPair = this.babyJubJubKeyPair;
 
-    return babyjubjub.sign(keyPair.privateKey, data);
+    return babyjubjub.sign(hexToBigInt(keyPair.privateKey), data);
   }
 
   /**

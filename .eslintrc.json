@@ -4,13 +4,18 @@
     "es2021": true,
     "node": true
   },
-  "extends": ["airbnb-base", "prettier"],
+  "extends": [
+    "airbnb-base",
+    "prettier"
+  ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 12,
     "sourceType": "module"
   },
-  "plugins": ["@typescript-eslint"],
+  "plugins": [
+    "@typescript-eslint"
+  ],
   "rules": {
     "import/prefer-default-export": "off",
     "import/extensions": [
@@ -26,18 +31,34 @@
     "no-shadow": "off",
     "no-return-await": "off",
     "@typescript-eslint/no-shadow": "error",
+    "no-useless-constructor": "off",
+    "no-empty-function": "off",
     "no-unused-vars": "off",
+    "no-bitwise": "off",
     "@typescript-eslint/no-unused-vars": "error"
   },
-  "ignorePatterns": ["dist/*"],
+  "ignorePatterns": [
+    "dist/*"
+  ],
   "settings": {
-    "import/extensions": [".js", ".ts", ".d.ts"],
+    "import/extensions": [
+      ".js",
+      ".ts",
+      ".d.ts"
+    ],
     "import/parsers": {
-      "@typescript-eslint/parser": [".ts", ".d.ts"]
+      "@typescript-eslint/parser": [
+        ".ts",
+        ".d.ts"
+      ]
     },
     "import/resolver": {
       "node": {
-        "extensions": [".js", ".ts", ".d.ts"]
+        "extensions": [
+          ".js",
+          ".ts",
+          ".d.ts"
+        ]
       }
     }
   }

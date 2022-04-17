@@ -2,17 +2,17 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import { BjjNode } from '../../src/keyderivation/bip32-babyjubjub';
+import { Node } from '../../src/keyderivation/bip32';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/Index', () => {
-
   it('Should derive keys', () => {
     const vectors = [
       {
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        mnemonic:
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
         path: "m/0'",
         keyPair: {
           address: 'rgany1q89y7g0arqc8v0ez5w0ux8202smd8zd9z08tf3gmshp3pgjuzgfjxz8rad5',
@@ -21,7 +21,8 @@ describe('Key Derivation/Index', () => {
         },
       },
       {
-        mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        mnemonic:
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
         path: "m/0'/1'",
         keyPair: {
           address: 'rgany1q9qnt7e8k96uwueg7kw0ral67v8d2ynyceyhasc68f40w2m9etaqj85z9qt',
@@ -30,7 +31,8 @@ describe('Key Derivation/Index', () => {
         },
       },
       {
-        mnemonic: 'culture flower sunny seat maximum begin design magnet side permit coin dial alter insect whisper series desk power cream afford regular strike poem ostrich',
+        mnemonic:
+          'culture flower sunny seat maximum begin design magnet side permit coin dial alter insect whisper series desk power cream afford regular strike poem ostrich',
         path: "m/1984'/0'/1'/1'",
         keyPair: {
           address: 'rgany1q8c80pgeaqujwsav288m2mf7trg25wnchks43adz4k7j64mptl9sun7g7an',
@@ -41,8 +43,8 @@ describe('Key Derivation/Index', () => {
     ];
 
     vectors.forEach((vector) => {
-      const node = BjjNode.fromMnemonic(vector.mnemonic);
-      expect(node.derive(vector.path).getBabyJubJubKey()).to.deep.equal(vector.keyPair);
+      const node = Node.fromMnemonic(vector.mnemonic);
+      expect(node.derive(vector.path).babyJubJubKeyPair).to.deep.equal(vector.keyPair);
     });
   });
 });

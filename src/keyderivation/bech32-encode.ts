@@ -1,5 +1,6 @@
-import BN from 'bn.js';
+// import BN from 'bn.js';
 import { bech32 } from '@scure/base';
+import { BN } from 'bn.js';
 import { bytes, constants } from '../utils';
 
 const prefixes: string[] = [];
@@ -11,7 +12,6 @@ prefixes[137] = 'rgpoly';
 
 export type AddressData = {
   masterPublicKey: string;
-  viewingPublicKey: string;
   chainID?: number;
   version?: number;
 };
@@ -23,12 +23,11 @@ export type AddressData = {
  * @param chainID - chainID to encode
  */
 function encode(data: AddressData): string {
-  const { masterPublicKey, viewingPublicKey, chainID } = data;
+  const { masterPublicKey, chainID } = data;
   // Combine key and version byte
   const words = bech32.toWords(
-    new Uint8Array(
-      bytes.arrayify(bytes.combine([new BN(constants.VERSION), masterPublicKey, viewingPublicKey])),
-    ),
+    new Uint8Array(bytes.arrayify(bytes.combine([new BN(constants.VERSION), masterPublicKey]))),
+    // new Uint8Array(bytes.arrayify(bytes.combine([new BN('0x01'), masterPublicKey]))),
   );
 
   // Prefix exists, encode and return with prefix
@@ -48,15 +47,13 @@ function decode(address: string): AddressData {
 
   // Get version
   const version = parseInt(data.slice(0, 2), 16);
-  const masterPublicKey = data.slice(2, 34);
-  const viewingPublicKey = data.slice(34, 66);
+  const masterPublicKey = data.slice(2);
 
   // Throw if address version is not supported
   if (version !== constants.VERSION) throw new Error('Incorrect address version');
 
   const result: Partial<AddressData> = {
     masterPublicKey,
-    viewingPublicKey,
     version,
   };
 

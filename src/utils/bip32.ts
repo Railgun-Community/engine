@@ -1,7 +1,6 @@
-import BN from "bn.js";
-import { bytes, hash } from ".";
-import { KeyNode } from "../models/types";
-
+import BN from 'bn.js';
+import { bytes, hash } from '.';
+import { KeyNode } from '../models/types';
 /**
  * Tests derivation path to see if it's valid
  * @param path - bath to test
@@ -39,7 +38,7 @@ export function getPathSegments(path: string): number[] {
 export function childKeyDerivationHardened(
   node: KeyNode,
   index: number,
-  offset: number = 0x80000000
+  offset: number = 0x80000000,
 ): KeyNode {
   // Convert index to bytes as 32bit big endian
   const indexFormatted = bytes.padToLength(new BN(index + offset), 4);

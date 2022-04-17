@@ -1,42 +1,52 @@
-/* eslint-disable no-bitwise, no-await-in-loop */
+/* eslint-disable no-bitwise */
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
 import { LeptonDebugger } from '../models/types';
-import type { ERC20NoteSerialized } from '../note/erc20';
-import { bytes, constants, hash } from '../utils';
+import type { CommitmentPreimage } from '../transaction/types';
+import { constants, hash } from '../utils';
+import { fromUTF8String, numberify, padEven, hexlify } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
 
 export type MerkleProof = {
-  leaf: bytes.BytesData;
-  elements: bytes.BytesData[];
-  indices: bytes.BytesData;
-  root: bytes.BytesData;
+  leaf: string;
+  elements: string[];
+  indices: string;
+  root: string;
 };
 
+/**
+ * Emitted from deposit and withdraw transactions
+ */
 export type GeneratedCommitment = {
-  hash: bytes.BytesData;
-  txid: bytes.BytesData;
-  data: ERC20NoteSerialized; // | ERC721NoteSerialized
+  hash: string;
+  txid: string;
+  data: CommitmentPreimage;
 };
 
+export type CommitmentCiphertext = {
+  ciphertext: Ciphertext; // iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
+  ephemeralKeys: string[]; // sender first, recipient second (packed points 32 bytes each)
+  memo: string; // bytes32[]
+};
+/**
+ * Emitted from transfer and adapt transactions
+ */
 export type EncryptedCommitment = {
-  hash: bytes.BytesData;
-  txid: bytes.BytesData;
-  senderPubKey: bytes.BytesData;
-  ciphertext: Ciphertext;
-  revealKey: bytes.BytesData[];
+  hash: string;
+  txid: string;
+  ciphertext: CommitmentCiphertext;
 };
 
 export type Commitment = GeneratedCommitment | EncryptedCommitment;
 
 export type Nullifier = {
-  nullifier: bytes.BytesData;
-  txid: bytes.BytesData;
+  nullifier: string;
+  txid: string;
 };
 
 // eslint-disable-next-line no-unused-vars
-export type RootValidator = (tree: number, root: bytes.BytesData) => Promise<boolean>;
+export type RootValidator = (tree: number, root: string) => Promise<boolean>;
 
 // Declare depth
 const depths = {
@@ -48,10 +58,11 @@ const depths = {
 export type TreePurpose = keyof typeof depths;
 
 // Calculate tree zero value
-const MERKLE_ZERO_VALUE: string = bytes.hexlify(
-  bytes.numberify(hash.keccak256(bytes.fromUTF8String('Railgun'))).mod(constants.SNARK_PRIME),
+export const MERKLE_ZERO_VALUE: string = padEven(
+  numberify(hash.keccak256(fromUTF8String('Railgun')))
+    .mod(constants.SNARK_PRIME)
+    .toString('hex'),
 );
-
 class MerkleTree {
   private db: Database;
 
@@ -63,12 +74,12 @@ class MerkleTree {
 
   readonly depth: number;
 
-  readonly zeroValues: string[] = [];
+  readonly zeros: string[] = [];
 
   private treeLengthCache: number[] = [];
 
   // tree[level[index]]
-  private nodeWriteCache: bytes.BytesData[][][] = [];
+  private nodeWriteCache: string[][][] = [];
 
   // tree[index]
   private commitmentWriteCache: Commitment[][] = [];
@@ -76,8 +87,13 @@ class MerkleTree {
   // tree[startingIndex[leaves]]
   private writeQueue: Commitment[][][] = [];
 
+  // Tree write queue lock to prevent race conditions
+  private queueLock = false;
+
   // Check function to test if merkle root is valid
   private validateRoot: Function;
+
+  public tree: bigint[][];
 
   /**
    * Create MerkleTree controller from database
@@ -91,25 +107,82 @@ class MerkleTree {
     chainID: number,
     purpose: TreePurpose,
     validateRoot: RootValidator,
-    leptonDebugger?: LeptonDebugger,
     depth: number = depths[purpose],
   ) {
+    this.leptonDebugger = console;
     // Set passed values
     this.db = db;
     this.chainID = chainID;
+    this.tree = Array(depth)
+      .fill(0)
+      .map(() => []);
     this.purpose = purpose;
-    this.leptonDebugger = leptonDebugger;
     this.depth = depth;
     this.validateRoot = validateRoot;
 
     // Calculate zero values
-    this.zeroValues[0] = MERKLE_ZERO_VALUE;
+    this.zeros[0] = MERKLE_ZERO_VALUE;
     for (let level = 1; level <= this.depth; level += 1) {
-      this.zeroValues[level] = MerkleTree.hashLeftRight(
-        this.zeroValues[level - 1],
-        this.zeroValues[level - 1],
-      );
+      this.zeros[level] = MerkleTree.hashLeftRight(this.zeros[level - 1], this.zeros[level - 1]);
     }
+  }
+
+  /**
+   * Gets tree root
+   *
+   * @returns {bigint} root
+   */
+  get root(): bigint {
+    return this.tree[this.depth][0];
+  }
+
+  /**
+   * Returns leaves of the tree
+   *
+   * @returns {Array<bigint>} leaves
+   */
+  get leaves(): bigint[] {
+    return this.tree[0];
+  }
+
+  /**
+   * Gets merkle proof for leaf
+   * @param tree - tree number
+   * @param index - index of leaf
+   * @returns Merkle proof
+   */
+  async getProof(tree: number, index: number): Promise<MerkleProof> {
+    // Fetch leaf
+    const leaf = await this.getNode(tree, 0, index);
+
+    // Get indexes of path elements to fetch
+    const elementsIndexes: number[] = [index ^ 1];
+
+    // Loop through each level and calculate index
+    while (elementsIndexes.length < this.depth) {
+      // Shift right and flip last bit
+      elementsIndexes.push((elementsIndexes[elementsIndexes.length - 1] >> 1) ^ 1);
+    }
+
+    // Fetch path elements
+    const elements = await Promise.all(
+      elementsIndexes.map((elementIndex, level) => this.getNode(tree, level, elementIndex)),
+    );
+
+    // Convert index to bytes data, the binary representation is the indices of the merkle path
+    // Pad to 32 bytes
+    const indices = hexlify(new BN(index));
+
+    // Fetch root
+    const root = await this.getRoot(tree);
+
+    // Return proof
+    return {
+      leaf,
+      elements,
+      indices,
+      root,
+    };
   }
 
   /**
@@ -118,7 +191,7 @@ class MerkleTree {
    * @param right - right element
    * @returns hash
    */
-  static hashLeftRight(left: bytes.BytesData, right: bytes.BytesData): string {
+  static hashLeftRight(left: string, right: string): string {
     return hash.poseidon([left, right]);
   }
 
@@ -139,9 +212,9 @@ class MerkleTree {
    */
   getTreeDBPrefix(tree: number): string[] {
     return [
-      bytes.fromUTF8String(`merkletree-${this.purpose}`),
-      bytes.hexlify(new BN(this.chainID)),
-      bytes.hexlify(new BN(tree)),
+      fromUTF8String(`merkletree-${this.purpose}`),
+      hexlify(new BN(this.chainID)),
+      hexlify(new BN(tree)),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -153,11 +226,9 @@ class MerkleTree {
    * @returns database path
    */
   getNodeDBPath(tree: number, level: number, index: number): string[] {
-    return [
-      ...this.getTreeDBPrefix(tree),
-      bytes.hexlify(new BN(level)),
-      bytes.hexlify(new BN(index)),
-    ].map((element) => element.padStart(64, '0'));
+    return [...this.getTreeDBPrefix(tree), hexlify(new BN(level)), hexlify(new BN(index))].map(
+      (element) => element.padStart(64, '0'),
+    );
   }
 
   /**
@@ -169,8 +240,8 @@ class MerkleTree {
   getCommitmentDBPath(tree: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      bytes.hexlify(new BN(0).notn(32)), // 2^256-1
-      bytes.hexlify(new BN(index)),
+      hexlify(new BN(0).notn(32)), // 2^256-1
+      hexlify(new BN(index)),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -179,12 +250,12 @@ class MerkleTree {
    * @param nullifier - nullifier to get path for
    * @returns database path
    */
-  getNullifierDBPath(nullifier: bytes.BytesData): string[] {
+  getNullifierDBPath(nullifier: string): string[] {
     return [
-      bytes.fromUTF8String(`merkletree-${this.purpose}`),
-      bytes.hexlify(new BN(this.chainID)),
-      bytes.hexlify(new BN(0).notn(32)), // 2^256-1
-      bytes.hexlify(nullifier),
+      fromUTF8String(`merkletree-${this.purpose}`),
+      hexlify(new BN(this.chainID)),
+      hexlify(new BN(0).notn(32)), // 2^256-1
+      hexlify(nullifier),
     ].map((element) => element.padStart(64, '0'));
   }
 
@@ -193,7 +264,7 @@ class MerkleTree {
    * @param nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else false
    */
-  async getNullified(nullifier: bytes.BytesData): Promise<string | false> {
+  async getNullified(nullifier: string): Promise<string | false> {
     // Return if nullifier is set
     try {
       return await this.db.get(this.getNullifierDBPath(nullifier));
@@ -210,8 +281,8 @@ class MerkleTree {
     // Build write batch for nullifiers
     const nullifierWriteBatch: PutBatch[] = nullifiers.map((nullifier) => ({
       type: 'put',
-      key: this.getNullifierDBPath(bytes.hexlify(nullifier.nullifier)).join(':'),
-      value: bytes.hexlify(nullifier.txid),
+      key: this.getNullifierDBPath(nullifier.nullifier).join(':'),
+      value: nullifier.txid,
     }));
 
     // Write to DB
@@ -237,9 +308,10 @@ class MerkleTree {
    */
   async getNode(tree: number, level: number, index: number): Promise<string> {
     try {
-      return await this.db.get(this.getNodeDBPath(tree, level, index));
+      const node = await this.db.get(this.getNodeDBPath(tree, level, index));
+      return node;
     } catch {
-      return this.zeroValues[level];
+      return this.zeros[level];
     }
   }
 
@@ -253,7 +325,7 @@ class MerkleTree {
       this.treeLengthCache[tree] ||
       (await this.db.countNamespace([
         ...this.getTreeDBPrefix(tree),
-        bytes.hexlify(new BN(0).notn(32)), // 2^256-1
+        hexlify(new BN(0).notn(32)), // 2^256-1
       ]));
 
     return this.treeLengthCache[tree];
@@ -277,6 +349,7 @@ class MerkleTree {
     const nodeWriteBatch: PutBatch[] = [];
     const commitmentWriteBatch: PutBatch[] = [];
 
+    this.nodeWriteCache[tree][0] = this.nodeWriteCache[tree][0] || [];
     // Get new leaves
     const newTreeLength = this.nodeWriteCache[tree][0].length;
 
@@ -306,6 +379,8 @@ class MerkleTree {
     // Batch write to DB
     await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(commitmentWriteBatch, 'json')]);
 
+    const v = await this.db.get(this.getCommitmentDBPath(tree, 0), 'json');
+    this.leptonDebugger?.log(v);
     // Update tree length
     this.treeLengthCache[tree] = newTreeLength;
 
@@ -342,38 +417,35 @@ class MerkleTree {
     // Ensure writecache array exists
     this.nodeWriteCache[tree][level] = this.nodeWriteCache[tree][level] || [];
 
-    this.leptonDebugger?.log(
-      `insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`,
-    );
-
     // Push values to leaves of write index
-    leaves.forEach((leaf, leafIndex) => {
-      this.leptonDebugger?.log(`index ${leafIndex}: leaf ${JSON.stringify(leaf)}`);
-
+    leaves.forEach((leaf) => {
       // Set writecache value
-      this.nodeWriteCache[tree][level][index] = bytes.hexlify(leaf.hash);
+      this.nodeWriteCache[tree][level][index] = hexlify(leaf.hash);
 
       if ('ciphertext' in leaf) {
+        const { ciphertext } = leaf;
         this.commitmentWriteCache[tree][index] = {
-          hash: bytes.hexlify(leaf.hash),
-          txid: bytes.hexlify(leaf.txid),
-          senderPubKey: bytes.hexlify(leaf.senderPubKey),
+          hash: hexlify(leaf.hash),
+          txid: hexlify(leaf.txid),
           ciphertext: {
-            iv: bytes.hexlify(leaf.ciphertext.iv),
-            tag: bytes.hexlify(leaf.ciphertext.tag),
-            data: leaf.ciphertext.data.map((el) => bytes.hexlify(el)),
+            ciphertext: {
+              iv: hexlify(ciphertext.ciphertext.iv),
+              tag: hexlify(ciphertext.ciphertext.tag),
+              data: ciphertext.ciphertext.data.map((el) => hexlify(el)),
+            },
+            memo: ciphertext.memo,
+            ephemeralKeys: ciphertext.ephemeralKeys,
           },
-          revealKey: leaf.revealKey.map((el) => bytes.hexlify(el)),
         };
       } else {
         this.commitmentWriteCache[tree][index] = {
-          hash: bytes.hexlify(leaf.hash),
-          txid: bytes.hexlify(leaf.txid),
+          hash: hexlify(leaf.hash),
+          txid: hexlify(leaf.txid),
           data: {
-            pubkey: bytes.hexlify(leaf.data.pubkey),
-            random: bytes.hexlify(leaf.data.random),
-            amount: bytes.hexlify(leaf.data.amount),
-            token: bytes.hexlify(leaf.data.token),
+            npk: hexlify(leaf.data.npk),
+            encryptedRandom: leaf.data.encryptedRandom.map((r) => hexlify(r)) as [string, string],
+            value: hexlify(leaf.data.value),
+            token: leaf.data.token,
           },
         };
       }
@@ -395,15 +467,19 @@ class MerkleTree {
         if (index % 2 === 0) {
           // Left
           this.nodeWriteCache[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
+            // eslint-disable-next-line no-await-in-loop
             this.nodeWriteCache[tree][level][index] || (await this.getNode(tree, level, index)),
             this.nodeWriteCache[tree][level][index + 1] ||
+              // eslint-disable-next-line no-await-in-loop
               (await this.getNode(tree, level, index + 1)),
           );
         } else {
           // Right
           this.nodeWriteCache[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
             this.nodeWriteCache[tree][level][index - 1] ||
+              // eslint-disable-next-line no-await-in-loop
               (await this.getNode(tree, level, index - 1)),
+            // eslint-disable-next-line no-await-in-loop
             this.nodeWriteCache[tree][level][index] || (await this.getNode(tree, level, index)),
           );
         }
@@ -421,6 +497,7 @@ class MerkleTree {
     if (await this.validateRoot(tree, this.nodeWriteCache[tree][this.depth][0])) {
       // Commit to DB if valid
       await this.writeTreeCache(tree);
+      this.leptonDebugger?.log('wrote treeCache');
     } else {
       this.leptonDebugger?.error(new Error('Cannot insert leaves. Invalid merkle root.'));
       // Clear cache if invalid
@@ -429,11 +506,18 @@ class MerkleTree {
   }
 
   async updateTrees(): Promise<void> {
+    // Don't proceed if queue write is locked
+    // if (this.queueLock) return;
+
+    // Write lock queue
+    // this.queueLock = true;
+
     // Loop until there isn't work to do
     let workToDo = true;
 
     while (workToDo) {
       // Loop through each tree present in write queue and get tree length
+      // eslint-disable-next-line no-await-in-loop
       const treeLengths = await Promise.all(
         this.writeQueue.map((_tree, index) => this.getTreeLength(index)),
       );
@@ -442,6 +526,15 @@ class MerkleTree {
 
       // Loop through each tree and check if there are updates to be made
       this.writeQueue.forEach((tree, treeIndex) => {
+        // Delete all queue entries less than tree length
+        /*
+        tree.forEach((element, elementIndex) => {
+          if (elementIndex < treeLengths[treeIndex]) {
+            delete this.writeQueue[treeIndex][elementIndex];
+          }
+        });
+        */
+
         // If there aren't any elements in the write queue delete it
         if (tree.reduce((x) => x + 1, 0) === 0) delete this.writeQueue[treeIndex];
 
@@ -462,13 +555,15 @@ class MerkleTree {
       });
 
       // Wait for updates to complete
+      // eslint-disable-next-line no-await-in-loop
       await Promise.all(updatePromises);
 
       // If no work was done exit
-      if (updatePromises.length === 0) {
-        workToDo = false;
-      }
+      if (updatePromises.length === 0) workToDo = false;
     }
+
+    // Release queue lock
+    // this.queueLock = false;
   }
 
   /**
@@ -494,7 +589,9 @@ class MerkleTree {
     }
 
     // Process tree updates
+    this.leptonDebugger?.log('merkletree.queueleaves: awaiting update');
     await this.updateTrees();
+    this.leptonDebugger?.log('merkletree.queueleaves: updated');
   }
 
   /**
@@ -503,48 +600,9 @@ class MerkleTree {
    */
   async latestTree(): Promise<number> {
     let latestTree = 0;
+    // eslint-disable-next-line no-await-in-loop
     while ((await this.getTreeLength(latestTree)) > 0) latestTree += 1;
     return Math.max(0, latestTree - 1);
-  }
-
-  /**
-   * Gets merkle proof for leaf
-   * @param tree - tree number
-   * @param index - index of leaf
-   * @returns Merkle proof
-   */
-  async getProof(tree: number, index: number): Promise<MerkleProof> {
-    // Fetch leaf
-    const leaf = await this.getNode(tree, 0, index);
-
-    // Get indexes of path elements to fetch
-    const elementsIndexes: number[] = [index ^ 1];
-
-    // Loop through each level and calculate index
-    while (elementsIndexes.length < this.depth) {
-      // Shift right and flip last bit
-      elementsIndexes.push((elementsIndexes[elementsIndexes.length - 1] >> 1) ^ 1);
-    }
-
-    // Fetch path elements
-    const elements = await Promise.all(
-      elementsIndexes.map((elementIndex, level) => this.getNode(tree, level, elementIndex)),
-    );
-
-    // Convert index to bytes data, the binary representation is the indices of the merkle path
-    // Pad to 32 bytes
-    const indices = bytes.hexlify(new BN(index));
-
-    // Fetch root
-    const root = await this.getRoot(tree);
-
-    // Return proof
-    return {
-      leaf,
-      elements,
-      indices,
-      root,
-    };
   }
 
   /**
@@ -554,12 +612,12 @@ class MerkleTree {
    */
   static verifyProof(proof: MerkleProof): boolean {
     // Get indicies as BN form
-    const indices = bytes.numberify(proof.indices);
+    const indices = numberify(proof.indices);
 
     // Calculate proof root and return if it matches the proof in the MerkleProof
     return (
-      bytes.hexlify(proof.root) ===
-      bytes.hexlify(
+      hexlify(proof.root) ===
+      hexlify(
         // Loop through each element and hash till we've reduced to 1 element
         proof.elements.reduce((current, element, index) => {
           // If index is right
