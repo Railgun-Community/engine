@@ -1,20 +1,24 @@
 // import BN from 'bn.js';
-import { bech32 } from '@scure/base';
-import { BN } from 'bn.js';
+import { bech32m } from '@scure/base';
+import xor from 'buffer-xor';
 import { bytes, constants } from '../utils';
-
-const prefixes: string[] = [];
-prefixes[1] = 'rgeth';
-prefixes[3] = 'rgtestropsten';
-prefixes[5] = 'rgtestgoerli';
-prefixes[56] = 'rgbsc';
-prefixes[137] = 'rgpoly';
+import { formatToByteLength, padToLength } from '../utils/bytes';
 
 export type AddressData = {
   masterPublicKey: string;
+  viewingPublicKey: string;
   chainID?: number;
   version?: number;
 };
+export const ADDRESS_LENGTH_LIMIT = 127;
+export const UNDEFINED_CHAIN = 'ffffffffffffffff';
+
+/**
+ * @param {string} chainID - hex value of chainID
+ * @returns {Buffer} - chainID XOR'd with 'railgun' to make address prettier
+ */
+const xorChainID = (chainID: string) =>
+  xor(Buffer.from(chainID as string, 'hex'), Buffer.from('railgun', 'utf8')).toString('hex');
 
 /**
  * Bech32 encodes address
@@ -23,54 +27,55 @@ export type AddressData = {
  * @param chainID - chainID to encode
  */
 function encode(data: AddressData): string {
-  const { masterPublicKey, chainID } = data;
-  // Combine key and version byte
-  const words = bech32.toWords(
-    new Uint8Array(bytes.arrayify(bytes.combine([new BN(constants.VERSION), masterPublicKey]))),
-    // new Uint8Array(bytes.arrayify(bytes.combine([new BN('0x01'), masterPublicKey]))),
+  const { chainID } = data;
+  const masterPublicKey = formatToByteLength(data.masterPublicKey, 32, false);
+  const viewingPublicKey = formatToByteLength(data.viewingPublicKey, 32, false);
+
+  const formattedChainID = chainID
+    ? (padToLength(chainID.toString(16), 8) as string)
+    : UNDEFINED_CHAIN;
+  const networkID = xorChainID(formattedChainID);
+
+  const version = '01';
+
+  // Create 73 byte address buffer
+  const addressBuffer = Buffer.from(
+    `${version}${masterPublicKey}${networkID}${viewingPublicKey}`,
+    'hex',
   );
 
-  // Prefix exists, encode and return with prefix
-  if (chainID && prefixes[chainID]) {
-    return bech32.encode(prefixes[chainID], words);
-  }
+  // Encode address
+  const address = bech32m.encode('0zk', bech32m.toWords(addressBuffer), ADDRESS_LENGTH_LIMIT);
 
-  // No chainID specified, throw error
-  return bech32.encode('rgany', words);
+  return address;
 }
 
 function decode(address: string): AddressData {
-  const decoded = bech32.decode(address);
+  const decoded = bech32m.decode(address, ADDRESS_LENGTH_LIMIT);
 
   // Hexlify data
-  const data = bytes.hexlify(bech32.fromWords(decoded.words));
+  const data = bytes.hexlify(bech32m.fromWords(decoded.words));
 
   // Get version
   const version = parseInt(data.slice(0, 2), 16);
-  const masterPublicKey = data.slice(2);
+  const masterPublicKey = data.slice(2, 66);
+  const networkID = xorChainID(data.slice(66, 82));
+  const viewingPublicKey = data.slice(82, 146);
+
+  // return undefined if XORed network matches the value we use to indicate undefined chain
+  const chainID = networkID === UNDEFINED_CHAIN ? undefined : parseInt(networkID, 16);
 
   // Throw if address version is not supported
   if (version !== constants.VERSION) throw new Error('Incorrect address version');
 
-  const result: Partial<AddressData> = {
+  const result: AddressData = {
     masterPublicKey,
+    viewingPublicKey,
     version,
+    chainID,
   };
 
-  if (prefixes.includes(decoded.prefix)) {
-    // If we know this prefix, then return with chainID
-    result.chainID = prefixes.indexOf(decoded.prefix);
-  }
-
-  if (decoded.prefix === 'rgany') {
-    // If this is the generic prefix, return undefined
-    result.chainID = undefined;
-  }
-
-  if ('chainID' in result) return result as AddressData;
-
-  // Don't know what this prefix is, throw
-  throw new Error('Address prefix unrecognized');
+  return result;
 }
 
 export { encode, decode };
