@@ -206,7 +206,7 @@ describe('Contract/Index', function () {
 
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
-    transaction.outputs = [new Note(generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(await generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([
@@ -292,7 +292,7 @@ describe('Contract/Index', function () {
 
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
-    transaction.outputs = [new Note(generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(await generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([

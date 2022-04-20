@@ -12,6 +12,7 @@ import { CommitmentEvent } from '../src/contract/erc20';
 import { Nullifier } from '../src/merkletree';
 import { AddressData } from '../src/keyderivation/bech32-encode';
 import { randomPubkey } from '../src/utils/babyjubjub';
+import { randomPublicKey } from '../src/utils/ed25519';
 
 export const artifactsGetter = (inputs: PublicInputs) =>
   artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length];
@@ -53,7 +54,7 @@ export const getEthersWallet = (
   return wallet;
 };
 
-export const generateRandomAddress = (): AddressData => ({
+export const generateRandomAddress = async (): Promise<AddressData> => ({
   masterPublicKey: randomPubkey(),
-  viewingPublicKey: randomPubkey(),
+  viewingPublicKey: await randomPublicKey(),
 });
