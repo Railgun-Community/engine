@@ -8,17 +8,16 @@ import memdown from 'memdown';
 import { ERC20RailgunContract } from '../../src/contract';
 import { Note } from '../../src/note';
 import { Transaction } from '../../src/transaction';
-// import { emptyCommitmentPreimage } from '../../src/note/preimage';
 import { Lepton } from '../../src';
 
 import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
-import { babyjubjub, bytes } from '../../src/utils';
+import { babyjubjub } from '../../src/utils';
 import { CommitmentEvent, EventName } from '../../src/contract/erc20';
 import { hexlify } from '../../src/utils/bytes';
 import { Nullifier } from '../../src/merkletree';
-import { artifactsGetter } from '../helper';
+import { artifactsGetter, awaitScan, generateRandomAddress } from '../helper';
 import { Deposit } from '../../src/note/deposit';
 
 chai.use(chaiAsPromised);
@@ -176,16 +175,9 @@ describe('Contract/Index', function () {
 
     const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
 
-    const awaiterScan = () =>
-      new Promise((resolve, reject) =>
-        wallet.once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
-          returnedChainID === chainID ? resolve(returnedChainID) : reject(),
-        ),
-      );
-
     // Send deposit on chain
     const tx = await etherswallet.sendTransaction(depositTx);
-    const [txResponse] = await Promise.all([tx.wait(), awaiterScan()]);
+    const [txResponse] = await Promise.all([tx.wait(), awaitScan(wallet, chainID)]);
 
     let resultEvent: CommitmentEvent;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
@@ -212,13 +204,9 @@ describe('Contract/Index', function () {
 
     startingBlock = await provider.getBlockNumber();
 
-    const randomPubKey = babyjubjub.privateKeyToPubKey(
-      babyjubjub.seedToPrivateKey(bytes.random(32)),
-    );
-
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
-    transaction.outputs = [new Note(randomPubKey, RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([
@@ -227,7 +215,7 @@ describe('Contract/Index', function () {
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
-    const [txResponseTransact] = await Promise.all([txTransact.wait(), awaiterScan()]);
+    const [txResponseTransact] = await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
 
     await contract.getHistoricalEvents(
       startingBlock,
@@ -302,13 +290,9 @@ describe('Contract/Index', function () {
       // '083e1ef25eee08184efd23a69db656c2ae1be3540c68b363139dce7dbac10ac7',
     );
 
-    const randomPubKey = babyjubjub.privateKeyToPubKey(
-      babyjubjub.seedToPrivateKey(bytes.random(32)),
-    );
-
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
-    transaction.outputs = [new Note(randomPubKey, RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([

@@ -13,13 +13,12 @@ import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
 import { CommitmentEvent } from './contract/erc20';
 
-export type QuickSync = (
-  chainID: number,
-  startingBlock: number,
-) => Promise<{
+export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
   nullifierEvents: Nullifier[];
-}>;
+};
+
+export type QuickSync = (chainID: number, startingBlock: number) => Promise<AccumulatedEvents>;
 
 class Lepton {
   readonly db;
@@ -79,6 +78,7 @@ class Lepton {
    * @param txid - txid of nullifier transaction
    */
   async nullifierListener(chainID: number, nullifiers: Nullifier[]) {
+    this.leptonDebugger?.log(`nullifierListener ${nullifiers.length}`);
     await this.merkletree[chainID].erc20.nullify(nullifiers);
   }
 
@@ -203,9 +203,7 @@ class Lepton {
 
     const eventsListener = async ({ startPosition, commitments }: CommitmentEvent) => {
       await this.listener(chainID, startPosition, commitments);
-      this.leptonDebugger?.log('eventslistener.listener done');
       await this.scanAllWallets(chainID);
-      this.leptonDebugger?.log('eventslistener.scanAllWallets done');
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {
       await this.nullifierListener(chainID, nullifiers);

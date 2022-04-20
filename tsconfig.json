@@ -1,6 +1,7 @@
 {
   "ts-node": {
-    "files": true
+    "files": true,
+    "swc": true
   },
   "compilerOptions": {
     "target": "es2020",

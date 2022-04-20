@@ -152,6 +152,10 @@ function sign(privateKey: bigint, data: BytesData[]): object {
   return eddsa.signPoseidon(privateKey, msghash);
 }
 
+function genRandomPrivateKey(): bigint {
+  return BigInt(`0x${randomBytes(32)}`);
+}
+
 function randomPubkey(): string {
   return privateKeyToPubKey(seedToPrivateKey(randomBytes(32)))[1];
 }
@@ -166,4 +170,5 @@ export {
   random,
   sign,
   randomPubkey,
+  genRandomPrivateKey,
 };

@@ -1,5 +1,6 @@
 import { Note } from '../note';
-import { babyjubjub, bytes } from '../utils';
+import { babyjubjub } from '../utils';
+import { randomPubkey } from '../utils/babyjubjub';
 import { TreeBalance, TXO } from '../wallet';
 import { NOTE_INPUTS } from './constants';
 
@@ -44,16 +45,18 @@ export function findSolutions(
       utxos = [...treeBalance.utxos];
 
       while (utxos.length < length) {
-        const dummyKey = babyjubjub.seedToPrivateKey(bytes.random(32));
-
+        const dummyAddress = {
+          masterPublicKey: randomPubkey(),
+          viewingPublicKey: randomPubkey(),
+        };
         utxos.push({
           tree,
           position: 0,
           index: 0,
           txid: '',
           spendtxid: false,
-          dummyKey,
-          note: new Note(babyjubjub.privateKeyToPubKey(dummyKey), babyjubjub.random(), '00', token),
+          dummyKey: dummyAddress.masterPublicKey,
+          note: new Note(dummyAddress, babyjubjub.random(), '00', token),
         });
       }
     } else {

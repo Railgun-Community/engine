@@ -91,7 +91,7 @@ class MerkleTree {
   private queueLock = false;
 
   // Check function to test if merkle root is valid
-  private validateRoot: Function;
+  public validateRoot: Function;
 
   public tree: bigint[][];
 
@@ -379,8 +379,6 @@ class MerkleTree {
     // Batch write to DB
     await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(commitmentWriteBatch, 'json')]);
 
-    const v = await this.db.get(this.getCommitmentDBPath(tree, 0), 'json');
-    this.leptonDebugger?.log(v);
     // Update tree length
     this.treeLengthCache[tree] = newTreeLength;
 
@@ -460,6 +458,7 @@ class MerkleTree {
       index = nextLevelStartIndex;
 
       // Ensure writecache array exists for next level
+      this.nodeWriteCache[tree][level] = this.nodeWriteCache[tree][level] || [];
       this.nodeWriteCache[tree][level + 1] = this.nodeWriteCache[tree][level + 1] || [];
 
       // Loop through every pair
@@ -497,7 +496,6 @@ class MerkleTree {
     if (await this.validateRoot(tree, this.nodeWriteCache[tree][this.depth][0])) {
       // Commit to DB if valid
       await this.writeTreeCache(tree);
-      this.leptonDebugger?.log('wrote treeCache');
     } else {
       this.leptonDebugger?.error(new Error('Cannot insert leaves. Invalid merkle root.'));
       // Clear cache if invalid
@@ -576,9 +574,7 @@ class MerkleTree {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
-    this.leptonDebugger?.log(
-      `queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`,
-    );
+    // this.leptonDebugger?.log( `merkletree.queueLeaves(${tree}, ${startingIndex}, leaves.length: ${leaves.length})}`,);
 
     // Ensure write queue for tree exists
     this.writeQueue[tree] = this.writeQueue[tree] || [];
@@ -589,9 +585,7 @@ class MerkleTree {
     }
 
     // Process tree updates
-    this.leptonDebugger?.log('merkletree.queueleaves: awaiting update');
     await this.updateTrees();
-    this.leptonDebugger?.log('merkletree.queueleaves: updated');
   }
 
   /**
@@ -615,21 +609,17 @@ class MerkleTree {
     const indices = numberify(proof.indices);
 
     // Calculate proof root and return if it matches the proof in the MerkleProof
-    return (
-      hexlify(proof.root) ===
-      hexlify(
-        // Loop through each element and hash till we've reduced to 1 element
-        proof.elements.reduce((current, element, index) => {
-          // If index is right
-          if (indices.testn(index)) {
-            return MerkleTree.hashLeftRight(element, current);
-          }
+    // Loop through each element and hash till we've reduced to 1 element
+    const calculatedRoot = proof.elements.reduce((current, element, index) => {
+      // If index is right
+      if (indices.testn(index)) {
+        return MerkleTree.hashLeftRight(element, current);
+      }
 
-          // If index is left
-          return MerkleTree.hashLeftRight(current, element);
-        }, proof.leaf),
-      )
-    );
+      // If index is left
+      return MerkleTree.hashLeftRight(current, element);
+    }, proof.leaf);
+    return hexlify(proof.root) === hexlify(calculatedRoot);
   }
 }
 

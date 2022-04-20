@@ -1,16 +1,24 @@
 import { Proof } from '../prover';
+import { formatToByteLength } from '../utils/bytes';
 
+export const HashZero = formatToByteLength('00', 32, true);
 export type AdaptID = {
   contract: string;
-  parameters: bigint;
+  parameters: string;
+};
+
+export type CommitmentCiphertext = {
+  ciphertext: bigint[]; // uint256[4]
+  ephemeralKeys: bigint[]; // uint256[2]
+  memo: bigint[]; // bytes32[]
 };
 
 export type BoundParams = {
   treeNumber: bigint;
   withdraw: bigint;
   adaptContract: string;
-  adaptParams: any;
-  commitmentCiphertext: any[];
+  adaptParams: string;
+  commitmentCiphertext: CommitmentCiphertext[];
 };
 
 export type TokenData = {

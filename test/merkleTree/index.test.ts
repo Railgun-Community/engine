@@ -417,7 +417,7 @@ describe('MerkleTree/Index', () => {
 
     // Insert leaves
     await merkletree.queueLeaves(
-      0,
+      1,
       0,
       Array.from(Array(600).keys()).map((el) => ({
         hash: new BN(el, 10).toString(16),
@@ -431,10 +431,11 @@ describe('MerkleTree/Index', () => {
     );
 
     // Get proof
-    const proof2 = await merkletree.getProof(0, 34);
+    const proof2 = await merkletree.getProof(1, 34);
 
+    expect(proof2.root).to.not.equal(proof.root);
     // Check proof is what we expect
-    expect(proof2).to.not.deep.equal({
+    expect(proof2).to.deep.equal({
       leaf: '22',
       elements: [
         '23',
@@ -464,7 +465,7 @@ describe('MerkleTree/Index', () => {
     expect(MerkleTree.verifyProof(proof2)).to.equal(false); // @todo no idea why this is verifying
     proof2.elements = proof.elements;
     expect(MerkleTree.verifyProof(proof2)).to.equal(false); // @todo ^ same
-  }).timeout(10000);
+  }).timeout(0);
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false

@@ -227,8 +227,12 @@ describe('Note/ERC20', () => {
 
     ciphertextVectors.forEach((vector) => {
       // Create Note object
+      const address = {
+        masterPublicKey: vector.note.pubkey,
+        viewingPublicKey: vector.note.pubkey,
+      };
       const note = new Note(
-        vector.note.pubkey,
+        address,
         vector.note.random,
         hexToBigInt(vector.note.amount),
         vector.note.token,
@@ -238,7 +242,9 @@ describe('Note/ERC20', () => {
       const encrypted = note.encrypt(vector.sharedKey);
 
       // Check if encrypted values are successfully decrypted
-      expect(Note.decrypt(encrypted, vector.sharedKey)).to.deep.equal(note);
+      const decrypted = Note.decrypt(encrypted, vector.sharedKey);
+      expect(decrypted.hash).to.equal(note.hash);
+      // ).to.deep.equal(note);
 
       // Check if vector encrypted values are successfully decrypted
       // expect(Note.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
@@ -247,7 +253,11 @@ describe('Note/ERC20', () => {
 
   it('Should serialize and deserialize notes', () => {
     vectors.forEach((vector) => {
-      const note = Note.deserialize(vector.note, vector.vpk, vector.pubkey);
+      const address = {
+        masterPublicKey: vector.pubkey,
+        viewingPublicKey: vector.pubkey,
+      };
+      const note = Note.deserialize(vector.note, vector.vpk, address);
       expect(hexlify(note.random)).to.equal(vector.random);
 
       expect(note.hash).to.equal(vector.hash);

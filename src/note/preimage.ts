@@ -6,7 +6,7 @@ export const emptyCommitmentPreimage = {
   npk: '00',
   token: {
     tokenType: '00',
-    tokenAddress: '0x'.padStart(40, '0'),
+    tokenAddress: '0x0000000000000000000000000000000000000000',
     tokenSubID: '00',
   },
   value: '0',

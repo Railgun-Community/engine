@@ -1,22 +1,25 @@
 /* globals describe it beforeEach, afterEach */
-import chai from 'chai';
+import chai, { assert, expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import BN from 'bn.js';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
 
-import { Lepton, Note, Transaction } from '../src';
+// import { HDKey } from 'ethereum-cryptography/hdkey';
+// import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
+import { Lepton, Transaction } from '../src';
 
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
-import { babyjubjub, bytes } from '../src/utils';
-import { ScannedEventData, Wallet } from '../src/wallet';
-import { artifactsGetter } from './helper';
+import { babyjubjub } from '../src/utils';
+import { Wallet } from '../src/wallet';
+import { artifactsGetter, awaitScan, getEthersWallet, quicksync } from './helper';
 import { Deposit } from '../src/note/deposit';
+import { MerkleTree } from '../src/merkletree';
+import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
+import { ERC20RailgunContract } from '../src/contract';
 
 chai.use(chaiAsPromised);
-const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
 let chainID: number;
@@ -26,6 +29,9 @@ let snapshot: number;
 let token: ethers.Contract;
 let walletID: string;
 let wallet: Wallet;
+let merkleTree: MerkleTree;
+let tokenAddress: string;
+let contract: ERC20RailgunContract;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -36,28 +42,28 @@ describe('Lepton', function () {
   this.timeout(240000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter);
+    lepton = new Lepton(memdown(), artifactsGetter, quicksync);
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
 
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
     chainID = (await provider.getNetwork()).chainId;
-    log(chainID);
 
-    const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
-      ethers.utils.defaultPath,
-    );
-    etherswallet = new ethers.Wallet(privateKey, provider);
+    etherswallet = getEthersWallet(config.mnemonic, provider);
+
     snapshot = await provider.send('evm_snapshot', []);
     token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet);
+    tokenAddress = formatToByteLength(token.address, 32, false);
 
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(config.contracts.proxy, balance);
 
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     wallet = lepton.wallets[walletID];
-    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
+    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 24);
+    merkleTree = lepton.merkletree[chainID].erc20;
+    contract = lepton.contracts[chainID];
   });
 
   it('[HH] Should load existing wallets', async function run() {
@@ -71,12 +77,7 @@ describe('Lepton', function () {
     expect(lepton.wallets[walletID].id).to.equal(walletID);
   });
 
-  it('[HH] Should show balance after deposit', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
-      this.skip();
-      return;
-    }
-
+  it('Should show balance after deposit', async () => {
     const commitment = {
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
@@ -95,9 +96,14 @@ describe('Lepton', function () {
         ],
       },
     };
-    lepton.merkletree[chainID].erc20.queueLeaves(0, 0, [commitment]);
-    const balances = await wallet.balances(chainID);
-    expect(balances[token.address]).to.equal(commitment.data.value);
+    // override root validator as we're not processing on chain
+    merkleTree.validateRoot = () => true;
+    await merkleTree.queueLeaves(0, 0, [commitment]);
+
+    await wallet.scan(chainID);
+    const balance = await wallet.getBalance(chainID, tokenAddress);
+    const value = hexToBigInt(commitment.data.value);
+    assert.isTrue(balance === value);
   });
 
   it('[HH] Should deposit, transact and update balance', async function run() {
@@ -106,35 +112,45 @@ describe('Lepton', function () {
       return;
     }
 
-    const address = await lepton.wallets[walletID].getAddress(chainID);
+    const address = await wallet.getAddress(chainID);
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
-    const vpk = await lepton.wallets[walletID].getViewingPrivateKey();
-    const value = 11000000000000000000000000n;
+    const vpk = await wallet.getViewingPrivateKey();
+    const value = 11000000n * 10n ** 18n;
     const deposit = new Deposit(mpk, babyjubjub.random(), value, config.contracts.rail);
 
     const { preImage, encryptedRandom } = deposit.serialize(vpk);
-    // log(preImage, encryptedRandom);
     // Create deposit
-    const depositTx = await lepton.contracts[chainID].generateDeposit(
-      [preImage],
-      [encryptedRandom],
-    );
+    const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
 
     // Send deposit on chain
-    const awaiterDeposit = new Promise((resolve, reject) =>
-      lepton.wallets[walletID].once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
-        returnedChainID === chainID ? resolve(returnedChainID) : reject(),
-      ),
-    );
     await etherswallet.sendTransaction(depositTx);
-    await expect(awaiterDeposit).to.be.fulfilled;
-    const balances = await wallet.balances(chainID);
-    log(balances);
-    expect(balances[token.address]).to.equal(deposit.value);
+    await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
+    const balance = await wallet.getBalance(chainID, tokenAddress);
+    assert.isTrue(balance > 0n);
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
+    transaction.withdraw(await etherswallet.getAddress(), 300n * 10n ** 18n);
+    transaction.overrideOutput = config.contracts.treasury;
+
+    const proof = await transaction.prove(
+      lepton.prover,
+      lepton.wallets[walletID],
+      testEncryptionKey,
+    );
+    const transact = await contract.transact([proof]);
+
+    const transactTx = await etherswallet.sendTransaction(transact);
+    const receipt = await transactTx.wait();
+    log(receipt);
+    await awaitScan(wallet, chainID);
+
+    assert.isTrue(
+      (await wallet.getBalance(chainID, tokenAddress)) === 10972568578553615960099750n,
+      'Failed to receive expected balance',
+    );
+    /*
     transaction.outputs = [
       new Note(
         babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
@@ -143,29 +159,8 @@ describe('Lepton', function () {
         config.contracts.rail,
       ),
     ];
-    transaction.withdraw(await etherswallet.getAddress(), 300n);
-    transaction.withdrawAddress = config.contracts.treasury;
-
-    const proof = await transaction.prove(
-      lepton.prover,
-      lepton.wallets[walletID],
-      testEncryptionKey,
-    );
-    const transact = await lepton.contracts[chainID].transact([proof]);
-
-    // Send transact on chain
-    const awaiterTransact = new Promise((resolve, reject) =>
-      lepton.wallets[walletID].once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
-        returnedChainID === chainID ? resolve(returnedChainID) : reject(),
-      ),
-    );
-    etherswallet.sendTransaction(transact);
-    await expect(awaiterTransact).to.be.fulfilled;
-
-    expect(
-      Object.values(await lepton.wallets[walletID].balances(chainID))[0].balance.toString(10),
-    ).to.equal('10999999999999999999999400');
-  }).timeout(0); // 90000);
+      */
+  }).timeout(900000);
 
   it('Should set/get last synced block', async () => {
     const chainIDForSyncedBlock = 10010;

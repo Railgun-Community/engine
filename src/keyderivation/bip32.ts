@@ -40,6 +40,8 @@ export class Node {
 
   #chainCode: string;
 
+  #_babyJubJubKeyPair?: KeyPair;
+
   constructor(keyNode: KeyNode) {
     this.#chainKey = keyNode.chainKey;
     this.#chainCode = keyNode.chainCode;
@@ -80,12 +82,14 @@ export class Node {
    * @returns {KeyPair} keypair
    */
   get babyJubJubKeyPair(): KeyPair {
+    if (this.#_babyJubJubKeyPair) return this.#_babyJubJubKeyPair as KeyPair;
     const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
     const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
-    return {
+    this.#_babyJubJubKeyPair = {
       privateKey, // sk
       pubkey, // PK
     };
+    return this.#_babyJubJubKeyPair as KeyPair;
   }
 
   /**

@@ -1,18 +1,34 @@
 import BN from 'bn.js';
-import { eddsa, babyjubjub, poseidon as nPoseidon } from 'circomlibjs';
+// @ts-ignore
+import { eddsa, poseidon as nPoseidon } from 'circomlibjs';
 import { NoteSerialized } from '../transaction/types';
 import { encryption } from '../utils';
-import { BigIntish, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import {
+  arrayify,
+  BigIntish,
+  formatToByteLength,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+} from '../utils/bytes';
 import { poseidon } from '../utils/hash';
 import { Ciphertext } from '../utils/encryption';
+import { AddressData } from '../keyderivation/bech32-encode';
 
 export class Note {
+  // viewing public key (VPK) of recipient - ed25519 curve
+  viewingPublicKey: string;
+
+  // master public key (VPK) of recipient - babyjubjub curve
   masterPublicKey: string;
 
+  // token address
   token: string;
 
+  // 16 byte random
   random: string;
 
+  // value to transfer as bigint
   value: bigint;
 
   /**
@@ -23,14 +39,16 @@ export class Note {
    * @param {BigIntish} value - note value
    */
   constructor(
-    masterPublicKey: string,
+    address: AddressData,
     random: string,
     value: BigIntish | BN, // @todo fix tests and remove BN
     token: string,
   ) {
-    this.masterPublicKey = formatToByteLength(masterPublicKey, 32, false);
+    this.masterPublicKey = formatToByteLength(address.masterPublicKey, 32, false);
+    this.viewingPublicKey = formatToByteLength(address.viewingPublicKey, 32, false);
     this.token = formatToByteLength(token, 32, false);
     this.random = formatToByteLength(random, 16, false);
+    // @todo remove BN shim
     this.value = value instanceof BN ? hexToBigInt(value.toString('hex')) : BigInt(value);
   }
 
@@ -39,7 +57,7 @@ export class Note {
   }
 
   get notePublicKey(): string {
-    return hexlify(poseidon([this.masterPublicKey, this.random]));
+    return poseidon([this.masterPublicKey, this.random]);
   }
 
   /**
@@ -47,7 +65,7 @@ export class Note {
    * @returns {string} hash as unprefixed hex string
    */
   get hash(): string {
-    return hexlify(poseidon([this.notePublicKey, this.token, this.valueHex]));
+    return poseidon([this.notePublicKey, this.token, this.valueHex]);
   }
 
   /**
@@ -66,10 +84,11 @@ export class Note {
     commitmentsOut: bigint[],
     spendingKeyPrivate: string,
   ): [bigint, bigint, bigint] {
-    const hashed = nPoseidon([merkleRoot, boundParamsHash, ...nullifiers, ...commitmentsOut]);
+    const msg = nPoseidon([merkleRoot, boundParamsHash, ...nullifiers, ...commitmentsOut]);
+    const prv = Buffer.from(arrayify(spendingKeyPrivate));
 
-    const { R8, S } = eddsa.signPoseidon(hexToBigInt(spendingKeyPrivate), hashed);
-    return [...babyjubjub.unpackPoint(R8), S];
+    const { R8, S } = eddsa.signPoseidon(prv, msg);
+    return [R8[0] as bigint, R8[1] as bigint, S as bigint];
   }
 
   /**
@@ -95,9 +114,13 @@ export class Note {
       .decrypt(encryptedNote, sharedKey)
       .map((value) => hexlify(value));
 
+    const address = {
+      masterPublicKey: decryptedValues[0],
+      viewingPublicKey: sharedKey, // @todo placeholder
+    };
     // Create new note object and return
     return new Note(
-      decryptedValues[0],
+      address,
       decryptedValues[2].substring(0, 32),
       hexToBigInt(decryptedValues[2].substring(32, 96)),
       decryptedValues[1],
@@ -133,7 +156,7 @@ export class Note {
   static deserialize(
     noteData: NoteSerialized,
     viewingPrivateKey: string,
-    masterPublicKey: string,
+    recipient: AddressData,
   ): Note {
     const encryptedRandom = noteData.encryptedRandom.map((r) => hexlify(r));
     const ciphertext = {
@@ -144,7 +167,7 @@ export class Note {
     const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, viewingPrivateKey);
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(
-      hexlify(masterPublicKey),
+      recipient,
       hexlify(decryptedRandom[0]),
       hexToBigInt(noteData.value),
       hexlify(noteData.token),

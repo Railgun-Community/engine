@@ -118,7 +118,7 @@ class ERC20RailgunContract {
         event: Event,
       ) => {
         this.leptonDebugger?.log(
-          `treeUpdates ${EventName.GeneratedCommitmentBatch} tree ${treeNumber} ${startPosition}`,
+          `contract.treeUpdates ${EventName.GeneratedCommitmentBatch} tree ${treeNumber} ${startPosition}`,
         );
         await eventsListener({
           txid: event.transactionHash,
@@ -130,7 +130,7 @@ class ERC20RailgunContract {
             encryptedRandom,
           ),
         });
-        this.leptonDebugger?.log('treeupdates GeneratedCommitmentBatch awaited');
+        this.leptonDebugger?.log('contract.treeupdates GeneratedCommitmentBatch awaited');
       },
     );
 
@@ -143,7 +143,7 @@ class ERC20RailgunContract {
         ciphertext: CommitmentCiphertextArgs[],
         event: Event,
       ) => {
-        this.leptonDebugger?.log('treeupdates CommitmentBatch start await');
+        this.leptonDebugger?.log('contract.treeupdates CommitmentBatch start await');
         await eventsListener({
           txid: event.transactionHash,
           treeNumber: treeNumber.toNumber(),
@@ -154,19 +154,19 @@ class ERC20RailgunContract {
             ciphertext,
           ),
         });
-        this.leptonDebugger?.log('treeupdates CommitmentBatch awaited');
+        this.leptonDebugger?.log('contract.treeupdates CommitmentBatch awaited');
       },
     );
 
     this.contract.on(EventName.Nullifiers, async (nullifier: BigNumber, event: Event) => {
-      this.leptonDebugger?.log('treeupdates Nullifiers start await');
+      this.leptonDebugger?.log('contract.treeupdates Nullifiers start await');
       await eventsNullifierListener([
         {
           txid: event.transactionHash,
           nullifier: nullifier.toHexString(),
         },
       ]);
-      this.leptonDebugger?.log('treeupdates Nullifiers awaited');
+      this.leptonDebugger?.log('contract.treeupdates Nullifiers awaited');
     });
   }
 

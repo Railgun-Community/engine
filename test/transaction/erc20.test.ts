@@ -1,21 +1,22 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* globals describe it beforeEach */
-import chai from 'chai';
+import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import BN from 'bn.js';
 import memdown from 'memdown';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
-import { walkUpBindingElementsAndPatterns } from 'typescript';
 import { Database } from '../../src/database';
-import { Commitment, MerkleTree } from '../../src/merkletree';
-import { getMasterPublicKey, Wallet } from '../../src/wallet';
+import { MerkleTree } from '../../src/merkletree';
+import { Wallet } from '../../src/wallet';
 import { Deposit, Note, WithdrawNote } from '../../src/note';
 import { babyjubjub } from '../../src/utils';
 import { Transaction } from '../../src/transaction';
 import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter } from '../helper';
+import { hashBoundParams } from '../../src/transaction/transaction';
+import { formatToByteLength } from '../../src/utils/bytes';
+import { AddressData, decode } from '../../src/keyderivation/bech32-encode';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -30,6 +31,7 @@ let deposit: Deposit;
 let withdraw: WithdrawNote;
 let masterPublicKey: string;
 let prover: Prover;
+let address: AddressData;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -79,7 +81,10 @@ const getTestData = () => {
 
   const leaves = notesPrep.map((keyIndex) => {
     const note = new Note(
-      keypairsPopulated[keyIndex].pubkey,
+      {
+        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+      },
       random,
       '11000000000000000000000000',
       token,
@@ -98,7 +103,10 @@ const getTestData = () => {
 
   const leaves2 = notesPrep2.map((keyIndex) => {
     const note = new Note(
-      keypairsPopulated[keyIndex].pubkey,
+      {
+        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+      },
       random,
       1000000000000n * BigInt(keyIndex + 1),
       token,
@@ -114,7 +122,15 @@ const getTestData = () => {
   const notesPrep3 = [0, 1, 0];
 
   const leaves3 = notesPrep3.map((keyIndex) => {
-    const note = new Note(keypairsPopulated[keyIndex].pubkey, random, 2166666666667n, token);
+    const note = new Note(
+      {
+        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+      },
+      random,
+      2166666666667n,
+      token,
+    );
 
     return {
       hash: note.hash,
@@ -126,7 +142,15 @@ const getTestData = () => {
   const notesPrep4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   const leaves4 = notesPrep4.map((keyIndex) => {
-    const note = new Note(keypairsPopulated[keyIndex].pubkey, random, 343000000000n, token);
+    const note = new Note(
+      {
+        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+      },
+      random,
+      343000000000n,
+      token,
+    );
 
     return {
       hash: note.hash,
@@ -175,11 +199,11 @@ describe('Transaction/ERC20', function () {
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
     masterPublicKey = wallet.masterPublicKey;
+    address = decode(await wallet.getAddress(chainID));
     wallet.loadTree(merkletree);
     testData = getTestData();
-    makeNote = (value: bigint = 6500000000000n): Note =>
-      new Note(masterPublicKey, random, value, token);
-    await merkletree.queueLeaves(0, 0, [depositLeaf]);
+    makeNote = (value: bigint = 6500000000000n): Note => new Note(address, random, value, token);
+    await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     // await merkletree.queueLeaves(1, 0, testData.leaves2);
     // await merkletree.queueLeaves(2, 0, testData.leaves3);
     // await merkletree.queueLeaves(3, 0, testData.leaves4);
@@ -187,8 +211,26 @@ describe('Transaction/ERC20', function () {
   });
 
   beforeEach(async () => {
-    deposit = new Deposit(masterPublicKey, random, 10n ** 18n, token);
+    // deposit = new Deposit(masterPublicKey, random, 10n ** 18n, token);
     transaction = new Transaction(token, 1);
+  });
+
+  it('Should hash bound parameters', async () => {
+    const params = {
+      treeNumber: 0n,
+      withdraw: 0n,
+      adaptContract: formatToByteLength('00', 20, true),
+      adaptParams: formatToByteLength('00', 32, true), //
+      commitmentCiphertext: [
+        {
+          ciphertext: [0n, 0n, 0n, 0n],
+          ephemeralKeys: [0n, 0n],
+          memo: [],
+        },
+      ],
+    };
+    const hashed = hashBoundParams(params);
+    assert.typeOf(hashed, 'bigint');
   });
 
   it('Should generate inputs for transaction', async () => {
@@ -209,7 +251,7 @@ describe('Transaction/ERC20', function () {
     ).to.eventually.be.rejectedWith('Too many outputs specified');
 
     transaction.outputs = [
-      new Note(masterPublicKey, random, 6500000000000n, '000925cdf66ddf5b88016df1fe915e68eff8f192'),
+      new Note(address, random, 6500000000000n, '000925cdf66ddf5b88016df1fe915e68eff8f192'),
     ];
 
     await expect(
