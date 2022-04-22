@@ -153,15 +153,11 @@ class Transaction {
       findSolutions(this.token, treeBalance, tree, totalRequired),
     )[this.tree];
 
-    // If tree isn't specified, find first tree with a spending solution
-    // const tree = this.tree || utxos.findIndex((value) => value.length > 0);
-
     // Get values
     const nullifiers: bigint[] = [];
     const pathElements: bigint[][] = [];
     const pathIndices: bigint[] = [];
 
-    // for (let i = 0; i < solutions[tree]?.length; i += 1) {
     for (let i = 0; i < utxos?.length; i += 1) {
       // Get UTXO
       const utxo = utxos[i];
@@ -197,15 +193,6 @@ class Transaction {
     // Create change output
     this.outputs.push(new Note(wallet.addressKeys, babyjubjub.random(), change, this.token));
 
-    // Pad with dummy notes to outputs length
-    while (this.outputs.length < 2) {
-      const randomAddress = {
-        masterPublicKey: randomPubkey(),
-        // eslint-disable-next-line no-await-in-loop
-        viewingPublicKey: await randomPublicKey(),
-      };
-      this.outputs.push(new Note(randomAddress, babyjubjub.random(), 0n, this.token));
-    }
     const ephemeralKeys = await Promise.all(
       this.outputs.map((note) => generateEphemeralKeys(viewingPublicKey, note.viewingPublicKey)),
     );
@@ -289,9 +276,6 @@ class Transaction {
     const { inputs, publicInputs, boundParams } = await this.generateInputs(wallet, encryptionKey);
 
     // Calculate proof
-    // @todo figure out which circuit to use
-    const { log } = console;
-    log({ publicInputs, inputs });
     const { proof } = await prover.prove(publicInputs, inputs);
 
     return Transaction.generateSerializedTransaction(

@@ -66,11 +66,15 @@ class Prover {
     publicInputs: PublicInputs,
     privateInputs: PrivateInputs,
   ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
+    // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(publicInputs);
 
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
+
+    const { dir } = console;
+    dir(formattedInputs, { depth: null });
 
     // Generate proof
     const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);

@@ -28,54 +28,12 @@ export function findSolutions(
 
   // TODO: optimise UTXO selection
   // Accumulate UTXOs until we hit the target value
-  let utxos: TXO[] = [];
+  const utxos: TXO[] = [];
 
   // Check if sum of UTXOs selected is greater than target
   while (utxos.reduce((left, right) => left + right.note.value, BigInt(0)) < totalRequired) {
     // If sum is not greater than target, push the next largest UTXO
     utxos.push(treeBalance.utxos[utxos.length]);
-  }
-
-  // @todo store commitment don't worry about hd wallet path
-  // @todo generateDeposit send encrypted randomness bundle
-  const fillUTXOs = (length: number) => {
-    if (treeBalance.utxos.length < length) {
-      // We don't have enough UTXOs to fill desired length
-      // Push what we have and fill to length with dummy notes
-      utxos = [...treeBalance.utxos];
-
-      while (utxos.length < length) {
-        const dummyAddress = {
-          masterPublicKey: randomPubkey(),
-          viewingPublicKey: randomPubkey(),
-        };
-        utxos.push({
-          tree,
-          position: 0,
-          index: 0,
-          txid: '',
-          spendtxid: false,
-          dummyKey: dummyAddress.masterPublicKey,
-          note: new Note(dummyAddress, babyjubjub.random(), '00', token),
-        });
-      }
-    } else {
-      // We have enough UTXOs to fill to desired length
-      // Loop and push from end of available until desired length is achieved
-      let cursor = 1;
-      while (utxos.length < length) {
-        utxos.push(treeBalance.utxos[treeBalance.utxos.length - cursor]);
-        cursor += 1;
-      }
-    }
-  };
-
-  if (utxos.length <= NOTE_INPUTS.small) {
-    fillUTXOs(NOTE_INPUTS.small);
-  } else if (utxos.length <= NOTE_INPUTS.large) {
-    fillUTXOs(NOTE_INPUTS.large);
-  } else {
-    return [];
   }
 
   return utxos;

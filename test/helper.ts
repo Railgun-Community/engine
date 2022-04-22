@@ -17,8 +17,11 @@ import { CommitmentEvent } from '../src/contract/erc20/events';
 export const DECIMALS = 10n ** 18n;
 const WALLET_PATH = "m/44'/60'/0'/0/0";
 
-export const artifactsGetter = (inputs: PublicInputs) =>
-  artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length];
+const { log } = console;
+export const artifactsGetter = (inputs: PublicInputs) => {
+  log(`artifacts ${inputs.nullifiers.length}-${inputs.commitmentsOut.length}`);
+  return artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length];
+};
 
 export const quicksync: QuickSync = (
   chainID: number,
