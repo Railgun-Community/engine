@@ -14,11 +14,12 @@ import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
 import { babyjubjub } from '../../src/utils';
-import { CommitmentEvent, EventName } from '../../src/contract/erc20';
 import { hexlify } from '../../src/utils/bytes';
 import { Nullifier } from '../../src/merkletree';
 import { artifactsGetter, awaitScan, generateRandomAddress } from '../helper';
 import { Deposit } from '../../src/note/deposit';
+import { CommitmentEvent } from '../../src/contract/erc20/events';
+import { EventName } from '../../src/contract/erc20';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -164,7 +165,7 @@ describe('Contract/Index', function () {
 
     const address = await wallet.getAddress(chainID);
     const { masterPublicKey } = Lepton.decodeAddress(address);
-    const viewingPrivateKey = await wallet.getViewingPrivateKey();
+    const viewingPrivateKey = await wallet.getNullifyingKey();
 
     const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
     const VALUE = 11000000000000000000000000n;
@@ -246,7 +247,7 @@ describe('Contract/Index', function () {
 
     const address = await wallet.getAddress(chainID);
     const { masterPublicKey } = Lepton.decodeAddress(address);
-    const viewingPrivateKey = await wallet.getViewingPrivateKey();
+    const viewingPrivateKey = await wallet.getNullifyingKey();
 
     const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
     const VALUE = 11000000000000000000000000n;

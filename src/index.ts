@@ -11,7 +11,7 @@ import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
-import { CommitmentEvent } from './contract/erc20';
+import { CommitmentEvent } from './contract/erc20/events';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];

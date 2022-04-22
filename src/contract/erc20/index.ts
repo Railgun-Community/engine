@@ -9,31 +9,20 @@ import {
 import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
-import type { Commitment, Nullifier } from '../../merkletree';
 import {
   CommitmentPreimage,
   EncryptedRandom,
   SerializedTransaction,
 } from '../../transaction/types';
 import {
-  formatNullifier,
-  formatGeneratedCommitmentBatchCommitments,
-  formatEncryptedCommitmentBatchCommitments,
-  CommitmentPreimageArgs,
-  CommitmentCiphertextArgs,
+  EventsListener,
+  EventsNullifierListener,
+  processCommitmentBatchEvents,
+  processGeneratedCommitmentEvents,
+  processNullifierEvents,
 } from './events';
 import { LeptonDebugger } from '../../models/types';
 import { BytesData, hexlify } from '../../utils/bytes';
-
-export type CommitmentEvent = {
-  txid: BytesData;
-  treeNumber: number;
-  startPosition: number;
-  commitments: Commitment[];
-};
-
-export type EventsListener = (event: CommitmentEvent) => Promise<void>;
-export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 5;
@@ -110,64 +99,18 @@ class ERC20RailgunContract {
   treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
     this.contract.on(
       EventName.GeneratedCommitmentBatch,
-      async (
-        treeNumber: BigNumber,
-        startPosition: BigNumber,
-        commitments: CommitmentPreimageArgs[],
-        encryptedRandom: [BigNumber, BigNumber][],
-        event: Event,
-      ) => {
-        this.leptonDebugger?.log(
-          `contract.treeUpdates ${EventName.GeneratedCommitmentBatch} tree ${treeNumber} ${startPosition}`,
-        );
-        await eventsListener({
-          txid: event.transactionHash,
-          treeNumber: treeNumber.toNumber(),
-          startPosition: startPosition.toNumber(),
-          commitments: formatGeneratedCommitmentBatchCommitments(
-            event.transactionHash,
-            commitments,
-            encryptedRandom,
-          ),
-        });
-        this.leptonDebugger?.log('contract.treeupdates GeneratedCommitmentBatch awaited');
-      },
+      async (e: Event) => await processGeneratedCommitmentEvents(eventsListener, [e]),
     );
 
     this.contract.on(
       EventName.CommitmentBatch,
-      async (
-        treeNumber: BigNumber,
-        startPosition: BigNumber,
-        hash: BigNumber[],
-        ciphertext: CommitmentCiphertextArgs[],
-        event: Event,
-      ) => {
-        this.leptonDebugger?.log('contract.treeupdates CommitmentBatch start await');
-        await eventsListener({
-          txid: event.transactionHash,
-          treeNumber: treeNumber.toNumber(),
-          startPosition: startPosition.toNumber(),
-          commitments: formatEncryptedCommitmentBatchCommitments(
-            event.transactionHash,
-            hash,
-            ciphertext,
-          ),
-        });
-        this.leptonDebugger?.log('contract.treeupdates CommitmentBatch awaited');
-      },
+      async (e: Event) => await processCommitmentBatchEvents(eventsListener, [e]),
     );
 
-    this.contract.on(EventName.Nullifiers, async (nullifier: BigNumber, event: Event) => {
-      this.leptonDebugger?.log('contract.treeupdates Nullifiers start await');
-      await eventsNullifierListener([
-        {
-          txid: event.transactionHash,
-          nullifier: nullifier.toHexString(),
-        },
-      ]);
-      this.leptonDebugger?.log('contract.treeupdates Nullifiers awaited');
-    });
+    this.contract.on(
+      EventName.Nullifiers,
+      async (e: Event) => await processNullifierEvents(eventsNullifierListener, [e]),
+    );
   }
 
   private async scanEvents(
@@ -236,15 +179,9 @@ class ERC20RailgunContract {
 
       // eslint-disable-next-line no-await-in-loop
       await Promise.all([
-        ERC20RailgunContract.processGeneratedCommitmentEvents(
-          eventsListener,
-          eventsGeneratedCommitment,
-        ),
-        ERC20RailgunContract.processEncryptedCommitmentEvents(
-          eventsListener,
-          eventsEncryptedCommitment,
-        ),
-        ERC20RailgunContract.processNullifierEvents(eventsNullifierListener, eventsNullifier),
+        processGeneratedCommitmentEvents(eventsListener, eventsGeneratedCommitment),
+        processCommitmentBatchEvents(eventsListener, eventsEncryptedCommitment),
+        processNullifierEvents(eventsNullifierListener, eventsNullifier),
       ]);
 
       // eslint-disable-next-line no-await-in-loop
@@ -254,64 +191,6 @@ class ERC20RailgunContract {
     }
 
     this.leptonDebugger?.log('Finished historical event scan');
-  }
-
-  private static async processGeneratedCommitmentEvents(
-    eventsListener: EventsListener,
-    generatedCommitmentEvents: Event[],
-  ) {
-    generatedCommitmentEvents.forEach(async (event) => {
-      if (!event.args) {
-        return;
-      }
-      await eventsListener({
-        txid: hexlify(event.transactionHash),
-        treeNumber: event.args.treeNumber.toNumber(),
-        startPosition: event.args.startPosition.toNumber(),
-        commitments: formatGeneratedCommitmentBatchCommitments(
-          event.transactionHash,
-          event.args.commitments,
-          event.args.encryptedRandom,
-        ),
-      });
-    });
-  }
-
-  private static async processEncryptedCommitmentEvents(
-    eventsListener: EventsListener,
-    encryptedCommitmentEvents: Event[],
-  ) {
-    encryptedCommitmentEvents.forEach(async (event) => {
-      if (!event.args) {
-        return;
-      }
-      await eventsListener({
-        txid: hexlify(event.transactionHash),
-        treeNumber: event.args.treeNumber.toNumber(),
-        startPosition: event.args.startPosition.toNumber(),
-        commitments: formatEncryptedCommitmentBatchCommitments(
-          event.transactionHash,
-          event.args.hash,
-          event.args.ciphertext,
-        ),
-      });
-    });
-  }
-
-  private static async processNullifierEvents(
-    eventsNullifierListener: EventsNullifierListener,
-    nullifierEvents: Event[],
-  ) {
-    const nullifiers: Nullifier[] = [];
-
-    nullifierEvents.forEach(async (event) => {
-      if (!event.args) {
-        return;
-      }
-      nullifiers.push(formatNullifier(event.transactionHash, event.args.nullifier));
-    });
-
-    await eventsNullifierListener(nullifiers);
   }
 
   /**

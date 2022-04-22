@@ -115,7 +115,7 @@ describe('Lepton', function () {
     const address = await wallet.getAddress(chainID);
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
-    const vpk = await wallet.getViewingPrivateKey();
+    const vpk = wallet.getNullifyingKey();
     const value = 11000000n * 10n ** 18n;
     const deposit = new Deposit(mpk, babyjubjub.random(), value, config.contracts.rail);
 

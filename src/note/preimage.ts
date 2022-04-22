@@ -36,7 +36,7 @@ export class WithdrawNote {
     return hash.poseidon([this.withdrawAddress, this.token.tokenAddress, nToHex(this.value)]);
   }
 
-  serialize(encryptedRandom: EncryptedRandom = ['00', '00']) {
+  serialize(encryptedRandom: EncryptedRandom) {
     return {
       npk: this.withdrawAddress,
       token: this.token,
@@ -45,18 +45,4 @@ export class WithdrawNote {
       encryptedRandom,
     };
   }
-
-  /*
-  format(): CommitmentPreimage {
-    return {
-      npk: this.withdrawAddress,
-      token: {
-        tokenType: 0n,
-        tokenAddress: `0x${hexlify(this.token.tokenAddress).padStart(40, '0')}`,
-        tokenSubID: 0n,
-      },
-      value: this.value,
-    };
-  }
-  */
 }

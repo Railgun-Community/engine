@@ -103,6 +103,14 @@ function ecdh(privateKey: BytesData, pubkey: BytesData): string {
   return sha256(babyjub.packPoint(babyjub.mulPointEscalar(pubkeyUnpacked, privateKeyBI)));
 }
 
+function privateKeyToPubKeyUnpacked(privateKey: BytesData): [bigint, bigint] {
+  // Format as number string
+  const privateKeyFormatted = numberify(privateKey).toString(10);
+
+  // Calculate pubkey
+  return babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted);
+}
+
 /**
  * Convert babyjubjub private key to public key
  * @param privateKey - private key
@@ -111,17 +119,19 @@ function ecdh(privateKey: BytesData, pubkey: BytesData): string {
 function privateKeyToPubKey(privateKey: BytesData): string {
   // TODO: remove dependance on circomlibjs
   // Format as number string
+  /*
   const privateKeyFormatted = numberify(privateKey).toString(10);
 
   // Calculate pubkey
   const pubKey = babyjub
     .mulPointEscalar(babyjub.Base8, privateKeyFormatted)
-    .map((element: BigInt) => {
-      const elementString = element.toString(16);
-      return elementString.length % 2 === 0
-        ? elementString
-        : elementString.padStart(elementString.length + 1, '0');
-    });
+    */
+  const pubKey = privateKeyToPubKeyUnpacked(privateKey).map((element: BigInt) => {
+    const elementString = element.toString(16);
+    return elementString.length % 2 === 0
+      ? elementString
+      : elementString.padStart(elementString.length + 1, '0');
+  });
 
   // Pack and return
   return packPoint(pubKey);
@@ -160,15 +170,26 @@ function randomPubkey(): string {
   return privateKeyToPubKey(seedToPrivateKey(randomBytes(32)))[1];
 }
 
+function getKeyPair(chainKey: string) {
+  const privateKey = seedToPrivateKey(chainKey);
+  const pubkey = privateKeyToPubKey(privateKey);
+  return {
+    privateKey,
+    pubkey,
+  };
+}
+
 export {
   seedToPrivateKey,
   packPoint,
   unpackPoint,
   ecdh,
+  privateKeyToPubKeyUnpacked,
   privateKeyToPubKey,
   unpackPubKey,
   random,
   sign,
   randomPubkey,
   genRandomPrivateKey,
+  getKeyPair,
 };

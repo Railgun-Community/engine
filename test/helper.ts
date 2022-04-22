@@ -8,11 +8,14 @@ import { bytesToHex } from 'ethereum-cryptography/utils';
 import { PublicInputs } from '../src/prover';
 import { ScannedEventData, Wallet } from '../src/wallet';
 import { AccumulatedEvents, QuickSync } from '../src';
-import { CommitmentEvent } from '../src/contract/erc20';
 import { Nullifier } from '../src/merkletree';
 import { AddressData } from '../src/keyderivation/bech32-encode';
 import { randomPubkey } from '../src/utils/babyjubjub';
 import { randomPublicKey } from '../src/utils/ed25519';
+import { CommitmentEvent } from '../src/contract/erc20/events';
+
+export const DECIMALS = 10n ** 18n;
+const WALLET_PATH = "m/44'/60'/0'/0/0";
 
 export const artifactsGetter = (inputs: PublicInputs) =>
   artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length];
@@ -25,16 +28,6 @@ export const quicksync: QuickSync = (
     commitmentEvents: [] as CommitmentEvent[],
     nullifierEvents: [] as Nullifier[],
   });
-/*
-export const quicksync: QuickSync = (
-  _chainID: number,
-  _startingBlock: number,
-): Promise<{ commitmentEvents: CommitmentEvent[]; nullifierEvents: Nullifier[] }> => ({
-  commitmentEvents: [],
-  nullifierEvents: [],
-});
-*/
-export const DECIMALS = 10n ** 18n;
 
 export const awaitScan = (wallet: Wallet, chainID: number) =>
   new Promise((resolve, reject) =>
@@ -42,8 +35,6 @@ export const awaitScan = (wallet: Wallet, chainID: number) =>
       returnedChainID === chainID ? resolve(returnedChainID) : reject(),
     ),
   );
-
-const WALLET_PATH = "m/44'/60'/0'/0/0";
 
 export const getEthersWallet = (
   mnemonic: string,

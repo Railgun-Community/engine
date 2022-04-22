@@ -25,7 +25,6 @@ import { emptyCommitmentPreimage } from '../note/preimage';
 import { depths } from '../merkletree';
 import { generateEphemeralKeys, randomPublicKey } from '../utils/ed25519';
 import { getSharedKey } from '../utils/encryption';
-import { decode } from '../keyderivation/bech32-encode';
 import { randomPubkey } from '../utils/babyjubjub';
 
 const abiCoder = defaultAbiCoder;
@@ -95,7 +94,7 @@ class Transaction {
   withdraw(originalAddress: string, value: BigIntish) {
     const note = new WithdrawNote(originalAddress, BigInt(value), this.tokenData);
     this.withdrawPreimage.value = value.toString();
-    this.withdrawPreimage = note.serialize();
+    this.withdrawPreimage = note.serialize(['00', '00']);
   }
 
   set withdrawAddress(value: string) {
@@ -119,9 +118,9 @@ class Transaction {
     const merkleTree = wallet.merkletree[this.chainID];
     const merkleRoot = await merkleTree.getRoot(0);
     const spendingPrivateKey = await wallet.getSpendingPrivateKey(encryptionKey);
-    const viewingPrivateKey = await wallet.getViewingPrivateKey();
-    const viewingPublicKey = await wallet.getViewingPublicKey();
-    const address = await wallet.getAddress(this.chainID);
+    const { viewingPublicKey } = wallet;
+    const viewingPrivateKey = await wallet.getNullifyingKey();
+    const publicKey = babyjubjub.privateKeyToPubKeyUnpacked(spendingPrivateKey);
 
     // Calculate total required to be supplied by UTXOs
     const totalRequired =
@@ -138,9 +137,10 @@ class Transaction {
     });
 
     // Get UTXOs sorted by tree
-    // const balances = await wallet.balancesByTree(this.chainID);
+    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[this.token];
 
-    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[this.token] || [];
+    if (treeSortedBalances === undefined)
+      throw new Error(`Failed to find balances for ${this.token}`);
 
     // Sum balances
     const balance: bigint = treeSortedBalances.reduce((left, right) => left + right.balance, 0n);
@@ -149,42 +149,22 @@ class Transaction {
     if (totalRequired > balance) throw new Error('Wallet balance too low');
 
     // Loop through each tree with a balance and attempt to find a spending solution
-    const solutions: TXO[][] = treeSortedBalances.map(
-      (treeBalance, tree) => findSolutions(this.token, treeBalance, tree, totalRequired) || [],
-    );
+    const utxos: TXO[] = treeSortedBalances.map((treeBalance, tree) =>
+      findSolutions(this.token, treeBalance, tree, totalRequired),
+    )[this.tree];
 
     // If tree isn't specified, find first tree with a spending solution
-    const tree = this.tree || solutions.findIndex((value) => value.length > 0);
-
-    // Check if tree with spending solution exists
-    /*
-    if (tree === -1 || solutions[tree] === undefined)
-      throw new Error('Balances need to be consolidated before being able to spend this amount');
-      */
-
-    // Check if withdraw address isn't set when it should be
-    /*
-    if (this.withdraw === WithdrawFlag.WITHDRAW && )
-      throw new Error('Withdraw flag indicates withdraw but amount is 0');
-    */
-
-    // Check if withdraw address is set when it shouldn't be
-    /*
-    if (!this.withdraw && this.overrideOutput !== undefined)
-      throw new Error('Withdraw amount should be set if withdrawAddress is');
-      */
-
-    if (this.withdrawFlag === WithdrawFlag.OVERRIDE && this.overrideOutput !== '')
-      throw new Error('Withdraw set to override but overrideOutput address not set');
+    // const tree = this.tree || utxos.findIndex((value) => value.length > 0);
 
     // Get values
     const nullifiers: bigint[] = [];
     const pathElements: bigint[][] = [];
     const pathIndices: bigint[] = [];
 
-    for (let i = 0; i < (solutions[tree]?.length || 0); i += 1) {
+    // for (let i = 0; i < solutions[tree]?.length; i += 1) {
+    for (let i = 0; i < utxos?.length; i += 1) {
       // Get UTXO
-      const utxo = solutions[tree][i];
+      const utxo = utxos[i];
 
       // Get private key (or dummy key if dummy note)
       const privateKey = utxo.dummyKey || spendingPrivateKey;
@@ -196,13 +176,9 @@ class Transaction {
       if (utxo.dummyKey) {
         pathElements.push(new Array(depths.erc20).fill(0n));
       } else {
-        pathElements.push(
-          // @todo here
-          // eslint-disable-next-line no-await-in-loop
-          (await wallet.merkletree[this.chainID].getProof(tree, utxo.position)).elements.map(
-            (element) => hexToBigInt(element),
-          ),
-        );
+        // eslint-disable-next-line no-await-in-loop
+        const proof = await merkleTree.getProof(this.tree, utxo.position);
+        pathElements.push(proof.elements.map((element) => hexToBigInt(element)));
       }
 
       // Push path indicies
@@ -210,7 +186,7 @@ class Transaction {
     }
 
     // Calculate change amount
-    const totalIn = solutions[tree]?.reduce((left, right) => left + right.note.value, 0n);
+    const totalIn = utxos?.reduce((left, right) => left + right.note.value, 0n);
 
     const totalOut =
       this.outputs.reduce((left, right) => left + right.value, 0n) +
@@ -219,7 +195,7 @@ class Transaction {
     const change = totalIn - totalOut;
 
     // Create change output
-    this.outputs.push(new Note(decode(address), babyjubjub.random(), change, this.token));
+    this.outputs.push(new Note(wallet.addressKeys, babyjubjub.random(), change, this.token));
 
     // Pad with dummy notes to outputs length
     while (this.outputs.length < 2) {
@@ -256,7 +232,6 @@ class Transaction {
       commitmentCiphertext,
     };
     const boundParamsHash = hashBoundParams(boundParams);
-    const addressKeys = await wallet.getAddressKeys();
 
     const serializedCommitments = this.outputs.map((note) => note.serialize(viewingPrivateKey));
 
@@ -280,12 +255,12 @@ class Transaction {
     // Format inputs
     const inputs: PrivateInputs = {
       token: hexToBigInt(this.token),
-      randomIn: solutions[tree].map((utxo) => hexToBigInt(utxo.note.random)),
-      valueIn: this.notesIn.map((note) => note.value), // @todo unset for circuit
+      randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
+      valueIn: utxos.map((utxo) => utxo.note.value),
       pathElements, // @todo possibly misformatted
       leavesIndices: pathIndices,
       valueOut: this.outputs.map((note) => note.value),
-      publicKey: addressKeys.map((key) => hexToBigInt(key)) as [bigint, bigint],
+      publicKey,
       npkOut: serializedCommitments.map((out) => hexToBigInt(out.npk)),
       nullifyingKey: hexToBigInt(viewingPrivateKey),
       signature,
@@ -315,6 +290,8 @@ class Transaction {
 
     // Calculate proof
     // @todo figure out which circuit to use
+    const { log } = console;
+    log({ publicInputs, inputs });
     const { proof } = await prover.prove(publicInputs, inputs);
 
     return Transaction.generateSerializedTransaction(

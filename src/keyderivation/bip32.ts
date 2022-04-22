@@ -1,7 +1,6 @@
 import * as curve25519 from '@noble/ed25519';
-import { poseidon } from 'circomlibjs';
-import { babyjubjub, bytes, hash } from '../utils';
-import { BytesData, hexlify, Hex, hexToBigInt, nToHex } from '../utils/bytes';
+import { babyjubjub, bytes, ed25519, hash } from '../utils';
+import { BytesData, Hex, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
@@ -39,8 +38,6 @@ export class Node {
   #chainKey: string;
 
   #chainCode: string;
-
-  #_babyJubJubKeyPair?: KeyPair;
 
   constructor(keyNode: KeyNode) {
     this.#chainKey = keyNode.chainKey;
@@ -82,14 +79,7 @@ export class Node {
    * @returns {KeyPair} keypair
    */
   get babyJubJubKeyPair(): KeyPair {
-    if (this.#_babyJubJubKeyPair) return this.#_babyJubJubKeyPair as KeyPair;
-    const privateKey = babyjubjub.seedToPrivateKey(this.#chainKey);
-    const pubkey = babyjubjub.privateKeyToPubKey(privateKey);
-    this.#_babyJubJubKeyPair = {
-      privateKey, // sk
-      pubkey, // PK
-    };
-    return this.#_babyJubJubKeyPair as KeyPair;
+    return babyjubjub.getKeyPair(this.#chainKey);
   }
 
   /**
@@ -100,11 +90,12 @@ export class Node {
     return this.babyJubJubKeyPair.pubkey;
   }
 
+  /**
+   * @todo keep viewing private key private
+   */
   async getViewingKeyPair(): Promise<KeyPair> {
     // the private key is also used as the nullifying key
-    const privateKey = hexlify(nToHex(poseidon([hexToBigInt(this.#chainKey)])));
-    const pubkey = hexlify(await curve25519.getPublicKey(privateKey));
-    return { privateKey, pubkey };
+    return ed25519.getKeyPair(this.#chainKey);
   }
 
   /**
