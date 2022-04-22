@@ -23,9 +23,8 @@ import {
 } from './constants';
 import { emptyCommitmentPreimage } from '../note/preimage';
 import { depths } from '../merkletree';
-import { generateEphemeralKeys, randomPublicKey } from '../utils/ed25519';
+import { generateEphemeralKeys } from '../utils/ed25519';
 import { getSharedKey } from '../utils/encryption';
-import { randomPubkey } from '../utils/babyjubjub';
 
 const abiCoder = defaultAbiCoder;
 
@@ -188,6 +187,7 @@ class Transaction {
       this.outputs.reduce((left, right) => left + right.value, 0n) +
       hexToBigInt(this.withdrawPreimage?.value);
 
+    // @todo for withdraw change should not be negative
     const change = totalIn - totalOut;
 
     // Create change output

@@ -9,14 +9,14 @@ import { fromUTF8String, numberify, padEven, hexlify } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
 
 export type MerkleProof = {
-  leaf: string;
+  leaf: string; // hash of commitment
   elements: string[];
   indices: string;
   root: string;
 };
 
 /**
- * Emitted from deposit and withdraw transactions
+ * Processed from transaction events
  */
 export type GeneratedCommitment = {
   hash: string;
@@ -29,8 +29,9 @@ export type CommitmentCiphertext = {
   ephemeralKeys: string[]; // sender first, recipient second (packed points 32 bytes each)
   memo: string; // bytes32[]
 };
+
 /**
- * Emitted from transfer and adapt transactions
+ * Processed from from transfer transactions with data encrypted to ciphertext
  */
 export type EncryptedCommitment = {
   hash: string;
@@ -38,10 +39,14 @@ export type EncryptedCommitment = {
   ciphertext: CommitmentCiphertext;
 };
 
+/**
+ * Stored Commitments are either GeneratedCommitment or EncryptedCommitment
+ */
 export type Commitment = GeneratedCommitment | EncryptedCommitment;
 
 export type Nullifier = {
   nullifier: string;
+  treeNumber: number;
   txid: string;
 };
 

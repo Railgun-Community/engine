@@ -1,8 +1,4 @@
-import { Note } from '../note';
-import { babyjubjub } from '../utils';
-import { randomPubkey } from '../utils/babyjubjub';
 import { TreeBalance, TXO } from '../wallet';
-import { NOTE_INPUTS } from './constants';
 
 export function findSolutions(
   token: string,
@@ -22,7 +18,6 @@ export function findSolutions(
 
     if (leftNum > rightNum) return -1;
 
-    // leftNum.eq(rightNum)
     return 0;
   });
 

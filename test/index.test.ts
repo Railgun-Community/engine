@@ -42,7 +42,7 @@ describe('Lepton', function () {
   this.timeout(240000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter, quicksync);
+    lepton = new Lepton(memdown(), artifactsGetter, quicksync, console);
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
@@ -112,12 +112,12 @@ describe('Lepton', function () {
       return;
     }
 
-    const address = await wallet.getAddress(chainID);
+    const address = wallet.getAddress(chainID);
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getNullifyingKey();
     const value = 11000000n * 10n ** 18n;
-    const deposit = new Deposit(mpk, babyjubjub.random(), value, config.contracts.rail);
+    const deposit = new Deposit(mpk, babyjubjub.random(), value, token.address);
 
     const { preImage, encryptedRandom } = deposit.serialize(vpk);
     // Create deposit
@@ -132,7 +132,7 @@ describe('Lepton', function () {
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
     transaction.withdraw(await etherswallet.getAddress(), 300n * 10n ** 18n);
-    transaction.overrideOutput = config.contracts.treasury;
+    transaction.withdrawAddress = config.contracts.treasury;
 
     const proof = await transaction.prove(
       lepton.prover,

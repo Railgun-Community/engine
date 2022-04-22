@@ -55,11 +55,11 @@ class Prover {
     this.artifactsGetter = artifactsGetter;
   }
 
-  async verify(inputs: PublicInputs, proof: Proof): Promise<boolean> {
+  async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
     // Fetch artifacts
-    const artifacts = await this.artifactsGetter(inputs);
+    const artifacts = await this.artifactsGetter(publicInputs);
     // Return output of groth16 verify
-    return groth16.verify(artifacts.vkey, inputs, proof);
+    return groth16.verify(artifacts.vkey, publicInputs, proof);
   }
 
   async prove(

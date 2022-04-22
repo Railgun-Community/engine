@@ -437,7 +437,7 @@ class Wallet extends EventEmitter {
   }
 
   async getBalance(chainID: number, tokenAddress: string) {
-    return (await this.balances(chainID))[formatToByteLength(tokenAddress, 32, false)].balance;
+    return (await this.balances(chainID))[formatToByteLength(tokenAddress, 32, false)]?.balance;
   }
 
   /**

@@ -62,10 +62,9 @@ class Lepton {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
-  async listener(chainID: number, startingIndex: number, leaves: Commitment[]) {
+  async listener(chainID: number, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
     // Queue leaves to merkle tree
-    const latestTree = await this.merkletree[chainID].erc20.latestTree();
-    await this.merkletree[chainID].erc20.queueLeaves(latestTree, startingIndex, leaves);
+    await this.merkletree[chainID].erc20.queueLeaves(treeNumber, startingIndex, leaves);
     this.leptonDebugger?.log(
       `lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`,
     );
@@ -131,7 +130,8 @@ class Lepton {
 
         // Pass events to commitments listener and wait for resolution
         commitmentEvents.forEach(async (commitmentEvent) => {
-          await this.listener(chainID, commitmentEvent.startPosition, commitmentEvent.commitments);
+          const { treeNumber, startPosition, commitments } = commitmentEvent;
+          await this.listener(chainID, treeNumber, startPosition, commitments);
         });
 
         // Scan after all leaves added.
@@ -150,8 +150,8 @@ class Lepton {
       // Run slow scan
       await this.contracts[chainID].getHistoricalEvents(
         startScanningBlock,
-        async ({ startPosition, commitments }: CommitmentEvent) => {
-          await this.listener(chainID, startPosition, commitments);
+        async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
+          await this.listener(chainID, treeNumber, startPosition, commitments);
         },
         async (nullifiers: Nullifier[]) => {
           await this.nullifierListener(chainID, nullifiers);
@@ -201,8 +201,8 @@ class Lepton {
       wallet.loadTree(this.merkletree[chainID].erc20);
     });
 
-    const eventsListener = async ({ startPosition, commitments }: CommitmentEvent) => {
-      await this.listener(chainID, startPosition, commitments);
+    const eventsListener = async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
+      await this.listener(chainID, treeNumber, startPosition, commitments);
       await this.scanAllWallets(chainID);
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {
