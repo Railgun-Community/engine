@@ -1,6 +1,7 @@
 /* eslint-disable no-bitwise */
 // @ts-ignore
 import { babyjub, eddsa } from 'circomlibjs';
+import { BytesData } from '../models/transaction-types';
 import {
   arrayify,
   numberify,
@@ -10,8 +11,6 @@ import {
   ByteLength,
 } from './bytes';
 import { poseidon, sha256 } from './hash';
-
-import type { BytesData } from './bytes';
 
 /**
  * Converts 32 byte seed to babyjubjub point

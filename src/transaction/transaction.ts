@@ -4,16 +4,16 @@ import { babyjubjub, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
-import { BigIntish, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { formatToByteLength, HashZero, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { findSolutions } from './solutions';
 import {
   AdaptID,
+  BigIntish,
   BoundParams,
   CommitmentCiphertext,
   CommitmentPreimage,
-  HashZero,
   SerializedTransaction,
-} from './types';
+} from '../models/transaction-types';
 import {
   DEFAULT_ERC20_TOKEN_TYPE,
   DEFAULT_TOKEN_SUB_ID,

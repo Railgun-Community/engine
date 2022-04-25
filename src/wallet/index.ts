@@ -11,10 +11,9 @@ import { Note } from '../note';
 import type { Commitment, MerkleTree } from '../merkletree';
 import { bech32, Node } from '../keyderivation';
 import { LeptonDebugger } from '../models/types';
-import { NoteSerialized } from '../transaction/types';
+import { BytesData, NoteSerialized } from '../models/transaction-types';
 import {
   arrayify,
-  BytesData,
   combine,
   formatToByteLength,
   fromUTF8String,

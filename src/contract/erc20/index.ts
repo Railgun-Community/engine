@@ -10,10 +10,11 @@ import type { Provider } from '@ethersproject/abstract-provider';
 import { bytes, babyjubjub } from '../../utils';
 import { abi } from './abi';
 import {
+  BytesData,
   CommitmentPreimage,
   EncryptedRandom,
   SerializedTransaction,
-} from '../../transaction/types';
+} from '../../models/transaction-types';
 import {
   EventsListener,
   EventsNullifierListener,
@@ -24,7 +25,7 @@ import {
   processNullifierEvents,
 } from './events';
 import { LeptonDebugger } from '../../models/types';
-import { BytesData, hexlify } from '../../utils/bytes';
+import { hexlify } from '../../utils/bytes';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 5;

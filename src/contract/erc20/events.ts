@@ -1,8 +1,8 @@
 import type { BigNumber, Event } from 'ethers';
 import { Commitment, EncryptedCommitment, GeneratedCommitment, Nullifier } from '../../merkletree';
 import { WithdrawNote } from '../../note';
-import { EncryptedRandom } from '../../transaction/types';
-import { BytesData, hexlify } from '../../utils/bytes';
+import { BytesData, EncryptedRandom } from '../../models/transaction-types';
+import { hexlify } from '../../utils/bytes';
 
 export type CommitmentEvent = {
   txid: BytesData;

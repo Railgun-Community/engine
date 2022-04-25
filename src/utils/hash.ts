@@ -3,8 +3,7 @@ import { utils as ethersutils } from 'ethers';
 // @ts-ignore
 import { poseidon as poseidonHash } from 'circomlibjs';
 import { arrayify, hexlify, numberify, padEven } from './bytes';
-
-import type { BytesData } from './bytes';
+import { BytesData } from '../models/transaction-types';
 
 const hashes = [
   'RSA-MD4',

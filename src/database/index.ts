@@ -2,9 +2,8 @@ import type { AbstractBatch, AbstractLevelDOWN } from 'abstract-leveldown';
 import encode from 'encoding-down';
 import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
+import { BytesData, Ciphertext } from '../models/transaction-types';
 import { bytes, encryption } from '../utils';
-import type { Ciphertext } from '../utils/encryption';
-
 
 // TODO: Remove JSON encoding and standardize everything as msgpack
 export type Encoding =
@@ -40,7 +39,7 @@ class Database {
    * @param path - path to covert
    * @returns key
    */
-  static pathToKey(path: bytes.BytesData[]): string {
+  static pathToKey(path: BytesData[]): string {
     // Convert to hex string, pad to 32 bytes, and join with :
     return path.map((element) => bytes.hexlify(element).toLowerCase().padStart(64, '0')).join(':');
   }
@@ -52,7 +51,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  put(path: bytes.BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
+  put(path: BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.put(key, value, { valueEncoding: encoding });
   }
@@ -63,7 +62,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns value
    */
-  get(path: bytes.BytesData[], encoding: Encoding = 'hex'): Promise<any> {
+  get(path: BytesData[], encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
     return this.level.get(key, { valueEncoding: encoding });
   }
@@ -74,7 +73,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  del(path: bytes.BytesData[], encoding: Encoding = 'hex'): Promise<void> {
+  del(path: BytesData[], encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.del(key, { valueEncoding: encoding });
   }
@@ -95,11 +94,7 @@ class Database {
    * @param encryptionKey - AES-256-GCM encryption key
    * @param value - value to encrypt and set
    */
-  async putEncrypted(
-    path: bytes.BytesData[],
-    encryptionKey: bytes.BytesData,
-    value: bytes.BytesData,
-  ) {
+  async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData) {
     // Encrypt data
     const encrypted = encryption.aes.gcm.encrypt(bytes.chunk(value), encryptionKey);
 
@@ -113,10 +108,7 @@ class Database {
    * @param encryptionKey - AES-256-GCM  encryption key
    * @return decrypted value
    */
-  async getEncrypted(
-    path: bytes.BytesData[],
-    encryptionKey: bytes.BytesData,
-  ): Promise<bytes.BytesData> {
+  async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData> {
     // Read from database
     const encrypted: Ciphertext = await this.get(path, 'json');
 
@@ -129,7 +121,7 @@ class Database {
    * @param namespace - namespace to stream from
    * @returns namespace stream
    */
-  streamNamespace(namespace: bytes.BytesData[], keys: boolean = true, values: boolean = false) {
+  streamNamespace(namespace: BytesData[], keys: boolean = true, values: boolean = false) {
     const pathkey = Database.pathToKey(namespace);
     return this.level.createReadStream({
       gte: `${pathkey}`,
@@ -144,7 +136,7 @@ class Database {
    * @param namespace - namespace to delete
    * @returns complete
    */
-  clearNamespace(namespace: bytes.BytesData[]): Promise<void> {
+  clearNamespace(namespace: BytesData[]): Promise<void> {
     return new Promise((resolve) => {
       const deleteOperations: AbstractBatch[] = [];
 
@@ -169,7 +161,7 @@ class Database {
    * @param namespace - namespace to count keys in
    * @returns number of keys in namespace
    */
-  countNamespace(namespace: bytes.BytesData[]): Promise<number> {
+  countNamespace(namespace: BytesData[]): Promise<number> {
     return new Promise((resolve) => {
       let keyNumber = 0;
 

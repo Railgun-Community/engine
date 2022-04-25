@@ -2,12 +2,8 @@
 import BN from 'bn.js';
 import crypto from 'crypto';
 import { hexToBytes } from 'ethereum-cryptography/utils';
+import { BytesData, Ciphertext, EncryptedRandom } from '../models/transaction-types';
 
-export type BytesData = ArrayLike<number> | string | BN;
-
-export type BigIntish = string | number | bigint | boolean;
-
-export type Hex = Uint8Array | string;
 export enum ByteLength {
   UINT_8 = 1,
   UINT_120 = 15,
@@ -352,6 +348,17 @@ function formatToByteLength(data: BytesData, length: number, prefix = true): str
   return trim(padToLength(hexlify(data, prefix), length), length) as string;
 }
 
+/**
+ * Formats ciphertext into EncryptedRandom type.
+ */
+function formatEncryptedRandom(ciphertext: Ciphertext): EncryptedRandom {
+  const ivTag = hexlify(ciphertext.iv, true) + hexlify(ciphertext.tag);
+  const data = hexlify(ciphertext.data[0], true);
+  return [ivTag, data];
+}
+
+export const HashZero = formatToByteLength('00', 32, true);
+
 export {
   random,
   hexlify,
@@ -366,4 +373,5 @@ export {
   combine,
   trim,
   formatToByteLength,
+  formatEncryptedRandom,
 };

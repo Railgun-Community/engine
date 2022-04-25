@@ -1,15 +1,9 @@
 import crypto from 'crypto';
 import * as curve25519 from '@noble/ed25519';
-import type { BytesData } from './bytes';
 import { arrayify, hexlify, padToLength, random, trim } from './bytes';
+import { BytesData, Ciphertext } from '../models/transaction-types';
 
 const { getSharedSecret } = curve25519;
-
-export interface Ciphertext {
-  iv: BytesData;
-  tag: BytesData;
-  data: BytesData[];
-}
 
 /**
  * Derive symmetric shared key

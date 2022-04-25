@@ -1,8 +1,7 @@
 import BN from 'bn.js';
-import { NoteSerialized } from '../transaction/types';
+import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
-import { BigIntish, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
-import { Ciphertext } from '../utils/encryption';
+import { formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { AddressData } from '../keyderivation/bech32-encode';
 import { PublicInputs } from '../prover';
 

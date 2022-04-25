@@ -1,5 +1,6 @@
 import * as curve25519 from '@noble/ed25519';
-import { Hex, hexlify } from './bytes';
+import { Hex } from '../models/transaction-types';
+import { hexlify } from './bytes';
 
 export async function getKeyPair(chainKey: string) {
   // const privateKey = poseidon([chainKey]);

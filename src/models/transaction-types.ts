@@ -1,11 +1,22 @@
+import BN from 'bn.js';
 import { Proof } from '../prover';
-import { formatToByteLength } from '../utils/bytes';
 
-export const HashZero = formatToByteLength('00', 32, true);
+export type BytesData = ArrayLike<number> | string | BN;
+
+export type BigIntish = string | number | bigint | boolean;
+
+export type Hex = Uint8Array | string;
+
 export type AdaptID = {
   contract: string;
   parameters: string;
 };
+
+export interface Ciphertext {
+  iv: BytesData;
+  tag: BytesData;
+  data: BytesData[];
+}
 
 export type CommitmentCiphertext = {
   ciphertext: bigint[]; // uint256[4]

@@ -36,7 +36,7 @@ let contract: ERC20RailgunContract;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
-const { log } = console;
+// const { log } = console;
 
 // eslint-disable-next-line func-names
 describe('Lepton', function () {
@@ -78,8 +78,13 @@ describe('Lepton', function () {
     expect(lepton.wallets[walletID].id).to.equal(walletID);
   });
 
-  it('Should show balance after deposit', async () => {
-    // TODO-balances
+  it('[HH] Should show balance after deposit', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    // TODO-balances - needs updated vector.
 
     const commitment: GeneratedCommitment = {
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
@@ -88,14 +93,14 @@ describe('Lepton', function () {
         npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
         token: {
           tokenType: ZERO_ADDRESS,
-          tokenAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+          tokenAddress: `0x${tokenAddress}`,
           tokenSubID: ZERO_ADDRESS,
         },
         value: '9138822709a9fc231cba6',
       },
       encryptedRandom: [
-        '0xa51425928f4d6be74808a67732a56085e53d58e18b91faed635049462aab883e',
-        '0x26e8e14696fe12fe8279764a0d8f22a9703ebc366b53a0cc253aa26c7b9bf884',
+        '0xb47a353e294711ff73cf086f97ee1ed29b853b67c353bc2371b87fe72c716cc6',
+        '0x3d321af08b8fa7a8f70379407706b752',
       ],
     };
     // override root validator as we're not processing on chain
@@ -105,7 +110,7 @@ describe('Lepton', function () {
     await wallet.scan(chainID);
     const balance = await wallet.getBalance(chainID, tokenAddress);
     const value = hexToBigInt(commitment.preimage.value);
-    assert.isTrue(balance === value);
+    expect(balance).to.equal(value);
   });
 
   it('[HH] Should deposit, transact and update balance', async function run() {
@@ -116,12 +121,17 @@ describe('Lepton', function () {
 
     // TODO-balances
 
+    const initialBalance = await wallet.getBalance(chainID, tokenAddress);
+    expect(initialBalance).to.equal(undefined);
+
     const address = wallet.getAddress(chainID);
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getNullifyingKey();
     const value = 11000000n * 10n ** 18n;
-    const deposit = new Deposit(mpk, babyjubjub.random(), value, token.address);
+    // const random = babyjubjub.random();
+    const random = '04eaf4ffc3fb976481dece36d3d26460048b6ff04e5e3fa6e1798d32947a0f2e';
+    const deposit = new Deposit(mpk, random, value, token.address);
 
     const { preImage, encryptedRandom } = deposit.serialize(vpk);
     // Create deposit
@@ -131,7 +141,8 @@ describe('Lepton', function () {
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    assert.isTrue(balance > 0n);
+    expect(balance).to.equal(9975062344139650872817n);
+    // expect(balance).to.equal(10972500000000000000000000n);
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);

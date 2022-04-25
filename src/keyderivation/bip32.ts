@@ -1,8 +1,9 @@
 import { hash, keysUtils } from '../utils';
-import { BytesData, fromUTF8String, hexToBigInt } from '../utils/bytes';
+import { fromUTF8String, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
+import { BytesData } from '../models/transaction-types';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;

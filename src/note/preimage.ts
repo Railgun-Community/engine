@@ -1,4 +1,4 @@
-import { EncryptedRandom } from '../transaction/types';
+import { EncryptedRandom } from '../models/transaction-types';
 import { formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';

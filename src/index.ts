@@ -12,6 +12,7 @@ import { bytes } from './utils';
 import { Wallet } from './wallet';
 import { LeptonDebugger } from './models/types';
 import { CommitmentEvent } from './contract/erc20/events';
+import { BytesData } from './models/transaction-types';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
@@ -303,7 +304,7 @@ class Lepton {
    * @param id - wallet ID
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: bytes.BytesData, id: string): Promise<string> {
+  async loadExistingWallet(encryptionKey: BytesData, id: string): Promise<string> {
     // Instantiate wallet
     const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
 
@@ -325,10 +326,7 @@ class Lepton {
    * @param mnemonic - mnemonic to load
    * @returns id
    */
-  async createWalletFromMnemonic(
-    encryptionKey: bytes.BytesData,
-    mnemonic: string,
-  ): Promise<string> {
+  async createWalletFromMnemonic(encryptionKey: BytesData, mnemonic: string): Promise<string> {
     // Instantiate wallet
     const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
 

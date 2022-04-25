@@ -3,9 +3,9 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
 import { LeptonDebugger } from '../models/types';
+import { Ciphertext } from '../models/transaction-types';
 import { constants, hash } from '../utils';
 import { fromUTF8String, numberify, padEven, hexlify } from '../utils/bytes';
-import type { Ciphertext } from '../utils/encryption';
 
 export type MerkleProof = {
   leaf: string; // hash of commitment
@@ -536,7 +536,9 @@ class MerkleTree {
         */
 
         // If there aren't any elements in the write queue delete it
-        if (tree.reduce((x) => x + 1, 0) === 0) delete this.writeQueue[treeIndex];
+        if (tree.reduce((x) => x + 1, 0) === 0) {
+          delete this.writeQueue[treeIndex];
+        }
 
         // If there is an element in the write queue equal to the tree length, process it
         if (this.writeQueue[treeIndex]?.[treeLengths[treeIndex]]) {
