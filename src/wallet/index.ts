@@ -201,7 +201,7 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Nullifying Key aka Viewing Private Key aka vpk derived on ed25519 curve
+   * Nullifying Key (ie poseidon hash of Viewing Private Key) aka vpk derived on ed25519 curve
    * Used to decrypt and nullify notes
    * @todo protect like spending private key
    */
@@ -274,7 +274,7 @@ class Wallet extends EventEmitter {
     this.leptonDebugger?.log(
       `wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}`,
     );
-    const vpk = this.#viewingKeyPair.privateKey;
+    const vpk = this.getViewingKeyPair().privateKey;
 
     const writeBatch: AbstractBatch[] = [];
 

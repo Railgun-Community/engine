@@ -1,7 +1,13 @@
 import BN from 'bn.js';
 import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
-import { formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import {
+  formatEncryptedRandom,
+  formatToByteLength,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+} from '../utils/bytes';
 import { AddressData } from '../keyderivation/bech32-encode';
 import { PublicInputs } from '../prover';
 
@@ -127,9 +133,8 @@ export class Note {
    */
   serialize(viewingPrivateKey: string, prefix?: boolean): NoteSerialized {
     const { npk, token, value, random } = this.format(prefix);
-    const encryptedRandom = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
-    const ivTag = `${hexlify(encryptedRandom.iv, true)}${hexlify(encryptedRandom.tag, false)}`;
-    const data = hexlify(encryptedRandom.data[0], true);
+    const ciphertext = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
+    const [ivTag, data] = formatEncryptedRandom(ciphertext);
 
     return {
       npk,
@@ -158,10 +163,11 @@ export class Note {
       data: [encryptedRandom[1]],
     };
     const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, nToHex(viewingPrivateKey));
+    const ivTag = decryptedRandom[0];
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(
       recipient,
-      hexlify(decryptedRandom[0]),
+      hexlify(ivTag),
       hexToBigInt(noteData.value),
       hexlify(noteData.token),
     );

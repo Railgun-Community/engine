@@ -1,9 +1,10 @@
 /* eslint-disable no-plusplus */
 /* globals describe it */
-import chai, { assert } from 'chai';
+import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { encryption } from '../../src/utils';
-import { BytesData, random } from '../../src/utils/bytes';
+import { BytesData } from '../../src/models/transaction-types';
+import { babyjubjub, encryption } from '../../src/utils';
+import { nToHex, random } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -46,5 +47,14 @@ describe('Utils/Encryption', () => {
         key,
       ),
     ).to.throw('Unsupported state or unable to authenticate data');
+  });
+
+  it('Should encrypt and decrypt data', () => {
+    const randomValue = babyjubjub.random();
+    const viewingPrivateKey =
+      71304128950017749550555748140089622855554443655032326837948344032235540545721n;
+    const ciphertext = encryption.aes.gcm.encrypt([randomValue], nToHex(viewingPrivateKey));
+    const decrypted = encryption.aes.gcm.decrypt(ciphertext, nToHex(viewingPrivateKey));
+    expect(randomValue).to.equal(decrypted[0]);
   });
 });

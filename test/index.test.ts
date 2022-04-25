@@ -5,15 +5,12 @@ import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
 
-// import { HDKey } from 'ethereum-cryptography/hdkey';
-// import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { Lepton, Transaction } from '../src';
 
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
-import { babyjubjub } from '../src/utils';
 import { Wallet } from '../src/wallet';
-import { artifactsGetter, awaitScan, getEthersWallet, quicksync } from './helper';
+import { artifactsGetter, awaitScan, getEthersWallet, mockQuickSync } from './helper';
 import { Deposit } from '../src/note/deposit';
 import { GeneratedCommitment, MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
@@ -43,7 +40,7 @@ describe('Lepton', function () {
   this.timeout(240000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter, quicksync, console);
+    lepton = new Lepton(memdown(), artifactsGetter, mockQuickSync, console);
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
@@ -127,7 +124,7 @@ describe('Lepton', function () {
     const address = wallet.getAddress(chainID);
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
-    const vpk = wallet.getNullifyingKey();
+    const vpk = wallet.getViewingKeyPair().privateKey;
     const value = 11000000n * 10n ** 18n;
     // const random = babyjubjub.random();
     const random = '04eaf4ffc3fb976481dece36d3d26460048b6ff04e5e3fa6e1798d32947a0f2e';
@@ -141,8 +138,8 @@ describe('Lepton', function () {
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    expect(balance).to.equal(9975062344139650872817n);
-    // expect(balance).to.equal(10972500000000000000000000n);
+    expect(balance).to.equal(10972568578553615960099750n);
+    // expect(balance).to.equal(10972500000000000000000000n); // Shouldn't it be this?
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);

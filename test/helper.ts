@@ -9,24 +9,27 @@ import { PublicInputs } from '../src/prover';
 import { ScannedEventData, Wallet } from '../src/wallet';
 import { AccumulatedEvents, QuickSync } from '../src';
 import { Nullifier } from '../src/merkletree';
-import { AddressData } from '../src/keyderivation/bech32-encode';
-import { randomPubkey } from '../src/utils/babyjubjub';
-import { randomPublicKey } from '../src/utils/ed25519';
 import { CommitmentEvent } from '../src/contract/erc20/events';
 
 export const DECIMALS = 10n ** 18n;
 const WALLET_PATH = "m/44'/60'/0'/0/0";
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-const { log } = console;
 export const artifactsGetter = (inputs: PublicInputs) => {
-  log(`artifacts ${inputs.nullifiers.length}-${inputs.commitmentsOut.length}`);
+  if (
+    !artifacts[inputs.nullifiers.length] ||
+    !artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length]
+  ) {
+    throw new Error(
+      `No artifacts for inputs: ${inputs.nullifiers.length}-${inputs.commitmentsOut.length}`,
+    );
+  }
   return artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length];
 };
 
-export const quicksync: QuickSync = (
-  chainID: number,
-  startingBlock: number,
+export const mockQuickSync: QuickSync = (
+  _chainID: number,
+  _startingBlock: number,
 ): Promise<AccumulatedEvents> =>
   Promise.resolve({
     commitmentEvents: [] as CommitmentEvent[],
