@@ -251,13 +251,13 @@ describe('Contract/Index', function () {
       return;
     }
 
-    const { log } = console;
+    // const { log } = console;
 
     let result: CommitmentEvent;
     contract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
-        log(result);
+        // log(result);
       },
       async () => {},
     );

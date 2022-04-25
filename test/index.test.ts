@@ -145,8 +145,9 @@ describe('Lepton', function () {
     const transact = await contract.transact([proof]);
 
     const transactTx = await etherswallet.sendTransaction(transact);
-    const receipt = await transactTx.wait();
-    log(receipt);
+    await transactTx.wait();
+    // const receipt = await transactTx.wait();
+    // log(receipt);
     await awaitScan(wallet, chainID);
 
     assert.isTrue(

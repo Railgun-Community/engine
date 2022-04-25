@@ -447,8 +447,8 @@ class MerkleTree {
         };
         */
       }
-      const { log } = console;
-      log(leaf);
+      // const { log } = console;
+      // log(leaf);
 
       // Increment index
       index += 1;
