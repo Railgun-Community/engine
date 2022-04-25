@@ -4,7 +4,7 @@ import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { HDNode } from '@ethersproject/hdnode';
 import { hexToBytes } from 'ethereum-cryptography/utils';
-import { ed25519, encryption, hash, keysUtils } from '../utils';
+import { hash, keysUtils } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
@@ -179,19 +179,6 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Sign message with ed25519 node derived at path index
-   * @param message - hex or Uint8 bytes of message to sign
-   * @param index - index to get keypair at
-   * @returns Promise<Uint8Array>
-   */
-  async signEd25519(message: string | Uint8Array) {
-    return await ed25519.sign(
-      message,
-      nToHex(this.#viewingKeyPair.privateKey, ByteLength.UINT_256),
-    );
-  }
-
-  /**
    * Load encrypted spending key Node from database and return babyjubjub private key
    * @returns Promise<string>
    */
@@ -210,7 +197,7 @@ class Wallet extends EventEmitter {
    * @todo protect like spending private key
    */
   getNullifyingKey(): bigint {
-    return poseidon([this.#viewingKeyPair.privateKey]);
+    return poseidon([hexlify(this.#viewingKeyPair.privateKey, true)]);
   }
 
   /**
@@ -290,17 +277,15 @@ class Wallet extends EventEmitter {
       if ('ciphertext' in leaf) {
         // Derive shared secret
         // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await encryption.getSharedKey(
-          nToHex(vpk, ByteLength.UINT_256),
-          leaf.ciphertext.ephemeralKeys[0],
+        const sharedKey = await keysUtils.getSharedSymmetricKey(
+          vpk,
+          hexToBytes(leaf.ciphertext.ephemeralKeys[0]),
         );
 
         // Decrypt
         try {
-          note = Note.decrypt(leaf.ciphertext.ciphertext, hexToBytes(sharedKey));
-          // } catch (e: any) {} // not addressed to us
+          note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
         } catch (e: any) {
-          // debug test
           this.leptonDebugger?.error(e);
         }
       } else {
@@ -314,22 +299,21 @@ class Wallet extends EventEmitter {
         };
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);
-          // } catch (e: any) {} // not addressed to us
         } catch (e: any) {
-          // debug test
           this.leptonDebugger?.error(e);
         }
       }
 
       // If this note is addressed to us add to write queue
-      // @todo shouldn't need to check if note is not undefined
       if (note !== undefined) {
-        // }.masterPublicKey === this.masterPublicKey) {
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
-          nullifier: nToHex(Note.getNullifier(vpk, position), ByteLength.UINT_256),
-          decrypted: note.serialize(nToHex(vpk, ByteLength.UINT_256)),
+          nullifier: nToHex(
+            Note.getNullifier(this.getNullifyingKey(), position),
+            ByteLength.UINT_256,
+          ),
+          decrypted: note.serialize(vpk),
         };
         writeBatch.push({
           type: 'put',

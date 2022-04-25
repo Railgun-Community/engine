@@ -2,8 +2,6 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { hexToBytes } from 'ethereum-cryptography/utils';
-import { AddressData } from '../../src/keyderivation/bech32-encode';
-
 import { Note } from '../../src/note';
 import { ByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes';
 
@@ -285,30 +283,6 @@ describe('Note/ERC20', () => {
       expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
       expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
     });
-  });
-
-  it('Should deserialize known note', () => {
-    const serialized = {
-      npk: '30565d4c0ecda2ff2d1c035a320e9db38594be8c425c7e73491de34ef6aaf51a',
-      encryptedRandom: [
-        '0x1846045b9efee2e7caeab8c05a8036ee61e7c36eaf0ba9242b39347882b97d02',
-        '0x62b76af800eb57b2394926b3213ba661a3c232437942530dc5776ab2be587478',
-      ],
-      token: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
-      value: '000000000009138822709a9fc231cba6',
-    };
-    const viewingPrivateKey =
-      8368299126798249740586535953124199418524409103803955764525436743456763691384n;
-    const recipient: AddressData = {
-      masterPublicKey:
-        18420843011127269333684419479640723626445038177966995952228157831021183862625n,
-      viewingPublicKey: new Uint8Array([
-        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
-        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
-      ]),
-    };
-    const deserialized = Note.deserialize(serialized, viewingPrivateKey, recipient);
-    expect(deserialized.masterPublicKey).to.equal(recipient.masterPublicKey);
   });
 
   it('Should calculate nullifiers', () => {

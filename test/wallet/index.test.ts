@@ -135,20 +135,26 @@ describe('Wallet/Index', () => {
 
   it('Should get viewing keypair', async () => {
     expect(wallet.getViewingKeyPair()).to.deep.equal({
-      privateKey: 71304128950017749550555748140089622855554443655032326837948344032235540545721n,
+      privateKey: new Uint8Array([
+        157, 164, 180, 240, 181, 73, 58, 107, 163, 247, 223, 6, 17, 195, 224, 132, 47, 126, 43, 179,
+        214, 64, 243, 19, 178, 53, 241, 183, 92, 29, 128, 185,
+      ]),
       pubkey: new Uint8Array([
-        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
-        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
+        172, 181, 158, 117, 95, 174, 171, 93, 44, 198, 111, 75, 32, 145, 215, 59, 36, 84, 198, 73,
+        250, 15, 26, 84, 194, 103, 165, 47, 2, 8, 239, 37,
       ]),
     });
   });
 
   it('Should get spending keypair', async () => {
     expect(await wallet.getSpendingKeyPair(testEncryptionKey)).to.deep.equal({
-      privateKey: 14885415580002452077068976469744009286192522487973243807233334368048451373219n,
+      privateKey: new Uint8Array([
+        176, 149, 143, 139, 194, 134, 174, 8, 50, 250, 131, 176, 27, 113, 154, 34, 90, 7, 206, 123,
+        134, 31, 243, 17, 50, 63, 34, 22, 103, 179, 189, 80,
+      ]),
       pubkey: [
-        20358432791702394440987616324389261946380133901540012684151464412561828403448n,
-        13628856795343582234988428809742510240520287808493898157708413671487002392124n,
+        15684838006997671713939066069845237677934334329285343229142447933587909549584n,
+        11878614856120328179849762231924033298788609151532558727282528569229552954628n,
       ],
     });
   });
@@ -156,29 +162,29 @@ describe('Wallet/Index', () => {
   it('Should get address keys', async () => {
     expect(wallet.addressKeys).to.deep.equal({
       masterPublicKey:
-        18420843011127269333684419479640723626445038177966995952228157831021183862625n,
+        20060431504059690749153982049210720252589378133547582826474262520121417617087n,
       viewingPublicKey: new Uint8Array([
-        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
-        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
+        172, 181, 158, 117, 95, 174, 171, 93, 44, 198, 111, 75, 32, 145, 215, 59, 36, 84, 198, 73,
+        250, 15, 26, 84, 194, 103, 165, 47, 2, 8, 239, 37,
       ]),
     });
   });
 
   it('Should get addresses', async () => {
     expect(wallet.getAddress(0)).to.equal(
-      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkrrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5tp2mcg',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53l7ktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2n2s479',
     );
     expect(wallet.getAddress(1)).to.equal(
-      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5vv9g56',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqxktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj258lxjh',
     );
     expect(wallet.getAddress(2)).to.equal(
-      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwqfma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5tynq32',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq2ktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2n0fwh8',
     );
     expect(wallet.getAddress(3)).to.equal(
-      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwqdma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw53mxlja',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqwktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2fsu35s',
     );
     expect(wallet.getAddress(4)).to.equal(
-      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwq3ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw595ksmr',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqjktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2alv7aw',
     );
   });
 

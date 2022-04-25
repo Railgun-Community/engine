@@ -6,6 +6,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import { hexToBytes } from 'ethereum-cryptography/utils';
+import { Signature } from 'circomlibjs';
 import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
 import { Wallet } from '../../src/wallet';
@@ -16,10 +17,9 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength, hexlify, hexToBigInt } from '../../src/utils/bytes';
+import { formatToByteLength, hexlify } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
-import { getEphemeralKeys, poseidon } from '../../src/utils/keys-utils';
-import { getSharedSecret } from '../../src/utils/encryption';
+import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -47,26 +47,26 @@ let makeNote: makeNoteFn;
 const keypairs = [
   {
     // Primary 0
-    privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-    pubkey: '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+    privateKey: hexToBytes('0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144'),
+    pubkey: hexToBytes('c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b'),
     address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
   },
   {
     // Primary 1
-    privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
-    pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
+    privateKey: hexToBytes('0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2'),
+    pubkey: hexToBytes('6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005'),
     address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
   },
   {
     // Primary 5
-    privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
-    pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
+    privateKey: hexToBytes('0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3'),
+    pubkey: hexToBytes('49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e'),
     address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
   },
   {
     // Change 2
-    privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
-    pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
+    privateKey: hexToBytes('0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500'),
+    pubkey: hexToBytes('e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07'),
     address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
   },
 ];
@@ -84,8 +84,8 @@ const getTestData = () => {
   const leaves = notesPrep.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
-        viewingPublicKey: hexToBytes(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
+        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
       },
       random,
       '11000000000000000000000000',
@@ -107,8 +107,8 @@ const getTestData = () => {
   const leaves2 = notesPrep2.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
-        viewingPublicKey: hexToBytes(keypairsPopulated[keyIndex].pubkey),
+        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
       },
       random,
       1000000000000n * BigInt(keyIndex + 1),
@@ -127,8 +127,8 @@ const getTestData = () => {
   const leaves3 = notesPrep3.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
-        viewingPublicKey: hexToBytes(keypairsPopulated[keyIndex].pubkey),
+        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
       },
       random,
       2166666666667n,
@@ -147,8 +147,8 @@ const getTestData = () => {
   const leaves4 = notesPrep4.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
-        viewingPublicKey: hexToBytes(keypairsPopulated[keyIndex].pubkey),
+        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
+        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
       },
       random,
       343000000000n,
@@ -246,18 +246,14 @@ describe('Transaction/ERC20', function () {
     assert.isTrue(note.viewingPublicKey === receiver.pubkey);
     const ephemeralKeys = await getEphemeralKeys(sender.pubkey, note.viewingPublicKey);
 
-    const senderShared = await getSharedSecret(sender.privateKey, ephemeralKeys[1]);
-    const receiverShared = await getSharedSecret(receiver.privateKey, ephemeralKeys[0]);
+    const senderShared = await getSharedSymmetricKey(sender.privateKey, ephemeralKeys[1]);
+    const receiverShared = await getSharedSymmetricKey(receiver.privateKey, ephemeralKeys[0]);
 
     const encryptedNote = note.encrypt(senderShared);
 
     const senderDecrypted = Note.decrypt(encryptedNote, senderShared);
-
-    // TODO: This test is broken because the note is encrypted using the sender's shared key.
-    // Don't we also need the receiver key?
-    const receiverDecrypted = Note.decrypt(encryptedNote, receiverShared);
-
     expect(senderDecrypted.hash).to.equal(note.hash);
+    const receiverDecrypted = Note.decrypt(encryptedNote, receiverShared);
     expect(receiverDecrypted.hash).to.equal(note.hash);
   });
 
@@ -268,8 +264,9 @@ describe('Transaction/ERC20', function () {
     const { signature } = inputs;
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
     const msg = poseidon(Object.values(publicInputs).flatMap((x) => x));
+    const sig: Signature = { R8: [signature[0], signature[1]], S: signature[2] };
 
-    assert.isTrue(keysUtils.verifyEDDSA(msg, signature, pubkey));
+    assert.isTrue(keysUtils.verifyEDDSA(msg, sig, pubkey));
 
     expect(signature).to.deep.equal(keysUtils.signEDDSA(privateKey, msg));
   });

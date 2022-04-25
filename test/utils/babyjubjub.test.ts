@@ -41,10 +41,7 @@ describe('Utils/BabyJubJub', () => {
     // known bad from fuzzing
     const bad = '3c8ae8f53964d84df43b3d1ec993d4be1731efec6fb1f357ca00de055c450a0100';
     expect(() => babyjubjub.packPoint([bad, bad])).to.throw(/babyjub/);
-    const invalidLengthVectors: string[][] = [
-      ['1'],
-      ['1', '2', '3'],
-    ];
+    const invalidLengthVectors: string[][] = [['1'], ['1', '2', '3']];
     invalidLengthVectors.forEach((vector) => {
       expect(() => babyjubjub.packPoint(vector)).to.throw(/Invalid unpacked length/);
     });
@@ -121,41 +118,12 @@ describe('Utils/BabyJubJub', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(
-        babyjubjub.ecdh(vector.keyA.private, vector.keyB.public),
-      ).to.equal(vector.sharedKey);
-      expect(
-        babyjubjub.ecdh(vector.keyB.private, vector.keyA.public),
-      ).to.equal(vector.sharedKey);
-    });
-  });
-
-  it('Should private keys to public keys', () => {
-    const vectors = [
-      {
-        privateKey: '0bd2dfe7ed7323285b1dbc3480580ef16eb488b62038f5095308551103902c03',
-        pubkey: 'ca4f21fd1830763f22a39fc31d4f5436d389a513ceb4c51b85c310a25c121323',
-      },
-      {
-        privateKey: '0d39f9b2d1f48e8a10f4417b0fac542db663106faeb4f0047c51b6e06a850fa3',
-        pubkey: '4135fb27b175c77328f59cf1f7faf30ed51264c6497ec31a3a6af72b65cafa09',
-      },
-      {
-        privateKey: '0f75f0f0f1e2d1021b1d7f839bea176d24c87e089ee959c6fb9c0e650473d684',
-        pubkey: 'f0778519e8392743ac51cfb56d3e58d0aa3a78bda158f5a2adbd2d57615fcb0e',
-      },
-    ];
-
-    vectors.forEach((vector) => {
-      expect(
-        babyjubjub.privateKeyToPubKey(vector.privateKey),
-      ).to.equal(vector.pubkey);
+      expect(babyjubjub.ecdh(vector.keyA.private, vector.keyB.public)).to.equal(vector.sharedKey);
+      expect(babyjubjub.ecdh(vector.keyB.private, vector.keyA.public)).to.equal(vector.sharedKey);
     });
   });
 
   it('Should create random babyjubjub values', () => {
-    expect(
-      bytes.numberify(babyjubjub.random()).lte(constants.SNARK_PRIME),
-    ).to.equal(true);
+    expect(bytes.numberify(babyjubjub.random()).lte(constants.SNARK_PRIME)).to.equal(true);
   });
 });

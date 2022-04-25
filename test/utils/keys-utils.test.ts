@@ -1,4 +1,5 @@
 /* globals describe it */
+import { randomBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
@@ -8,12 +9,12 @@ import { ByteLength, nToHex } from '../../src/utils/bytes';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-let privateKey: bigint;
+let privateKey: Uint8Array;
 let pubkey: [bigint, bigint];
 
 describe('Test keys-utils', () => {
   before(() => {
-    privateKey = keysUtils.getPrivateSpendingKey('deadbeef');
+    privateKey = randomBytes(32);
     pubkey = keysUtils.getPublicSpendingKey(privateKey);
   });
 
@@ -26,7 +27,6 @@ describe('Test keys-utils', () => {
   it('Should create and verify signatures', () => {
     const message = keysUtils.poseidon([1n, 2n]);
     const signature = keysUtils.signEDDSA(privateKey, message);
-    expect(signature.length).to.equal(3);
     assert.isTrue(keysUtils.verifyEDDSA(message, signature, pubkey));
     const fakeMessage = keysUtils.poseidon([2n, 3n]);
     assert.isFalse(keysUtils.verifyEDDSA(fakeMessage, signature, pubkey));

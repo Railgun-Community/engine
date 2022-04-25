@@ -2,6 +2,7 @@ import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note, WithdrawNote } from '../note';
 import { babyjubjub, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
+import { depths } from '../merkletree';
 import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
 import {
@@ -28,9 +29,7 @@ import {
   NOTE_OUTPUTS,
   WithdrawFlag,
 } from './constants';
-import { depths } from '../merkletree';
-import { getSharedSecret } from '../utils/encryption';
-import { getEphemeralKeys } from '../utils/keys-utils';
+import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 
 const abiCoder = defaultAbiCoder;
 
@@ -192,7 +191,7 @@ class Transaction {
     // calculate symmetric key using sender privateKey and recipient ephemeral key
     const sharedKeys = await Promise.all(
       notesEphemeralKeys.map((ephemeralKeys) =>
-        getSharedSecret(viewingKey.privateKey, ephemeralKeys[1]),
+        getSharedSymmetricKey(viewingKey.privateKey, ephemeralKeys[1]),
       ),
     );
 
@@ -236,7 +235,7 @@ class Transaction {
       publicKey: spendingKey.pubkey,
       npkOut: this.outputs.map((x) => x.notePublicKey),
       nullifyingKey,
-      signature,
+      signature: [...signature.R8, signature.S],
     };
 
     return {

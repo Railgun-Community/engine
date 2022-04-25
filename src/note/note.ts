@@ -1,3 +1,4 @@
+import { Signature } from 'circomlibjs';
 import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
 import {
@@ -69,7 +70,7 @@ export class Note {
    * @param {Array<bigint>} commitmentsOut - transaction commitments
    * @returns {object} signature
    */
-  static sign(publicInputs: PublicInputs, spendingKeyPrivate: bigint): [bigint, bigint, bigint] {
+  static sign(publicInputs: PublicInputs, spendingKeyPrivate: Uint8Array): Signature {
     const entries = Object.values(publicInputs).flatMap((x) => x);
     const msg = poseidon(entries);
     return keysUtils.signEDDSA(spendingKeyPrivate, msg);
@@ -125,7 +126,7 @@ export class Note {
    * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
    * @returns serialized note
    */
-  serialize(viewingPrivateKey: string, prefix?: boolean): NoteSerialized {
+  serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
     const { npk, token, value, random } = this.format(prefix);
     const ciphertext = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
     const [ivTag, data] = formatEncryptedRandom(ciphertext);
@@ -147,7 +148,7 @@ export class Note {
    */
   static deserialize(
     noteData: NoteSerialized,
-    viewingPrivateKey: bigint,
+    viewingPrivateKey: Uint8Array,
     recipient: AddressData,
   ): Note {
     const encryptedRandom = noteData.encryptedRandom.map((r) => hexlify(r));
@@ -156,10 +157,7 @@ export class Note {
       tag: encryptedRandom[0].substring(32),
       data: [encryptedRandom[1]],
     };
-    const decryptedRandom = encryption.aes.gcm.decrypt(
-      ciphertext,
-      nToHex(viewingPrivateKey, ByteLength.UINT_256),
-    );
+    const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, viewingPrivateKey);
     const ivTag = decryptedRandom[0];
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(

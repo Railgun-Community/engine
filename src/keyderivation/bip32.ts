@@ -1,5 +1,7 @@
+import { Signature } from 'circomlibjs';
+import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
 import { hash, keysUtils } from '../utils';
-import { fromUTF8String, hexToBigInt } from '../utils/bytes';
+import { fromUTF8String } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
@@ -8,8 +10,8 @@ import { BytesData } from '../models/transaction-types';
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
 
-export type SpendingKeyPair = { privateKey: bigint; pubkey: [bigint, bigint] };
-export type ViewingKeyPair = { privateKey: bigint; pubkey: Uint8Array };
+export type SpendingKeyPair = { privateKey: Uint8Array; pubkey: [bigint, bigint] };
+export type ViewingKeyPair = { privateKey: Uint8Array; pubkey: Uint8Array };
 
 /**
  * Creates KeyNode from seed
@@ -80,7 +82,7 @@ export class Node {
    * @returns keypair
    */
   getSpendingKeyPair(): SpendingKeyPair {
-    const privateKey = keysUtils.getPrivateSpendingKey(this.#chainKey);
+    const privateKey = hexToBytes(this.#chainKey);
     const pubkey = keysUtils.getPublicSpendingKey(privateKey);
     return {
       privateKey,
@@ -93,17 +95,18 @@ export class Node {
   }
 
   async getViewingKeyPair(): Promise<ViewingKeyPair> {
-    const privateKey = hexToBigInt(this.#chainKey);
+    // TODO: THIS should be a separate node chainkey
+    const privateKey = hexToBytes(this.#chainKey);
     const pubkey = await keysUtils.getPublicViewingKey(privateKey);
     return { privateKey, pubkey };
   }
 
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    return keysUtils.poseidon([privateKey]);
+    return keysUtils.poseidon([bytesToHex(privateKey)]);
   }
 
-  signBySpendingKey(message: bigint): [bigint, bigint, bigint] {
+  signBySpendingKey(message: bigint): Signature {
     return keysUtils.signEDDSA(this.getSpendingKeyPair().privateKey, message);
   }
 }
