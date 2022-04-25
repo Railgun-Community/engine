@@ -10,7 +10,6 @@ import { ByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes'
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-// @todo update final hashes
 const vectors = [
   {
     note: {
@@ -221,7 +220,7 @@ const ciphertextVectors = [
   },
 ];
 
-describe('Note/ERC20', () => {
+describe.only('Note/ERC20', () => {
   it('Should encrypt and decrypt notes', () => {
     ciphertextVectors.forEach((vector) => {
       const viewingPublicKey = hexToBytes(vector.note.pubkey);
@@ -312,7 +311,7 @@ describe('Note/ERC20', () => {
     expect(deserialized.masterPublicKey).to.equal(recipient.masterPublicKey);
   });
 
-  it.only('Should calculate nullifiers', () => {
+  it('Should calculate nullifiers', () => {
     // TODO-VECTORS: Vector needs confirming.
     const nullifierVectors = [
       {

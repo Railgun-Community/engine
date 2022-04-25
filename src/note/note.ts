@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
 import {
@@ -37,18 +36,12 @@ export class Note {
    * @param {string} token - note token ID
    * @param {BigInt} value - note value
    */
-  constructor(
-    address: AddressData,
-    random: string,
-    value: BigIntish | BN, // @todo fix tests and remove BN
-    token: string,
-  ) {
+  constructor(address: AddressData, random: string, value: BigIntish, token: string) {
     this.masterPublicKey = address.masterPublicKey;
     this.viewingPublicKey = address.viewingPublicKey;
     this.token = formatToByteLength(token, 20, false);
     this.random = formatToByteLength(random, 16, false);
-    // @todo remove BN shim
-    this.value = value instanceof BN ? hexToBigInt(value.toString('hex')) : BigInt(value);
+    this.value = BigInt(value);
   }
 
   get valueHex(): string {
