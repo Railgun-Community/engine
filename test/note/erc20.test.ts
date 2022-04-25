@@ -220,7 +220,7 @@ const ciphertextVectors = [
   },
 ];
 
-describe.only('Note/ERC20', () => {
+describe('Note/ERC20', () => {
   it('Should encrypt and decrypt notes', () => {
     ciphertextVectors.forEach((vector) => {
       const viewingPublicKey = hexToBytes(vector.note.pubkey);
