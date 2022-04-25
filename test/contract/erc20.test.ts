@@ -101,7 +101,7 @@ describe('Contract/Index', function () {
     );
   });
 
-  it('[HH] Should return gas estimate number', async function run() {
+  it.skip('[HH] Should return gas estimate number - relay', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

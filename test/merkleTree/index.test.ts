@@ -321,7 +321,7 @@ describe('MerkleTree/Index', () => {
 
     expect(await merkletree.getCommitment(0, 0)).to.deep.equal({
       hash: '02',
-      txid: '1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       ciphertext: {
         ciphertext: { iv: '02', tag: '05', data: ['03', '04'] },
         memo: '',
@@ -331,17 +331,13 @@ describe('MerkleTree/Index', () => {
 
     expect(await merkletree.getCommitment(0, 1)).to.deep.equal({
       hash: '04',
-      txid: '1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      data: {
-        encryptedRandom: ['01', '01'],
+      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+      preimage: {
         npk: '00',
         value: '02',
-        token: {
-          tokenAddress: '0x03',
-          tokenSubID: '0x00',
-          tokenType: '0x00',
-        },
+        token: { tokenAddress: '0x03', tokenType: ZERO_ADDRESS, tokenSubID: ZERO_ADDRESS },
       },
+      encryptedRandom: ['01', '01'],
     });
   });
 

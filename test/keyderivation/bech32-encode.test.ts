@@ -47,12 +47,12 @@ describe('Key Derivation/Bech32 Encode', () => {
   it('Should throw error on invalid address version', () => {
     expect(() => {
       decode('rgany1pnj7u66vwqhcquxgmh4pewutpa4y55vtwlag60umdpshkej92rn47ey76ges3t3enn');
-    }).to.throw('Incorrect address version');
+    }).to.throw('Invalid checksum');
   });
 
   it('Should throw error on invalid address prefix', () => {
     expect(() => {
       decode('rgunknown1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxv0uzkrc');
-    }).to.throw('Address prefix unrecognized');
+    }).to.throw('Invalid address prefix');
   });
 });

@@ -53,31 +53,42 @@ function encode(data: AddressData): string {
 }
 
 function decode(address: string): AddressData {
-  const decoded = bech32m.decode(address, ADDRESS_LENGTH_LIMIT);
+  try {
+    const decoded = bech32m.decode(address, ADDRESS_LENGTH_LIMIT);
 
-  // Hexlify data
-  const data = bytes.hexlify(bech32m.fromWords(decoded.words));
+    if (decoded.prefix !== PREFIX) {
+      throw new Error('Invalid address prefix');
+    }
 
-  // Get version
-  const version = parseInt(data.slice(0, 2), 16);
-  const masterPublicKey = hexToBigInt(data.slice(2, 66));
-  const networkID = xorChainID(data.slice(66, 82));
-  const viewingPublicKey = hexToBytes(data.slice(82, 146));
+    // Hexlify data
+    const data = bytes.hexlify(bech32m.fromWords(decoded.words));
 
-  // return undefined if XORed network matches the value we use to indicate undefined chain
-  const chainID = networkID === UNDEFINED_CHAIN ? undefined : parseInt(networkID, 16);
+    // Get version
+    const version = parseInt(data.slice(0, 2), 16);
+    const masterPublicKey = hexToBigInt(data.slice(2, 66));
+    const networkID = xorChainID(data.slice(66, 82));
+    const viewingPublicKey = hexToBytes(data.slice(82, 146));
 
-  // Throw if address version is not supported
-  if (version !== constants.VERSION) throw new Error('Incorrect address version');
+    // return undefined if XORed network matches the value we use to indicate undefined chain
+    const chainID = networkID === UNDEFINED_CHAIN ? undefined : parseInt(networkID, 16);
 
-  const result: AddressData = {
-    masterPublicKey,
-    viewingPublicKey,
-    version,
-    chainID,
-  };
+    // Throw if address version is not supported
+    if (version !== constants.VERSION) throw new Error('Incorrect address version');
 
-  return result;
+    const result: AddressData = {
+      masterPublicKey,
+      viewingPublicKey,
+      version,
+      chainID,
+    };
+
+    return result;
+  } catch (err: any) {
+    if (err.message?.includes('Invalid checksum')) {
+      throw new Error('Invalid checksum');
+    }
+    throw err;
+  }
 }
 
 export { encode, decode };
