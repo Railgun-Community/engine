@@ -114,7 +114,7 @@ class Wallet extends EventEmitter {
 
   public spendingPublicKey!: [bigint, bigint];
 
-  private leptonDebugger: LeptonDebugger = console;
+  private leptonDebugger: LeptonDebugger | undefined;
 
   /**
    * Create Wallet controller

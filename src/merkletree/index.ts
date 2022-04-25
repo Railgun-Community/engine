@@ -104,9 +104,6 @@ class MerkleTree {
   // tree[startingIndex[leaves]]
   private writeQueue: Commitment[][][] = [];
 
-  // Tree write queue lock to prevent race conditions
-  private queueLock = false;
-
   // Check function to test if merkle root is valid
   public validateRoot: Function;
 
@@ -126,7 +123,6 @@ class MerkleTree {
     validateRoot: RootValidator,
     depth: number = depths[purpose],
   ) {
-    this.leptonDebugger = console;
     // Set passed values
     this.db = db;
     this.chainID = chainID;
@@ -506,12 +502,6 @@ class MerkleTree {
   }
 
   async updateTrees(): Promise<void> {
-    // Don't proceed if queue write is locked
-    // if (this.queueLock) return;
-
-    // Write lock queue
-    // this.queueLock = true;
-
     // Loop until there isn't work to do
     let workToDo = true;
 
@@ -563,9 +553,6 @@ class MerkleTree {
       // If no work was done exit
       if (updatePromises.length === 0) workToDo = false;
     }
-
-    // Release queue lock
-    // this.queueLock = false;
   }
 
   /**

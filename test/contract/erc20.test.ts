@@ -66,7 +66,7 @@ describe('Contract/Index', function () {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(contract.address, balance);
 
-    lepton = new Lepton(memdown(), artifactsGetter, undefined, console);
+    lepton = new Lepton(memdown(), artifactsGetter, undefined);
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
     wallet = lepton.wallets[walletID];

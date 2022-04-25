@@ -40,7 +40,7 @@ describe('Lepton', function () {
   this.timeout(240000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter, mockQuickSync, console);
+    lepton = new Lepton(memdown(), artifactsGetter, mockQuickSync);
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }

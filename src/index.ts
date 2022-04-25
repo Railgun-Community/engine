@@ -48,7 +48,7 @@ class Lepton {
     leveldown: AbstractLevelDOWN,
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
-    leptonDebugger: LeptonDebugger = console,
+    leptonDebugger?: LeptonDebugger,
   ) {
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
