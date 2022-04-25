@@ -79,6 +79,8 @@ describe('Lepton', function () {
   });
 
   it('Should show balance after deposit', async () => {
+    // TODO-balances
+
     const commitment: GeneratedCommitment = {
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
@@ -111,6 +113,8 @@ describe('Lepton', function () {
       this.skip();
       return;
     }
+
+    // TODO-balances
 
     const address = wallet.getAddress(chainID);
 

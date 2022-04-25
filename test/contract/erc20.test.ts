@@ -251,6 +251,8 @@ describe('Contract/Index', function () {
       return;
     }
 
+    // TODO-balances
+
     // const { log } = console;
 
     let result: CommitmentEvent;
