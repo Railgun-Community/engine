@@ -30,6 +30,76 @@ const chainID: number = 1;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
+// const keypairs = [
+//   {
+//     // Primary 0
+//     privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
+//     pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+//     address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
+//   },
+//   {
+//     // Primary 1
+//     privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
+//     pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
+//     address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
+//   },
+//   {
+//     // Primary 5
+//     privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
+//     pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
+//     address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
+//   },
+//   {
+//     // Change 2
+//     privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
+//     pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
+//     address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
+//   },
+// ];
+
+// const senderPubKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
+
+// const keypairsPopulated = keypairs.map((key) => ({
+//   ...key,
+//   sharedKey: babyjubjub.ecdh(key.privateKey, senderPubKey),
+// }));
+
+// const notesPrep = [0, 1, 2, 3, 2, 0];
+
+// const leaves: Commitment[] = notesPrep.map((keyIndex) => {
+//   const note = new Note(
+//     keypairsPopulated[keyIndex].pubkey,
+//     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+//     'ffff',
+//     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+//   );
+
+//   return {
+//     hash: note.hash,
+//     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+//     senderPubKey,
+//     ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
+//     revealKey: ['01', '02'], // TODO
+//   };
+// });
+
+// const notesPrep2 = [0, 1, 2, 3, 2, 0];
+
+// const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
+//   const note = new Note(
+//     keypairsPopulated[keyIndex].pubkey,
+//     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
+//     'ffff',
+//     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+//   );
+
+//   return {
+//     hash: note.hash,
+//     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
+//     data: note.serialize(viewingPrivateKey),
+//   };
+// });
+
 describe('Wallet/Index', () => {
   beforeEach(async () => {
     // Create database and wallet
@@ -63,30 +133,54 @@ describe('Wallet/Index', () => {
     ]);
   });
 
-  /*
-  it('Should get keypairs', async () => {
-    expect(wallet.getKeypair(testEncryptionKey, 0, false)).to.deep.equal({
-      address: 'rgany1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapkz2ffkk',
-      privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-      pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
+  it('Should get viewing keypair', async () => {
+    expect(wallet.getViewingKeyPair()).to.deep.equal({
+      privateKey: 71304128950017749550555748140089622855554443655032326837948344032235540545721n,
+      pubkey: new Uint8Array([
+        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
+      ]),
     });
-    expect(() => {
-      wallet.getKeypair('111111', 0, false);
-    }).to.throw('Wrong encryption key');
   });
-  */
 
-  /*
-  it('Should get addresses', async () => {
-    expect(await wallet.addresses(0)).to.deep.equal([
-      'rgany1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapkz2ffkk',
-      'rgany1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2dv0hm0',
-      'rgany1qyzzx3d36h7q9d6l68jd86h8egen0vnw2hkv8rv7w7fep2md8kyfvmm50s2',
-      'rgany1qyaf5xkrufh0y8wx6yer7skpfd0u9yfludk65ulp3d9ut4ramlf2jd9z4v3',
-      'rgany1q8x0yspfamxvdykkf8upnjt7jr0h2hs86mwq0jarszkp7utd0j0s67er68c',
-    ]);
+  it('Should get spending keypair', async () => {
+    expect(await wallet.getSpendingKeyPair(testEncryptionKey)).to.deep.equal({
+      privateKey: 14885415580002452077068976469744009286192522487973243807233334368048451373219n,
+      pubkey: [
+        20358432791702394440987616324389261946380133901540012684151464412561828403448n,
+        13628856795343582234988428809742510240520287808493898157708413671487002392124n,
+      ],
+    });
   });
-  */
+
+  it('Should get address keys', async () => {
+    expect(wallet.addressKeys).to.deep.equal({
+      masterPublicKey:
+        18420843011127269333684419479640723626445038177966995952228157831021183862625n,
+      viewingPublicKey: new Uint8Array([
+        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
+      ]),
+    });
+  });
+
+  it('Should get addresses', async () => {
+    expect(wallet.getAddress(0)).to.equal(
+      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkrrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5tp2mcg',
+    );
+    expect(wallet.getAddress(1)).to.equal(
+      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5vv9g56',
+    );
+    expect(wallet.getAddress(2)).to.equal(
+      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwqfma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5tynq32',
+    );
+    expect(wallet.getAddress(3)).to.equal(
+      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwqdma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw53mxlja',
+    );
+    expect(wallet.getAddress(4)).to.equal(
+      '0zk1qy5tn5lplg4rwmxu6k42226q8fkffhhauezvvd7v0thsrldtgwrkzunpd9kxwatwq3ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw595ksmr',
+    );
+  });
 
   it('Should derive addresses correctly', async () => {
     const address = wallet.getAddress(chainID);
@@ -101,154 +195,83 @@ describe('Wallet/Index', () => {
     });
   });
 
-  /*
-  const keypairs = [
-    {
-      // Primary 0
-      privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-      pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-      address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
-    },
-    {
-      // Primary 1
-      privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
-      pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
-      address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
-    },
-    {
-      // Primary 5
-      privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
-      pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
-      address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
-    },
-    {
-      // Change 2
-      privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
-      pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
-      address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
-    },
-  ];
+  // it('Should scan ERC20 balances', async () => {
+  //   await merkletree.queueLeaves(0, 0, leaves);
 
-  const senderPubKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
+  //   const process = wallet.scan(1);
 
-  const keypairsPopulated = keypairs.map((key) => ({
-    ...key,
-    sharedKey: babyjubjub.ecdh(key.privateKey, senderPubKey),
-  }));
+  //   // Should respect scan lock
+  //   wallet.scan(1);
+  //   await process;
 
-  const notesPrep = [0, 1, 2, 3, 2, 0];
+  //   expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
+  //     treeScannedHeights: [5],
+  //     primaryHeight: 5,
+  //     changeHeight: 2,
+  //   });
 
-  const leaves: Commitment[] = notesPrep.map((keyIndex) => {
-    const note = new Note(
-      keypairsPopulated[keyIndex].pubkey,
-      '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-      'ffff',
-      '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
-    );
+  //   await merkletree.queueLeaves(0, 6, leaves2);
 
-    return {
-      hash: note.hash,
-      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      senderPubKey,
-      ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
-      revealKey: ['01', '02'], // TODO
-    };
-  });
+  //   await wallet.scan(1);
 
-  const notesPrep2 = [0, 1, 2, 3, 2, 0];
+  //   expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
+  //     treeScannedHeights: [11],
+  //   });
 
-  const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
-    const note = new Note(
-      keypairsPopulated[keyIndex].pubkey,
-      '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-      'ffff',
-      '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
-    );
+  //   const balances = await wallet.balances(1);
 
-    return {
-      hash: note.hash,
-      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      data: note.serialize(viewingPrivateKey),
-    };
-  });
-  it('Should scan ERC20 balances', async () => {
-    await merkletree.queueLeaves(0, 0, leaves);
+  //   expect(
+  //     balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
+  //   ).to.equal(12);
 
-    const process = wallet.scan(1);
+  //   expect(
+  //     balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance,
+  //   ).to.equal(786420n);
 
-    // Should respect scan lock
-    wallet.scan(1);
-    await process;
+  //   await merkletree.nullify([
+  //     {
+  //       txid: '000001',
+  //       nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
+  //     },
+  //   ]);
 
-    expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
-      treeScannedHeights: [5],
-      primaryHeight: 5,
-      changeHeight: 2,
-    });
+  //   const balances2 = await wallet.balances(1);
 
-    await merkletree.queueLeaves(0, 6, leaves2);
+  //   expect(
+  //     balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
+  //   ).to.equal(11);
 
-    await wallet.scan(1);
+  //   expect(
+  //     balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
+  //       720885,
+  //     ),
+  //   ).to.equal(true);
 
-    expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
-      treeScannedHeights: [11],
-    });
+  //   await merkletree.nullify([
+  //     {
+  //       txid: '000001',
+  //       nullifier: '1c3ba503ad9e144683649756ce1e9a919afb56d836988435c1528ea8942f286e',
+  //     },
+  //   ]);
 
-    const balances = await wallet.balances(1);
+  //   const balances3 = await wallet.balances(1);
 
-    expect(
-      balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
-    ).to.equal(12);
+  //   expect(
+  //     balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
+  //   ).to.equal(10);
 
-    expect(
-      balances['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance,
-    ).to.equal(786420n);
+  //   expect(
+  //     balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
+  //       655350,
+  //     ),
+  //   ).to.equal(true);
 
-    await merkletree.nullify([
-      {
-        txid: '000001',
-        nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
-      },
-    ]);
-
-    const balances2 = await wallet.balances(1);
-
-    expect(
-      balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
-    ).to.equal(11);
-
-    expect(
-      balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
-        720885,
-      ),
-    ).to.equal(true);
-
-    await merkletree.nullify([
-      {
-        txid: '000001',
-        nullifier: '1c3ba503ad9e144683649756ce1e9a919afb56d836988435c1528ea8942f286e',
-      },
-    ]);
-
-    const balances3 = await wallet.balances(1);
-
-    expect(
-      balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].utxos.length,
-    ).to.equal(10);
-
-    expect(
-      balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
-        655350,
-      ),
-    ).to.equal(true);
-
-    expect(
-      (await wallet.balancesByTree(1))[
-        '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'
-      ][0].utxos.length,
-    ).to.equal(10);
-  }).timeout(60000);
-  */
+  //   expect(
+  //     (await wallet.balancesByTree(1))[
+  //       '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'
+  //     ][0].utxos.length,
+  //   ).to.equal(10);
+  // }).timeout(60000);
 
   afterEach(() => {
     // Clean up database
