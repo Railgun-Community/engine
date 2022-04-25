@@ -13,6 +13,7 @@ export type AddressData = {
 };
 export const ADDRESS_LENGTH_LIMIT = 127;
 export const UNDEFINED_CHAIN = 'ffffffffffffffff';
+const PREFIX = '0zk';
 
 /**
  * @param {string} chainID - hex value of chainID
@@ -46,7 +47,7 @@ function encode(data: AddressData): string {
   );
 
   // Encode address
-  const address = bech32m.encode('0zk', bech32m.toWords(addressBuffer), ADDRESS_LENGTH_LIMIT);
+  const address = bech32m.encode(PREFIX, bech32m.toWords(addressBuffer), ADDRESS_LENGTH_LIMIT);
 
   return address;
 }

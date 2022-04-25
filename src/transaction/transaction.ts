@@ -1,5 +1,4 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
-import { curve25519 } from '@noble/ed25519';
 import { Note, WithdrawNote } from '../note';
 import { babyjubjub, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';

@@ -4,7 +4,6 @@ import chaiAsPromised from 'chai-as-promised';
 import { hexToBytes } from 'ethereum-cryptography/utils';
 
 import { encode, decode, ADDRESS_LENGTH_LIMIT } from '../../src/keyderivation/bech32-encode';
-import { formatToByteLength, hexlify } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -43,14 +42,17 @@ describe('Key Derivation/Bech32 Encode', () => {
       expect(encoded.length).to.equal(ADDRESS_LENGTH_LIMIT);
       expect(decode(encoded)).to.deep.equal(v);
     });
+  });
 
-    /*
+  it('Should throw error on invalid address version', () => {
     expect(() => {
       decode('rgany1pnj7u66vwqhcquxgmh4pewutpa4y55vtwlag60umdpshkej92rn47ey76ges3t3enn');
     }).to.throw('Incorrect address version');
+  });
+
+  it('Should throw error on invalid address prefix', () => {
     expect(() => {
       decode('rgunknown1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kf8kjxv0uzkrc');
     }).to.throw('Address prefix unrecognized');
-    */
   });
 });
