@@ -5,13 +5,7 @@ import { hexToBytes } from 'ethereum-cryptography/utils';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 
 import { Note } from '../../src/note';
-import {
-  ByteLength,
-  formatToByteLength,
-  hexlify,
-  hexToBigInt,
-  nToHex,
-} from '../../src/utils/bytes';
+import { ByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -318,34 +312,35 @@ describe('Note/ERC20', () => {
     expect(deserialized.masterPublicKey).to.equal(recipient.masterPublicKey);
   });
 
-  it('Should calculate nullifiers', () => {
+  it.only('Should calculate nullifiers', () => {
+    // TODO-VECTORS: Vector needs confirming.
     const nullifierVectors = [
       {
         privateKey: '08ad9143ae793cdfe94b77e4e52bc4e9f13666966cffa395e3d412ea4e20480f',
         tree: 0,
         position: 0,
-        nullifier: '086ba0bf110354e8e0e739a2f75f16b4881b860eee3a3f8ec496697d4772b070',
+        nullifier: '03f68801f3ee2ed10178c162b4f7f1bd466bc9718f4f98175fc04934c5caba6e',
       },
       {
         privateKey: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
         tree: 1,
         position: 12,
-        nullifier: '221726902157517f269638f3cb694c9fb70bf4945d4c31a37c6e980bb874c0e1',
+        nullifier: '1aeadb64bf8faff93dfe26bcf0b2e2d0e9724293cc7a455f028b6accabee13b8',
       },
       {
         privateKey: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
         tree: 14,
         position: 6500,
-        nullifier: '063ada7117b163a5d5d9c1b66e8ce397040163846bd2757c8fbd79f0971d3ab9',
+        nullifier: '091961ce11c244db49a25668e57dfa2b5ffb1fe63055dd64a14af6f2be58b0e7',
       },
     ];
 
     const v = nullifierVectors[0];
     expect(Note.getNullifier(hexToBigInt(v.privateKey), v.position)).to.be.a('bigint');
-    // nullifierVectors.forEach((vector) => {
-    //   const nullifier = Note.getNullifier(hexToBigInt(vector.privateKey), vector.position);
-    //   const hexNullifier = nToHex(nullifier, ByteLength.UINT_256);
-    //   expect(hexNullifier).to.equal(vector.nullifier);
-    // });
+    nullifierVectors.forEach((vector) => {
+      const nullifier = Note.getNullifier(hexToBigInt(vector.privateKey), vector.position);
+      const hexNullifier = nToHex(nullifier, ByteLength.UINT_256);
+      expect(hexNullifier).to.equal(vector.nullifier);
+    });
   });
 });

@@ -8,7 +8,8 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/Index', () => {
-  it.only('Should derive keys', async () => {
+  it('Should derive keys', async () => {
+    // TODO-VECTORS: Vectors need confirming.
     const vectors = [
       {
         mnemonic:

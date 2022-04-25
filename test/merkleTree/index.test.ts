@@ -286,7 +286,6 @@ describe('MerkleTree/Index', () => {
 
     expect(await merkletree.getTreeLength(0)).to.equal(12);
     expect(await merkletree.getRoot(0)).to.equal(
-      // '1e863610374ec18cfa61ad59a6da46197702c9c1086e4852a2dbc4284c8ee725'
       '1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c',
     );
   });
