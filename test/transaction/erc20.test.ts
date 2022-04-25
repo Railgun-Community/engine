@@ -236,7 +236,7 @@ describe('Transaction/ERC20', function () {
     assert.typeOf(hashed, 'bigint');
   });
 
-  it.only('Should generate ciphertext decryptable by sender and recipient', async () => {
+  it('Should generate ciphertext decryptable by sender and recipient', async () => {
     const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
     const note = new Note(wallet2.addressKeys, random, 100n, token);
 
@@ -252,6 +252,9 @@ describe('Transaction/ERC20', function () {
     const encryptedNote = note.encrypt(senderShared);
 
     const senderDecrypted = Note.decrypt(encryptedNote, senderShared);
+
+    // TODO: This test is broken because the note is encrypted using the sender's shared key.
+    // Don't we also need the receiver key?
     const receiverDecrypted = Note.decrypt(encryptedNote, receiverShared);
 
     expect(senderDecrypted.hash).to.equal(note.hash);
