@@ -245,90 +245,87 @@ describe('Contract/Index', function () {
     expect(hexlify(contractHash)).to.equal(withdraw.hash);
   });
 
-  it.only(
-    '[HH] Should create serialized transactions and parse tree updates',
-    async function run() {
-      if (!process.env.RUN_HARDHAT_TESTS) {
-        this.skip();
-        return;
-      }
+  it('[HH] Should create serialized transactions and parse tree updates', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
 
-      let result: CommitmentEvent;
-      contract.treeUpdates(
-        async (commitmentEvent: CommitmentEvent) => {
-          result = commitmentEvent;
-        },
-        async () => {},
-      );
+    let result: CommitmentEvent;
+    contract.treeUpdates(
+      async (commitmentEvent: CommitmentEvent) => {
+        result = commitmentEvent;
+      },
+      async () => {},
+    );
 
-      const merkleRootBefore = await contract.merkleRoot();
+    const merkleRootBefore = await contract.merkleRoot();
 
-      const address = await wallet.getAddress(chainID);
-      const { masterPublicKey } = Lepton.decodeAddress(address);
-      const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
+    const address = await wallet.getAddress(chainID);
+    const { masterPublicKey } = Lepton.decodeAddress(address);
+    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
-      // Create deposit
-      const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
-      const { preImage, encryptedRandom } = deposit.serialize(viewingPrivateKey);
+    // Create deposit
+    const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
+    const { preImage, encryptedRandom } = deposit.serialize(viewingPrivateKey);
 
-      const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
+    const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
 
-      const awaiterDeposit = new Promise((resolve, reject) =>
-        wallet.once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
-          returnedChainID === chainID ? resolve(returnedChainID) : reject(),
-        ),
-      );
+    const awaiterDeposit = new Promise((resolve, reject) =>
+      wallet.once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
+        returnedChainID === chainID ? resolve(returnedChainID) : reject(),
+      ),
+    );
 
-      // Send deposit on chain
-      await (await etherswallet.sendTransaction(depositTx)).wait();
+    // Send deposit on chain
+    await (await etherswallet.sendTransaction(depositTx)).wait();
 
-      // Wait for events to fire
-      await new Promise((resolve) =>
-        contract.contract.once(EventName.GeneratedCommitmentBatch, resolve),
-      );
+    // Wait for events to fire
+    await new Promise((resolve) =>
+      contract.contract.once(EventName.GeneratedCommitmentBatch, resolve),
+    );
 
-      await expect(awaiterDeposit).to.be.fulfilled;
+    await expect(awaiterDeposit).to.be.fulfilled;
 
-      // Check result
-      // @ts-ignore
-      expect(result.treeNumber).to.equal(0);
-      // @ts-ignore
-      expect(result.startPosition).to.equal(0);
-      // @ts-ignore
-      expect(result.commitments.length).to.equal(1);
+    // Check result
+    // @ts-ignore
+    expect(result.treeNumber).to.equal(0);
+    // @ts-ignore
+    expect(result.startPosition).to.equal(0);
+    // @ts-ignore
+    expect(result.commitments.length).to.equal(1);
 
-      const merkleRootAfterDeposit = await contract.merkleRoot();
+    const merkleRootAfterDeposit = await contract.merkleRoot();
 
-      // Check merkle root changed
-      expect(merkleRootAfterDeposit).not.to.equal(merkleRootBefore);
+    // Check merkle root changed
+    expect(merkleRootAfterDeposit).not.to.equal(merkleRootBefore);
 
-      // Create transaction
-      const transaction = new Transaction(TOKEN_ADDRESS, chainID);
-      transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
+    // Create transaction
+    const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
 
-      // Create transact
-      const transact = await contract.transact([
-        await transaction.prove(lepton.prover, wallet, testEncryptionKey),
-      ]);
+    // Create transact
+    const transact = await contract.transact([
+      await transaction.prove(lepton.prover, wallet, testEncryptionKey),
+    ]);
 
-      // Send transact on chain
-      await (await etherswallet.sendTransaction(transact)).wait();
+    // Send transact on chain
+    await (await etherswallet.sendTransaction(transact)).wait();
 
-      // Wait for events to fire
-      await new Promise((resolve) => contract.contract.once(EventName.CommitmentBatch, resolve));
+    // Wait for events to fire
+    await new Promise((resolve) => contract.contract.once(EventName.CommitmentBatch, resolve));
 
-      // Check merkle root changed
-      expect(await contract.merkleRoot()).to.not.equal(merkleRootAfterDeposit);
+    // Check merkle root changed
+    expect(await contract.merkleRoot()).to.not.equal(merkleRootAfterDeposit);
 
-      // Check result
-      // @ts-ignore
-      expect(result.treeNumber).to.equal(0);
-      // @ts-ignore
-      expect(result.startPosition).to.equal(1);
-      // @ts-ignore
-      expect(result.commitments.length).to.equal(3);
-    },
-  ).timeout(40000);
+    // Check result
+    // @ts-ignore
+    expect(result.treeNumber).to.equal(0);
+    // @ts-ignore
+    expect(result.startPosition).to.equal(1);
+    // @ts-ignore
+    expect(result.commitments.length).to.equal(3);
+  }).timeout(40000);
 
   afterEach(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {
