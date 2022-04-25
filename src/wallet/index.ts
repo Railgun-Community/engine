@@ -3,7 +3,8 @@ import msgpack from 'msgpack-lite';
 import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { HDNode } from '@ethersproject/hdnode';
-import { babyjubjub, ed25519, encryption, hash } from '../utils';
+import { hexToBytes } from 'ethereum-cryptography/utils';
+import { ed25519, encryption, hash, keysUtils } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
@@ -18,10 +19,13 @@ import {
   formatToByteLength,
   fromUTF8String,
   hexlify,
+  nToHex,
   numberify,
   padToLength,
 } from '../utils/bytes';
-import { KeyPair } from '../keyderivation/bip32';
+import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
+
+const { poseidon } = keysUtils;
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -57,12 +61,13 @@ export type ScannedEventData = {
 };
 
 export type AddressKeys = {
-  masterPublicKey: string;
-  viewingPublicKey: string;
+  masterPublicKey: bigint;
+  viewingPublicKey: Uint8Array;
 };
 
-export type WalletNodes = { spendingKey: Node; viewingKey: Node };
 export type WalletData = { mnemonic: string; index: number };
+
+export type WalletNodes = { spending: Node; viewing: Node };
 /**
  * constant defining the derivation path prefixes for spending and viewing keys
  * must be appended with index' to form a complete path
@@ -75,28 +80,21 @@ const DERIVATION_PATH_PREFIXES = {
 /**
  * Helper to append DERIVATION_PATH_PREFIXES with index'
  */
-function derivePathsForIndex(index: number = 0) {
+export function derivePathsForIndex(index: number = 0) {
   return {
     spending: `${DERIVATION_PATH_PREFIXES.SPENDING}${index}'`,
     viewing: `${DERIVATION_PATH_PREFIXES.VIEWING}${index}'`,
   };
 }
 
-function deriveNodes(mnemonic: string, index: number = 0): WalletNodes {
+export function deriveNodes(mnemonic: string, index: number = 0): WalletNodes {
   const paths = derivePathsForIndex(index);
   return {
-    spendingKey: Node.fromMnemonic(mnemonic).derive(paths.spending),
-    viewingKey: Node.fromMnemonic(mnemonic).derive(paths.viewing),
+    // eslint-disable-next-line no-use-before-define
+    spending: Node.fromMnemonic(mnemonic).derive(paths.spending),
+    // eslint-disable-next-line no-use-before-define
+    viewing: Node.fromMnemonic(mnemonic).derive(paths.viewing),
   };
-}
-
-/**
- * Derive Master Public Key (MPK) which is used as the user's address
- * @returns {string}
- */
-export async function getMasterPublicKey(spendingKey: Node, viewingKey: Node): Promise<string> {
-  const unpacked = babyjubjub.unpackPubKey(spendingKey.babyJubJubPublicKey);
-  return hash.poseidon([...unpacked, await viewingKey.getNullifyingKey()]);
 }
 
 class Wallet extends EventEmitter {
@@ -106,17 +104,16 @@ class Wallet extends EventEmitter {
 
   // #viewingKey: Node;
 
-  #viewingKeyPair!: KeyPair;
+  #viewingKeyPair!: ViewingKeyPair;
 
-  // packed point
-  babyJubJubPublicKey!: string;
-
-  masterPublicKey!: string;
+  masterPublicKey!: bigint;
 
   readonly merkletree: MerkleTree[] = [];
 
   // Lock scanning operations to prevent race conditions
   private scanLockPerChain: boolean[] = [];
+
+  public spendingPublicKey!: [bigint, bigint];
 
   private leptonDebugger: LeptonDebugger = console;
 
@@ -132,9 +129,11 @@ class Wallet extends EventEmitter {
   }
 
   async initialize(nodes: WalletNodes): Promise<Wallet> {
-    this.#viewingKeyPair = await nodes.viewingKey.getViewingKeyPair();
-    this.babyJubJubPublicKey = nodes.spendingKey.babyJubJubPublicKey;
-    this.masterPublicKey = await getMasterPublicKey(nodes.spendingKey, nodes.viewingKey);
+    const { spending, viewing } = nodes;
+    this.#viewingKeyPair = await viewing.getViewingKeyPair();
+    const spendingKeyPair = spending.getSpendingKeyPair();
+    this.masterPublicKey = Node.getMasterPublicKey(spendingKeyPair.pubkey, this.getNullifyingKey());
+    this.spendingPublicKey = spendingKeyPair.pubkey;
 
     return this;
   }
@@ -186,26 +185,20 @@ class Wallet extends EventEmitter {
    * @returns Promise<Uint8Array>
    */
   async signEd25519(message: string | Uint8Array) {
-    return await ed25519.sign(message, this.getNullifyingKey());
-  }
-
-  /**
-   * Get public key from ed25519 node at index
-   * @param index - index to get keypair at
-   * @returns Promise<Uint8Array>
-   * @todo remove, confusing and redundant
-   */
-  getSigningPublicKey(): string {
-    return this.viewingPublicKey;
+    return await ed25519.sign(message, nToHex(this.#viewingKeyPair.privateKey));
   }
 
   /**
    * Load encrypted spending key Node from database and return babyjubjub private key
    * @returns Promise<string>
    */
-  async getSpendingPrivateKey(encryptionKey: BytesData): Promise<string> {
+  async getSpendingKeyPair(encryptionKey: BytesData): Promise<SpendingKeyPair> {
     const node = await this.loadSpendingKey(encryptionKey);
-    return node.babyJubJubKeyPair.privateKey;
+    return node.getSpendingKeyPair();
+  }
+
+  getViewingKeyPair(): ViewingKeyPair {
+    return this.#viewingKeyPair;
   }
 
   /**
@@ -213,15 +206,15 @@ class Wallet extends EventEmitter {
    * Used to decrypt and nullify notes
    * @todo protect like spending private key
    */
-  getNullifyingKey(): string {
-    return this.#viewingKeyPair.privateKey;
+  getNullifyingKey(): bigint {
+    return poseidon([this.#viewingKeyPair.privateKey]);
   }
 
   /**
    * Get Viewing Public Key (VK)
    * @returns string
    */
-  get viewingPublicKey(): string {
+  get viewingPublicKey(): Uint8Array {
     return this.#viewingKeyPair.pubkey;
   }
 
@@ -254,7 +247,10 @@ class Wallet extends EventEmitter {
       walletDetails = msgpack.decode(
         arrayify(
           // @todo use different key?
-          await this.db.getEncrypted(this.getWalletDetailsPath(chainID), this.masterPublicKey),
+          await this.db.getEncrypted(
+            this.getWalletDetailsPath(chainID),
+            nToHex(this.masterPublicKey),
+          ),
         ),
       );
     } catch {
@@ -279,46 +275,58 @@ class Wallet extends EventEmitter {
     this.leptonDebugger?.log(
       `wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}`,
     );
-    const vpk = this.getNullifyingKey();
+    const vpk = this.#viewingKeyPair.privateKey;
 
     const writeBatch: AbstractBatch[] = [];
 
     // Loop through passed commitments
     for (let position = 0; position < leaves.length; position += 1) {
-      let note: Note;
+      let note: Note | undefined;
       const leaf = leaves[position];
 
       if ('ciphertext' in leaf) {
         // Derive shared secret
         // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await encryption.getSharedKey(vpk, leaf.ciphertext.ephemeralKeys[0]);
+        const sharedKey = await encryption.getSharedKey(
+          nToHex(vpk),
+          leaf.ciphertext.ephemeralKeys[0],
+        );
 
         // Decrypt
-        note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
+        try {
+          note = Note.decrypt(leaf.ciphertext.ciphertext, hexToBytes(sharedKey));
+          // } catch (e: any) {} // not addressed to us
+        } catch (e: any) {
+          // debug test
+          this.leptonDebugger?.error(e);
+        }
       } else {
         // preimage
         // Deserialize
         const serialized: NoteSerialized = {
-          npk: leaf.data.npk,
-          encryptedRandom: leaf.data.encryptedRandom,
-          token: leaf.data.token.tokenAddress,
-          value: leaf.data.value,
+          npk: leaf.preimage.npk,
+          encryptedRandom: leaf.encryptedRandom,
+          token: leaf.preimage.token.tokenAddress,
+          value: leaf.preimage.value,
         };
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);
+          // } catch (e: any) {} // not addressed to us
         } catch (e: any) {
+          // debug test
           this.leptonDebugger?.error(e);
-          throw e;
         }
       }
 
       // If this note is addressed to us add to write queue
-      if (note.masterPublicKey === this.masterPublicKey) {
+      // @todo shouldn't need to check if note is not undefined
+      if (note !== undefined) {
+        // }.masterPublicKey === this.masterPublicKey) {
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
-          nullifier: Note.getNullifier(vpk, position),
-          decrypted: note.serialize(vpk),
+          nullifier: nToHex(Note.getNullifier(vpk, position)),
+          decrypted: note.serialize(nToHex(vpk)),
         };
         writeBatch.push({
           type: 'put',
@@ -342,7 +350,7 @@ class Wallet extends EventEmitter {
    */
   async TXOs(chainID: number): Promise<TXO[]> {
     const address = this.addressKeys;
-    const vpk = this.getNullifyingKey();
+    const vpk = this.getViewingKeyPair().privateKey;
 
     const latestTree = await this.merkletree[chainID].latestTree();
     // Get chain namespace
@@ -414,7 +422,7 @@ class Wallet extends EventEmitter {
 
     // Loop through each TXO and add to balances if unspent
     TXOs.forEach((txOutput) => {
-      const { token } = txOutput.note;
+      const token = formatToByteLength(txOutput.note.token, 32, false);
       // If we don't have an entry for this token yet, create one
       if (!balances[token]) {
         balances[token] = {
@@ -538,7 +546,7 @@ class Wallet extends EventEmitter {
     // Write wallet details to db
     await this.db.putEncrypted(
       this.getWalletDetailsPath(chainID),
-      this.masterPublicKey,
+      nToHex(this.masterPublicKey),
       msgpack.encode(walletDetails),
     );
 
@@ -626,7 +634,7 @@ class Wallet extends EventEmitter {
   async loadSpendingKey(encryptionKey: BytesData): Promise<Node> {
     const { mnemonic, index } = await Wallet.read(this.db, this.id, encryptionKey);
 
-    return deriveNodes(mnemonic, index).spendingKey;
+    return deriveNodes(mnemonic, index).spending;
   }
 
   /**

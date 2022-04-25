@@ -15,9 +15,10 @@ import { babyjubjub } from '../src/utils';
 import { Wallet } from '../src/wallet';
 import { artifactsGetter, awaitScan, getEthersWallet, quicksync } from './helper';
 import { Deposit } from '../src/note/deposit';
-import { MerkleTree } from '../src/merkletree';
+import { GeneratedCommitment, MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
+import { ZERO_ADDRESS } from '../src/utils/constants';
 
 chai.use(chaiAsPromised);
 
@@ -78,23 +79,22 @@ describe('Lepton', function () {
   });
 
   it('Should show balance after deposit', async () => {
-    const commitment = {
+    const commitment: GeneratedCommitment = {
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
-      data: {
+      preimage: {
         npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
         token: {
-          tokenType: '0',
+          tokenType: ZERO_ADDRESS,
           tokenAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-          tokenSubID: '0',
+          tokenSubID: ZERO_ADDRESS,
         },
-        hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
         value: '9138822709a9fc231cba6',
-        encryptedRandom: [
-          '0xa51425928f4d6be74808a67732a56085e53d58e18b91faed635049462aab883e',
-          '0x26e8e14696fe12fe8279764a0d8f22a9703ebc366b53a0cc253aa26c7b9bf884',
-        ],
       },
+      encryptedRandom: [
+        '0xa51425928f4d6be74808a67732a56085e53d58e18b91faed635049462aab883e',
+        '0x26e8e14696fe12fe8279764a0d8f22a9703ebc366b53a0cc253aa26c7b9bf884',
+      ],
     };
     // override root validator as we're not processing on chain
     merkleTree.validateRoot = () => true;
@@ -102,7 +102,7 @@ describe('Lepton', function () {
 
     await wallet.scan(chainID);
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    const value = hexToBigInt(commitment.data.value);
+    const value = hexToBigInt(commitment.preimage.value);
     assert.isTrue(balance === value);
   });
 
@@ -131,8 +131,11 @@ describe('Lepton', function () {
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
-    transaction.withdraw(await etherswallet.getAddress(), 300n * 10n ** 18n);
-    transaction.withdrawAddress = config.contracts.treasury;
+    transaction.withdraw(
+      await etherswallet.getAddress(),
+      300n * 10n ** 18n,
+      config.contracts.treasury,
+    );
 
     const proof = await transaction.prove(
       lepton.prover,

@@ -1,6 +1,7 @@
-import { EncryptedRandom, TokenData } from '../transaction/types';
-import { hash } from '../utils';
-import { nToHex } from '../utils/bytes';
+import { EncryptedRandom } from '../transaction/types';
+import { formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { ZERO_ADDRESS } from '../utils/constants';
+import { poseidon } from '../utils/keys-utils';
 
 export const emptyCommitmentPreimage = {
   npk: '00',
@@ -17,14 +18,30 @@ export class WithdrawNote {
   /**
    * Create Note object
    *
-   * @param {bigint} withdrawAddress - address to withdraw to
+   * @param {string} withdrawAddress - address to withdraw to
    * @param {bigint} value - note value
-   * @param {TokenData} token - note token
+   * @param {string} token - note token
    */
-  constructor(private withdrawAddress: string, private value: bigint, private token: TokenData) {}
+  constructor(public withdrawAddress: string, public value: bigint, public tokenAddress: string) {}
+
+  get token() {
+    return {
+      tokenAddress: formatToByteLength(this.tokenAddress, 20, true),
+      tokenType: ZERO_ADDRESS,
+      tokenSubID: ZERO_ADDRESS,
+    };
+  }
+
+  get npk() {
+    return this.withdrawAddress;
+  }
 
   get notePublicKey() {
     return this.withdrawAddress;
+  }
+
+  get valueHex() {
+    return formatToByteLength(nToHex(this.value), 16, false);
   }
 
   /**
@@ -33,16 +50,29 @@ export class WithdrawNote {
    * @returns {string} hash
    */
   get hash(): string {
-    return hash.poseidon([this.withdrawAddress, this.token.tokenAddress, nToHex(this.value)]);
+    return nToHex(
+      poseidon([
+        hexToBigInt(this.withdrawAddress),
+        hexToBigInt(this.token.tokenAddress),
+        this.value,
+      ]),
+    );
   }
 
-  serialize(encryptedRandom: EncryptedRandom) {
+  serialize(prefix: boolean = false) {
     return {
-      npk: this.withdrawAddress,
+      npk: formatToByteLength(this.withdrawAddress, 32, prefix),
       token: this.token,
-      hash: this.hash,
-      value: this.value.toString(16),
-      encryptedRandom,
+      value: this.valueHex,
     };
+  }
+
+  get preImage() {
+    const { npk, token, value } = this;
+    return { npk, token, value };
+  }
+
+  static empty() {
+    return new WithdrawNote(ZERO_ADDRESS, 0n, ZERO_ADDRESS);
   }
 }

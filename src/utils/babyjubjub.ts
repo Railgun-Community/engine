@@ -105,10 +105,11 @@ function ecdh(privateKey: BytesData, pubkey: BytesData): string {
 
 function privateKeyToPubKeyUnpacked(privateKey: BytesData): [bigint, bigint] {
   // Format as number string
-  const privateKeyFormatted = numberify(privateKey).toString(10);
+  // const privateKeyFormatted = numberify(privateKey).toString(10);
 
   // Calculate pubkey
-  return babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted);
+  // return babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted);
+  return eddsa.prv2pub(hexlify(privateKey));
 }
 
 /**
@@ -150,18 +151,6 @@ function random() {
   return poseidon([randomBytes(32)]);
 }
 
-/**
- * EdDSA signs a message with babyjubjub private key
- * @param privateKey - private key to sign with
- * @param data - array byte chunks to sign
- * @returns signed data
- */
-function sign(privateKey: bigint, data: BytesData[]): object {
-  const msghash = poseidon(data);
-
-  return eddsa.signPoseidon(privateKey, msghash);
-}
-
 function genRandomPrivateKey(): bigint {
   return BigInt(`0x${randomBytes(32)}`);
 }
@@ -188,7 +177,6 @@ export {
   privateKeyToPubKey,
   unpackPubKey,
   random,
-  sign,
   randomPubkey,
   genRandomPrivateKey,
   getKeyPair,

@@ -16,6 +16,7 @@ import { CommitmentEvent } from '../src/contract/erc20/events';
 
 export const DECIMALS = 10n ** 18n;
 const WALLET_PATH = "m/44'/60'/0'/0/0";
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const { log } = console;
 export const artifactsGetter = (inputs: PublicInputs) => {
@@ -47,8 +48,3 @@ export const getEthersWallet = (
   const wallet = new ethers.Wallet(bytesToHex(node.privateKey as Uint8Array), provider);
   return wallet;
 };
-
-export const generateRandomAddress = async (): Promise<AddressData> => ({
-  masterPublicKey: randomPubkey(),
-  viewingPublicKey: await randomPublicKey(),
-});

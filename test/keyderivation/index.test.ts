@@ -8,6 +8,7 @@ chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('Key Derivation/Index', () => {
+  /*
   it('Should derive keys', () => {
     const vectors = [
       {
@@ -44,4 +45,5 @@ describe('Key Derivation/Index', () => {
       expect(node.derive(vector.path).babyJubJubKeyPair).to.deep.equal(vector.keyPair);
     });
   });
+  */
 });

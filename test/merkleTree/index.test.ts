@@ -8,6 +8,7 @@ import { Database } from '../../src/database';
 
 import { MERKLE_ZERO_VALUE, MerkleTree } from '../../src/merkletree';
 import type { TreePurpose } from '../../src/merkletree';
+import { ZERO_ADDRESS } from '../../src/utils/constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -309,12 +310,12 @@ describe('MerkleTree/Index', () => {
       {
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-        data: {
+        preimage: {
           npk: '00',
-          encryptedRandom: ['01', '01'],
           value: '02',
-          token: { tokenAddress: '0x03', tokenType: '0x00', tokenSubID: '0x00' },
+          token: { tokenAddress: '0x03', tokenType: ZERO_ADDRESS, tokenSubID: ZERO_ADDRESS },
         },
+        encryptedRandom: ['01', '01'],
       },
     ]);
 
@@ -524,7 +525,7 @@ describe('MerkleTree/Index', () => {
 
   it('Should store nullifiers', async () => {
     expect(await merkletree.getNullified('00')).to.equal(false);
-    await merkletree.nullify([{ nullifier: '00', txid: '01' }]);
+    await merkletree.nullify([{ nullifier: '00', treeNumber: 0, txid: '01' }]);
     expect(await merkletree.getNullified('00')).to.equal('01');
   });
 

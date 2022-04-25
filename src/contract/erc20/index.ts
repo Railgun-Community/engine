@@ -220,6 +220,11 @@ class ERC20RailgunContract {
     return this.contract.populateTransaction.transact(transactions);
   }
 
+  async hashCommitment(commitment: any): Promise<string> {
+    const hash: BigNumber = await this.contract.hashCommitment(commitment);
+    return hash.toHexString();
+  }
+
   /**
    *
    * @param

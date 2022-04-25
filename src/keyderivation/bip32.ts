@@ -1,14 +1,14 @@
-import * as curve25519 from '@noble/ed25519';
-import { babyjubjub, bytes, ed25519, hash } from '../utils';
-import { BytesData, Hex, hexToBigInt } from '../utils/bytes';
+import { hash, keysUtils } from '../utils';
+import { BytesData, fromUTF8String, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
 
-const CURVE_SEED = bytes.fromUTF8String('babyjubjub seed');
+const CURVE_SEED = fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
 
-export type KeyPair = { privateKey: string; pubkey: string };
+export type SpendingKeyPair = { privateKey: bigint; pubkey: [bigint, bigint] };
+export type ViewingKeyPair = { privateKey: bigint; pubkey: Uint8Array };
 
 /**
  * Creates KeyNode from seed
@@ -75,66 +75,34 @@ export class Node {
   }
 
   /**
-   * Gets babyjubjub key pair of this BIP32 Node
-   * @returns {KeyPair} keypair
+   * Get spending key-pair
+   * @returns keypair
    */
-  get babyJubJubKeyPair(): KeyPair {
-    return babyjubjub.getKeyPair(this.#chainKey);
+  getSpendingKeyPair(): SpendingKeyPair {
+    const privateKey = keysUtils.getPrivateSpendingKey(this.#chainKey);
+    const pubkey = keysUtils.getPublicSpendingKey(privateKey);
+    return {
+      privateKey,
+      pubkey,
+    };
   }
 
-  /**
-   * Shortcut to return public portion (PK) BabyJubJub key
-   * @returns {string} pubkey
-   */
-  get babyJubJubPublicKey(): string {
-    return this.babyJubJubKeyPair.pubkey;
+  static getMasterPublicKey(spendingPublicKey: [bigint, bigint], nullifyingKey: bigint): bigint {
+    return keysUtils.poseidon([...spendingPublicKey, nullifyingKey]);
   }
 
-  /**
-   * @todo keep viewing private key private
-   */
-  async getViewingKeyPair(): Promise<KeyPair> {
-    // the private key is also used as the nullifying key
-    return ed25519.getKeyPair(this.#chainKey);
+  async getViewingKeyPair(): Promise<ViewingKeyPair> {
+    const privateKey = hexToBigInt(this.#chainKey);
+    const pubkey = await keysUtils.getPublicViewingKey(privateKey);
+    return { privateKey, pubkey };
   }
 
-  /**
-   * Get viewing public key (VK) from ed25519 viewing keypair
-   * @returns {Promise<string>}
-   */
-  async getViewingPublicKey(): Promise<string> {
-    const { pubkey } = await this.getViewingKeyPair();
-    return pubkey;
-  }
-
-  /**
-   * Get private Nullifying (aka Viewing) Key (n) from ed25519 viewing keypair
-   * @returns {Promise<string>}
-   */
-  async getNullifyingKey(): Promise<string> {
+  async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    return privateKey;
+    return keysUtils.poseidon([privateKey]);
   }
 
-  /**
-   * Sign a message with BabyJubJub key
-   *
-   * @param data - data to sign
-   * @returns signed data
-   */
-  signBabyJubJub(data: Hex[]): object {
-    const keyPair = this.babyJubJubKeyPair;
-
-    return babyjubjub.sign(hexToBigInt(keyPair.privateKey), data);
-  }
-
-  /**
-   * Sign a message with ed25519 private key
-   * @param {Hex} message
-   * @returns {Promise<Uint8Array>} - signature
-   */
-  async signEd25519(message: Hex): Promise<Uint8Array> {
-    const { privateKey } = await this.getViewingKeyPair();
-    return await curve25519.sign(message, privateKey);
+  signBySpendingKey(message: bigint): [bigint, bigint, bigint] {
+    return keysUtils.signEDDSA(this.getSpendingKeyPair().privateKey, message);
   }
 }

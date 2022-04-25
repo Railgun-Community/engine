@@ -1,10 +1,11 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
+import { curve25519 } from '@noble/ed25519';
 import { Note, WithdrawNote } from '../note';
 import { babyjubjub, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
-import { SNARK_PRIME } from '../utils/constants';
-import { BigIntish, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
+import { BigIntish, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { findSolutions } from './solutions';
 import {
   AdaptID,
@@ -21,19 +22,17 @@ import {
   NOTE_OUTPUTS,
   WithdrawFlag,
 } from './constants';
-import { emptyCommitmentPreimage } from '../note/preimage';
 import { depths } from '../merkletree';
-import { generateEphemeralKeys } from '../utils/ed25519';
-import { getSharedKey } from '../utils/encryption';
+import { getSharedSecret } from '../utils/encryption';
+import { getEphemeralKeys } from '../utils/keys-utils';
 
 const abiCoder = defaultAbiCoder;
 
 export function hashBoundParams(boundParams: BoundParams) {
   const hashed = hash.keccak256(
     abiCoder.encode(
-      [
-        'tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
-      ],
+      // prettier-ignore
+      ['tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',],
       [boundParams],
     ),
   );
@@ -59,7 +58,7 @@ class Transaction {
   withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
 
   // boundParams.withdraw == 2 means withdraw address is not to self and set in overrideOutput
-  overrideOutput: string = '0x0000000000000000000000000000000000000000';
+  overrideOutput: string = ZERO_ADDRESS;
 
   tokenType = DEFAULT_ERC20_TOKEN_TYPE;
 
@@ -67,7 +66,7 @@ class Transaction {
 
   tree: number;
 
-  withdrawPreimage: CommitmentPreimage;
+  withdrawNote: WithdrawNote;
 
   /**
    * Create ERC20Transaction Object
@@ -76,29 +75,22 @@ class Transaction {
    * @param tree - manually specify a tree
    */
   constructor(token: string, chainID: number, tree: number = 0) {
-    this.token = formatToByteLength(token, 32, false);
+    this.token = formatToByteLength(token, 20, false);
     this.chainID = chainID;
     this.tree = tree;
-    this.withdrawPreimage = emptyCommitmentPreimage;
+    this.withdrawNote = WithdrawNote.empty();
   }
 
-  get tokenData() {
-    return {
-      tokenAddress: this.token,
-      tokenSubID: '00',
-      tokenType: '00',
-    };
+  withdraw(originalAddress: string, value: BigIntish, toAddress?: string) {
+    this.withdrawNote = new WithdrawNote(originalAddress, BigInt(value), this.token);
+    if (toAddress !== undefined) {
+      this.overrideOutput = toAddress;
+      this.withdrawFlag = WithdrawFlag.OVERRIDE;
+    }
   }
 
-  withdraw(originalAddress: string, value: BigIntish) {
-    const note = new WithdrawNote(originalAddress, BigInt(value), this.tokenData);
-    this.withdrawPreimage.value = value.toString();
-    this.withdrawPreimage = note.serialize(['00', '00']);
-  }
-
-  set withdrawAddress(value: string) {
-    this.overrideOutput = value;
-    this.withdrawFlag = WithdrawFlag.OVERRIDE;
+  get withdrawValue() {
+    return this.withdrawNote ? this.withdrawNote.value : 0n;
   }
 
   /**
@@ -116,27 +108,25 @@ class Transaction {
   }> {
     const merkleTree = wallet.merkletree[this.chainID];
     const merkleRoot = await merkleTree.getRoot(0);
-    const spendingPrivateKey = await wallet.getSpendingPrivateKey(encryptionKey);
-    const { viewingPublicKey } = wallet;
-    const viewingPrivateKey = await wallet.getNullifyingKey();
-    const publicKey = babyjubjub.privateKeyToPubKeyUnpacked(spendingPrivateKey);
+    const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
+    const nullifyingKey = wallet.getNullifyingKey();
+    const viewingKey = wallet.getViewingKeyPair();
 
     // Calculate total required to be supplied by UTXOs
-    const totalRequired =
-      this.outputs.reduce((left, right) => left + right.value, 0n) -
-      hexToBigInt(this.withdrawPreimage?.value);
+    const totalRequired = this.outputs.reduce((left, right) => left + right.value, 0n); // - this.withdrawNote?.value ?? 0n;
 
     // Check if there's too many outputs
     if (this.outputs.length > 3) throw new Error('Too many outputs specified');
 
     // Check if output token fields match tokenID for this transaction
     this.outputs.forEach((output, index) => {
-      if (output.token !== this.tokenData.tokenAddress)
-        throw new Error(`TokenID mismatch on output ${index}`);
+      if (output.token !== this.token) throw new Error(`TokenID mismatch on output ${index}`);
     });
 
     // Get UTXOs sorted by tree
-    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[this.token];
+    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[
+      formatToByteLength(this.token, 32, false)
+    ];
 
     if (treeSortedBalances === undefined)
       throw new Error(`Failed to find balances for ${this.token}`);
@@ -161,11 +151,8 @@ class Transaction {
       // Get UTXO
       const utxo = utxos[i];
 
-      // Get private key (or dummy key if dummy note)
-      const privateKey = utxo.dummyKey || spendingPrivateKey;
-
       // Push spending key and nullifier
-      nullifiers.push(hexToBigInt(Note.getNullifier(privateKey, utxo.position)));
+      nullifiers.push(Note.getNullifier(nullifyingKey, utxo.position));
 
       // Push path elements
       if (utxo.dummyKey) {
@@ -184,20 +171,23 @@ class Transaction {
     const totalIn = utxos?.reduce((left, right) => left + right.note.value, 0n);
 
     const totalOut =
-      this.outputs.reduce((left, right) => left + right.value, 0n) +
-      hexToBigInt(this.withdrawPreimage?.value);
+      this.outputs.reduce((left, right) => left + right.value, 0n) + this.withdrawValue;
 
-    // @todo for withdraw change should not be negative
+    // @todo for withdraw change should not be negative etc
     const change = totalIn - totalOut;
 
     // Create change output
     this.outputs.push(new Note(wallet.addressKeys, babyjubjub.random(), change, this.token));
 
-    const ephemeralKeys = await Promise.all(
-      this.outputs.map((note) => generateEphemeralKeys(viewingPublicKey, note.viewingPublicKey)),
+    const notesEphemeralKeys = await Promise.all(
+      this.outputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),
     );
+
+    // calculate symmetric key using sender privateKey and recipient ephemeral key
     const sharedKeys = await Promise.all(
-      this.outputs.map((note, index) => getSharedKey(viewingPrivateKey, ephemeralKeys[index][0])),
+      notesEphemeralKeys.map((ephemeralKeys) =>
+        getSharedSecret(viewingKey.privateKey, ephemeralKeys[1]),
+      ),
     );
 
     const commitmentCiphertext: CommitmentCiphertext[] = this.outputs.map((note, index) => {
@@ -206,8 +196,7 @@ class Transaction {
         ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
           hexToBigInt(el as string),
         ),
-        ephemeralKeys: ephemeralKeys[index].map((el) => hexToBigInt(el)),
-        // memo: new Array(Math.floor(Math.random() * 10)).fill(1).map(() => hexToBigInt(random(32))),
+        ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))),
         memo: [],
       };
     });
@@ -218,38 +207,29 @@ class Transaction {
       adaptParams: this.adaptID.parameters,
       commitmentCiphertext,
     };
-    const boundParamsHash = hashBoundParams(boundParams);
 
-    const serializedCommitments = this.outputs.map((note) => note.serialize(viewingPrivateKey));
-
-    const commitmentsOut = this.outputs.map((note) => hexToBigInt(note.hash));
+    const commitmentsOut = this.outputs.map((note) => note.hash);
 
     const publicInputs: PublicInputs = {
       merkleRoot: hexToBigInt(merkleRoot),
-      boundParamsHash,
+      boundParamsHash: hashBoundParams(boundParams),
       nullifiers,
       commitmentsOut,
     };
 
-    const signature = Note.sign(
-      publicInputs.merkleRoot,
-      boundParamsHash,
-      nullifiers,
-      commitmentsOut,
-      spendingPrivateKey,
-    );
+    const signature = Note.sign(publicInputs, spendingKey.privateKey);
 
     // Format inputs
     const inputs: PrivateInputs = {
       token: hexToBigInt(this.token),
       randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
-      pathElements, // @todo possibly misformatted
+      pathElements,
       leavesIndices: pathIndices,
       valueOut: this.outputs.map((note) => note.value),
-      publicKey,
-      npkOut: serializedCommitments.map((out) => hexToBigInt(out.npk)),
-      nullifyingKey: hexToBigInt(viewingPrivateKey),
+      publicKey: spendingKey.pubkey,
+      npkOut: this.outputs.map((x) => x.notePublicKey),
+      nullifyingKey,
       signature,
     };
 
@@ -283,18 +263,16 @@ class Transaction {
       publicInputs,
       boundParams,
       this.overrideOutput,
-      this.withdrawPreimage,
+      this.withdrawNote.preImage,
     );
   }
 
   static get zeroProof(): Proof {
     const zero = nToHex(BigInt(0));
+    // prettier-ignore
     return {
       a: [zero, zero],
-      b: [
-        [zero, zero],
-        [zero, zero],
-      ],
+      b: [ [zero, zero], [zero, zero]],
       c: [zero, zero],
     };
   }
@@ -317,7 +295,7 @@ class Transaction {
       publicInputs,
       boundParams,
       this.overrideOutput,
-      this.withdrawPreimage,
+      this.withdrawNote.preImage,
     );
   }
 

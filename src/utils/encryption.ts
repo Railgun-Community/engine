@@ -3,6 +3,8 @@ import * as curve25519 from '@noble/ed25519';
 import type { BytesData } from './bytes';
 import { arrayify, hexlify, padToLength, random, trim } from './bytes';
 
+const { getSharedSecret } = curve25519;
+
 export interface Ciphertext {
   iv: BytesData;
   tag: BytesData;
@@ -91,4 +93,4 @@ const aes = {
   },
 };
 
-export { aes, getSharedKey };
+export { aes, getSharedKey, getSharedSecret };

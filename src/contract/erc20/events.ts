@@ -56,27 +56,29 @@ export type CommitmentBatchEventArgs = {
   ciphertext: CommitmentCiphertextArgs[];
 };
 
-const formatTokenData = (token: EventTokenData) => ({
-  tokenType: token.tokenType.toString(),
-  tokenAddress: token.tokenAddress,
-  tokenSubID: token.tokenSubID.toString(),
-});
-
+/**
+ * Parse event data for database
+ */
 export function formatGeneratedCommitmentBatchCommitments(
   transactionHash: string,
   preImages: CommitmentPreimageArgs[],
   encryptedRandom: EncryptedRandomArgs[],
 ): GeneratedCommitment[] {
   const randomFormatted = encryptedRandom.map(
-    (el): EncryptedRandom => el.map((key) => key.toHexString()),
+    (el) => el.map((key) => key.toHexString()) as EncryptedRandom,
   );
-  const generatedCommitments = preImages.map((preImage, index) => {
-    const token = formatTokenData(preImage.token);
-    const note = new WithdrawNote(preImage.npk.toHexString(), preImage.value.toBigInt(), token);
+  const generatedCommitments = preImages.map((item, index) => {
+    // const token = formatTokenData(preImage.token);
+    const note = new WithdrawNote(
+      item.npk.toHexString(),
+      item.value.toBigInt(),
+      item.token.tokenAddress,
+    );
     return {
       hash: note.hash,
       txid: transactionHash,
-      data: note.serialize(randomFormatted[index]),
+      preimage: note.serialize(false),
+      encryptedRandom: randomFormatted[index],
     };
   });
   return generatedCommitments;

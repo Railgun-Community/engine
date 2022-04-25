@@ -3,7 +3,6 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
 import { LeptonDebugger } from '../models/types';
-import type { CommitmentPreimage } from '../transaction/types';
 import { constants, hash } from '../utils';
 import { fromUTF8String, numberify, padEven, hexlify } from '../utils/bytes';
 import type { Ciphertext } from '../utils/encryption';
@@ -15,13 +14,26 @@ export type MerkleProof = {
   root: string;
 };
 
+export type TokenData = {
+  tokenAddress: string;
+  tokenSubID: string;
+  tokenType: string;
+};
+
+export type PreImage = {
+  npk: string;
+  token: TokenData;
+  value: string;
+};
+
 /**
  * Processed from transaction events
  */
 export type GeneratedCommitment = {
   hash: string;
   txid: string;
-  data: CommitmentPreimage;
+  preimage: PreImage;
+  encryptedRandom: string[];
 };
 
 export type CommitmentCiphertext = {
@@ -130,24 +142,6 @@ class MerkleTree {
     for (let level = 1; level <= this.depth; level += 1) {
       this.zeros[level] = MerkleTree.hashLeftRight(this.zeros[level - 1], this.zeros[level - 1]);
     }
-  }
-
-  /**
-   * Gets tree root
-   *
-   * @returns {bigint} root
-   */
-  get root(): bigint {
-    return this.tree[this.depth][0];
-  }
-
-  /**
-   * Returns leaves of the tree
-   *
-   * @returns {Array<bigint>} leaves
-   */
-  get leaves(): bigint[] {
-    return this.tree[0];
   }
 
   /**
@@ -426,7 +420,8 @@ class MerkleTree {
       this.nodeWriteCache[tree][level][index] = hexlify(leaf.hash);
 
       if ('ciphertext' in leaf) {
-        const { ciphertext } = leaf;
+        this.commitmentWriteCache[tree][index] = leaf;
+        /*
         this.commitmentWriteCache[tree][index] = {
           hash: hexlify(leaf.hash),
           txid: hexlify(leaf.txid),
@@ -440,18 +435,20 @@ class MerkleTree {
             ephemeralKeys: ciphertext.ephemeralKeys,
           },
         };
+        */
       } else {
+        this.commitmentWriteCache[tree][index] = leaf;
+        /*
         this.commitmentWriteCache[tree][index] = {
           hash: hexlify(leaf.hash),
           txid: hexlify(leaf.txid),
-          data: {
-            npk: hexlify(leaf.data.npk),
-            encryptedRandom: leaf.data.encryptedRandom.map((r) => hexlify(r)) as [string, string],
-            value: hexlify(leaf.data.value),
-            token: leaf.data.token,
-          },
+          preimage: leaf.preimage,
+          encryptedRandom: leaf.encryptedRandom.map((r) => hexlify(r)) as [string, string],
         };
+        */
       }
+      const { log } = console;
+      log(leaf);
 
       // Increment index
       index += 1;

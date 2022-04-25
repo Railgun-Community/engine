@@ -6,7 +6,7 @@ import { CallOverrides, ethers } from 'ethers';
 
 import memdown from 'memdown';
 import { ERC20RailgunContract } from '../../src/contract';
-import { Note } from '../../src/note';
+import { Note, WithdrawNote } from '../../src/note';
 import { Transaction } from '../../src/transaction';
 import { Lepton } from '../../src';
 
@@ -16,7 +16,7 @@ import { ScannedEventData, Wallet } from '../../src/wallet';
 import { babyjubjub } from '../../src/utils';
 import { hexlify } from '../../src/utils/bytes';
 import { Nullifier } from '../../src/merkletree';
-import { artifactsGetter, awaitScan, generateRandomAddress } from '../helper';
+import { artifactsGetter, awaitScan, DECIMALS } from '../helper';
 import { Deposit } from '../../src/note/deposit';
 import { CommitmentEvent } from '../../src/contract/erc20/events';
 import { EventName } from '../../src/contract/erc20';
@@ -38,6 +38,10 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
+const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
+const VALUE = 10000n * DECIMALS;
+
+let testDeposit: (value?: bigint) => Promise<[ethers.providers.TransactionReceipt, unknown]>;
 
 // eslint-disable-next-line func-names
 describe('Contract/Index', function () {
@@ -66,6 +70,24 @@ describe('Contract/Index', function () {
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
     wallet = lepton.wallets[walletID];
+
+    // fn to create deposit tx for tests
+    // tx should be complete and balances updated after await
+    testDeposit = async (
+      value: bigint = 10000n * DECIMALS,
+    ): Promise<[ethers.providers.TransactionReceipt, unknown]> => {
+      // Create deposit
+      const deposit = new Deposit(wallet.addressKeys.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
+      const { preImage, encryptedRandom } = deposit.serialize(
+        wallet.getViewingKeyPair().privateKey,
+      );
+
+      const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
+
+      // Send deposit on chain
+      const tx = await etherswallet.sendTransaction(depositTx);
+      return Promise.all([tx.wait(), awaitScan(wallet, chainID)]);
+    };
   });
 
   it('[HH] Should retrieve merkle root from contract', async function run() {
@@ -84,6 +106,7 @@ describe('Contract/Index', function () {
       this.skip();
       return;
     }
+    await testDeposit();
 
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
@@ -95,11 +118,7 @@ describe('Contract/Index', function () {
       from: '0x0000000000000000000000000000000000000000',
     };
 
-    expect(
-      await (
-        await contract.relay([dummyTx], random, true, [call], overrides)
-      ).gasLimit,
-    ).to.greaterThanOrEqual(0);
+    expect((await contract.relay([dummyTx], random, true, [call], overrides)).gasLimit).to.throw(); // greaterThanOrEqual(0);
   });
 
   /*
@@ -163,23 +182,7 @@ describe('Contract/Index', function () {
 
     let startingBlock = await provider.getBlockNumber();
 
-    const address = await wallet.getAddress(chainID);
-    const { masterPublicKey } = Lepton.decodeAddress(address);
-    const viewingPrivateKey = await wallet.getNullifyingKey();
-
-    const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
-    const VALUE = 11000000000000000000000000n;
-
-    // Create deposit
-    const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
-    const { preImage, encryptedRandom } = deposit.serialize(viewingPrivateKey);
-
-    const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
-
-    // Send deposit on chain
-    const tx = await etherswallet.sendTransaction(depositTx);
-    const [txResponse] = await Promise.all([tx.wait(), awaitScan(wallet, chainID)]);
-
+    const [txResponse] = await testDeposit();
     let resultEvent: CommitmentEvent;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
       resultEvent = commitmentEvent;
@@ -207,7 +210,7 @@ describe('Contract/Index', function () {
 
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
-    transaction.outputs = [new Note(await generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([
@@ -231,26 +234,39 @@ describe('Contract/Index', function () {
     expect(resultNullifiers.length).to.equal(2);
   }).timeout(120000);
 
+  it('Should get note hashes', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+    const withdraw = new WithdrawNote(etherswallet.address, 100n, token.address);
+    const contractHash = await contract.hashCommitment(withdraw.preImage);
+
+    expect(hexlify(contractHash)).to.equal(withdraw.hash);
+  });
+
   it('[HH] Should create serialized transactions and parse tree updates', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
+    const { log } = console;
+
     let result: CommitmentEvent;
     contract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
+        log(result);
       },
       async () => {},
     );
 
+    const merkleRootBefore = await contract.merkleRoot();
+
     const address = await wallet.getAddress(chainID);
     const { masterPublicKey } = Lepton.decodeAddress(address);
-    const viewingPrivateKey = await wallet.getNullifyingKey();
-
-    const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
-    const VALUE = 11000000000000000000000000n;
+    const viewingPrivateKey = wallet.getNullifyingKey();
 
     // Create deposit
     const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
@@ -285,15 +301,11 @@ describe('Contract/Index', function () {
     const merkleRootAfterDeposit = await contract.merkleRoot();
 
     // Check merkle root changed
-    expect(merkleRootAfterDeposit).to.equal(
-      // @todo this was output for new contracts idk if correct
-      '111cc5206406eb697ada5c173b831d7829069b23ad8fbd1a55918ec96235df8d',
-      // '083e1ef25eee08184efd23a69db656c2ae1be3540c68b363139dce7dbac10ac7',
-    );
+    expect(merkleRootAfterDeposit).not.to.equal(merkleRootBefore);
 
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
-    transaction.outputs = [new Note(await generateRandomAddress(), RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
 
     // Create transact
     const transact = await contract.transact([

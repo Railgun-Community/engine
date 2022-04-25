@@ -57,6 +57,11 @@ export function nToBytes(n: bigint): Uint8Array {
   return hexToBytes(nToHex(n));
 }
 
+export function u8ToBigInt(u8: Uint8Array): bigint {
+  // eslint-disable-next-line no-use-before-define
+  return hexToBigInt(hexlify(u8));
+}
+
 /**
  * Generates random bytes
  * @param length - number of bytes to generate

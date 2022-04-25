@@ -3,20 +3,26 @@
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
+import { eddsa } from 'circomlibjs';
 import memdown from 'memdown';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
+import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
+import { curve25519, utils } from '@noble/ed25519';
 import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
 import { Wallet } from '../../src/wallet';
 import { Deposit, Note, WithdrawNote } from '../../src/note';
-import { babyjubjub } from '../../src/utils';
+import { babyjubjub, keysUtils } from '../../src/utils';
 import { Transaction } from '../../src/transaction';
 import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength } from '../../src/utils/bytes';
+import { formatToByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes';
 import { AddressData, decode } from '../../src/keyderivation/bech32-encode';
+import { getEphemeralKeys, poseidon } from '../../src/utils/keys-utils';
+import { ZERO_ADDRESS } from '../../src/utils/constants';
+import { getSharedSecret } from '../../src/utils/encryption';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -29,7 +35,6 @@ let ethersWallet: EthersWallet;
 let transaction: Transaction;
 let deposit: Deposit;
 let withdraw: WithdrawNote;
-let masterPublicKey: string;
 let prover: Prover;
 let address: AddressData;
 
@@ -83,8 +88,8 @@ const getTestData = () => {
   const leaves = notesPrep.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
+        viewingPublicKey: hexToBytes(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
       },
       random,
       '11000000000000000000000000',
@@ -95,7 +100,8 @@ const getTestData = () => {
       hash: note.hash,
       txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       senderPubKey,
-      ciphertext: { ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey) },
+      ciphertext: { ciphertext: note.encrypt(hexToBytes(keypairsPopulated[keyIndex].sharedKey)) },
+      // ciphertext: { ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey) },
       revealKey: ['01', '02'], // TODO
     };
   });
@@ -105,8 +111,8 @@ const getTestData = () => {
   const leaves2 = notesPrep2.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
+        viewingPublicKey: hexToBytes(keypairsPopulated[keyIndex].pubkey),
       },
       random,
       1000000000000n * BigInt(keyIndex + 1),
@@ -125,8 +131,8 @@ const getTestData = () => {
   const leaves3 = notesPrep3.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
+        viewingPublicKey: hexToBytes(keypairsPopulated[keyIndex].pubkey),
       },
       random,
       2166666666667n,
@@ -145,8 +151,8 @@ const getTestData = () => {
   const leaves4 = notesPrep4.map((keyIndex) => {
     const note = new Note(
       {
-        masterPublicKey: keypairsPopulated[keyIndex].pubkey,
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
+        masterPublicKey: hexToBigInt(keypairsPopulated[keyIndex].pubkey),
+        viewingPublicKey: hexToBytes(keypairsPopulated[keyIndex].pubkey),
       },
       random,
       343000000000n,
@@ -171,22 +177,21 @@ const getTestData = () => {
 let testData: any;
 
 const depositLeaf = {
-  hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
-  txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
-  data: {
-    npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
+  hash: '25b529619b894ef742f9c0f9f98243feeb6ef54ee63a8059a908b33d4ce31b0e',
+  txid: '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
+  preimage: {
+    npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
     token: {
-      tokenType: '0',
-      tokenAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-      tokenSubID: '0',
+      tokenAddress: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
+      tokenType: '0x0000000000000000000000000000000000000000',
+      tokenSubID: '0x0000000000000000000000000000000000000000',
     },
-    hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
-    value: '9138822709a9fc231cba6',
-    encryptedRandom: [
-      '0xa51425928f4d6be74808a67732a56085e53d58e18b91faed635049462aab883e',
-      '0x26e8e14696fe12fe8279764a0d8f22a9703ebc366b53a0cc253aa26c7b9bf884',
-    ],
+    value: '000000000000021cbfcc6fd98333b5f1',
   },
+  encryptedRandom: [
+    '0x7797f244fc1c60af03f25cbe9a798080b920733cc2de2456af21ee7c9eb1ca0c',
+    '0x118beef50353ab8512be871c0473e219',
+  ],
 };
 
 // eslint-disable-next-line func-names
@@ -199,11 +204,9 @@ describe('Transaction/ERC20', function () {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
-    masterPublicKey = wallet.masterPublicKey;
-    address = decode(await wallet.getAddress(chainID));
+    address = wallet.addressKeys;
     wallet.loadTree(merkletree);
-    testData = getTestData();
-    // makeNote = (value: bigint = 6500000000000n): Note => new Note(address, random, value, token);
+    // testData = getTestData();
     makeNote = (value: bigint = 65n * DECIMALS): Note => new Note(address, random, value, token);
     merkletree.validateRoot = () => true;
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
@@ -237,20 +240,51 @@ describe('Transaction/ERC20', function () {
     assert.typeOf(hashed, 'bigint');
   });
 
+  it('Should generate ciphertext decryptable by sender and recipient', async () => {
+    const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
+    const note = new Note(wallet2.addressKeys, random, 100n, token);
+
+    const sender = wallet.getViewingKeyPair();
+    const receiver = wallet2.getViewingKeyPair();
+
+    assert.isTrue(note.viewingPublicKey === receiver.pubkey);
+    const ephemeralKeys = await getEphemeralKeys(sender.pubkey, note.viewingPublicKey);
+
+    const senderShared = await getSharedSecret(sender.privateKey, ephemeralKeys[1]);
+    const receiverShared = await getSharedSecret(receiver.privateKey, ephemeralKeys[0]);
+
+    const encryptedNote = note.encrypt(senderShared);
+
+    const senderDecrypted = Note.decrypt(encryptedNote, senderShared);
+    const receiverDecrypted = Note.decrypt(encryptedNote, receiverShared);
+
+    expect(senderDecrypted.hash).to.equal(note.hash);
+    expect(receiverDecrypted.hash).to.equal(note.hash);
+  });
+
+  it('Should generate a valid signature for transaction', async () => {
+    transaction.outputs = [makeNote()];
+
+    const { inputs, publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
+    const { signature } = inputs;
+    const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
+    const msg = poseidon(Object.values(publicInputs).flatMap((x) => x));
+
+    assert.isTrue(keysUtils.verifyEDDSA(msg, signature, pubkey));
+
+    expect(signature).to.deep.equal(keysUtils.signEDDSA(privateKey, msg));
+  });
+
   it('Should generate inputs for transaction', async () => {
     transaction.outputs = [makeNote()];
 
-    const inputs = await transaction.generateInputs(wallet, testEncryptionKey);
-    const { nullifiers } = inputs.publicInputs;
-
-    expect(nullifiers.length).to.equal(2);
-    const { log } = console;
-    log(nullifiers);
-    expect(nullifiers[0]).to.equal(
-      14310647571962909742907984199478334085322709310853676308580927185682783501384n,
-    );
+    const { publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
+    const { nullifiers, commitmentsOut } = publicInputs;
+    expect(nullifiers.length).to.equal(1);
+    expect(commitmentsOut.length).to.equal(2);
 
     /*
+    // @todo verify that prover throws for unmatched artifact
     transaction.outputs = [makeNote(), makeNote(), makeNote()];
 
     await expect(
@@ -292,19 +326,11 @@ describe('Transaction/ERC20', function () {
 
     transaction.outputs = [makeNote()];
 
-    transaction.withdraw(await ethersWallet.getAddress(), 2n);
-
-    /*
-    await expect(
-      transaction.generateInputs(wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith('Withdraw address not set');
-    */
-
-    transaction.withdrawAddress = '01';
+    transaction.withdraw(await ethersWallet.getAddress(), 2n, '01');
 
     expect(
       (await transaction.generateInputs(wallet, testEncryptionKey)).publicInputs.nullifiers.length,
-    ).to.equal(2);
+    ).to.equal(1);
 
     // transaction.setDeposit('00');
     // transaction.setWithdraw('00');

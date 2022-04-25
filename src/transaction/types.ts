@@ -27,13 +27,12 @@ export type TokenData = {
   tokenSubID: string;
 };
 
-export type EncryptedRandom = string[];
+export type EncryptedRandom = [string, string];
 
 export type CommitmentPreimage = {
   npk: string;
   token: TokenData;
-  value: string;
-  encryptedRandom: EncryptedRandom;
+  value: bigint;
 };
 
 export type SerializedTransaction = {

@@ -89,7 +89,7 @@ describe('Wallet/Index', () => {
   */
 
   it('Should derive addresses correctly', async () => {
-    const address = await wallet.getAddress(chainID);
+    const address = wallet.getAddress(chainID);
     const decoded = bech32.decode(address);
     expect(decoded.masterPublicKey).to.equal(wallet.masterPublicKey);
     expect(decoded.chainID).to.equal(chainID);

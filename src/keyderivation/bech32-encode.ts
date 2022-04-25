@@ -1,12 +1,13 @@
 // import BN from 'bn.js';
 import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
+import { hexToBytes } from 'ethereum-cryptography/utils';
 import { bytes, constants } from '../utils';
-import { formatToByteLength, padToLength } from '../utils/bytes';
+import { formatToByteLength, hexToBigInt, nToHex, padToLength } from '../utils/bytes';
 
 export type AddressData = {
-  masterPublicKey: string;
-  viewingPublicKey: string;
+  masterPublicKey: bigint;
+  viewingPublicKey: Uint8Array;
   chainID?: number;
   version?: number;
 };
@@ -28,7 +29,7 @@ const xorChainID = (chainID: string) =>
  */
 function encode(data: AddressData): string {
   const { chainID } = data;
-  const masterPublicKey = formatToByteLength(data.masterPublicKey, 32, false);
+  const masterPublicKey = formatToByteLength(nToHex(data.masterPublicKey), 32, false);
   const viewingPublicKey = formatToByteLength(data.viewingPublicKey, 32, false);
 
   const formattedChainID = chainID
@@ -58,9 +59,9 @@ function decode(address: string): AddressData {
 
   // Get version
   const version = parseInt(data.slice(0, 2), 16);
-  const masterPublicKey = data.slice(2, 66);
+  const masterPublicKey = hexToBigInt(data.slice(2, 66));
   const networkID = xorChainID(data.slice(66, 82));
-  const viewingPublicKey = data.slice(82, 146);
+  const viewingPublicKey = hexToBytes(data.slice(82, 146));
 
   // return undefined if XORed network matches the value we use to indicate undefined chain
   const chainID = networkID === UNDEFINED_CHAIN ? undefined : parseInt(networkID, 16);

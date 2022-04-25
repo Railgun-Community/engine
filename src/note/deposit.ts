@@ -1,12 +1,13 @@
 // import { poseidon } from 'circomlibjs';
 import { CommitmentPreimage, EncryptedRandom } from '../transaction/types';
 import { encryption } from '../utils';
-import { hexlify, nToHex } from '../utils/bytes';
-import { poseidon } from '../utils/hash';
+import { hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { ZERO_ADDRESS } from '../utils/constants';
+import { poseidon } from '../utils/keys-utils';
 
 export class Deposit {
   constructor(
-    public masterPublicKey: string,
+    public masterPublicKey: bigint,
     public random: string,
     public value: bigint,
     public token: string,
@@ -15,20 +16,20 @@ export class Deposit {
   get tokenData() {
     return {
       tokenAddress: this.token,
-      tokenSubID: '00',
-      tokenType: '00',
+      tokenSubID: ZERO_ADDRESS,
+      tokenType: ZERO_ADDRESS,
     };
   }
 
-  get notePublicKey() {
-    return poseidon([this.masterPublicKey, this.random]);
+  get notePublicKey(): bigint {
+    return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
   }
 
   /**
    * Get note hash
    */
-  get hash(): string {
-    return poseidon([this.notePublicKey, this.token, nToHex(this.value)]);
+  get hash(): bigint {
+    return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
   }
 
   /**
@@ -37,18 +38,18 @@ export class Deposit {
    * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
    * @returns serialized note
    */
-  serialize(viewingPrivateKey: string): {
+  serialize(viewingPrivateKey: bigint): {
     preImage: Partial<CommitmentPreimage>;
     encryptedRandom: EncryptedRandom;
   } {
-    const encryptedRandom = encryption.aes.gcm.encrypt([this.random], viewingPrivateKey);
+    const encryptedRandom = encryption.aes.gcm.encrypt([this.random], nToHex(viewingPrivateKey));
     const ivTag = hexlify(encryptedRandom.iv, true) + hexlify(encryptedRandom.tag);
     const data = hexlify(encryptedRandom.data[0], true);
     return {
       preImage: {
-        npk: hexlify(this.notePublicKey, true),
+        npk: nToHex(this.notePublicKey, true),
         token: this.tokenData,
-        value: nToHex(this.value, true),
+        value: this.value,
       },
       encryptedRandom: [ivTag, data],
     };
