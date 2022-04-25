@@ -1,11 +1,19 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
-import { curve25519 } from '@noble/ed25519';
+import { depths } from '../merkletree';
 import { Note, WithdrawNote } from '../note';
+import type { PrivateInputs, Proof, Prover, PublicInputs } from '../prover';
 import { babyjubjub, hash } from '../utils';
-import { Wallet, TXO } from '../wallet';
-import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
-import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
 import { BigIntish, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
+import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
+import { TXO, Wallet } from '../wallet';
+import {
+  DEFAULT_ERC20_TOKEN_TYPE,
+  DEFAULT_TOKEN_SUB_ID,
+  NOTE_INPUTS,
+  NOTE_OUTPUTS,
+  WithdrawFlag,
+} from './constants';
 import { findSolutions } from './solutions';
 import {
   AdaptID,
@@ -15,16 +23,6 @@ import {
   HashZero,
   SerializedTransaction,
 } from './types';
-import {
-  DEFAULT_ERC20_TOKEN_TYPE,
-  DEFAULT_TOKEN_SUB_ID,
-  NOTE_INPUTS,
-  NOTE_OUTPUTS,
-  WithdrawFlag,
-} from './constants';
-import { depths } from '../merkletree';
-import { getSharedSecret } from '../utils/encryption';
-import { getEphemeralKeys } from '../utils/keys-utils';
 
 const abiCoder = defaultAbiCoder;
 
@@ -186,7 +184,7 @@ class Transaction {
     // calculate symmetric key using sender privateKey and recipient ephemeral key
     const sharedKeys = await Promise.all(
       notesEphemeralKeys.map((ephemeralKeys) =>
-        getSharedSecret(viewingKey.privateKey, ephemeralKeys[1]),
+        getSharedSymmetricKey(viewingKey.privateKey, ephemeralKeys[1]),
       ),
     );
 
@@ -230,7 +228,7 @@ class Transaction {
       publicKey: spendingKey.pubkey,
       npkOut: this.outputs.map((x) => x.notePublicKey),
       nullifyingKey,
-      signature,
+      signature: [...signature.R8, signature.S],
     };
 
     return {

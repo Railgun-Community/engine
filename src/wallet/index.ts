@@ -1,17 +1,18 @@
-import BN from 'bn.js';
-import msgpack from 'msgpack-lite';
-import EventEmitter from 'events';
-import type { AbstractBatch } from 'abstract-leveldown';
 import { HDNode } from '@ethersproject/hdnode';
+import type { AbstractBatch } from 'abstract-leveldown';
+import BN from 'bn.js';
 import { hexToBytes } from 'ethereum-cryptography/utils';
-import { ed25519, encryption, hash, keysUtils } from '../utils';
+import EventEmitter from 'events';
+import msgpack from 'msgpack-lite';
 import { Database } from '../database';
-import { mnemonicToSeed } from '../keyderivation/bip39';
-import { Note } from '../note';
-import type { Commitment, MerkleTree } from '../merkletree';
 import { bech32, Node } from '../keyderivation';
+import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
+import { mnemonicToSeed } from '../keyderivation/bip39';
+import type { Commitment, MerkleTree } from '../merkletree';
 import { LeptonDebugger } from '../models/types';
+import { Note } from '../note';
 import { NoteSerialized } from '../transaction/types';
+import { hash, keysUtils } from '../utils';
 import {
   arrayify,
   BytesData,
@@ -23,7 +24,6 @@ import {
   numberify,
   padToLength,
 } from '../utils/bytes';
-import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 
 const { poseidon } = keysUtils;
 
@@ -179,16 +179,6 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Sign message with ed25519 node derived at path index
-   * @param message - hex or Uint8 bytes of message to sign
-   * @param index - index to get keypair at
-   * @returns Promise<Uint8Array>
-   */
-  async signEd25519(message: string | Uint8Array) {
-    return await ed25519.sign(message, nToHex(this.#viewingKeyPair.privateKey));
-  }
-
-  /**
    * Load encrypted spending key Node from database and return babyjubjub private key
    * @returns Promise<string>
    */
@@ -207,7 +197,7 @@ class Wallet extends EventEmitter {
    * @todo protect like spending private key
    */
   getNullifyingKey(): bigint {
-    return poseidon([this.#viewingKeyPair.privateKey]);
+    return poseidon([hexlify(this.#viewingKeyPair.privateKey, true)]);
   }
 
   /**
@@ -287,14 +277,14 @@ class Wallet extends EventEmitter {
       if ('ciphertext' in leaf) {
         // Derive shared secret
         // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await encryption.getSharedKey(
-          nToHex(vpk),
-          leaf.ciphertext.ephemeralKeys[0],
+        const sharedKey = await keysUtils.getSharedSymmetricKey(
+          vpk,
+          hexToBytes(leaf.ciphertext.ephemeralKeys[0]),
         );
 
         // Decrypt
         try {
-          note = Note.decrypt(leaf.ciphertext.ciphertext, hexToBytes(sharedKey));
+          note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
           // } catch (e: any) {} // not addressed to us
         } catch (e: any) {
           // debug test
@@ -325,8 +315,8 @@ class Wallet extends EventEmitter {
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
-          nullifier: nToHex(Note.getNullifier(vpk, position)),
-          decrypted: note.serialize(nToHex(vpk)),
+          nullifier: nToHex(Note.getNullifier(this.getNullifyingKey(), position)),
+          decrypted: note.serialize(vpk),
         };
         writeBatch.push({
           type: 'put',

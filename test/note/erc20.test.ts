@@ -256,32 +256,33 @@ describe('Note/ERC20', () => {
     });
   });
 
-  it('Should serialize and deserialize notes', () => {
-    vectors.forEach((vector) => {
-      const address = {
-        masterPublicKey: hexToBigInt(vector.pubkey),
-        viewingPublicKey: hexToBytes(vector.pubkey),
-      };
-      const note = Note.deserialize(vector.note, hexToBigInt(vector.vpk), address);
-      expect(hexlify(note.random)).to.equal(vector.random);
+  // it('Should serialize and deserialize notes', () => {
+  //   vectors.forEach((vector) => {
+  //     const address = {
+  //       masterPublicKey: hexToBigInt(vector.pubkey),
+  //       viewingPublicKey: hexToBytes(vector.pubkey),
+  //     };
+  //     const note = Note.deserialize(vector.note, hexToBigInt(vector.vpk), address);
+  //     expect(hexlify(note.random)).to.equal(vector.random);
 
-      // @todo update hashes
-      // expect(note.hash).to.equal(vector.hash);
+  //     // @todo update hashes
+  //     // expect(note.hash).to.equal(vector.hash);
 
-      const reserialized = note.serialize(vector.vpk);
+      
+  //     const reserialized = note.serialize(vector.vpk);
 
-      expect(reserialized.encryptedRandom).not.to.equal(vector.note.encryptedRandom);
-      expect(reserialized.npk).to.equal(vector.note.npk);
-      expect(reserialized.value).to.equal(vector.note.value);
-      // @todo padding otherwise ok
-      // expect(reserialized.token).to.equal(vector.note.token);
+  //     expect(reserialized.encryptedRandom).not.to.equal(vector.note.encryptedRandom);
+  //     expect(reserialized.npk).to.equal(vector.note.npk);
+  //     expect(reserialized.value).to.equal(vector.note.value);
+  //     // @todo padding otherwise ok
+  //     // expect(reserialized.token).to.equal(vector.note.token);
 
-      const serializedContract = note.serialize(vector.vpk, true);
-      expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
-      expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
-      // expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
-    });
-  });
+  //     const serializedContract = note.serialize(vector.vpk, true);
+  //     expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
+  //     expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
+  //     // expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
+  //   });
+  // });
 
   it('Should calculate nullifiers', () => {
     const nullifierVectors = [

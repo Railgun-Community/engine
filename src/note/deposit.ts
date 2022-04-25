@@ -38,11 +38,11 @@ export class Deposit {
    * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
    * @returns serialized note
    */
-  serialize(viewingPrivateKey: bigint): {
+  serialize(viewingPrivateKey: Uint8Array): {
     preImage: Partial<CommitmentPreimage>;
     encryptedRandom: EncryptedRandom;
   } {
-    const encryptedRandom = encryption.aes.gcm.encrypt([this.random], nToHex(viewingPrivateKey));
+    const encryptedRandom = encryption.aes.gcm.encrypt([this.random], viewingPrivateKey);
     const ivTag = hexlify(encryptedRandom.iv, true) + hexlify(encryptedRandom.tag);
     const data = hexlify(encryptedRandom.data[0], true);
     return {

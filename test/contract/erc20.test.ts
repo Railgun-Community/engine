@@ -266,7 +266,7 @@ describe('Contract/Index', function () {
 
     const address = await wallet.getAddress(chainID);
     const { masterPublicKey } = Lepton.decodeAddress(address);
-    const viewingPrivateKey = wallet.getNullifyingKey();
+    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
     // Create deposit
     const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);

@@ -1,10 +1,11 @@
 import BN from 'bn.js';
+import { Signature } from 'circomlibjs';
+import { AddressData } from '../keyderivation/bech32-encode';
+import { PublicInputs } from '../prover';
 import { NoteSerialized } from '../transaction/types';
 import { encryption, keysUtils } from '../utils';
 import { BigIntish, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { Ciphertext } from '../utils/encryption';
-import { AddressData } from '../keyderivation/bech32-encode';
-import { PublicInputs } from '../prover';
 
 const { poseidon } = keysUtils;
 
@@ -70,7 +71,7 @@ export class Note {
    * @param {Array<bigint>} commitmentsOut - transaction commitments
    * @returns {object} signature
    */
-  static sign(publicInputs: PublicInputs, spendingKeyPrivate: bigint): [bigint, bigint, bigint] {
+  static sign(publicInputs: PublicInputs, spendingKeyPrivate: Uint8Array): Signature {
     const entries = Object.values(publicInputs).flatMap((x) => x);
     const msg = poseidon(entries);
     return keysUtils.signEDDSA(spendingKeyPrivate, msg);
@@ -126,7 +127,7 @@ export class Note {
    * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
    * @returns serialized note
    */
-  serialize(viewingPrivateKey: string, prefix?: boolean): NoteSerialized {
+  serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
     const { npk, token, value, random } = this.format(prefix);
     const encryptedRandom = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
     const ivTag = `${hexlify(encryptedRandom.iv, true)}${hexlify(encryptedRandom.tag, false)}`;
@@ -149,7 +150,7 @@ export class Note {
    */
   static deserialize(
     noteData: NoteSerialized,
-    viewingPrivateKey: bigint,
+    viewingPrivateKey: Uint8Array,
     recipient: AddressData,
   ): Note {
     const encryptedRandom = noteData.encryptedRandom.map((r) => hexlify(r));
@@ -158,7 +159,7 @@ export class Note {
       tag: encryptedRandom[0].substring(32),
       data: [encryptedRandom[1]],
     };
-    const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, nToHex(viewingPrivateKey));
+    const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, viewingPrivateKey);
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(
       recipient,

@@ -1,18 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
+import { bytesToHex } from 'ethereum-cryptography/utils';
+import { ethers } from 'ethers';
 // @ts-ignore
 import artifacts from 'railgun-artifacts-node';
-import { ethers } from 'ethers';
-import { bytesToHex } from 'ethereum-cryptography/utils';
+import { AccumulatedEvents, QuickSync } from '../src';
+import { CommitmentEvent } from '../src/contract/erc20/events';
+import { Nullifier } from '../src/merkletree';
 import { PublicInputs } from '../src/prover';
 import { ScannedEventData, Wallet } from '../src/wallet';
-import { AccumulatedEvents, QuickSync } from '../src';
-import { Nullifier } from '../src/merkletree';
-import { AddressData } from '../src/keyderivation/bech32-encode';
-import { randomPubkey } from '../src/utils/babyjubjub';
-import { randomPublicKey } from '../src/utils/ed25519';
-import { CommitmentEvent } from '../src/contract/erc20/events';
 
 export const DECIMALS = 10n ** 18n;
 const WALLET_PATH = "m/44'/60'/0'/0/0";

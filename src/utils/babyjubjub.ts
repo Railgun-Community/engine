@@ -1,17 +1,16 @@
 /* eslint-disable no-bitwise */
 // @ts-ignore
-import { babyjub, eddsa } from 'circomlibjs';
+import { babyjub } from 'circomlibjs';
+import type { BytesData } from './bytes';
 import {
   arrayify,
-  numberify,
-  hexlify,
-  random as randomBytes,
-  formatToByteLength,
   ByteLength,
+  formatToByteLength,
+  hexlify,
+  numberify,
+  random as randomBytes,
 } from './bytes';
 import { poseidon, sha256 } from './hash';
-
-import type { BytesData } from './bytes';
 
 /**
  * Converts 32 byte seed to babyjubjub point
@@ -103,41 +102,6 @@ function ecdh(privateKey: BytesData, pubkey: BytesData): string {
   return sha256(babyjub.packPoint(babyjub.mulPointEscalar(pubkeyUnpacked, privateKeyBI)));
 }
 
-function privateKeyToPubKeyUnpacked(privateKey: BytesData): [bigint, bigint] {
-  // Format as number string
-  // const privateKeyFormatted = numberify(privateKey).toString(10);
-
-  // Calculate pubkey
-  // return babyjub.mulPointEscalar(babyjub.Base8, privateKeyFormatted);
-  return eddsa.prv2pub(hexlify(privateKey));
-}
-
-/**
- * Convert babyjubjub private key to public key
- * @param privateKey - private key
- * @returns public key
- */
-function privateKeyToPubKey(privateKey: BytesData): string {
-  // TODO: remove dependance on circomlibjs
-  // Format as number string
-  /*
-  const privateKeyFormatted = numberify(privateKey).toString(10);
-
-  // Calculate pubkey
-  const pubKey = babyjub
-    .mulPointEscalar(babyjub.Base8, privateKeyFormatted)
-    */
-  const pubKey = privateKeyToPubKeyUnpacked(privateKey).map((element: BigInt) => {
-    const elementString = element.toString(16);
-    return elementString.length % 2 === 0
-      ? elementString
-      : elementString.padStart(elementString.length + 1, '0');
-  });
-
-  // Pack and return
-  return packPoint(pubKey);
-}
-
 /**
  * Unpack pubKey string into 2 element array.
  * @param pubKey - public key
@@ -155,29 +119,12 @@ function genRandomPrivateKey(): bigint {
   return BigInt(`0x${randomBytes(32)}`);
 }
 
-function randomPubkey(): string {
-  return privateKeyToPubKey(seedToPrivateKey(randomBytes(32)))[1];
-}
-
-function getKeyPair(chainKey: string) {
-  const privateKey = seedToPrivateKey(chainKey);
-  const pubkey = privateKeyToPubKey(privateKey);
-  return {
-    privateKey,
-    pubkey,
-  };
-}
-
 export {
   seedToPrivateKey,
   packPoint,
   unpackPoint,
   ecdh,
-  privateKeyToPubKeyUnpacked,
-  privateKeyToPubKey,
   unpackPubKey,
   random,
-  randomPubkey,
   genRandomPrivateKey,
-  getKeyPair,
 };
