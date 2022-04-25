@@ -103,7 +103,8 @@ export class Node {
 
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    return keysUtils.poseidon([bytesToHex(privateKey)]);
+    const hex = bytesToHex(privateKey);
+    return keysUtils.poseidon([hex]);
   }
 
   signBySpendingKey(message: bigint): Signature {

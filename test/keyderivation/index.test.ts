@@ -119,7 +119,8 @@ describe('Key Derivation/Index', () => {
     await Promise.all(
       VECTORS.map(async (vector) => {
         const node = Node.fromMnemonic(vector.mnemonic);
-        expect(await node.derive(vector.path).getNullifyingKey()).to.equal(vector.nullifyingKey);
+        const nullifyingKey = await node.derive(vector.path).getNullifyingKey();
+        expect(nullifyingKey).to.equal(vector.nullifyingKey);
       }),
     );
   });
