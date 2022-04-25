@@ -244,7 +244,7 @@ describe('Note/ERC20', () => {
       const encrypted = note.encrypt(hexToBytes(vector.sharedKey));
 
       // Check if encrypted values are successfully decrypted
-      const decrypted = Note.decrypt(encrypted, vector.sharedKey);
+      const decrypted = Note.decrypt(encrypted, hexToBytes(vector.sharedKey));
       expect(decrypted.token).to.equal(note.token);
       expect(decrypted.value).to.equal(note.value);
       expect(decrypted.random).to.equal(note.random);
