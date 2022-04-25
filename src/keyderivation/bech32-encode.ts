@@ -3,7 +3,7 @@ import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
 import { hexToBytes } from 'ethereum-cryptography/utils';
 import { bytes, constants } from '../utils';
-import { formatToByteLength, hexToBigInt, nToHex, padToLength } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexToBigInt, nToHex, padToLength } from '../utils/bytes';
 
 export type AddressData = {
   masterPublicKey: bigint;
@@ -30,8 +30,8 @@ const xorChainID = (chainID: string) =>
  */
 function encode(data: AddressData): string {
   const { chainID } = data;
-  const masterPublicKey = formatToByteLength(nToHex(data.masterPublicKey), 32, false);
-  const viewingPublicKey = formatToByteLength(data.viewingPublicKey, 32, false);
+  const masterPublicKey = nToHex(data.masterPublicKey, ByteLength.UINT_256, false);
+  const viewingPublicKey = formatToByteLength(data.viewingPublicKey, ByteLength.UINT_256, false);
 
   const formattedChainID = chainID
     ? (padToLength(chainID.toString(16), 8) as string)

@@ -1,5 +1,5 @@
 import { EncryptedRandom } from '../models/transaction-types';
-import { formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
 
@@ -41,7 +41,7 @@ export class WithdrawNote {
   }
 
   get valueHex() {
-    return formatToByteLength(nToHex(this.value), 16, false);
+    return nToHex(this.value, ByteLength.UINT_128);
   }
 
   /**
@@ -56,6 +56,7 @@ export class WithdrawNote {
         hexToBigInt(this.token.tokenAddress),
         this.value,
       ]),
+      ByteLength.UINT_256,
     );
   }
 

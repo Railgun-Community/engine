@@ -3,11 +3,9 @@
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import { eddsa } from 'circomlibjs';
 import memdown from 'memdown';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
-import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
-import { curve25519, utils } from '@noble/ed25519';
+import { hexToBytes } from 'ethereum-cryptography/utils';
 import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
 import { Wallet } from '../../src/wallet';
@@ -18,10 +16,9 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes';
-import { AddressData, decode } from '../../src/keyderivation/bech32-encode';
+import { formatToByteLength, hexlify, hexToBigInt } from '../../src/utils/bytes';
+import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { getEphemeralKeys, poseidon } from '../../src/utils/keys-utils';
-import { ZERO_ADDRESS } from '../../src/utils/constants';
 import { getSharedSecret } from '../../src/utils/encryption';
 
 chai.use(chaiAsPromised);
@@ -41,7 +38,6 @@ let address: AddressData;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-// const token = '0x7f4925cdf66ddf5b88016df1fe915e68eff8f192';
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const random = '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9';
 const txid = '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b';
@@ -240,7 +236,7 @@ describe('Transaction/ERC20', function () {
     assert.typeOf(hashed, 'bigint');
   });
 
-  it('Should generate ciphertext decryptable by sender and recipient', async () => {
+  it.only('Should generate ciphertext decryptable by sender and recipient', async () => {
     const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
     const note = new Note(wallet2.addressKeys, random, 100n, token);
 
@@ -283,14 +279,11 @@ describe('Transaction/ERC20', function () {
     expect(nullifiers.length).to.equal(1);
     expect(commitmentsOut.length).to.equal(2);
 
-    /*
-    // @todo verify that prover throws for unmatched artifact
-    transaction.outputs = [makeNote(), makeNote(), makeNote()];
+    transaction.outputs = [makeNote(), makeNote(), makeNote(), makeNote()];
 
     await expect(
       transaction.generateInputs(wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith('Too many outputs specified');
-    */
 
     transaction.outputs = [
       new Note(address, random, 6500000000000n, '000925cdf66ddf5b88016df1fe915e68eff8f192'),
@@ -306,15 +299,11 @@ describe('Transaction/ERC20', function () {
       transaction.generateInputs(wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
-    /*
     transaction.outputs = [makeNote(11000000000027360000000000n)];
 
     await expect(
       transaction.generateInputs(wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith(
-      'Balances need to be consolidated before being able to spend this amount',
-    );
-    */
+    ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     const transaction2 = new Transaction('ff', 1);
 

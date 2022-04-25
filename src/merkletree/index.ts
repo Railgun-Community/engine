@@ -5,7 +5,7 @@ import type { Database } from '../database';
 import { LeptonDebugger } from '../models/types';
 import { Ciphertext } from '../models/transaction-types';
 import { constants, hash } from '../utils';
-import { fromUTF8String, numberify, padEven, hexlify } from '../utils/bytes';
+import { fromUTF8String, numberify, hexlify, formatToByteLength, ByteLength } from '../utils/bytes';
 
 export type MerkleProof = {
   leaf: string; // hash of commitment
@@ -75,10 +75,12 @@ const depths = {
 export type TreePurpose = keyof typeof depths;
 
 // Calculate tree zero value
-export const MERKLE_ZERO_VALUE: string = padEven(
+export const MERKLE_ZERO_VALUE: string = formatToByteLength(
   numberify(hash.keccak256(fromUTF8String('Railgun')))
     .mod(constants.SNARK_PRIME)
     .toString('hex'),
+  ByteLength.UINT_256,
+  false,
 );
 class MerkleTree {
   private db: Database;

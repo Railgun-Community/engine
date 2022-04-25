@@ -1,7 +1,7 @@
 // import { poseidon } from 'circomlibjs';
 import { CommitmentPreimage, EncryptedRandom } from '../models/transaction-types';
 import { encryption } from '../utils';
-import { formatEncryptedRandom, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, formatEncryptedRandom, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
 
@@ -42,10 +42,13 @@ export class Deposit {
     preImage: Partial<CommitmentPreimage>;
     encryptedRandom: EncryptedRandom;
   } {
-    const ciphertext = encryption.aes.gcm.encrypt([this.random], nToHex(viewingPrivateKey));
+    const ciphertext = encryption.aes.gcm.encrypt(
+      [this.random],
+      nToHex(viewingPrivateKey, ByteLength.UINT_256),
+    );
     return {
       preImage: {
-        npk: nToHex(this.notePublicKey, true),
+        npk: nToHex(this.notePublicKey, ByteLength.UINT_256, true),
         token: this.tokenData,
         value: this.value,
       },

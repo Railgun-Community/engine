@@ -14,6 +14,7 @@ import { LeptonDebugger } from '../models/types';
 import { BytesData, NoteSerialized } from '../models/transaction-types';
 import {
   arrayify,
+  ByteLength,
   combine,
   formatToByteLength,
   fromUTF8String,
@@ -184,7 +185,10 @@ class Wallet extends EventEmitter {
    * @returns Promise<Uint8Array>
    */
   async signEd25519(message: string | Uint8Array) {
-    return await ed25519.sign(message, nToHex(this.#viewingKeyPair.privateKey));
+    return await ed25519.sign(
+      message,
+      nToHex(this.#viewingKeyPair.privateKey, ByteLength.UINT_256),
+    );
   }
 
   /**
@@ -248,7 +252,7 @@ class Wallet extends EventEmitter {
           // @todo use different key?
           await this.db.getEncrypted(
             this.getWalletDetailsPath(chainID),
-            nToHex(this.masterPublicKey),
+            nToHex(this.masterPublicKey, ByteLength.UINT_256),
           ),
         ),
       );
@@ -287,7 +291,7 @@ class Wallet extends EventEmitter {
         // Derive shared secret
         // eslint-disable-next-line no-await-in-loop
         const sharedKey = await encryption.getSharedKey(
-          nToHex(vpk),
+          nToHex(vpk, ByteLength.UINT_256),
           leaf.ciphertext.ephemeralKeys[0],
         );
 
@@ -324,8 +328,8 @@ class Wallet extends EventEmitter {
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
-          nullifier: nToHex(Note.getNullifier(vpk, position)),
-          decrypted: note.serialize(nToHex(vpk)),
+          nullifier: nToHex(Note.getNullifier(vpk, position), ByteLength.UINT_256),
+          decrypted: note.serialize(nToHex(vpk, ByteLength.UINT_256)),
         };
         writeBatch.push({
           type: 'put',
@@ -545,7 +549,7 @@ class Wallet extends EventEmitter {
     // Write wallet details to db
     await this.db.putEncrypted(
       this.getWalletDetailsPath(chainID),
-      nToHex(this.masterPublicKey),
+      nToHex(this.masterPublicKey, ByteLength.UINT_256),
       msgpack.encode(walletDetails),
     );
 

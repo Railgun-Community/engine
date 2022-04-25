@@ -5,7 +5,13 @@ import { hexToBytes } from 'ethereum-cryptography/utils';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 
 import { Note } from '../../src/note';
-import { hexlify, hexToBigInt } from '../../src/utils/bytes';
+import {
+  ByteLength,
+  formatToByteLength,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+} from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -15,7 +21,7 @@ const vectors = [
   {
     note: {
       npk: '23da85e72baa8d77f476a893de0964ce1ec2957d056b591a19d05bb4b9a549ed',
-      token: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      token: '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
       value: '0000000000000000086aa1ade61ccb53',
       encryptedRandom: [
         '0x5c4a783fd15546fbad149c673b7139790a9cf62ec849a5a8e6a167815ee2d08d',
@@ -30,7 +36,7 @@ const vectors = [
   {
     note: {
       npk: '0bb21912817ea606faf03c0c3d62b37f75be41daee5e784a6f5db9b4f6591bdb',
-      token: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
+      token: 'df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
       value: '000000000000000007cf6b5ae17ae75a',
       encryptedRandom: [
         '0xf401e001c520b9f40d37736c0ef2309fa9b2dc97bf1634ac1443fc2fe5359f69',
@@ -45,7 +51,7 @@ const vectors = [
   {
     note: {
       npk: '233845eec9a6b6c4d9a40117d54130e9a912d834eedbf819af31782878bb6256',
-      token: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
+      token: '34e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
       value: '00000000000000000b9df0087cbbd709',
       encryptedRandom: [
         '0x4b0b63e8f573bf29cabc8e840c5db89892c0acc3f30bbdf6ad9d39ac9485fa49',
@@ -60,7 +66,7 @@ const vectors = [
   {
     note: {
       npk: '25d40e7f08d6fa7698f389f9654e54895f60fa4f7b54ce0b4e3e1ba7172738b0',
-      token: '0000000000000000000000009b71cad96341485290d3f1376fb9e969a632694d',
+      token: '9b71cad96341485290d3f1376fb9e969a632694d',
       value: '00000000000000000ac76747c40dda3a',
       encryptedRandom: [
         '0xe9abf13a310d1910d3010a1cf8b5c03a50c228f1fe81de21734479398973ec77',
@@ -75,7 +81,7 @@ const vectors = [
   {
     note: {
       npk: '251a55948f8127b1d4f1f50c24a7889efda01dd968055a1e4cde3e9a1706ab8b',
-      token: '00000000000000000000000089d21609e4ea344c576d1692ceca0f0e0bf4b771',
+      token: '89d21609e4ea344c576d1692ceca0f0e0bf4b771',
       value: '00000000000000000475d82f700206b8',
       encryptedRandom: [
         '0x7462849ef8b7bdbb9deeae7983f84334d934d129bd7a7e926bd87b6cf0053e0d',
@@ -90,7 +96,7 @@ const vectors = [
   {
     note: {
       npk: '0e47233036d5a9d5762b3c619d648f77bb6ae78c5897474a08fc221ff1d23abc',
-      token: '0000000000000000000000006f2870a30f4ff19f073fe894d6fe881f0c04657f',
+      token: '6f2870a30f4ff19f073fe894d6fe881f0c04657f',
       value: '000000000000000003426801bd08640b',
       encryptedRandom: [
         '0xe501c3195c8a4cc2134ed19d69ba1208a4c7f4ef6f33c2c5e51655f919d4855e',
@@ -105,7 +111,7 @@ const vectors = [
   {
     note: {
       npk: '1c22a5df62aece44424c3044b6069397ee02933478a1be1c3c1dbde7c3283095',
-      token: '0000000000000000000000004224904029a556a7cd0bc78d81b165c391fffb45',
+      token: '4224904029a556a7cd0bc78d81b165c391fffb45',
       value: '000000000000000003449e13312815a6',
       encryptedRandom: [
         '0x1bef951429c37eaa69190cb635591d122ffe959d690366876e9f1704aa37bb18',
@@ -120,7 +126,7 @@ const vectors = [
   {
     note: {
       npk: '2097ccb284370aad7fae52669f84e1466b0fd00f79c02b18e9ed8b61866d0424',
-      token: '000000000000000000000000480bdc4d52df318db7b458b171540a936dc39a07',
+      token: '480bdc4d52df318db7b458b171540a936dc39a07',
       value: '000000000000000008d210fd771f72ab',
       encryptedRandom: [
         '0x789ee74fc10fd3b8daac3846b307d7d20db76ca9d5b6894c78f58b2ebc0303e4',
@@ -135,7 +141,7 @@ const vectors = [
   {
     note: {
       npk: '1f477464f3c896c4cf74d66019f2dffb27d825c1d38800b671f96a52772f22ee',
-      token: '0000000000000000000000008afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
+      token: '8afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
       value: '0000000000000000060c736c94f022c6',
       encryptedRandom: [
         '0x82df79ed67267bd528f0302a95129bbb56d04fab22f95af35b03d2c07ac75737',
@@ -150,7 +156,7 @@ const vectors = [
   {
     note: {
       npk: '013a628aa76f883a6546a963424eb561d4d3221317d29d7f4a67236fe95aec61',
-      token: '0000000000000000000000004f53cbc84f501847cf42bd9fb14d63be21dcffc8',
+      token: '4f53cbc84f501847cf42bd9fb14d63be21dcffc8',
       value: '0000000000000000005589f7d39c59bf',
       encryptedRandom: [
         '0x4732f678e893c09c6393be8f8fcc5eee1d9a1078a16151dcae2d65f2d78edc4b',
@@ -174,13 +180,12 @@ const ciphertextVectors = [
     },
     sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
     ciphertext: {
-      iv: '00000000000000000000000000000000ac1479a356621f493a6d8b3ca99d1a25',
+      iv: '0x5f8c104eec6e72996078ca3149a153c0',
+      tag: '0xb1959596279a0c3bd9ec7e16f2fad8c6',
       data: [
-        '1f7bb778c84a9786dc1beeb1b7cc108834752a386a9921c9c6f26b2312d3ea63',
-        '58335f95ae23341654bc45b9e308b16f3945dc7835a99f9fbce44e4aa4544b05',
-        '742397c6aa7dbaacc6d02b8cffde96b3d5523a00e2691a9c6e9628e9fd3c995d',
-        '995c4bca7a0ba8ff0c6e5f5826a9151db4d2333c6fc5014cb3dae0d8a9461db7',
-        '8d1c0bbec99872b751c2f19188beaf216282d64ec50aa055acb99cfd2332cf55',
+        'ed60c5dc0304f63e6e201e2311467bd112b90224dfd523eeaafd2e59b66198c0',
+        '3f67deea78b30df94e415d01296aee9e84f30a13',
+        '09c6e5e8efc57491911d2d5b36acb6d585b1d784185a5ac0b0bba1ece3a68c36',
       ],
     },
   },
@@ -193,13 +198,12 @@ const ciphertextVectors = [
     },
     sharedKey: 'c8c2a74bacf6ce3158069f81202d8c2d81fd25d226d7536f26442888c014a755',
     ciphertext: {
-      iv: '00000000000000000000000000000000dcad5707d7af6abc9574e6fd8b7a78bc',
+      iv: '0xf5bab8e512e9f729f65f21369a86db56',
+      tag: '0xa800eff5cfbe3b6bb0523057957e105b',
       data: [
-        '3eb25c527d434bb07a424f48a061fd00d0f90ee30e9a2f92d07716d12ac498a7',
-        '0b09a3d591397034d39f6b1fa6292af8795f20af315b9ab7f0ff1cd42bc1d2b6',
-        'f7425271fbbf8a09bd774886d8e2a93ea500a384dde272ea7479deec61fcf15e',
-        'da1d87d35f2a8a58f2f24aa161aec30b4d19b990c4e15c2e9d9fcc0071475343',
-        'a25bc95d76915893cb6a2fd1718f7101d31423657917b1895d45d3f2a87bf45c',
+        '3410be7a6027e32e6ff52e46cbef9b22492329a8e9cd3a9c4e39e421280c1c62',
+        'e49b63bc7de8973064b43cd556d3c9d975eafa35',
+        'bc8ab045ae8452b79881b1bc201ef85bc6a24ddd6b646710e27e663a751335bd',
       ],
     },
   },
@@ -212,26 +216,26 @@ const ciphertextVectors = [
     },
     sharedKey: '4676adb24e597086894880767f274818f711233eda9d617b348bb1cf92dd35e5',
     ciphertext: {
-      iv: '00000000000000000000000000000000becd0762e4c0e44ce4104246431a37e8',
+      iv: '0xb9a10ed717b6102d8943bdf0190947f4',
+      tag: '0x20f0fa2bb52614c833076b6dd2dbe40f',
       data: [
-        '3709e9d719d12d1c121d73abcf61281e6c0f1278f877546821d2e7e3b7f6be41',
-        '40ddbe18f5b3cccf1204b77dcdb5a6e663bf97c76a5604dc9ff94f838cc4f7ec',
-        '87c30c7a60a85a82e83c22f053b19ec988637b02d62eaf827c635d22c6c73b1d',
-        'ecc046188ba314a96bc6eceffcfc20a8310f752f0e47a022363aaa4800463e1c',
-        '0d561cec83799299847a2d073218861442e432778773443a176ed078adcb4016',
+        'd0e4bd3f27ac20e748cd799125bff35c3e6e7222c838931f2d7fe7093d387fb2',
+        '56b67175b0f447c630c2603db983612eb21dcd9b',
+        'd73a3634b0b1bdcefdbdb870b7b05bb6dda74f207bd90932655434c2a9dbf677',
       ],
     },
   },
 ];
 
 describe('Note/ERC20', () => {
-  // TODO: update this unit-test to use tag
   it('Should encrypt and decrypt notes', () => {
     ciphertextVectors.forEach((vector) => {
+      const viewingPublicKey = hexToBytes(vector.note.pubkey);
+
       // Create Note object
       const address = {
         masterPublicKey: hexToBigInt(vector.note.pubkey),
-        viewingPublicKey: hexToBytes(vector.note.pubkey),
+        viewingPublicKey,
       };
       const note = new Note(
         address,
@@ -240,19 +244,27 @@ describe('Note/ERC20', () => {
         vector.note.token,
       );
 
+      const sharedKeyBytes = hexToBytes(vector.sharedKey);
+
       // Get encrypted values
-      const encrypted = note.encrypt(hexToBytes(vector.sharedKey));
+      const encrypted = note.encrypt(sharedKeyBytes);
 
       // Check if encrypted values are successfully decrypted
-      const decrypted = Note.decrypt(encrypted, hexToBytes(vector.sharedKey));
+      const decrypted = Note.decrypt(encrypted, sharedKeyBytes);
       expect(decrypted.token).to.equal(note.token);
       expect(decrypted.value).to.equal(note.value);
       expect(decrypted.random).to.equal(note.random);
       expect(decrypted.hash).to.equal(note.hash);
-      // ).to.deep.equal(note);
 
       // Check if vector encrypted values are successfully decrypted
-      // expect(Note.decrypt(vector.ciphertext, vector.sharedKey)).to.deep.equal(note);
+      const decryptedFromCiphertext = Note.decrypt(vector.ciphertext, sharedKeyBytes);
+      expect(decryptedFromCiphertext.token).to.equal(note.token);
+      expect(decryptedFromCiphertext.value).to.equal(note.value);
+      expect(decryptedFromCiphertext.valueHex).to.equal(nToHex(note.value, ByteLength.UINT_128));
+      expect(decryptedFromCiphertext.random).to.equal(note.random);
+      expect(decryptedFromCiphertext.hash).to.equal(note.hash);
+      expect(decryptedFromCiphertext.masterPublicKey).to.equal(address.masterPublicKey);
+      expect(decryptedFromCiphertext.viewingPublicKey).to.deep.equal(new Uint8Array());
     });
   });
 
@@ -265,21 +277,20 @@ describe('Note/ERC20', () => {
       const note = Note.deserialize(vector.note, hexToBigInt(vector.vpk), address);
       expect(hexlify(note.random)).to.equal(vector.random);
 
-      // @todo update hashes
-      // expect(note.hash).to.equal(vector.hash);
+      const hexHash = nToHex(note.hash, ByteLength.UINT_256);
+      expect(hexHash).to.equal(vector.hash);
 
       const reserialized = note.serialize(vector.vpk);
 
       expect(reserialized.encryptedRandom).not.to.equal(vector.note.encryptedRandom);
       expect(reserialized.npk).to.equal(vector.note.npk);
       expect(reserialized.value).to.equal(vector.note.value);
-      // @todo padding otherwise ok
-      // expect(reserialized.token).to.equal(vector.note.token);
+      expect(reserialized.token).to.equal(vector.note.token);
 
       const serializedContract = note.serialize(vector.vpk, true);
       expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
       expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
-      // expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
+      expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
     });
   });
 
@@ -331,12 +342,10 @@ describe('Note/ERC20', () => {
 
     const v = nullifierVectors[0];
     expect(Note.getNullifier(hexToBigInt(v.privateKey), v.position)).to.be.a('bigint');
-    /*
-    nullifierVectors.forEach((vector) => {
-      expect(Note.getNullifier(hexToBigInt(vector.privateKey), vector.position)).to.equal(
-        vector.nullifier,
-      );
-    });
-    */
+    // nullifierVectors.forEach((vector) => {
+    //   const nullifier = Note.getNullifier(hexToBigInt(vector.privateKey), vector.position);
+    //   const hexNullifier = nToHex(nullifier, ByteLength.UINT_256);
+    //   expect(hexNullifier).to.equal(vector.nullifier);
+    // });
   });
 });

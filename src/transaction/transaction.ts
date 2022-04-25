@@ -4,7 +4,14 @@ import { babyjubjub, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
-import { formatToByteLength, HashZero, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import {
+  ByteLength,
+  formatToByteLength,
+  HashZero,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+} from '../utils/bytes';
 import { findSolutions } from './solutions';
 import {
   AdaptID,
@@ -267,11 +274,11 @@ class Transaction {
   }
 
   static get zeroProof(): Proof {
-    const zero = nToHex(BigInt(0));
+    const zero = nToHex(BigInt(0), ByteLength.UINT_8);
     // prettier-ignore
     return {
       a: [zero, zero],
-      b: [ [zero, zero], [zero, zero]],
+      b: [[zero, zero], [zero, zero]],
       c: [zero, zero],
     };
   }

@@ -9,11 +9,9 @@ export enum ByteLength {
   UINT_120 = 15,
   UINT_128 = 16,
   Address = 20,
+  UINT_192 = 24,
   UINT_256 = 32,
 }
-
-// pad hex string to even length with 0 if it is not even
-export const padEven = (str: string): string => (str.length % 2 === 0 ? str : `0${str}`);
 
 // returns true if string is prefixed with '0x'
 const isPrefixed = (str: string): boolean => str.startsWith('0x');
@@ -25,32 +23,12 @@ const prefix0x = (str: string): string => (isPrefixed(str) ? str : `0x${str}`);
 const strip0x = (str: string): string => (isPrefixed(str) ? str.slice(2) : str);
 
 /**
- * Convert bigint to hex string, 0-padded to even length
- * @param {bigint} n - a bigint
- * @param {boolean} prefix - prefix hex with 0x
- * @return {string} even-length hex
- */
-export function nToHex(n: bigint, prefix: boolean = false): string {
-  if (n < 0) throw new Error('bigint must be positive');
-  const hex = padEven(n.toString(16));
-  return prefix ? prefix0x(hex) : hex;
-}
-
-/**
  * convert hex string to BigInt, prefixing with 0x if necessary
  * @param {string} str
  * @returns {bigint}
  */
 export function hexToBigInt(str: string): bigint {
   return BigInt(prefix0x(str));
-}
-/**
- * Convert bigint to Uint8Array
- * @param {bigint} value
- * @returns {Uint8Array}
- */
-export function nToBytes(n: bigint): Uint8Array {
-  return hexToBytes(nToHex(n));
 }
 
 export function u8ToBigInt(u8: Uint8Array): bigint {
@@ -344,8 +322,29 @@ function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'):
  * @param length - length to format to
  * @returns formatted data
  */
-function formatToByteLength(data: BytesData, length: number, prefix = true): string {
+function formatToByteLength(data: BytesData, length: ByteLength, prefix = true): string {
   return trim(padToLength(hexlify(data, prefix), length), length) as string;
+}
+
+/**
+ * Convert bigint to hex string, 0-padded to even length
+ * @param {bigint} n - a bigint
+ * @param {boolean} prefix - prefix hex with 0x
+ * @return {string} even-length hex
+ */
+export function nToHex(n: bigint, byteLength: ByteLength, prefix: boolean = false): string {
+  if (n < 0) throw new Error('bigint must be positive');
+  const hex = formatToByteLength(n.toString(16), byteLength, prefix);
+  return prefix ? prefix0x(hex) : hex;
+}
+
+/**
+ * Convert bigint to Uint8Array
+ * @param {bigint} value
+ * @returns {Uint8Array}
+ */
+export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
+  return hexToBytes(nToHex(n, byteLength));
 }
 
 /**

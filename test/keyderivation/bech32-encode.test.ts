@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { hexToBytes } from 'ethereum-cryptography/utils';
 
 import { encode, decode, ADDRESS_LENGTH_LIMIT } from '../../src/keyderivation/bech32-encode';
-import { formatToByteLength } from '../../src/utils/bytes';
+import { ByteLength, formatToByteLength, hexToBigInt } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -37,8 +37,8 @@ describe('Key Derivation/Bech32 Encode', () => {
 
     vectors.forEach((vector, index) => {
       const v = {
-        masterPublicKey: BigInt(`0x${vector.pubkey}`),
-        viewingPublicKey: hexToBytes(formatToByteLength(vector.pubkey, 32, false)),
+        masterPublicKey: hexToBigInt(vector.pubkey),
+        viewingPublicKey: hexToBytes(formatToByteLength(vector.pubkey, ByteLength.UINT_256, false)),
         chainID: vector.chainID,
         version: vector.version,
       };

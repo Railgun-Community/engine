@@ -1,7 +1,7 @@
 import * as curve25519 from '@noble/ed25519';
 import { eddsa, poseidon } from 'circomlibjs';
 import { randomBytes } from '@noble/hashes/utils';
-import { hexlify, hexToBigInt, nToHex } from './bytes';
+import { ByteLength, hexlify, hexToBigInt, nToHex } from './bytes';
 
 function getPrivateSpendingKey(seed: string): bigint {
   return poseidon([hexToBigInt(seed)]);
@@ -24,7 +24,7 @@ function getRandomScalar(): bigint {
 }
 
 function signEDDSA(privateKey: bigint, message: bigint): [bigint, bigint, bigint] {
-  const signature = eddsa.signPoseidon(nToHex(privateKey), message);
+  const signature = eddsa.signPoseidon(nToHex(privateKey, ByteLength.UINT_256), message);
   return [signature.R8[0], signature.R8[1], signature.S];
 }
 
@@ -43,7 +43,7 @@ function verifyEDDSA(msg: bigint, signature: [bigint, bigint, bigint], pubkey: [
  * @returns {[Uint8Array, Uint8Array]} [senderEK, recipientEK]
  */
 function getEphemeralKeys(senderVPK: Uint8Array, recipientVPK: Uint8Array): Promise<Uint8Array[]> {
-  const r = nToHex(getRandomScalar());
+  const r = nToHex(getRandomScalar(), ByteLength.UINT_256);
 
   return Promise.all(
     [senderVPK, recipientVPK].map(

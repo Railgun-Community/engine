@@ -2,6 +2,7 @@ import BN from 'bn.js';
 import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
 import {
+  ByteLength,
   formatEncryptedRandom,
   formatToByteLength,
   hexlify,
@@ -51,7 +52,7 @@ export class Note {
   }
 
   get valueHex(): string {
-    return formatToByteLength(nToHex(this.value), 16, false);
+    return nToHex(this.value, ByteLength.UINT_128);
   }
 
   get notePublicKey(): bigint {
@@ -117,11 +118,11 @@ export class Note {
 
   format(prefix: boolean = false) {
     return {
-      masterPublicKey: formatToByteLength(nToHex(this.masterPublicKey), 32, prefix),
-      npk: formatToByteLength(nToHex(this.notePublicKey), 32, prefix),
-      token: formatToByteLength(this.token, 20, prefix),
-      value: formatToByteLength(this.valueHex, 16, prefix),
-      random: formatToByteLength(this.random, 16, prefix),
+      masterPublicKey: nToHex(this.masterPublicKey, ByteLength.UINT_256, prefix),
+      npk: nToHex(this.notePublicKey, ByteLength.UINT_256, prefix),
+      token: formatToByteLength(this.token, ByteLength.Address, prefix),
+      value: formatToByteLength(this.valueHex, ByteLength.UINT_128, prefix),
+      random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
     };
   }
 
@@ -162,7 +163,10 @@ export class Note {
       tag: encryptedRandom[0].substring(32),
       data: [encryptedRandom[1]],
     };
-    const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, nToHex(viewingPrivateKey));
+    const decryptedRandom = encryption.aes.gcm.decrypt(
+      ciphertext,
+      nToHex(viewingPrivateKey, ByteLength.UINT_256),
+    );
     const ivTag = decryptedRandom[0];
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(
