@@ -8,5 +8,5 @@ declare module 'circomlibjs' {
     export function signPoseidon(prv: Uint8Array, msg: bigint): Signature;
     export function prv2pub(prv: Uint8Array): [bigint, bigint];
   }
-  export function poseidon(inputs: bigint[] | string[]): bigint;
+  export function poseidon(inputs: bigint[]): bigint;
 }

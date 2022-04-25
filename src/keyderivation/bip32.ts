@@ -1,7 +1,7 @@
 import { Signature } from 'circomlibjs';
 import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
 import { hash, keysUtils } from '../utils';
-import { fromUTF8String } from '../utils/bytes';
+import { fromUTF8String, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 import { KeyNode } from '../models/types';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
@@ -103,8 +103,7 @@ export class Node {
 
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    const hex = bytesToHex(privateKey);
-    return keysUtils.poseidon([hex]);
+    return keysUtils.poseidon([hexToBigInt(bytesToHex(privateKey))]);
   }
 
   signBySpendingKey(message: bigint): Signature {
