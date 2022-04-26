@@ -17,7 +17,7 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength, hexlify } from '../../src/utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, nToHex } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
 
@@ -173,20 +173,26 @@ const getTestData = () => {
 let testData: any;
 
 const depositLeaf = {
-  hash: '25b529619b894ef742f9c0f9f98243feeb6ef54ee63a8059a908b33d4ce31b0e',
+  hash: nToHex(
+    12837823496271515477858227314042914801463879010592948180372631930127964543691n,
+    ByteLength.UINT_256,
+  ),
   txid: '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
   preimage: {
-    npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
+    npk: nToHex(
+      3244638229673874225039454787368298151974170645387027288760790963187005112154n,
+      ByteLength.UINT_256,
+    ),
     token: {
-      tokenAddress: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
+      tokenAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
       tokenType: '0x0000000000000000000000000000000000000000',
       tokenSubID: '0x0000000000000000000000000000000000000000',
     },
     value: '000000000000021cbfcc6fd98333b5f1',
   },
   encryptedRandom: [
-    '0x7797f244fc1c60af03f25cbe9a798080b920733cc2de2456af21ee7c9eb1ca0c',
-    '0x118beef50353ab8512be871c0473e219',
+    '0x99e9c738ba1c2e1aedaf01cfdfe9e62fb5520304d1ecd9cac2f8f5a0daa15a96',
+    '0x7a62cf0b7eb981ea001b48f15185975d91764ccf7a1dc6b693f8d5bcfe0e37ae',
   ],
 };
 

@@ -248,7 +248,7 @@ describe('Contract/Index', function () {
     expect(resultNullifiers.length).to.equal(2);
   }).timeout(120000);
 
-  it('Should get note hashes', async function run() {
+  it('[HH] Should get note hashes', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
