@@ -5,7 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
 
-import { Lepton, Transaction } from '../src';
+import { Lepton, Note, Transaction } from '../src';
 
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
@@ -124,7 +124,7 @@ describe('Lepton', function () {
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getViewingKeyPair().privateKey;
-    const value = 11000000n * 10n ** 18n;
+    const value = 110000n * 10n ** 18n;
     const random = babyjubjub.random();
     const deposit = new Deposit(mpk, random, value, token.address);
 
@@ -137,8 +137,8 @@ describe('Lepton', function () {
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    expect(balance).to.equal(10972568578553615960099750n);
-    // expect(balance).to.equal(10972500000000000000000000n); // TODO-CRITICAL: This is the correct value.
+    expect(balance).to.equal(109725685785536159600997n);
+    // expect(balance).to.equal(109725000000000000000000n); // TODO-CRITICAL: This is the correct value.
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
@@ -147,6 +147,9 @@ describe('Lepton', function () {
       300n * 10n ** 18n,
       config.contracts.treasury,
     );
+
+    // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
+    transaction.outputs = [new Note(wallet.addressKeys, random, 1n * 10n ** 18n, tokenAddress)];
 
     const proof = await transaction.prove(
       lepton.prover,
@@ -160,19 +163,9 @@ describe('Lepton', function () {
     await awaitScan(wallet, chainID);
 
     assert.isTrue(
-      (await wallet.getBalance(chainID, tokenAddress)) === 10972500000000000000000000n,
+      (await wallet.getBalance(chainID, tokenAddress)) === 109424000000000000000000n, // 109725(decimals) - 300(dec) - 1(dec)
       'Failed to receive expected balance',
     );
-    /*
-    transaction.outputs = [
-      new Note(
-        babyjubjub.privateKeyToPubKey(babyjubjub.seedToPrivateKey(bytes.random(32))),
-        '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-        new BN('300', 10),
-        config.contracts.rail,
-      ),
-    ];
-      */
   }).timeout(900000);
 
   it('Should set/get last synced block', async () => {
