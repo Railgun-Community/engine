@@ -117,8 +117,10 @@ class Transaction {
     const nullifyingKey = wallet.getNullifyingKey();
     const viewingKey = wallet.getViewingKeyPair();
 
+    const outputTotal = this.outputs.reduce((left, right) => left + right.value, 0n);
+
     // Calculate total required to be supplied by UTXOs
-    const totalRequired = this.outputs.reduce((left, right) => left + right.value, 0n); // - this.withdrawNote?.value ?? 0n;
+    const totalRequired = outputTotal + this.withdrawValue;
 
     // Check if there's too many outputs
     if (this.outputs.length > 3) throw new Error('Too many outputs specified');
@@ -178,7 +180,6 @@ class Transaction {
     const totalOut =
       this.outputs.reduce((left, right) => left + right.value, 0n) + this.withdrawValue;
 
-    // @todo for withdraw change should not be negative etc
     const change = totalIn - totalOut;
 
     // Create change output
