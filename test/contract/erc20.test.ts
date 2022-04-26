@@ -1,15 +1,12 @@
 /* globals describe it beforeEach afterEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
 import { CallOverrides, ethers } from 'ethers';
-
 import memdown from 'memdown';
 import { ERC20RailgunContract } from '../../src/contract';
 import { Note, WithdrawNote } from '../../src/note';
 import { Transaction } from '../../src/transaction';
 import { Lepton } from '../../src';
-
 import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
