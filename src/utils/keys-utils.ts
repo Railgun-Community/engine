@@ -1,7 +1,6 @@
 import * as curve25519 from '@noble/ed25519';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { randomBytes } from '@noble/hashes/utils';
-import { bytesToHex } from 'ethereum-cryptography/utils';
 import { hexlify } from './bytes';
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
@@ -18,7 +17,7 @@ function getRandomScalar(): bigint {
 }
 
 function signEDDSA(privateKey: Uint8Array, message: bigint): Signature {
-  return eddsa.signPoseidon(bytesToHex(privateKey), message);
+  return eddsa.signPoseidon(Buffer.from(privateKey), message);
 }
 
 function verifyEDDSA(msg: bigint, signature: Signature, pubkey: [bigint, bigint]) {

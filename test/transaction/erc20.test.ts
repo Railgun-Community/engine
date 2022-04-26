@@ -268,7 +268,7 @@ describe('Transaction/ERC20', function () {
 
     assert.isTrue(keysUtils.verifyEDDSA(msg, sig, pubkey));
 
-    expect(signature).to.deep.equal(keysUtils.signEDDSA(privateKey, msg));
+    expect(sig).to.deep.equal(keysUtils.signEDDSA(privateKey, msg));
   });
 
   it('Should generate inputs for transaction', async () => {
