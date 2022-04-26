@@ -267,20 +267,21 @@ describe('Note/ERC20', () => {
         masterPublicKey: hexToBigInt(vector.pubkey),
         viewingPublicKey: hexToBytes(vector.pubkey),
       };
-      const note = Note.deserialize(vector.note, hexToBigInt(vector.vpk), address);
+      const vectorBytes = hexToBytes(vector.vpk);
+      const note = Note.deserialize(vector.note, vectorBytes, address);
       expect(hexlify(note.random)).to.equal(vector.random);
 
       const hexHash = nToHex(note.hash, ByteLength.UINT_256);
       expect(hexHash).to.equal(vector.hash);
 
-      const reserialized = note.serialize(vector.vpk);
+      const reserialized = note.serialize(vectorBytes);
 
       expect(reserialized.encryptedRandom).not.to.equal(vector.note.encryptedRandom);
       expect(reserialized.npk).to.equal(vector.note.npk);
       expect(reserialized.value).to.equal(vector.note.value);
       expect(reserialized.token).to.equal(vector.note.token);
 
-      const serializedContract = note.serialize(vector.vpk, true);
+      const serializedContract = note.serialize(vectorBytes, true);
       expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
       expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
       expect(serializedContract.token).to.equal(`0x${vector.note.token}`);

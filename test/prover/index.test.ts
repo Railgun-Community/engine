@@ -1,7 +1,7 @@
-/* globals describe it beforeEach */
-import chai from 'chai';
-import chaiAsPromised from 'chai-as-promised';
-import { artifactsGetter } from '../helper';
+// /* globals describe it beforeEach */
+// import chai from 'chai';
+// import chaiAsPromised from 'chai-as-promised';
+// import { artifactsGetter } from '../helper';
 
 /*
 import { Prover, PrivateInputs, FormattedCircuitInputs, PublicInputs } from '../../src/prover';

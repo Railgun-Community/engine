@@ -1,4 +1,4 @@
-/* globals describe it */
+/* globals describe */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 // import { getMasterKeyFromSeed } from '../../src/keyderivation/bip32';
