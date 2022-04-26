@@ -57,6 +57,10 @@ class Lepton {
     }
   }
 
+  static setLeptonDebugger = (leptonDebugger: LeptonDebugger) => {
+    LeptonDebug.init(leptonDebugger);
+  };
+
   /**
    * Handle new commitment events and kick off balance scan on wallets
    * @param chainID - chainID of commitments
