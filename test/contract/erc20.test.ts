@@ -98,7 +98,7 @@ describe('Contract/Index', function () {
     );
   });
 
-  it('[HH] Should return gas estimate number', async function run() {
+  it('[HH] Should return gas estimate for dummy transaction', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
