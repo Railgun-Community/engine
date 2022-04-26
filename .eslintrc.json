@@ -35,7 +35,8 @@
     "no-empty-function": "off",
     "no-unused-vars": "off",
     "no-bitwise": "off",
-    "@typescript-eslint/no-unused-vars": "error"
+    "@typescript-eslint/no-unused-vars": "error",
+    "no-promise-executor-return": "off"
   },
   "ignorePatterns": [
     "dist/*"
