@@ -34,7 +34,6 @@ let contract: ERC20RailgunContract;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
-// const { log } = console;
 
 // eslint-disable-next-line func-names
 describe('Lepton', function () {
@@ -138,7 +137,6 @@ describe('Lepton', function () {
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
     expect(balance).to.equal(109725685785536159600997n);
-    // expect(balance).to.equal(109725000000000000000000n); // TODO-CRITICAL: This is the correct value.
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
@@ -163,7 +161,8 @@ describe('Lepton', function () {
     await awaitScan(wallet, chainID);
 
     assert.isTrue(
-      (await wallet.getBalance(chainID, tokenAddress)) === 109424000000000000000000n, // 109725(decimals) - 300(dec) - 1(dec)
+      // 109725685785536159600997 - (300 - (300 * 10000)/ (10000 + 25) + 1 + 300) * 10^18
+      (await wallet.getBalance(chainID, tokenAddress)) === 109423937655890349127181n, // deposit amount - 300(dec) - withdraw fee - 1(dec)
       'Failed to receive expected balance',
     );
   }).timeout(900000);
