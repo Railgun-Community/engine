@@ -1,4 +1,3 @@
-/* eslint-disable no-bitwise */
 import BN from 'bn.js';
 import crypto from 'crypto';
 import { hexToBytes } from 'ethereum-cryptography/utils';

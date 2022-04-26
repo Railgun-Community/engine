@@ -1,4 +1,4 @@
-import { Signature } from 'circomlibjs';
+import { Signature } from 'circomlib';
 import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
 import {

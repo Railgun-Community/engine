@@ -1,4 +1,4 @@
-// import { poseidon } from 'circomlibjs';
+// import { poseidon } from 'circomlib';
 import { CommitmentPreimage, EncryptedRandom } from '../models/transaction-types';
 import { encryption } from '../utils';
 import { ByteLength, formatEncryptedRandom, hexToBigInt, nToHex } from '../utils/bytes';

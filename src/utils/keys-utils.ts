@@ -1,5 +1,5 @@
 import * as curve25519 from '@noble/ed25519';
-import { eddsa, poseidon, Signature } from 'circomlibjs';
+import { eddsa, poseidon, Signature } from 'circomlib';
 import { randomBytes } from '@noble/hashes/utils';
 import { hexlify } from './bytes';
 

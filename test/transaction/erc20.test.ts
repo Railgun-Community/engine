@@ -6,7 +6,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import { hexToBytes } from 'ethereum-cryptography/utils';
-import { Signature } from 'circomlibjs';
+import { Signature } from 'circomlib';
 import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
 import { Wallet } from '../../src/wallet';
@@ -17,7 +17,7 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength, hexlify } from '../../src/utils/bytes';
+import { formatToByteLength } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
 

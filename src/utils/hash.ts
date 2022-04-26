@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { utils as ethersutils } from 'ethers';
 // @ts-ignore
-import { poseidon as poseidonHash } from 'circomlibjs';
+import { poseidon as poseidonHash } from 'circomlib';
 import { arrayify, ByteLength, formatToByteLength, hexlify, numberify } from './bytes';
 import { BytesData } from '../models/transaction-types';
 
@@ -135,7 +135,7 @@ function keccak256(preimage: BytesData): string {
  * @returns hash
  */
 function poseidon(preimage: BytesData[]): string {
-  // TODO: Remove reliance on circomlibjs
+  // TODO: Remove reliance on circomlib
   // Convert all bytes into bigints (typing issue)
   const preimageFormatted = preimage.map((bytedata) => BigInt(numberify(bytedata).toString(10)));
 

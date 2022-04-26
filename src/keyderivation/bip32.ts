@@ -1,4 +1,4 @@
-import { Signature } from 'circomlibjs';
+import { Signature } from 'circomlib';
 import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
 import { hash, keysUtils } from '../utils';
 import { fromUTF8String, hexToBigInt } from '../utils/bytes';
