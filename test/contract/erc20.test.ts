@@ -101,6 +101,23 @@ describe('Contract/Index', function () {
     );
   });
 
+  it('[HH] Should return gas estimate number', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+    await testDeposit();
+
+    const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
+
+    const tx = await contract.transact([dummyTx], {
+      from: '0x000000000000000000000000000000000000dEaD',
+    });
+
+    expect(await provider.estimateGas(tx)).to.be.greaterThanOrEqual(0);
+  });
+
   it.skip('[HH] Should return gas estimate number - relay', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
@@ -115,7 +132,7 @@ describe('Contract/Index', function () {
     const random = babyjubjub.random();
 
     const overrides: CallOverrides = {
-      from: '0x0000000000000000000000000000000000000000',
+      from: '0x000000000000000000000000000000000000dEaD',
     };
 
     expect((await contract.relay([dummyTx], random, true, [call], overrides)).gasLimit).to.throw(); // greaterThanOrEqual(0);
