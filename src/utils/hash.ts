@@ -154,17 +154,27 @@ function poseidon(preimage: BytesData[]): string {
  * @param keyLength - length of output
  * @param digest - hash function to use
  */
-function pbkdf2(
+async function pbkdf2(
   secret: BytesData,
   salt: BytesData,
   iterations: number,
   keyLength: number,
   digest: PBKDF2Digest,
-): string {
+): Promise<string> {
   const secretFormatted = new Uint8Array(arrayify(secret));
   const saltFormatted = new Uint8Array(arrayify(salt));
 
-  return hexlify(crypto.pbkdf2Sync(secretFormatted, saltFormatted, iterations, keyLength, digest));
+  const key: Buffer = await new Promise((resolve) =>
+    crypto.pbkdf2(
+      secretFormatted,
+      saltFormatted,
+      iterations,
+      keyLength,
+      digest,
+      (_err: Error | null, derivedKey: Buffer) => resolve(derivedKey),
+    ),
+  );
+  return hexlify(key);
 }
 
 export { sha256, sha512, sha512HMAC, keccak256, poseidon, pbkdf2 };
