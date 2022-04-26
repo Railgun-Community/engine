@@ -10,8 +10,9 @@ import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { bytes } from './utils';
 import { Wallet } from './wallet';
+import { CommitmentEvent } from './contract/erc20';
+import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
-import { CommitmentEvent } from './contract/erc20/events';
 import { BytesData } from './models/transaction-types';
 
 export type AccumulatedEvents = {
@@ -36,8 +37,6 @@ class Lepton {
 
   readonly quickSync: QuickSync | undefined;
 
-  readonly leptonDebugger: LeptonDebugger | undefined;
-
   /**
    * Create a lepton instance
    * @param leveldown - abstract-leveldown compatible store
@@ -53,7 +52,9 @@ class Lepton {
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
     this.quickSync = quickSync;
-    this.leptonDebugger = leptonDebugger;
+    if (leptonDebugger) {
+      LeptonDebug.init(leptonDebugger);
+    }
   }
 
   /**
@@ -66,9 +67,7 @@ class Lepton {
   async listener(chainID: number, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
     // Queue leaves to merkle tree
     await this.merkletree[chainID].erc20.queueLeaves(treeNumber, startingIndex, leaves);
-    this.leptonDebugger?.log(
-      `lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`,
-    );
+    LeptonDebug.log(`lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`);
   }
 
   /**
@@ -78,7 +77,7 @@ class Lepton {
    * @param txid - txid of nullifier transaction
    */
   async nullifierListener(chainID: number, nullifiers: Nullifier[]) {
-    this.leptonDebugger?.log(`nullifierListener ${nullifiers.length}`);
+    LeptonDebug.log(`nullifierListener ${nullifiers.length}`);
     await this.merkletree[chainID].erc20.nullify(nullifiers);
   }
 
@@ -92,7 +91,7 @@ class Lepton {
 
     // Get latest synced event
     const treeLength = await this.merkletree[chainID].erc20.getTreeLength(latestTree);
-    this.leptonDebugger?.log(`scanHistory: treeLength ${treeLength}`);
+    LeptonDebug.log(`scanHistory: treeLength ${treeLength}`);
 
     let startScanningBlock: number;
 
@@ -121,7 +120,7 @@ class Lepton {
     // Call quicksync
     if (this.quickSync) {
       try {
-        this.leptonDebugger?.log(`quickSync: chainID ${chainID}`);
+        LeptonDebug.log(`quickSync: chainID ${chainID}`);
 
         // Fetch events
         const { commitmentEvents, nullifierEvents } = await this.quickSync(
@@ -143,7 +142,7 @@ class Lepton {
         // Pass nullifier events to listener
         await this.nullifierListener(chainID, nullifierEvents);
       } catch (err: any) {
-        this.leptonDebugger?.error(err);
+        LeptonDebug.error(err);
       }
     }
 
@@ -160,8 +159,8 @@ class Lepton {
         (block: number) => this.setLastSyncedBlock(block, chainID),
       );
     } catch (err: any) {
-      this.leptonDebugger?.log(`Scan incomplete for chain ${chainID}`);
-      this.leptonDebugger?.error(err);
+      LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
+      LeptonDebug.error(err);
     }
 
     // Final scan after all leaves added.
@@ -180,13 +179,13 @@ class Lepton {
     provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
-    this.leptonDebugger?.log(`loadNetwork: ${chainID}`);
+    LeptonDebug.log(`loadNetwork: ${chainID}`);
 
     // If a network with this chainID exists, unload it and load the provider as a new network
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
     // Create contract instance
-    const contract = new ERC20RailgunContract(address, provider, this.leptonDebugger);
+    const contract = new ERC20RailgunContract(address, provider);
     this.contracts[chainID] = contract;
 
     const validateRoot = (tree: number, root: string) => contract.validateRoot(tree, root);
@@ -208,7 +207,7 @@ class Lepton {
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {
       await this.nullifierListener(chainID, nullifiers);
-      this.leptonDebugger?.log('nullifierlistener done');
+      LeptonDebug.log('nullifierlistener done');
     };
     // Setup listeners
     this.contracts[chainID].treeUpdates(eventsListener, nullifierListener);
@@ -279,7 +278,7 @@ class Lepton {
   unload() {
     // Unload chains
     this.contracts.forEach((contract, chainID) => {
-      this.leptonDebugger?.log(`unload contract for ${chainID}`);
+      LeptonDebug.log(`unload contract for ${chainID}`);
       this.unloadNetwork(chainID);
     });
 

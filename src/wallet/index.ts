@@ -25,6 +25,7 @@ import {
   padToLength,
 } from '../utils/bytes';
 import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
+import LeptonDebug from '../debugger';
 
 const { poseidon } = keysUtils;
 
@@ -115,8 +116,6 @@ class Wallet extends EventEmitter {
   private scanLockPerChain: boolean[] = [];
 
   public spendingPublicKey!: [bigint, bigint];
-
-  private leptonDebugger: LeptonDebugger | undefined;
 
   /**
    * Create Wallet controller
@@ -263,9 +262,7 @@ class Wallet extends EventEmitter {
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async scanLeaves(leaves: Commitment[], tree: number, chainID: number): Promise<boolean> {
-    this.leptonDebugger?.log(
-      `wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}`,
-    );
+    LeptonDebug.log(`wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}`);
     const vpk = this.getViewingKeyPair().privateKey;
 
     const writeBatch: AbstractBatch[] = [];
@@ -287,7 +284,7 @@ class Wallet extends EventEmitter {
         try {
           note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
         } catch (e: any) {
-          this.leptonDebugger?.error(e);
+          LeptonDebug.error(e);
         }
       } else {
         // preimage
@@ -301,7 +298,7 @@ class Wallet extends EventEmitter {
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);
         } catch (e: any) {
-          this.leptonDebugger?.error(e);
+          LeptonDebug.error(e);
         }
       }
 
@@ -477,10 +474,10 @@ class Wallet extends EventEmitter {
   async scan(chainID: number) {
     // Don't proceed if scan write is locked
     if (this.scanLockPerChain[chainID]) {
-      this.leptonDebugger?.log(`wallet: scan(${chainID}) locked`);
+      LeptonDebug.log(`scan locked: chainID ${chainID}`);
       return;
     }
-    this.leptonDebugger?.log(`wallet: scan(${chainID})`);
+    LeptonDebug.log(`scan wallet balances: chainID ${chainID}`);
 
     // Lock scan on this chain
     this.scanLockPerChain[chainID] = true;
@@ -518,7 +515,7 @@ class Wallet extends EventEmitter {
       // Delete undefined values and return sparse array
       leaves.forEach((value, index) => {
         if (value === undefined) {
-          this.leptonDebugger?.log('wallet.scan: value was undefined');
+          LeptonDebug.log('wallet.scan: value was undefined');
           delete leaves[index];
         }
       });
@@ -539,7 +536,7 @@ class Wallet extends EventEmitter {
     );
 
     // Emit scanned event for this chain
-    this.leptonDebugger?.log(`wallet: scanned ${chainID}`);
+    LeptonDebug.log(`wallet: scanned ${chainID}`);
     this.emit('scanned', { chainID } as ScannedEventData);
 
     // Release lock

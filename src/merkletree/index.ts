@@ -2,10 +2,10 @@
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
-import { LeptonDebugger } from '../models/types';
 import { Ciphertext } from '../models/transaction-types';
 import { constants, hash } from '../utils';
 import { fromUTF8String, numberify, hexlify, formatToByteLength, ByteLength } from '../utils/bytes';
+import LeptonDebug from '../debugger';
 
 export type MerkleProof = {
   leaf: string; // hash of commitment
@@ -88,8 +88,6 @@ class MerkleTree {
   readonly chainID: number;
 
   readonly purpose: TreePurpose;
-
-  readonly leptonDebugger: LeptonDebugger | undefined;
 
   readonly depth: number;
 
@@ -412,8 +410,14 @@ class MerkleTree {
     // Ensure writecache array exists
     this.nodeWriteCache[tree][level] = this.nodeWriteCache[tree][level] || [];
 
+    LeptonDebug.log(
+      `insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`,
+    );
+
     // Push values to leaves of write index
-    leaves.forEach((leaf) => {
+    leaves.forEach((leaf, leafIndex) => {
+      LeptonDebug.log(`index ${leafIndex}: leaf ${JSON.stringify(leaf)}`);
+
       // Set writecache value
       this.nodeWriteCache[tree][level][index] = hexlify(leaf.hash);
 
@@ -497,7 +501,7 @@ class MerkleTree {
       // Commit to DB if valid
       await this.writeTreeCache(tree);
     } else {
-      this.leptonDebugger?.error(new Error('Cannot insert leaves. Invalid merkle root.'));
+      LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'));
       // Clear cache if invalid
       this.clearWriteCache(tree);
     }
@@ -567,7 +571,7 @@ class MerkleTree {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
-    // this.leptonDebugger?.log( `merkletree.queueLeaves(${tree}, ${startingIndex}, leaves.length: ${leaves.length})}`,);
+    LeptonDebug.log(`queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`);
 
     // Ensure write queue for tree exists
     this.writeQueue[tree] = this.writeQueue[tree] || [];

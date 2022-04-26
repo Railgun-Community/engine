@@ -7,7 +7,7 @@ import {
   CallOverrides,
 } from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
-import { bytes, babyjubjub } from '../../utils';
+import { babyjubjub } from '../../utils';
 import { abi } from './abi';
 import {
   BytesData,
@@ -24,8 +24,16 @@ import {
   processGeneratedCommitmentEvents,
   processNullifierEvents,
 } from './events';
-import { LeptonDebugger } from '../../models/types';
+import LeptonDebug from '../../debugger';
+import { Commitment } from '../../merkletree';
 import { hexlify } from '../../utils/bytes';
+
+export type CommitmentEvent = {
+  txid: BytesData;
+  treeNumber: number;
+  startPosition: number;
+  commitments: Commitment[];
+};
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 5;
@@ -42,17 +50,14 @@ class ERC20RailgunContract {
   // Contract address
   address: string;
 
-  readonly leptonDebugger: LeptonDebugger | undefined;
-
   /**
    * Connect to Railgun instance on network
    * @param address - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(address: string, provider: Provider, leptonDebugger?: LeptonDebugger) {
+  constructor(address: string, provider: Provider) {
     this.address = address;
     this.contract = new Contract(address, abi, provider);
-    this.leptonDebugger = leptonDebugger;
   }
 
   /**
@@ -60,7 +65,7 @@ class ERC20RailgunContract {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return bytes.hexlify((await this.contract.merkleRoot()).toHexString());
+    return hexlify((await this.contract.merkleRoot()).toHexString());
   }
 
   /**
@@ -132,14 +137,14 @@ class ERC20RailgunContract {
     } catch (err: any) {
       if (retryCount < MAX_SCAN_RETRIES) {
         const retry = retryCount + 1;
-        this.leptonDebugger?.log(
+        LeptonDebug.log(
           `Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
         );
-        this.leptonDebugger?.error(err);
+        LeptonDebug.error(err);
         return this.scanEvents(eventFilter, startBlock, endBlock, retry);
       }
-      this.leptonDebugger?.log(`Scan failed at block ${startBlock}. No longer retrying.`);
-      this.leptonDebugger?.error(err);
+      LeptonDebug.log(`Scan failed at block ${startBlock}. No longer retrying.`);
+      LeptonDebug.error(err);
       throw err;
     }
   }
@@ -162,14 +167,12 @@ class ERC20RailgunContract {
     const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
     const eventFilterNullifier = this.contract.filters.Nullifiers();
 
-    this.leptonDebugger?.log(
-      `Scanning historical events from block ${currentStartBlock} to ${latest}`,
-    );
+    LeptonDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latest}`);
 
     while (currentStartBlock < latest) {
       // Process chunks of blocks at a time
       if ((currentStartBlock - startBlock) % 10000 === 0) {
-        this.leptonDebugger?.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
+        LeptonDebug.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
       const endBlock = Math.min(latest, currentStartBlock + SCAN_CHUNKS);
       const [eventsGeneratedCommitment, eventsEncryptedCommitment, eventsNullifier] =
@@ -193,7 +196,7 @@ class ERC20RailgunContract {
       currentStartBlock += SCAN_CHUNKS + 1;
     }
 
-    this.leptonDebugger?.log('Finished historical event scan');
+    LeptonDebug.log('Finished historical event scan');
   }
 
   /**
