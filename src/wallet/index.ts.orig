@@ -604,8 +604,12 @@ class Wallet extends EventEmitter {
    */
   static async loadExisting(db: Database, encryptionKey: BytesData, id: string): Promise<Wallet> {
     // Get encrypted mnemonic and derivation path from DB
+<<<<<<< HEAD
     const { mnemonic, index } = await Wallet.read(db, id, encryptionKey);
     const nodes = deriveNodes(mnemonic, index);
+=======
+    const { mnemonic, derivationPath } = await this.getEncryptedData(db, encryptionKey, id);
+>>>>>>> ed08900 (Add helper func to getEncrypted wallet data)
 
     // Create wallet object and return
     return await new Wallet(id, db).initialize(nodes);
@@ -639,9 +643,9 @@ class Wallet extends EventEmitter {
    * @param id - wallet id
    * @returns Data (JSON any)
    */
-  static async getEncryptedData(db: Database, encryptionKey: BytesData, id: string) {
+  static async getEncryptedData(db: Database, encryptionKey: bytes.BytesData, id: string) {
     return msgpack.decode(
-      arrayify(await db.getEncrypted([fromUTF8String('wallet'), id], encryptionKey)),
+      bytes.arrayify(await db.getEncrypted([bytes.fromUTF8String('wallet'), id], encryptionKey)),
     );
   }
 }
