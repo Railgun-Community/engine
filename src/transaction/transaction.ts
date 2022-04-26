@@ -277,9 +277,9 @@ class Transaction {
     const zero = nToHex(BigInt(0), ByteLength.UINT_8);
     // prettier-ignore
     return {
-      a: [zero, zero],
-      b: [[zero, zero], [zero, zero]],
-      c: [zero, zero],
+      pi_a: [zero, zero],
+      pi_b: [[zero, zero], [zero, zero]],
+      pi_c: [zero, zero],
     };
   }
 
@@ -313,7 +313,20 @@ class Transaction {
     withdrawPreimage: CommitmentPreimage,
   ): SerializedTransaction {
     return {
-      proof,
+      proof: {
+        a: {
+          x: BigInt(proof.pi_a[0]),
+          y: BigInt(proof.pi_a[1]),
+        },
+        b: {
+          x: proof.pi_b[0].map((x) => BigInt(x)),
+          y: proof.pi_b[1].map((x) => BigInt(x)),
+        },
+        c: {
+          x: BigInt(proof.pi_c[0]),
+          y: BigInt(proof.pi_c[1]),
+        },
+      },
       merkleRoot: publicInputs.merkleRoot,
       nullifiers: publicInputs.nullifiers,
       boundParams,

@@ -46,8 +46,23 @@ export type CommitmentPreimage = {
   value: bigint;
 };
 
+export type G1Point = {
+  x: bigint;
+  y: bigint;
+};
+export type G2Point = {
+  x: bigint[];
+  y: bigint[];
+};
+
+export type SnarkProof = {
+  a: G1Point;
+  b: G2Point;
+  c: G1Point;
+};
+
 export type SerializedTransaction = {
-  proof: Proof;
+  proof: SnarkProof;
   merkleRoot: bigint;
   nullifiers: bigint[];
   commitments: bigint[];

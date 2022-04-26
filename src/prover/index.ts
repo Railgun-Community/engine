@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 // @ts-ignore-next-line
 import { groth16 } from 'snarkjs';
 
@@ -16,9 +17,9 @@ export const enum Circuits {
 }
 
 export type Proof = {
-  a: string[];
-  b: string[][];
-  c: string[];
+  pi_a: string[];
+  pi_b: string[][];
+  pi_c: string[];
 };
 
 export type PublicInputs = {
