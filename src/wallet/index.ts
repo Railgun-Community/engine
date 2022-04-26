@@ -19,6 +19,7 @@ import {
   formatToByteLength,
   fromUTF8String,
   hexlify,
+  hexToBigInt,
   nToHex,
   numberify,
   padToLength,
@@ -197,7 +198,7 @@ class Wallet extends EventEmitter {
    * @todo protect like spending private key
    */
   getNullifyingKey(): bigint {
-    return poseidon([hexlify(this.#viewingKeyPair.privateKey, true)]);
+    return poseidon([hexToBigInt(hexlify(this.#viewingKeyPair.privateKey, true))]);
   }
 
   /**
