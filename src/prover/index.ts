@@ -49,10 +49,23 @@ export type FormattedCircuitInputs = {
 // export type ArtifactsGetter = (Circuits) => Promise<Artifacts>;
 export type ArtifactsGetter = (publicInputs: PublicInputs) => Promise<Artifacts>;
 class Prover {
-  artifactsGetter: ArtifactsGetter;
+  private artifactsGetter: ArtifactsGetter;
+
+  private groth16Override: any;
 
   constructor(artifactsGetter: ArtifactsGetter) {
     this.artifactsGetter = artifactsGetter;
+  }
+
+  /**
+   * Used in browser to override with implementation from snarkjs.min.js.
+   */
+  overrideGroth16(groth16Override: any) {
+    this.groth16Override = groth16Override;
+  }
+
+  private getGroth16Impl() {
+    return this.groth16Override ?? groth16;
   }
 
   async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
@@ -65,7 +78,7 @@ class Prover {
       ...publicInputs.nullifiers,
       ...publicInputs.commitmentsOut,
     ];
-    return groth16.verify(artifacts.vkey, publicSignals, proof);
+    return this.getGroth16Impl().verify(artifacts.vkey, publicSignals, proof);
   }
 
   async prove(
@@ -80,7 +93,11 @@ class Prover {
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
     // Generate proof
-    const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
+    const { proof } = await this.getGroth16Impl().fullProve(
+      formattedInputs,
+      artifacts.wasm,
+      artifacts.zkey,
+    );
 
     // Throw if proof is invalid
     if (!(await this.verify(publicInputs, proof))) throw new Error('Proof generation failed');
