@@ -17,7 +17,7 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { ByteLength, formatToByteLength, hexlify, nToHex } from '../../src/utils/bytes';
+import { formatToByteLength, hexlify } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
 
@@ -173,26 +173,20 @@ const getTestData = () => {
 let testData: any;
 
 const depositLeaf = {
-  hash: nToHex(
-    12837823496271515477858227314042914801463879010592948180372631930127964543691n,
-    ByteLength.UINT_256,
-  ),
+  hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
   txid: '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
   preimage: {
-    npk: nToHex(
-      3244638229673874225039454787368298151974170645387027288760790963187005112154n,
-      ByteLength.UINT_256,
-    ),
+    npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
     token: {
-      tokenAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+      tokenAddress: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
       tokenType: '0x0000000000000000000000000000000000000000',
       tokenSubID: '0x0000000000000000000000000000000000000000',
     },
     value: '000000000000021cbfcc6fd98333b5f1',
   },
   encryptedRandom: [
-    '0x99e9c738ba1c2e1aedaf01cfdfe9e62fb5520304d1ecd9cac2f8f5a0daa15a96',
-    '0x7a62cf0b7eb981ea001b48f15185975d91764ccf7a1dc6b693f8d5bcfe0e37ae',
+    '0x7797f244fc1c60af03f25cbe9a798080b920733cc2de2456af21ee7c9eb1ca0c',
+    '0x118beef50353ab8512be871c0473e219',
   ],
 };
 
@@ -210,13 +204,7 @@ describe('Transaction/ERC20', function () {
     wallet.loadTree(merkletree);
     // testData = getTestData();
     makeNote = (value: bigint = 65n * DECIMALS): Note => new Note(address, random, value, token);
-
-    if (!process.env.RUN_HARDHAT_TESTS) {
-      // This function typically queries the contract.
-      // Bypass for non-hardhat runs.
-      merkletree.validateRoot = () => true;
-    }
-
+    merkletree.validateRoot = () => true;
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     await wallet.scan(chainID);
     // await merkletree.queueLeaves(1, 0, testData.leaves2);
@@ -345,25 +333,22 @@ describe('Transaction/ERC20', function () {
 
   it('Should create transaction proofs', async () => {
     transaction.outputs = [makeNote(1n)];
-
-    // 10972568578547115960099750n valueOut[1] fails, too big?
     const tx = await transaction.prove(prover, wallet, testEncryptionKey);
-
-    expect(tx.nullifiers.length).to.equal(2);
+    expect(tx.nullifiers.length).to.equal(1);
+    expect(tx.commitments.length).to.equal(2);
 
     transaction.outputs = [makeNote(1715000000000n)];
 
-    transaction.tree = 3;
+    // transaction.tree = 3;
 
     const tx2 = await transaction.prove(prover, wallet, testEncryptionKey);
 
-    expect(tx2.nullifiers.length).to.equal(10);
+    expect(tx2.nullifiers.length).to.equal(1);
   });
 
   it('Should create dummy transaction proofs', async () => {
     transaction.outputs = [makeNote()];
-
-    const tx = await transaction.dummyProve(wallet, testEncryptionKey);
+    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
     expect(tx.nullifiers.length).to.equal(1);
   });
 

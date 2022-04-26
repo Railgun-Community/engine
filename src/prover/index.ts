@@ -59,7 +59,13 @@ class Prover {
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(publicInputs);
     // Return output of groth16 verify
-    return groth16.verify(artifacts.vkey, publicInputs, proof);
+    const publicSignals = [
+      publicInputs.merkleRoot,
+      publicInputs.boundParamsHash,
+      ...publicInputs.nullifiers,
+      ...publicInputs.commitmentsOut,
+    ];
+    return groth16.verify(artifacts.vkey, publicSignals, proof);
   }
 
   async prove(
@@ -72,9 +78,6 @@ class Prover {
 
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
-
-    const { dir } = console;
-    dir(formattedInputs, { depth: null });
 
     // Generate proof
     const { proof } = await groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
