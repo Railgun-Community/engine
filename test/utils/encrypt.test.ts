@@ -4,7 +4,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BytesData } from '../../src/models/transaction-types';
 import { babyjubjub, encryption } from '../../src/utils';
-import { nToHex, random } from '../../src/utils/bytes';
+import { ByteLength, nToHex, random } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -53,8 +53,14 @@ describe('Utils/Encryption', () => {
     const randomValue = babyjubjub.random();
     const viewingPrivateKey =
       71304128950017749550555748140089622855554443655032326837948344032235540545721n;
-    const ciphertext = encryption.aes.gcm.encrypt([randomValue], nToHex(viewingPrivateKey));
-    const decrypted = encryption.aes.gcm.decrypt(ciphertext, nToHex(viewingPrivateKey));
+    const ciphertext = encryption.aes.gcm.encrypt(
+      [randomValue],
+      nToHex(viewingPrivateKey, ByteLength.UINT_256),
+    );
+    const decrypted = encryption.aes.gcm.decrypt(
+      ciphertext,
+      nToHex(viewingPrivateKey, ByteLength.UINT_256),
+    );
     expect(randomValue).to.equal(decrypted[0]);
   });
 });
