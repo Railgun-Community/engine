@@ -1,5 +1,4 @@
 import BN from 'bn.js';
-import { Proof } from '../prover';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
