@@ -16,6 +16,7 @@ import { GeneratedCommitment, MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
 import { ZERO_ADDRESS } from '../src/utils/constants';
+import { babyjubjub } from '../src/utils';
 
 chai.use(chaiAsPromised);
 
@@ -116,8 +117,6 @@ describe('Lepton', function () {
       return;
     }
 
-    // TODO-balances
-
     const initialBalance = await wallet.getBalance(chainID, tokenAddress);
     expect(initialBalance).to.equal(undefined);
 
@@ -126,8 +125,7 @@ describe('Lepton', function () {
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getViewingKeyPair().privateKey;
     const value = 11000000n * 10n ** 18n;
-    // const random = babyjubjub.random();
-    const random = '04eaf4ffc3fb976481dece36d3d26460048b6ff04e5e3fa6e1798d32947a0f2e';
+    const random = babyjubjub.random();
     const deposit = new Deposit(mpk, random, value, token.address);
 
     const { preImage, encryptedRandom } = deposit.serialize(vpk);
@@ -138,8 +136,7 @@ describe('Lepton', function () {
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    expect(balance).to.equal(10972568578553615960099750n);
-    // expect(balance).to.equal(10972500000000000000000000n); // Shouldn't it be this?
+    expect(balance).to.equal(10972500000000000000000000n);
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
@@ -158,12 +155,10 @@ describe('Lepton', function () {
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
-    // const receipt = await transactTx.wait();
-    // log(receipt);
     await awaitScan(wallet, chainID);
 
     assert.isTrue(
-      (await wallet.getBalance(chainID, tokenAddress)) === 10972568578553615960099750n,
+      (await wallet.getBalance(chainID, tokenAddress)) === 10972500000000000000000000n,
       'Failed to receive expected balance',
     );
     /*

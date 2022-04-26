@@ -204,7 +204,13 @@ describe('Transaction/ERC20', function () {
     wallet.loadTree(merkletree);
     // testData = getTestData();
     makeNote = (value: bigint = 65n * DECIMALS): Note => new Note(address, random, value, token);
-    merkletree.validateRoot = () => true;
+
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      // This function typically queries the contract.
+      // Bypass for non-hardhat runs.
+      merkletree.validateRoot = () => true;
+    }
+
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     await wallet.scan(chainID);
     // await merkletree.queueLeaves(1, 0, testData.leaves2);
@@ -351,17 +357,8 @@ describe('Transaction/ERC20', function () {
   it('Should create dummy transaction proofs', async () => {
     transaction.outputs = [makeNote()];
 
-    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
-
-    expect(tx.nullifiers.length).to.equal(2);
-
-    transaction.outputs = [makeNote(1715000000000n)];
-
-    transaction.tree = 3;
-
-    const tx2 = await transaction.dummyProve(wallet, testEncryptionKey);
-
-    expect(tx2.nullifiers.length).to.equal(10);
+    const tx = await transaction.dummyProve(wallet, testEncryptionKey);
+    expect(tx.nullifiers.length).to.equal(1);
   });
 
   // it('Generator', async () => {
