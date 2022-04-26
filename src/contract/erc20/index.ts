@@ -18,9 +18,9 @@ import {
 import {
   EventsListener,
   EventsNullifierListener,
-  processCommitmentBatchEvent,
+  formatCommitmentBatchEvent,
+  formatGeneratedCommitmentBatchEvent,
   processCommitmentBatchEvents,
-  processGeneratedCommitment,
   processGeneratedCommitmentEvents,
   processNullifierEvents,
 } from './events';
@@ -107,12 +107,12 @@ class ERC20RailgunContract {
   treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
     this.contract.on(EventName.GeneratedCommitmentBatch, async (...rest: any) => {
       const event = rest.pop();
-      await eventsListener(processGeneratedCommitment(event));
+      await eventsListener(formatGeneratedCommitmentBatchEvent(event));
     });
 
     this.contract.on(EventName.CommitmentBatch, async (...rest: any) => {
       const event = rest.pop();
-      await eventsListener(processCommitmentBatchEvent(event));
+      await eventsListener(formatCommitmentBatchEvent(event));
     });
 
     this.contract.on(
