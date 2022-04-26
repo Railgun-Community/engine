@@ -259,9 +259,7 @@ describe('Note/ERC20', () => {
     });
   });
 
-  it.skip('Should serialize and deserialize notes', () => {
-    // TODO-TEST: Fix these test vectors.
-
+  it('Should serialize and deserialize notes', () => {
     vectors.forEach((vector) => {
       const address = {
         masterPublicKey: hexToBigInt(vector.pubkey),
