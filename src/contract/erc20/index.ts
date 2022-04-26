@@ -217,11 +217,11 @@ class ERC20RailgunContract {
    * @param transactions - serialized railgun transaction
    * @returns - populated ETH transaction
    */
-  transact(transactions: SerializedTransaction[], overrides?: any): Promise<PopulatedTransaction> {
+  transact(transactions: SerializedTransaction[]): Promise<PopulatedTransaction> {
     // Calculate inputs
 
     // Return populated transaction
-    return this.contract.populateTransaction.transact(transactions, overrides);
+    return this.contract.populateTransaction.transact(transactions);
   }
 
   async hashCommitment(commitment: any): Promise<string> {

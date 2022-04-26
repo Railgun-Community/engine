@@ -108,9 +108,9 @@ describe('Contract/Index', function () {
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
 
-    const tx = await contract.transact([dummyTx], {
-      from: '0x000000000000000000000000000000000000dEaD',
-    });
+    const tx = await contract.transact([dummyTx]);
+
+    tx.from = '0x000000000000000000000000000000000000dEaD';
 
     expect(await provider.estimateGas(tx)).to.be.greaterThanOrEqual(0);
   });
@@ -125,6 +125,8 @@ describe('Contract/Index', function () {
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
     const call = await contract.transact([dummyTx]);
+
+    // @todo Copy from overrides from above when updating this
 
     const random = babyjubjub.random();
 
