@@ -30,7 +30,7 @@ export type PublicInputs = {
 
 export type PrivateInputs = {
   token: bigint;
-  publicKey: [bigint, bigint]; // babyjubjub pubkey unpacked
+  publicKey: [bigint, bigint];
   signature: [bigint, bigint, bigint];
   randomIn: bigint[];
   valueIn: bigint[];

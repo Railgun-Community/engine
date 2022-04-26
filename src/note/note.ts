@@ -18,7 +18,7 @@ export class Note {
   // viewing public key (VPK) of recipient - ed25519 curve
   viewingPublicKey: Uint8Array;
 
-  // master public key (VPK) of recipient - babyjubjub curve
+  // master public key (VPK) of recipient
   masterPublicKey: bigint;
 
   // token address

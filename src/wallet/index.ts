@@ -178,7 +178,7 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Load encrypted spending key Node from database and return babyjubjub private key
+   * Load encrypted spending key Node from database
    * @returns Promise<string>
    */
   async getSpendingKeyPair(encryptionKey: BytesData): Promise<SpendingKeyPair> {

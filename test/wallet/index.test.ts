@@ -5,13 +5,10 @@ import chaiAsPromised from 'chai-as-promised';
 import { mnemonicToSeed } from 'ethers/lib/utils';
 
 import memdown from 'memdown';
-import { Note } from '../../src';
 import { Database } from '../../src/database';
 import { bech32 } from '../../src/keyderivation';
-import { Commitment, MerkleTree } from '../../src/merkletree';
-import { Deposit } from '../../src/note';
-import { babyjubjub, bytes, hash } from '../../src/utils';
-import { hexToBigInt } from '../../src/utils/bytes';
+import { MerkleTree } from '../../src/merkletree';
+import { bytes, hash } from '../../src/utils';
 
 import { Wallet } from '../../src/wallet';
 

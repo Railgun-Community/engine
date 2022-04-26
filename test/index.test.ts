@@ -1,12 +1,9 @@
 /* globals describe it beforeEach, afterEach */
 import chai, { assert, expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
 import { ethers } from 'ethers';
 import memdown from 'memdown';
-
 import { Lepton, Note, Transaction } from '../src';
-
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
 import { Wallet } from '../src/wallet';
@@ -16,7 +13,7 @@ import { GeneratedCommitment, MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
 import { ZERO_ADDRESS } from '../src/utils/constants';
-import { babyjubjub } from '../src/utils';
+import { bytes } from '../src/utils';
 
 chai.use(chaiAsPromised);
 
@@ -124,7 +121,7 @@ describe('Lepton', function () {
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getViewingKeyPair().privateKey;
     const value = 110000n * 10n ** 18n;
-    const random = babyjubjub.random();
+    const random = bytes.random();
     const deposit = new Deposit(mpk, random, value, token.address);
 
     const { preImage, encryptedRandom } = deposit.serialize(vpk);

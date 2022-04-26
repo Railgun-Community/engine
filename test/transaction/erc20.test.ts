@@ -10,8 +10,8 @@ import { Signature } from 'circomlibjs';
 import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
 import { Wallet } from '../../src/wallet';
-import { Deposit, Note, WithdrawNote } from '../../src/note';
-import { babyjubjub, keysUtils } from '../../src/utils';
+import { Note } from '../../src/note';
+import { keysUtils } from '../../src/utils';
 import { Transaction } from '../../src/transaction';
 import { Prover } from '../../src/prover';
 import { config } from '../config.test';
@@ -30,8 +30,6 @@ let wallet: Wallet;
 let chainID: number;
 let ethersWallet: EthersWallet;
 let transaction: Transaction;
-let deposit: Deposit;
-let withdraw: WithdrawNote;
 let prover: Prover;
 let address: AddressData;
 
@@ -40,7 +38,6 @@ const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const random = '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9';
-const txid = '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b';
 type makeNoteFn = (value?: bigint) => Note;
 let makeNote: makeNoteFn;
 
@@ -70,107 +67,6 @@ const keypairs = [
     address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
   },
 ];
-
-const senderPubKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
-
-const getTestData = () => {
-  const keypairsPopulated = keypairs.map((key) => ({
-    ...key,
-    sharedKey: babyjubjub.ecdh(key.privateKey, senderPubKey),
-  }));
-
-  const notesPrep = [0];
-
-  const leaves = notesPrep.map((keyIndex) => {
-    const note = new Note(
-      {
-        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
-      },
-      random,
-      '11000000000000000000000000',
-      token,
-    );
-
-    return {
-      hash: note.hash,
-      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      senderPubKey,
-      ciphertext: { ciphertext: note.encrypt(hexToBytes(keypairsPopulated[keyIndex].sharedKey)) },
-      // ciphertext: { ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey) },
-      revealKey: ['01', '02'], // TODO
-    };
-  });
-
-  const notesPrep2 = [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0];
-
-  const leaves2 = notesPrep2.map((keyIndex) => {
-    const note = new Note(
-      {
-        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
-      },
-      random,
-      1000000000000n * BigInt(keyIndex + 1),
-      token,
-    );
-
-    return {
-      hash: note.hash,
-      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      data: note.serialize(keypairsPopulated[keyIndex].privateKey),
-    };
-  });
-
-  const notesPrep3 = [0, 1, 0];
-
-  const leaves3 = notesPrep3.map((keyIndex) => {
-    const note = new Note(
-      {
-        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
-      },
-      random,
-      2166666666667n,
-      token,
-    );
-
-    return {
-      hash: note.hash,
-      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      data: note.serialize(keypairsPopulated[keyIndex].privateKey),
-    };
-  });
-
-  const notesPrep4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-  const leaves4 = notesPrep4.map((keyIndex) => {
-    const note = new Note(
-      {
-        masterPublicKey: BigInt(hexlify(keypairsPopulated[keyIndex].pubkey, true)),
-        viewingPublicKey: keypairsPopulated[keyIndex].pubkey,
-      },
-      random,
-      343000000000n,
-      token,
-    );
-
-    return {
-      hash: note.hash,
-      txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-      data: note.serialize(keypairsPopulated[keyIndex].privateKey),
-    };
-  });
-  return {
-    keypairsPopulated,
-    leaves,
-    leaves2,
-    leaves3,
-    leaves4,
-  };
-};
-
-let testData: any;
 
 const depositLeaf = {
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',

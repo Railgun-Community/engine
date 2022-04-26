@@ -1,6 +1,6 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note, WithdrawNote } from '../note';
-import { babyjubjub, hash } from '../utils';
+import { bytes, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
 import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
@@ -183,7 +183,7 @@ class Transaction {
     const change = totalIn - totalOut;
 
     // Create change output
-    this.outputs.push(new Note(wallet.addressKeys, babyjubjub.random(), change, this.token));
+    this.outputs.push(new Note(wallet.addressKeys, bytes.random(), change, this.token));
 
     const notesEphemeralKeys = await Promise.all(
       this.outputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),

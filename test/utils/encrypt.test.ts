@@ -3,7 +3,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BytesData } from '../../src/models/transaction-types';
-import { babyjubjub, encryption } from '../../src/utils';
+import { bytes, encryption } from '../../src/utils';
 import { ByteLength, nToHex, random } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
@@ -50,7 +50,7 @@ describe('Utils/Encryption', () => {
   });
 
   it('Should encrypt and decrypt data', () => {
-    const randomValue = babyjubjub.random();
+    const randomValue = bytes.random();
     const viewingPrivateKey =
       71304128950017749550555748140089622855554443655032326837948344032235540545721n;
     const ciphertext = encryption.aes.gcm.encrypt(

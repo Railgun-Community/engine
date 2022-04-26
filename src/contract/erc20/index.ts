@@ -7,7 +7,6 @@ import {
   CallOverrides,
 } from 'ethers';
 import type { Provider } from '@ethersproject/abstract-provider';
-import { babyjubjub } from '../../utils';
 import { abi } from './abi';
 import {
   BytesData,
@@ -260,61 +259,62 @@ class ERC20RailgunContract {
     );
   }
 
-  depositEth(
-    amount: BigNumber,
-    wethAddress: BytesData,
-    pubKey: BytesData,
-  ): Promise<PopulatedTransaction> {
-    const random = babyjubjub.random();
-    const pubkeyUnpacked = babyjubjub.unpackPubKey(pubKey);
+  // TODO: Needs new implementation with newer keys.
+  // depositEth(
+  //   amount: BigNumber,
+  //   wethAddress: BytesData,
+  //   pubKey: BytesData,
+  // ): Promise<PopulatedTransaction> {
 
-    const calls = [
-      this.contract.interface.encodeFunctionData('wrapAllEth'),
-      this.contract.interface.encodeFunctionData('deposit', [
-        [wethAddress],
-        random,
-        pubkeyUnpacked,
-      ]),
-    ];
+  //   const random = bytes.random();
 
-    const requireSuccess = true;
+  //   const calls = [
+  //     this.contract.interface.encodeFunctionData('wrapAllEth'),
+  //     this.contract.interface.encodeFunctionData('deposit', [
+  //       [wethAddress],
+  //       random,
+  //       pubkeyUnpacked,
+  //     ]),
+  //   ];
 
-    return this.relay(
-      [],
-      random,
-      requireSuccess,
-      calls.map((call) => ({
-        to: this.contract.address,
-        data: call,
-      })),
-      { value: amount },
-    );
-  }
+  //   const requireSuccess = true;
 
-  withdrawEth(amount: BigNumber, to: BytesData): Promise<PopulatedTransaction> {
-    const random = babyjubjub.random();
+  //   return this.relay(
+  //     [],
+  //     random,
+  //     requireSuccess,
+  //     calls.map((call) => ({
+  //       to: this.contract.address,
+  //       data: call,
+  //     })),
+  //     { value: amount },
+  //   );
+  // }
 
-    const calls = [
-      this.contract.interface.encodeFunctionData('unWrapEth'),
-      this.contract.interface.encodeFunctionData('send', [
-        ['0x0000000000000000000000000000000000000000'],
-        to,
-      ]),
-    ];
+  // withdrawEth(amount: BigNumber, to: BytesData): Promise<PopulatedTransaction> {
+  //   const random = bytes.random();
 
-    const requireSuccess = true;
+  //   const calls = [
+  //     this.contract.interface.encodeFunctionData('unWrapEth'),
+  //     this.contract.interface.encodeFunctionData('send', [
+  //       ['0x0000000000000000000000000000000000000000'],
+  //       to,
+  //     ]),
+  //   ];
 
-    return this.relay(
-      [],
-      random,
-      requireSuccess,
-      calls.map((call) => ({
-        to: this.contract.address,
-        data: call,
-      })),
-      { value: amount },
-    );
-  }
+  //   const requireSuccess = true;
+
+  //   return this.relay(
+  //     [],
+  //     random,
+  //     requireSuccess,
+  //     calls.map((call) => ({
+  //       to: this.contract.address,
+  //       data: call,
+  //     })),
+  //     { value: amount },
+  //   );
+  // }
 
   /**
    * Remove all listeners and shutdown contract instance

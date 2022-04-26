@@ -10,13 +10,13 @@ import { Lepton } from '../../src';
 import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
-import { babyjubjub } from '../../src/utils';
 import { hexlify } from '../../src/utils/bytes';
 import { Nullifier } from '../../src/merkletree';
 import { artifactsGetter, awaitScan, DECIMALS } from '../helper';
 import { Deposit } from '../../src/note/deposit';
 import { CommitmentEvent } from '../../src/contract/erc20/events';
 import { EventName } from '../../src/contract/erc20';
+import { bytes } from '../../src/utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -128,7 +128,7 @@ describe('Contract/Index', function () {
 
     // @todo Copy from overrides from above when updating this
 
-    const random = babyjubjub.random();
+    const random = bytes.random();
 
     const overrides: CallOverrides = {
       from: '0x000000000000000000000000000000000000dEaD',
