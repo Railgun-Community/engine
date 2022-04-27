@@ -18,7 +18,10 @@ export const tryDecryptJSONDataWithSharedKey = async (
   }
 };
 
-export const encryptJSONDataWithSharedKey = (data: object, sharedKey: string): EncryptedData => {
+export const encryptJSONDataWithSharedKey = (
+  data: object,
+  sharedKey: Uint8Array,
+): EncryptedData => {
   const dataString = JSON.stringify(data);
   const chunkedData = chunk(fromUTF8String(dataString));
   const ciphertext = aes.gcm.encrypt(chunkedData, sharedKey);
