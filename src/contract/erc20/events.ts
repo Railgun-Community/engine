@@ -1,7 +1,7 @@
 import type { BigNumber, Event } from 'ethers';
 import { Commitment, EncryptedCommitment, GeneratedCommitment, Nullifier } from '../../merkletree';
 import { WithdrawNote } from '../../note';
-import { BytesData, EncryptedRandom } from '../../models/transaction-types';
+import { BytesData, EncryptedData } from '../../models/transaction-types';
 import { hexlify } from '../../utils/bytes';
 
 export type CommitmentEvent = {
@@ -26,7 +26,7 @@ export type CommitmentTokenData = {
   tokenSubID: BigNumber;
 };
 
-export type EncryptedRandomArgs = [BigNumber, BigNumber];
+export type EncryptedDataArgs = [BigNumber, BigNumber];
 
 export type CommitmentPreimageArgs = {
   npk: BigNumber;
@@ -43,7 +43,7 @@ export type GeneratedCommitmentBatchEventArgs = {
   treeNumber: BigNumber;
   startPosition: BigNumber;
   commitments: CommitmentPreimageArgs[];
-  encryptedRandom: EncryptedRandomArgs[];
+  encryptedRandom: EncryptedDataArgs[];
 };
 
 /**
@@ -62,10 +62,10 @@ export type CommitmentBatchEventArgs = {
 export function formatGeneratedCommitmentBatchCommitments(
   transactionHash: string,
   preImages: CommitmentPreimageArgs[],
-  encryptedRandom: EncryptedRandomArgs[],
+  encryptedRandom: EncryptedDataArgs[],
 ): GeneratedCommitment[] {
   const randomFormatted = encryptedRandom.map(
-    (el) => el.map((key) => key.toHexString()) as EncryptedRandom,
+    (el) => el.map((key) => key.toHexString()) as EncryptedData,
   );
   const generatedCommitments = preImages.map((item, index) => {
     const note = new WithdrawNote(

@@ -1,7 +1,7 @@
-// import { poseidon } from 'circomlib';
-import { CommitmentPreimage, EncryptedRandom } from '../models/transaction-types';
+import { CommitmentPreimage, EncryptedData } from '../models/transaction-types';
 import { encryption } from '../utils';
-import { ByteLength, formatEncryptedRandom, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { ciphertextToEncryptedData } from '../utils/ciphertext';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
 
@@ -40,7 +40,7 @@ export class Deposit {
    */
   serialize(viewingPrivateKey: Uint8Array): {
     preImage: Partial<CommitmentPreimage>;
-    encryptedRandom: EncryptedRandom;
+    encryptedRandom: EncryptedData;
   } {
     const ciphertext = encryption.aes.gcm.encrypt([this.random], viewingPrivateKey);
     return {
@@ -49,7 +49,7 @@ export class Deposit {
         token: this.tokenData,
         value: this.value,
       },
-      encryptedRandom: formatEncryptedRandom(ciphertext),
+      encryptedRandom: ciphertextToEncryptedData(ciphertext),
     };
   }
 }

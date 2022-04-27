@@ -1,4 +1,4 @@
-import { EncryptedRandom } from '../models/transaction-types';
+import { EncryptedData } from '../models/transaction-types';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
@@ -11,7 +11,7 @@ export const emptyCommitmentPreimage = {
     tokenSubID: '00',
   },
   value: '0',
-  encryptedRandom: ['00', '00'] as EncryptedRandom,
+  encryptedRandom: ['00', '00'] as EncryptedData,
 };
 
 export class WithdrawNote {

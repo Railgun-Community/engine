@@ -1,16 +1,10 @@
 import { Signature } from 'circomlib';
 import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
-import {
-  ByteLength,
-  formatEncryptedRandom,
-  formatToByteLength,
-  hexlify,
-  hexToBigInt,
-  nToHex,
-} from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { AddressData } from '../keyderivation/bech32-encode';
 import { PublicInputs } from '../prover/types';
+import { ciphertextToEncryptedData, encryptedDataToCiphertext } from '../utils/ciphertext';
 
 const { poseidon } = keysUtils;
 
@@ -126,13 +120,13 @@ export class Note {
   serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
     const { npk, token, value, random } = this.format(prefix);
     const ciphertext = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
-    const [ivTag, data] = formatEncryptedRandom(ciphertext);
+    const [ivTag, data] = ciphertextToEncryptedData(ciphertext);
 
     return {
       npk,
       token,
       value,
-      encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)),
+      encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)) as [string, string],
     };
   }
 
@@ -148,12 +142,7 @@ export class Note {
     viewingPrivateKey: Uint8Array,
     recipient: AddressData,
   ): Note {
-    const encryptedRandom = noteData.encryptedRandom.map((r) => hexlify(r));
-    const ciphertext = {
-      iv: encryptedRandom[0].substring(0, 32),
-      tag: encryptedRandom[0].substring(32),
-      data: [encryptedRandom[1]],
-    };
+    const ciphertext = encryptedDataToCiphertext(noteData.encryptedRandom);
     const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, viewingPrivateKey);
     const ivTag = decryptedRandom[0];
     // Call hexlify to ensure all note data isn't 0x prefixed

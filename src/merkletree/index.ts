@@ -33,7 +33,7 @@ export type GeneratedCommitment = {
   hash: string;
   txid: string;
   preimage: PreImage;
-  encryptedRandom: string[];
+  encryptedRandom: [string, string];
 };
 
 export type CommitmentCiphertext = {

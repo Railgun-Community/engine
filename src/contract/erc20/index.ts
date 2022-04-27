@@ -11,7 +11,7 @@ import { abi } from './abi';
 import {
   BytesData,
   CommitmentPreimage,
-  EncryptedRandom,
+  EncryptedData,
   SerializedTransaction,
 } from '../../models/transaction-types';
 import {
@@ -205,7 +205,7 @@ class ERC20RailgunContract {
    */
   generateDeposit(
     inputs: Partial<CommitmentPreimage>[],
-    encryptedRandom: EncryptedRandom[],
+    encryptedRandom: EncryptedData[],
   ): Promise<PopulatedTransaction> {
     // Return populated transaction
     return this.contract.populateTransaction.generateDeposit(inputs, encryptedRandom);

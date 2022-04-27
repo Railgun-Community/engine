@@ -38,7 +38,7 @@ export type TokenData = {
   tokenSubID: string;
 };
 
-export type EncryptedRandom = [string, string];
+export type EncryptedData = [string, string];
 
 export type CommitmentPreimage = {
   npk: string;
@@ -60,5 +60,5 @@ export type NoteSerialized = {
   npk: string;
   value: string;
   token: string;
-  encryptedRandom: string[];
+  encryptedRandom: [string, string];
 };
