@@ -3,7 +3,7 @@ import { randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
-import { ByteLength, fromUTF8String, nToHex } from '../../src/utils/bytes';
+import { ByteLength, nToHex } from '../../src/utils/bytes';
 import {
   getPublicSpendingKey,
   getPublicViewingKey,

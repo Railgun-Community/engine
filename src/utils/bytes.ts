@@ -347,6 +347,15 @@ export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
 }
 
 /**
+ * Convert hex string to Uint8Array
+ * @param {bigint} value
+ * @returns {Uint8Array}
+ */
+export function hexStringToBytes(hex: string): Uint8Array {
+  return hexToBytes(hex);
+}
+
+/**
  * Formats ciphertext into EncryptedRandom type.
  */
 function formatEncryptedRandom(ciphertext: Ciphertext): EncryptedRandom {
@@ -372,4 +381,5 @@ export {
   trim,
   formatToByteLength,
   formatEncryptedRandom,
+  hexToBytes,
 };
