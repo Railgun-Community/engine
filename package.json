@@ -1,6 +1,6 @@
 {
   "name": "@railgun-community/lepton",
-  "version": "0.0.23",
+  "version": "0.0.40",
   "description": "Wallet framework for Railgun",
   "author": "Railgun Contributors",
   "license": "UNLICENSED",
@@ -17,7 +17,6 @@
   },
   "files": [
     "/dist",
-    "/src",
     "/*.md"
   ],
   "repository": {
