@@ -428,9 +428,10 @@ class Wallet extends EventEmitter {
     return balances;
   }
 
-  async getBalance(chainID: number, tokenAddress: string) {
+  async getBalance(chainID: number, tokenAddress: string): Promise<bigint | undefined> {
     const balances = await this.balances(chainID);
-    return balances[formatToByteLength(tokenAddress, 32, false)].balance;
+    const balanceForToken = balances[formatToByteLength(tokenAddress, 32, false)];
+    return balanceForToken ? balanceForToken.balance : undefined;
   }
 
   /**
