@@ -7,12 +7,7 @@ import { ByteLength, nToHex } from '../../src/utils/bytes';
 import {
   getPublicSpendingKey,
   getPublicViewingKey,
-  getRandomScalar,
-  signEDDSA,
-  verifyEDDSA,
-  signED25519,
-  verifyED25519,
-  poseidon,
+  getRandomScalar, poseidon, signED25519, signEDDSA, verifyED25519, verifyEDDSA
 } from '../../src/utils/keys-utils';
 
 chai.use(chaiAsPromised);
@@ -23,7 +18,7 @@ let publicSpendingKey: [bigint, bigint];
 let privateViewingKey: Uint8Array;
 let publicViewingKey: Uint8Array;
 
-describe.only('Test keys-utils', () => {
+describe('Test keys-utils', () => {
   before(async () => {
     privateSpendingKey = randomBytes(32);
     publicSpendingKey = getPublicSpendingKey(privateSpendingKey);
@@ -51,11 +46,12 @@ describe.only('Test keys-utils', () => {
   it('Should create and verify ED25519 signatures', async () => {
     const message = utf8ToBytes(JSON.stringify({ data: 'value', more: { data: 'another_value' } }));
 
-    const signature = await signED25519(privateViewingKey, message);
+    const signature = await signED25519(message, privateViewingKey);
     assert.isTrue(await verifyED25519(message, signature, publicViewingKey));
 
     const fakeMessage = utf8ToBytes('123');
     assert.isFalse(await verifyED25519(fakeMessage, signature, publicViewingKey));
-    assert.isFalse(await verifyED25519(message, signature, randomBytes(32)));
+    // eslint-disable-next-line no-unused-expressions
+    expect(verifyED25519(message, signature, randomBytes(32))).to.eventually.be.rejected
   });
 });

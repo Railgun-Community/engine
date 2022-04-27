@@ -139,13 +139,13 @@ describe('Wallet/Index', () => {
         214, 64, 243, 19, 178, 53, 241, 183, 92, 29, 128, 185,
       ]),
       pubkey: new Uint8Array([
-        172, 181, 158, 117, 95, 174, 171, 93, 44, 198, 111, 75, 32, 145, 215, 59, 36, 84, 198, 73,
-        250, 15, 26, 84, 194, 103, 165, 47, 2, 8, 239, 37,
+        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234
       ]),
     });
   });
 
-  it.only('Should sign and verify with viewing keypair', async () => {
+  it('Should sign and verify with viewing keypair', async () => {
     const data = utf8ToBytes('20388293809abc');
     const signed = await wallet.signWithViewingKey(data);
     const { pubkey } = wallet.getViewingKeyPair();
@@ -170,27 +170,27 @@ describe('Wallet/Index', () => {
       masterPublicKey:
         20060431504059690749153982049210720252589378133547582826474262520121417617087n,
       viewingPublicKey: new Uint8Array([
-        172, 181, 158, 117, 95, 174, 171, 93, 44, 198, 111, 75, 32, 145, 215, 59, 36, 84, 198, 73,
-        250, 15, 26, 84, 194, 103, 165, 47, 2, 8, 239, 37,
+        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234
       ]),
     });
   });
 
   it('Should get addresses', async () => {
     expect(wallet.getAddress(0)).to.equal(
-      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53l7ktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2n2s479',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990',
     );
     expect(wallet.getAddress(1)).to.equal(
-      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqxktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj258lxjh',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw56ltkfa',
     );
     expect(wallet.getAddress(2)).to.equal(
-      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq2ktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2n0fwh8',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqfma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5aha7vd',
     );
     expect(wallet.getAddress(3)).to.equal(
-      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqwktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2fsu35s',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqdma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw58ggp06',
     );
     expect(wallet.getAddress(4)).to.equal(
-      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqjktt8n4t7h2khfvceh5kgy36uajg4xxf8aq7xj5cfn62tczprhj2alv7aw',
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq3ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5n8cwxy',
     );
   });
 
