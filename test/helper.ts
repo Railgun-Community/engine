@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
-// @ts-ignore
 import artifacts from 'railgun-artifacts-node';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
@@ -11,7 +9,7 @@ import { AccumulatedEvents, QuickSync } from '../src';
 import { Nullifier } from '../src/merkletree';
 import { CommitmentEvent } from '../src/contract/erc20/events';
 
-export const DECIMALS = 10n ** 18n;
+export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 const WALLET_PATH = "m/44'/60'/0'/0/0";
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -28,7 +26,9 @@ export const artifactsGetter = (inputs: PublicInputs) => {
 };
 
 export const mockQuickSync: QuickSync = (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _chainID: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _startingBlock: number,
 ): Promise<AccumulatedEvents> =>
   Promise.resolve({

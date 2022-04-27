@@ -8,10 +8,14 @@ export default class LeptonDebug {
   }
 
   static log(msg: string) {
-    this.leptonDebugger?.log(msg);
+    if (this.leptonDebugger) {
+      this.leptonDebugger.log(msg);
+    }
   }
 
   static error(err: Error) {
-    this.leptonDebugger?.error(err);
+    if (this.leptonDebugger) {
+      this.leptonDebugger.error(err);
+    }
   }
 }

@@ -95,7 +95,7 @@ class Transaction {
   }
 
   get withdrawValue() {
-    return this.withdrawNote ? this.withdrawNote.value : 0n;
+    return this.withdrawNote ? this.withdrawNote.value : BigInt(0);
   }
 
   /**
@@ -117,7 +117,7 @@ class Transaction {
     const nullifyingKey = wallet.getNullifyingKey();
     const viewingKey = wallet.getViewingKeyPair();
 
-    const outputTotal = this.outputs.reduce((left, right) => left + right.value, 0n);
+    const outputTotal = this.outputs.reduce((left, right) => left + right.value, BigInt(0));
 
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.withdrawValue;
@@ -139,7 +139,10 @@ class Transaction {
       throw new Error(`Failed to find balances for ${this.token}`);
 
     // Sum balances
-    const balance: bigint = treeSortedBalances.reduce((left, right) => left + right.balance, 0n);
+    const balance: bigint = treeSortedBalances.reduce(
+      (left, right) => left + right.balance,
+      BigInt(0),
+    );
 
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired > balance) throw new Error('Wallet balance too low');
@@ -154,7 +157,7 @@ class Transaction {
     const pathElements: bigint[][] = [];
     const pathIndices: bigint[] = [];
 
-    for (let i = 0; i < utxos?.length; i += 1) {
+    for (let i = 0; i < utxos.length; i += 1) {
       // Get UTXO
       const utxo = utxos[i];
 
@@ -163,7 +166,7 @@ class Transaction {
 
       // Push path elements
       if (utxo.dummyKey) {
-        pathElements.push(new Array(depths.erc20).fill(0n));
+        pathElements.push(new Array(depths.erc20).fill(BigInt(0)));
       } else {
         // eslint-disable-next-line no-await-in-loop
         const proof = await merkleTree.getProof(this.tree, utxo.position);
@@ -175,10 +178,10 @@ class Transaction {
     }
 
     // Calculate change amount
-    const totalIn = utxos?.reduce((left, right) => left + right.note.value, 0n);
+    const totalIn = utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
     const totalOut =
-      this.outputs.reduce((left, right) => left + right.value, 0n) + this.withdrawValue;
+      this.outputs.reduce((left, right) => left + right.value, BigInt(0)) + this.withdrawValue;
 
     const change = totalIn - totalOut;
 

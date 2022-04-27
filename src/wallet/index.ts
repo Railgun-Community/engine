@@ -429,7 +429,8 @@ class Wallet extends EventEmitter {
   }
 
   async getBalance(chainID: number, tokenAddress: string) {
-    return (await this.balances(chainID))[formatToByteLength(tokenAddress, 32, false)]?.balance;
+    const balances = await this.balances(chainID);
+    return balances[formatToByteLength(tokenAddress, 32, false)].balance;
   }
 
   /**

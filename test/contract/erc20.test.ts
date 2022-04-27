@@ -12,7 +12,7 @@ import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
 import { hexlify } from '../../src/utils/bytes';
 import { Nullifier } from '../../src/merkletree';
-import { artifactsGetter, awaitScan, DECIMALS } from '../helper';
+import { artifactsGetter, awaitScan, DECIMALS_18 } from '../helper';
 import { Deposit } from '../../src/note/deposit';
 import { CommitmentEvent } from '../../src/contract/erc20/events';
 import { EventName } from '../../src/contract/erc20';
@@ -36,7 +36,7 @@ const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
 const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
-const VALUE = 10000n * DECIMALS;
+const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDeposit: (value?: bigint) => Promise<[ethers.providers.TransactionReceipt, unknown]>;
 
@@ -71,7 +71,7 @@ describe('Contract/Index', function () {
     // fn to create deposit tx for tests
     // tx should be complete and balances updated after await
     testDeposit = async (
-      value: bigint = 10000n * DECIMALS,
+      value: bigint = BigInt(10000) * DECIMALS_18,
     ): Promise<[ethers.providers.TransactionReceipt, unknown]> => {
       // Create deposit
       const deposit = new Deposit(wallet.addressKeys.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);

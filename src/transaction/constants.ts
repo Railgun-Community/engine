@@ -15,7 +15,7 @@ export const NOTE_INPUTS = {
 export const NOTE_OUTPUTS = 3;
 
 export const WithdrawFlag = {
-  NO_WITHDRAW: 0n,
-  WITHDRAW: 1n,
-  OVERRIDE: 2n,
+  NO_WITHDRAW: BigInt(0),
+  WITHDRAW: BigInt(1),
+  OVERRIDE: BigInt(2),
 } as const;

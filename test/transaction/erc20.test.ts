@@ -15,7 +15,7 @@ import { keysUtils } from '../../src/utils';
 import { Transaction } from '../../src/transaction';
 import { Prover } from '../../src/prover';
 import { config } from '../config.test';
-import { artifactsGetter, DECIMALS } from '../helper';
+import { artifactsGetter, DECIMALS_18 } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
 import { formatToByteLength } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
@@ -99,7 +99,7 @@ describe('Transaction/ERC20', function () {
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     // testData = getTestData();
-    makeNote = (value: bigint = 65n * DECIMALS): Note => new Note(address, random, value, token);
+    makeNote = (value: bigint = 65n * DECIMALS_18): Note => new Note(address, random, value, token);
     merkletree.validateRoot = () => true;
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     await wallet.scan(chainID);
@@ -110,20 +110,20 @@ describe('Transaction/ERC20', function () {
   });
 
   beforeEach(async () => {
-    // deposit = new Deposit(masterPublicKey, random, 10n ** 18n, token);
+    // deposit = new Deposit(masterPublicKey, random, DECIMALS_18, token);
     transaction = new Transaction(token, 1);
   });
 
   it('Should hash bound parameters', async () => {
     const params = {
-      treeNumber: 0n,
-      withdraw: 0n,
+      treeNumber: BigInt(0),
+      withdraw: BigInt(0),
       adaptContract: formatToByteLength('00', 20, true),
       adaptParams: formatToByteLength('00', 32, true), //
       commitmentCiphertext: [
         {
-          ciphertext: [0n, 0n, 0n, 0n],
-          ephemeralKeys: [0n, 0n],
+          ciphertext: [0n, BigInt(0), BigInt(0), BigInt(0)],
+          ephemeralKeys: [0n, BigInt(0)],
           memo: [],
         },
       ],

@@ -7,7 +7,7 @@ import { Lepton, Note, Transaction } from '../src';
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
 import { Wallet } from '../src/wallet';
-import { artifactsGetter, awaitScan, getEthersWallet, mockQuickSync } from './helper';
+import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync } from './helper';
 import { Deposit } from '../src/note/deposit';
 import { GeneratedCommitment, MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
@@ -120,7 +120,7 @@ describe('Lepton', function () {
 
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getViewingKeyPair().privateKey;
-    const value = 110000n * 10n ** 18n;
+    const value = BigInt(110000) * DECIMALS_18;
     const random = bytes.random();
     const deposit = new Deposit(mpk, random, value, token.address);
 
@@ -133,18 +133,20 @@ describe('Lepton', function () {
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    expect(balance).to.equal(109725685785536159600997n);
+    expect(balance).to.equal(BigInt('109725685785536159600997'));
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
     transaction.withdraw(
       await etherswallet.getAddress(),
-      300n * 10n ** 18n,
+      BigInt(300) * DECIMALS_18,
       config.contracts.treasury,
     );
 
     // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
-    transaction.outputs = [new Note(wallet.addressKeys, random, 1n * 10n ** 18n, tokenAddress)];
+    transaction.outputs = [
+      new Note(wallet.addressKeys, random, BigInt(1) * DECIMALS_18, tokenAddress),
+    ];
 
     const proof = await transaction.prove(
       lepton.prover,

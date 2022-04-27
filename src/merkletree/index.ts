@@ -537,7 +537,7 @@ class MerkleTree {
         }
 
         // If there is an element in the write queue equal to the tree length, process it
-        if (this.writeQueue[treeIndex]?.[treeLengths[treeIndex]]) {
+        if (this.writeQueue[treeIndex] && this.writeQueue[treeIndex][treeLengths[treeIndex]]) {
           updatePromises.push(
             this.insertLeaves(
               treeIndex,

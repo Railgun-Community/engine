@@ -74,6 +74,6 @@ export class WithdrawNote {
   }
 
   static empty() {
-    return new WithdrawNote(ZERO_ADDRESS, 0n, ZERO_ADDRESS);
+    return new WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS);
   }
 }
