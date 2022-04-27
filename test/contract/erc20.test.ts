@@ -346,7 +346,7 @@ describe('Contract/Index', function () {
     // @ts-ignore
     expect(result.startPosition).to.equal(1);
     // @ts-ignore
-    expect(result.commitments.length).to.equal(3);
+    expect(result.commitments.length).to.equal(2);
   }).timeout(40000);
 
   afterEach(async () => {
