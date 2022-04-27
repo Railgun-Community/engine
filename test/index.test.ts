@@ -107,7 +107,7 @@ describe('Lepton', function () {
     expect(balance).to.equal(value);
   });
 
-  it.only('[HH] Should deposit, transact and update balance', async function run() {
+  it('[HH] Should deposit, transact and update balance', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
