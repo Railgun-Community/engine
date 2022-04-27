@@ -1,9 +1,9 @@
 import { Ciphertext, EncryptedData } from '../models/transaction-types';
-import { hexlify } from './bytes';
+import { chunk, combine, hexlify } from './bytes';
 
 export const ciphertextToEncryptedData = (ciphertext: Ciphertext): EncryptedData => {
   const ivTag = hexlify(ciphertext.iv, true) + hexlify(ciphertext.tag);
-  const data = hexlify(ciphertext.data[0], true);
+  const data = combine(ciphertext.data.map((el) => hexlify(el)));
   return [ivTag, data];
 };
 
@@ -12,7 +12,7 @@ export const encryptedDataToCiphertext = (encryptedData: EncryptedData): Ciphert
   const ciphertext = {
     iv: hexlified[0].substring(0, 32),
     tag: hexlified[0].substring(32),
-    data: [hexlified[1]],
+    data: chunk(hexlified[1]),
   };
   return ciphertext;
 };
