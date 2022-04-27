@@ -197,7 +197,7 @@ class Wallet extends EventEmitter {
    */
   async signWithViewingKey(message: Uint8Array): Promise<Uint8Array> {
     const viewingPrivateKey = this.getViewingKeyPair().privateKey;
-    return signED25519(viewingPrivateKey, message);
+    return signED25519(message, viewingPrivateKey);
   }
 
   /**

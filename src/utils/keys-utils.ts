@@ -1,6 +1,6 @@
 import * as curve25519 from '@noble/ed25519';
+import { bytesToHex, randomBytes } from '@noble/hashes/utils';
 import { eddsa, poseidon, Signature } from 'circomlib';
-import { randomBytes } from '@noble/hashes/utils';
 import { hexlify } from './bytes';
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
@@ -8,8 +8,7 @@ function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
 }
 
 async function getPublicViewingKey(privateViewingKey: Uint8Array): Promise<Uint8Array> {
-  const extendedPoint = await curve25519.utils.getExtendedPublicKey(privateViewingKey);
-  return extendedPoint.point.toX25519();
+  return await curve25519.getPublicKey(privateViewingKey);
 }
 
 function getRandomScalar(): bigint {
@@ -24,7 +23,7 @@ function verifyEDDSA(message: bigint, signature: Signature, pubkey: [bigint, big
   return eddsa.verifyPoseidon(message, signature, pubkey);
 }
 
-async function signED25519(privateKey: Uint8Array, message: Uint8Array): Promise<Uint8Array> {
+async function signED25519(message: Uint8Array, privateKey: Uint8Array): Promise<Uint8Array> {
   return curve25519.sign(message, privateKey);
 }
 
@@ -41,9 +40,11 @@ async function getEphemeralKeys(
   recipientVPK: Uint8Array,
 ): Promise<Uint8Array[]> {
   const random = randomBytes(32);
+  const S = curve25519.Point.fromHex(bytesToHex(senderVPK)).toX25519();
+  const R = curve25519.Point.fromHex(bytesToHex(recipientVPK)).toX25519();
   const { head } = await curve25519.utils.getExtendedPublicKey(random);
-  const rS = curve25519.curve25519.scalarMult(head, senderVPK);
-  const rR = curve25519.curve25519.scalarMult(head, recipientVPK);
+  const rS = curve25519.curve25519.scalarMult(head, S);
+  const rR = curve25519.curve25519.scalarMult(head, R);
   return [rS, rR];
 }
 
