@@ -3,7 +3,7 @@ import { Note, WithdrawNote } from '../note';
 import { bytes, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
-import type { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
+import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
 import {
   ByteLength,
@@ -290,7 +290,6 @@ class Transaction {
    * Return serialized transaction with zero'd proof for gas estimates.
    * @param wallet - wallet to spend from
    * @param encryptionKey - encryption key for wallet
-   * @param boundParams
    * @returns serialized transaction
    */
   async dummyProve(wallet: Wallet, encryptionKey: string): Promise<SerializedTransaction> {
@@ -315,21 +314,9 @@ class Transaction {
     overrideOutput: string,
     withdrawPreimage: CommitmentPreimage,
   ): SerializedTransaction {
+    const formatted = Prover.formatProof(proof);
     return {
-      proof: {
-        a: {
-          x: BigInt(proof.pi_a[0]),
-          y: BigInt(proof.pi_a[1]),
-        },
-        b: {
-          x: proof.pi_b[0].map((x) => BigInt(x)),
-          y: proof.pi_b[1].map((x) => BigInt(x)),
-        },
-        c: {
-          x: BigInt(proof.pi_c[0]),
-          y: BigInt(proof.pi_c[1]),
-        },
-      },
+      proof: formatted,
       merkleRoot: publicInputs.merkleRoot,
       nullifiers: publicInputs.nullifiers,
       boundParams,

@@ -64,7 +64,7 @@ class Lepton {
   /**
    * Handle new commitment events and kick off balance scan on wallets
    * @param chainID - chainID of commitments
-   * @param tree - tree of commitments
+   * @param treeNumber - tree of commitments
    * @param startingIndex - starting index of commitments
    * @param leaves - commitments
    */
@@ -329,12 +329,16 @@ class Lepton {
    * @param mnemonic - mnemonic to load
    * @returns id
    */
-  async createWalletFromMnemonic(encryptionKey: BytesData, mnemonic: string): Promise<string> {
+  async createWalletFromMnemonic(
+    encryptionKey: BytesData,
+    mnemonic: string,
+    index: number = 0,
+  ): Promise<string> {
     // Instantiate wallet
-    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic);
+    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
 
     // Store wallet against ID
-    this.wallets[wallet.id] = wallet;
+    this.wallets[bytes.hexlify(wallet.id)] = wallet;
 
     // Load merkle trees for wallet
     this.merkletree.forEach((tree) => {

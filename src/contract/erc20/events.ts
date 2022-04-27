@@ -164,11 +164,11 @@ export function formatNullifierEvents(event: Event): Nullifier[] {
   const nullifiers: Nullifier[] = [];
 
   const { args } = event;
-  args!.nullifiers.forEach((nullifier: BigNumber) => {
+  args!.nullifier.forEach((nullifier: BigNumber) => {
     nullifiers.push({
       txid: event.transactionHash,
       nullifier: nullifier.toHexString(),
-      treeNumber: args!.treeNumber,
+      treeNumber: args!.treeNumber.toNumber(),
     });
   });
 

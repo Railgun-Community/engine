@@ -10,7 +10,7 @@ import {
   nToHex,
 } from '../utils/bytes';
 import { AddressData } from '../keyderivation/bech32-encode';
-import { PublicInputs } from '../prover';
+import { PublicInputs } from '../prover/types';
 
 const { poseidon } = keysUtils;
 
@@ -64,11 +64,8 @@ export class Note {
   /**
    * Sign a transaction
    *
-   * @param {bigint} merkleRoot - transaction merkle root
-   * @param {bigint} boundParamsHash - transaction bound parameters hash
-   * @param {Array<bigint>} nullifiers - transaction nullifiers
-   * @param {Array<bigint>} commitmentsOut - transaction commitments
-   * @returns {object} signature
+   * @param {PublicInputs} publicInputs - transaction merkle root
+   * @returns {Signature} signature
    */
   static sign(publicInputs: PublicInputs, spendingKeyPrivate: Uint8Array): Signature {
     const entries = Object.values(publicInputs).flatMap((x) => x);

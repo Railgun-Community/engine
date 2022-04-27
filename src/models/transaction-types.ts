@@ -1,4 +1,5 @@
 import BN from 'bn.js';
+import { SnarkProof } from '../prover/types';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
@@ -43,21 +44,6 @@ export type CommitmentPreimage = {
   npk: string;
   token: TokenData;
   value: bigint;
-};
-
-export type G1Point = {
-  x: bigint;
-  y: bigint;
-};
-export type G2Point = {
-  x: bigint[];
-  y: bigint[];
-};
-
-export type SnarkProof = {
-  a: G1Point;
-  b: G2Point;
-  c: G1Point;
 };
 
 export type SerializedTransaction = {

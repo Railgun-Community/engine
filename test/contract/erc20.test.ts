@@ -29,7 +29,9 @@ let snapshot: number;
 let token: ethers.Contract;
 let contract: ERC20RailgunContract;
 let walletID: string;
+let walletID2: string;
 let wallet: Wallet;
+let wallet2: Wallet;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -64,9 +66,11 @@ describe('Contract/Index', function () {
     await token.approve(contract.address, balance);
 
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
-    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
+    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
+    walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
     wallet = lepton.wallets[walletID];
+    wallet2 = lepton.wallets[walletID2];
 
     // fn to create deposit tx for tests
     // tx should be complete and balances updated after await
@@ -98,7 +102,7 @@ describe('Contract/Index', function () {
     );
   });
 
-  it('[HH] Should return gas estimate for dummy transaction', async function run() {
+  it.skip('[HH] Should return gas estimate for dummy transaction', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -226,12 +230,14 @@ describe('Contract/Index', function () {
 
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
-    transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
+
+    // const { dir } = console;
 
     // Create transact
-    const transact = await contract.transact([
-      await transaction.prove(lepton.prover, wallet, testEncryptionKey),
-    ]);
+    const serializedTx = await transaction.prove(lepton.prover, wallet, testEncryptionKey);
+    const transact = await contract.transact([serializedTx]);
+    // dir(serializedTx, { depth: null });
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
@@ -247,7 +253,7 @@ describe('Contract/Index', function () {
     // @ts-ignore
     expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
     // @ts-ignore
-    expect(resultNullifiers.length).to.equal(2);
+    expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
   it('[HH] Should get note hashes', async function run() {

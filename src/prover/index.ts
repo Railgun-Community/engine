@@ -1,55 +1,18 @@
 /* eslint-disable camelcase */
 // @ts-ignore-next-line
 import { groth16 } from 'snarkjs';
+import {
+  ArtifactsGetter,
+  FormattedCircuitInputs,
+  PrivateInputs,
+  Proof,
+  PublicInputs,
+  SnarkProof,
+} from './types';
 
-export type Artifacts = {
-  zkey: ArrayLike<number>;
-  wasm: ArrayLike<number>;
-  vkey: object;
-};
+export { ArtifactsGetter, FormattedCircuitInputs, PrivateInputs, Proof, PublicInputs, SnarkProof };
 
-export const enum Circuits {
-  OneTwo,
-  OneThree,
-  TwoTwo,
-  TwoThree,
-  EightTwo,
-}
-
-export type Proof = {
-  pi_a: string[];
-  pi_b: string[][];
-  pi_c: string[];
-};
-
-export type PublicInputs = {
-  merkleRoot: bigint;
-  boundParamsHash: bigint;
-  nullifiers: bigint[];
-  commitmentsOut: bigint[];
-};
-
-export type PrivateInputs = {
-  token: bigint;
-  publicKey: [bigint, bigint];
-  signature: [bigint, bigint, bigint];
-  randomIn: bigint[];
-  valueIn: bigint[];
-  pathElements: bigint[][];
-  leavesIndices: bigint[];
-  nullifyingKey: bigint;
-  npkOut: bigint[];
-  valueOut: bigint[];
-};
-
-export type FormattedCircuitInputs = {
-  [key: string]: bigint | bigint[];
-};
-
-// eslint-disable-next-line no-unused-vars
-// export type ArtifactsGetter = (Circuits) => Promise<Artifacts>;
-export type ArtifactsGetter = (publicInputs: PublicInputs) => Promise<Artifacts>;
-class Prover {
+export class Prover {
   private artifactsGetter: ArtifactsGetter;
 
   private groth16Override: any;
@@ -101,12 +64,30 @@ class Prover {
     );
 
     // Throw if proof is invalid
-    if (!(await this.verify(publicInputs, proof))) throw new Error('Proof generation failed');
+    const verified = await this.verify(publicInputs, proof);
+    if (verified !== true) throw new Error('Proof generation failed');
 
     // Return proof with inputs
     return {
       proof,
       publicInputs,
+    };
+  }
+
+  static formatProof(proof: Proof): SnarkProof {
+    return {
+      a: {
+        x: BigInt(proof.pi_a[0]),
+        y: BigInt(proof.pi_a[1]),
+      },
+      b: {
+        x: [BigInt(proof.pi_b[0][1]), BigInt(proof.pi_b[0][0])],
+        y: [BigInt(proof.pi_b[1][1]), BigInt(proof.pi_b[1][0])],
+      },
+      c: {
+        x: BigInt(proof.pi_c[0]),
+        y: BigInt(proof.pi_c[1]),
+      },
     };
   }
 
@@ -132,5 +113,3 @@ class Prover {
     };
   }
 }
-
-export { Prover };

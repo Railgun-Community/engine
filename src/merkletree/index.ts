@@ -421,36 +421,7 @@ class MerkleTree {
       // Set writecache value
       this.nodeWriteCache[tree][level][index] = hexlify(leaf.hash);
 
-      if ('ciphertext' in leaf) {
-        this.commitmentWriteCache[tree][index] = leaf;
-        /*
-        this.commitmentWriteCache[tree][index] = {
-          hash: hexlify(leaf.hash),
-          txid: hexlify(leaf.txid),
-          ciphertext: {
-            ciphertext: {
-              iv: hexlify(ciphertext.ciphertext.iv),
-              tag: hexlify(ciphertext.ciphertext.tag),
-              data: ciphertext.ciphertext.data.map((el) => hexlify(el)),
-            },
-            memo: ciphertext.memo,
-            ephemeralKeys: ciphertext.ephemeralKeys,
-          },
-        };
-        */
-      } else {
-        this.commitmentWriteCache[tree][index] = leaf;
-        /*
-        this.commitmentWriteCache[tree][index] = {
-          hash: hexlify(leaf.hash),
-          txid: hexlify(leaf.txid),
-          preimage: leaf.preimage,
-          encryptedRandom: leaf.encryptedRandom.map((r) => hexlify(r)) as [string, string],
-        };
-        */
-      }
-      // const { log } = console;
-      // log(leaf);
+      this.commitmentWriteCache[tree][index] = leaf;
 
       // Increment index
       index += 1;
