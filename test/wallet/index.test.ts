@@ -2,6 +2,7 @@
 /* globals describe it beforeEach afterEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { utf8ToBytes } from 'ethereum-cryptography/utils';
 import { mnemonicToSeed } from 'ethers/lib/utils';
 
 import memdown from 'memdown';
@@ -9,6 +10,8 @@ import { Database } from '../../src/database';
 import { bech32 } from '../../src/keyderivation';
 import { MerkleTree } from '../../src/merkletree';
 import { bytes, hash } from '../../src/utils';
+import { fromUTF8String } from '../../src/utils/bytes';
+import { verifyED25519 } from '../../src/utils/keys-utils';
 
 import { Wallet } from '../../src/wallet';
 
@@ -21,7 +24,6 @@ const { expect } = chai;
 let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
-let viewingPrivateKey: string;
 const chainID: number = 1;
 
 const testMnemonic = config.mnemonic;
@@ -141,6 +143,13 @@ describe('Wallet/Index', () => {
         250, 15, 26, 84, 194, 103, 165, 47, 2, 8, 239, 37,
       ]),
     });
+  });
+
+  it.only('Should sign and verify with viewing keypair', async () => {
+    const data = utf8ToBytes('20388293809abc');
+    const signed = await wallet.signWithViewingKey(data);
+    const { pubkey } = wallet.getViewingKeyPair();
+    expect(await verifyED25519(data, signed, pubkey)).to.equal(true);
   });
 
   it('Should get spending keypair', async () => {

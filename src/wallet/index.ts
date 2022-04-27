@@ -25,6 +25,7 @@ import {
 } from '../utils/bytes';
 import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import LeptonDebug from '../debugger';
+import { signED25519 } from '../utils/keys-utils';
 
 const { poseidon } = keysUtils;
 
@@ -188,6 +189,15 @@ class Wallet extends EventEmitter {
 
   getViewingKeyPair(): ViewingKeyPair {
     return this.#viewingKeyPair;
+  }
+
+  /**
+   * Used only to sign Relayer fee messages.
+   * Verified using Relayer's viewingPublicKey, which is contained in its rail address.
+   */
+  async signWithViewingKey(message: Uint8Array): Promise<Uint8Array> {
+    const viewingPrivateKey = this.getViewingKeyPair().privateKey;
+    return signED25519(viewingPrivateKey, message);
   }
 
   /**

@@ -20,8 +20,20 @@ function signEDDSA(privateKey: Uint8Array, message: bigint): Signature {
   return eddsa.signPoseidon(Buffer.from(privateKey), message);
 }
 
-function verifyEDDSA(msg: bigint, signature: Signature, pubkey: [bigint, bigint]) {
-  return eddsa.verifyPoseidon(msg, signature, pubkey);
+function verifyEDDSA(message: bigint, signature: Signature, pubkey: [bigint, bigint]) {
+  return eddsa.verifyPoseidon(message, signature, pubkey);
+}
+
+async function signED25519(privateKey: Uint8Array, message: Uint8Array): Promise<Uint8Array> {
+  return curve25519.sign(message, privateKey);
+}
+
+function verifyED25519(
+  message: Uint8Array,
+  signature: Uint8Array,
+  pubkey: Uint8Array,
+): Promise<boolean> {
+  return curve25519.verify(signature, message, pubkey);
 }
 
 async function getEphemeralKeys(
@@ -49,6 +61,8 @@ export {
   getRandomScalar,
   signEDDSA,
   verifyEDDSA,
+  signED25519,
+  verifyED25519,
   getEphemeralKeys,
   getSharedSymmetricKey,
   poseidon,
