@@ -12,7 +12,7 @@ import {
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe.only('ecies', () => {
+describe('ecies', () => {
   it('Should encrypt and decrypt data using shared keys', async () => {
     const privateKey1 = bytes.random(32);
     const publicKey1 = await curve25519.getPublicKey(privateKey1);
