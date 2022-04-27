@@ -3,7 +3,7 @@ import * as curve25519 from '@noble/ed25519';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { bytes } from '../../src/utils';
-import { hexlify, hexToBytes } from '../../src/utils/bytes';
+import { hexlify } from '../../src/utils/bytes';
 import {
   encryptJSONDataWithSharedKey,
   tryDecryptJSONDataWithSharedKey,
@@ -31,12 +31,7 @@ describe.only('ecies', () => {
     const sharedKeyAlternate = await curve25519.getSharedSecret(privateKey1, publicKey2);
     expect(sharedKeyAlternate).to.deep.equal(sharedKey);
 
-    expect(
-      await tryDecryptJSONDataWithSharedKey(
-        encryptedData,
-        hexToBytes(privateKey1),
-        hexlify(publicKey2),
-      ),
-    ).to.deep.equal(data);
+    const decrypted = await tryDecryptJSONDataWithSharedKey(encryptedData, sharedKeyAlternate);
+    expect(decrypted).to.deep.equal(data);
   });
 });
