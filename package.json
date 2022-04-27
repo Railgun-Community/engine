@@ -44,7 +44,7 @@
     "ethers": "^5.6.4",
     "levelup": "^5.1.1",
     "msgpack-lite": "^0.1.26",
-    "railgun-artifacts-node": "https://npm.railgun.org/railgun-artifacts-node-0.0.1.tgz",
+    "railgun-artifacts-node": "https://npm.railgun.org/railgun-artifacts-node-0.1.0.tgz",
     "snarkjs": "^0.4.16"
   },
   "devDependencies": {

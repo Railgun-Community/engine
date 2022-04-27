@@ -1,7 +1,7 @@
 import { CommitmentPreimage, EncryptedData } from '../models/transaction-types';
 import { encryption } from '../utils';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
-import { ciphertextToEncryptedData } from '../utils/ciphertext';
+import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
 
@@ -49,7 +49,7 @@ export class Deposit {
         token: this.tokenData,
         value: this.value,
       },
-      encryptedRandom: ciphertextToEncryptedData(ciphertext),
+      encryptedRandom: ciphertextToEncryptedRandomData(ciphertext),
     };
   }
 }

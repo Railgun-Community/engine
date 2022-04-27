@@ -1,6 +1,6 @@
 import { EncryptedData } from '../models/transaction-types';
 import { toUTF8String, combine, chunk, fromUTF8String } from './bytes';
-import { encryptedDataToCiphertext, ciphertextToEncryptedData } from './ciphertext';
+import { encryptedDataToCiphertext, ciphertextToEncryptedJSONData } from './ciphertext';
 import { aes } from './encryption';
 
 export const tryDecryptJSONDataWithSharedKey = async (
@@ -22,5 +22,5 @@ export const encryptJSONDataWithSharedKey = (data: object, sharedKey: string): E
   const dataString = JSON.stringify(data);
   const chunkedData = chunk(fromUTF8String(dataString));
   const ciphertext = aes.gcm.encrypt(chunkedData, sharedKey);
-  return ciphertextToEncryptedData(ciphertext);
+  return ciphertextToEncryptedJSONData(ciphertext);
 };

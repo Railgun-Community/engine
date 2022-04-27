@@ -1,7 +1,13 @@
 import { Ciphertext, EncryptedData } from '../models/transaction-types';
 import { chunk, combine, hexlify } from './bytes';
 
-export const ciphertextToEncryptedData = (ciphertext: Ciphertext): EncryptedData => {
+export const ciphertextToEncryptedRandomData = (ciphertext: Ciphertext): EncryptedData => {
+  const ivTag = hexlify(ciphertext.iv, true) + hexlify(ciphertext.tag);
+  const data = hexlify(ciphertext.data[0], true);
+  return [ivTag, data];
+};
+
+export const ciphertextToEncryptedJSONData = (ciphertext: Ciphertext): EncryptedData => {
   const ivTag = hexlify(ciphertext.iv, true) + hexlify(ciphertext.tag);
   const data = combine(ciphertext.data.map((el) => hexlify(el)));
   return [ivTag, data];

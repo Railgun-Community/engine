@@ -4,7 +4,10 @@ import chaiAsPromised from 'chai-as-promised';
 import { BytesData } from '../../src/models/transaction-types';
 import { encryption } from '../../src/utils';
 import { random } from '../../src/utils/bytes';
-import { ciphertextToEncryptedData, encryptedDataToCiphertext } from '../../src/utils/ciphertext';
+import {
+  ciphertextToEncryptedJSONData,
+  encryptedDataToCiphertext,
+} from '../../src/utils/ciphertext';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -17,7 +20,7 @@ describe('Ciphertext', () => {
     const key = random(32);
     const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
 
-    const encryptedData = ciphertextToEncryptedData(ciphertext);
+    const encryptedData = ciphertextToEncryptedJSONData(ciphertext);
     const newCiphertext = encryptedDataToCiphertext(encryptedData);
 
     expect(newCiphertext).to.deep.equal(ciphertext);

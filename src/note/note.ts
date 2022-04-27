@@ -4,7 +4,7 @@ import { encryption, keysUtils } from '../utils';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { AddressData } from '../keyderivation/bech32-encode';
 import { PublicInputs } from '../prover/types';
-import { ciphertextToEncryptedData, encryptedDataToCiphertext } from '../utils/ciphertext';
+import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 
 const { poseidon } = keysUtils;
 
@@ -120,7 +120,7 @@ export class Note {
   serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
     const { npk, token, value, random } = this.format(prefix);
     const ciphertext = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
-    const [ivTag, data] = ciphertextToEncryptedData(ciphertext);
+    const [ivTag, data] = ciphertextToEncryptedRandomData(ciphertext);
 
     return {
       npk,
