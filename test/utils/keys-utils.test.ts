@@ -7,7 +7,12 @@ import { ByteLength, nToHex } from '../../src/utils/bytes';
 import {
   getPublicSpendingKey,
   getPublicViewingKey,
-  getRandomScalar, poseidon, signED25519, signEDDSA, verifyED25519, verifyEDDSA
+  getRandomScalar,
+  poseidon,
+  signED25519,
+  signEDDSA,
+  verifyED25519,
+  verifyEDDSA,
 } from '../../src/utils/keys-utils';
 
 chai.use(chaiAsPromised);
@@ -52,6 +57,6 @@ describe('Test keys-utils', () => {
     const fakeMessage = utf8ToBytes('123');
     assert.isFalse(await verifyED25519(fakeMessage, signature, publicViewingKey));
     // eslint-disable-next-line no-unused-expressions
-    expect(verifyED25519(message, signature, randomBytes(32))).to.eventually.be.rejected
+    expect(verifyED25519(message, signature, randomBytes(32))).to.eventually.be.rejected;
   });
 });
