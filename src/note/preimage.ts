@@ -33,11 +33,11 @@ export class WithdrawNote {
   }
 
   get npk() {
-    return this.withdrawAddress;
+    return BigInt(this.withdrawAddress);
   }
 
   get notePublicKey() {
-    return this.withdrawAddress;
+    return BigInt(this.withdrawAddress);
   }
 
   get valueHex() {
@@ -47,17 +47,14 @@ export class WithdrawNote {
   /**
    * Get note hash
    *
-   * @returns {string} hash
+   * @returns {bigint} hash
    */
-  get hash(): string {
-    return nToHex(
-      poseidon([
-        hexToBigInt(this.withdrawAddress),
-        hexToBigInt(this.token.tokenAddress),
-        this.value,
-      ]),
-      ByteLength.UINT_256,
-    );
+  get hash(): bigint {
+    return poseidon([
+      hexToBigInt(this.withdrawAddress),
+      hexToBigInt(this.token.tokenAddress),
+      this.value,
+    ]);
   }
 
   serialize(prefix: boolean = false) {

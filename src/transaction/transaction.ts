@@ -57,7 +57,7 @@ class Transaction {
 
   notesIn: Note[] = [];
 
-  outputs: Note[] = [];
+  outputs: (Note | WithdrawNote)[] = [];
 
   // see WithdrawFlag
   withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
@@ -188,8 +188,15 @@ class Transaction {
     // Create change output
     this.outputs.push(new Note(wallet.addressKeys, bytes.random(), change, this.token));
 
+    // Push withdraw output if withdraw is requested
+    if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
+      this.outputs.push(this.withdrawNote);
+    }
+
+    const onlyInternalOutputs = this.outputs.filter((note): note is Note => note instanceof WithdrawNote);
+
     const notesEphemeralKeys = await Promise.all(
-      this.outputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),
+      onlyInternalOutputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),
     );
 
     // calculate symmetric key using sender privateKey and recipient ephemeral key
@@ -199,7 +206,7 @@ class Transaction {
       ),
     );
 
-    const commitmentCiphertext: CommitmentCiphertext[] = this.outputs.map((note, index) => {
+    const commitmentCiphertext: CommitmentCiphertext[] = onlyInternalOutputs.map((note, index) => {
       const ciphertext = note.encrypt(sharedKeys[index]);
       return {
         ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
