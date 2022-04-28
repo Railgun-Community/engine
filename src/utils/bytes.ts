@@ -36,15 +36,6 @@ export function u8ToBigInt(u8: Uint8Array): bigint {
 }
 
 /**
- * Generates random bytes
- * @param length - number of bytes to generate
- * @returns random bytes hex string
- */
-function random(length: number = 32): string {
-  return crypto.randomBytes(length).toString('hex');
-}
-
-/**
  * Coerces BytesData into hex string format
  * @param data - bytes data to coerce
  * @param prefix - prefix with 0x
@@ -353,6 +344,15 @@ export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
  */
 export function hexStringToBytes(hex: string): Uint8Array {
   return hexToBytes(hex);
+}
+
+/**
+ * Generates random bytes
+ * @param length - number of bytes to generate
+ * @returns random bytes hex string
+ */
+function random(length: number = 32): string {
+  return crypto.randomBytes(length).toString('hex');
 }
 
 export const HashZero = formatToByteLength('00', 32, true);

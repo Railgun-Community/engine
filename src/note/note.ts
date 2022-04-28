@@ -26,16 +26,16 @@ export class Note {
 
   /**
    * Create Note object from values
-   * @param {BigInt} masterPublicKey - spending public key
+   * @param {BigInt} addressData - recipient wallet address data
    * @param {BigInt} random - note randomness
    * @param {string} token - note token ID
    * @param {BigInt} value - note value
    */
-  constructor(address: AddressData, random: string, value: BigIntish, token: string) {
-    this.masterPublicKey = address.masterPublicKey;
-    this.viewingPublicKey = address.viewingPublicKey;
-    this.token = formatToByteLength(token, 20, false);
-    this.random = formatToByteLength(random, 16, false);
+  constructor(addressData: AddressData, random: string, value: BigIntish, token: string) {
+    this.masterPublicKey = addressData.masterPublicKey;
+    this.viewingPublicKey = addressData.viewingPublicKey;
+    this.token = formatToByteLength(token, ByteLength.Address, false);
+    this.random = formatToByteLength(random, ByteLength.UINT_128, false);
     this.value = BigInt(value);
   }
 

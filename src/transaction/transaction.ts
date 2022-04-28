@@ -4,7 +4,7 @@ import { bytes, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
 import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
-import { SNARK_PRIME, ZERO_ADDRESS } from '../utils/constants';
+import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import {
   ByteLength,
   formatToByteLength,
@@ -42,7 +42,7 @@ export function hashBoundParams(boundParams: BoundParams) {
     ),
   );
 
-  return hexToBigInt(hashed) % BigInt(SNARK_PRIME.toString(10));
+  return hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
 }
 
 class Transaction {
@@ -87,6 +87,10 @@ class Transaction {
   }
 
   withdraw(originalAddress: string, value: BigIntish, toAddress?: string) {
+    if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
+      throw new Error('You may only call .withdraw once for a given transaction.');
+    }
+
     this.withdrawNote = new WithdrawNote(originalAddress, BigInt(value), this.token);
 
     const isOverride = toAddress !== undefined;

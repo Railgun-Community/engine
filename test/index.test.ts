@@ -25,6 +25,8 @@ let snapshot: number;
 let token: ethers.Contract;
 let walletID: string;
 let wallet: Wallet;
+let walletID2: string;
+let wallet2: Wallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
 let contract: ERC20RailgunContract;
@@ -56,6 +58,8 @@ describe('Lepton', function () {
 
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     wallet = lepton.wallets[walletID];
+    walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
+    wallet2 = lepton.wallets[walletID2];
     await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 24);
     merkleTree = lepton.merkletree[chainID].erc20;
     contract = lepton.contracts[chainID];
@@ -121,7 +125,7 @@ describe('Lepton', function () {
     const mpk = Lepton.decodeAddress(address).masterPublicKey;
     const vpk = wallet.getViewingKeyPair().privateKey;
     const value = BigInt(110000) * DECIMALS_18;
-    const random = bytes.random();
+    const random = bytes.random(16);
     const deposit = new Deposit(mpk, random, value, token.address);
 
     const { preImage, encryptedRandom } = deposit.serialize(vpk);
@@ -138,33 +142,29 @@ describe('Lepton', function () {
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
     transaction.withdraw(
-      await etherswallet.getAddress(),
+      etherswallet.address,
       BigInt(300) * DECIMALS_18,
       config.contracts.treasury,
     );
 
     // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
-    transaction.outputs = [
-      new Note(wallet.addressKeys, random, BigInt(1) * DECIMALS_18, tokenAddress),
-    ];
+    transaction.outputs = [new Note(wallet2.addressKeys, random, 1n, tokenAddress)];
 
-    const proof = await transaction.prove(
+    const serializedTransaction = await transaction.prove(
       lepton.prover,
       lepton.wallets[walletID],
       testEncryptionKey,
     );
-    const transact = await contract.transact([proof]);
+    const transact = await contract.transact([serializedTransaction]);
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
     await awaitScan(wallet, chainID);
 
-    assert.isTrue(
-      // 109424000000000000000000 - (300 + 1) * 10^18
-      (await wallet.getBalance(chainID, tokenAddress)) === 109424000000000000000000n, // deposit amount - 300(decimals) - 1(decimals)
-      'Failed to receive expected balance',
-    );
-  }).timeout(900000);
+    // BALANCE = deposited amount - 300(decimals) - 1
+    const newBalance = await wallet.getBalance(chainID, tokenAddress);
+    expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
+  }).timeout(90000);
 
   it('Should set/get last synced block', async () => {
     const chainIDForSyncedBlock = 10010;

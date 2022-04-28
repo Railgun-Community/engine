@@ -75,7 +75,7 @@ describe('Contract/Index', function () {
     // fn to create deposit tx for tests
     // tx should be complete and balances updated after await
     testDeposit = async (
-      value: bigint = BigInt(10000) * DECIMALS_18,
+      value: bigint = BigInt(110000) * DECIMALS_18,
     ): Promise<[ethers.providers.TransactionReceipt, unknown]> => {
       // Create deposit
       const deposit = new Deposit(wallet.addressKeys.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
@@ -233,6 +233,7 @@ describe('Contract/Index', function () {
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.withdraw(etherswallet.address, 100n);
 
     // Create transact
     const serializedTx = await transaction.prove(lepton.prover, wallet, testEncryptionKey);
