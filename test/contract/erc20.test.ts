@@ -102,7 +102,7 @@ describe('Contract/Index', function () {
     );
   });
 
-  it.skip('[HH] Should return gas estimate for dummy transaction', async function run() {
+  it('[HH] Should return gas estimate for dummy transaction', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -110,13 +110,14 @@ describe('Contract/Index', function () {
     await testDeposit();
 
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
 
     const tx = await contract.transact([dummyTx]);
 
     tx.from = '0x000000000000000000000000000000000000dEaD';
 
-    expect(await provider.estimateGas(tx)).to.be.greaterThanOrEqual(0);
+    expect((await provider.estimateGas(tx)).toNumber()).to.be.greaterThanOrEqual(0);
   });
 
   it.skip('[HH] Should return gas estimate number - relay', async function run() {
@@ -127,6 +128,7 @@ describe('Contract/Index', function () {
     await testDeposit();
 
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
     const call = await contract.transact([dummyTx]);
 
