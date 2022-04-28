@@ -234,12 +234,9 @@ describe('Contract/Index', function () {
     const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
 
-    // const { dir } = console;
-
     // Create transact
     const serializedTx = await transaction.prove(lepton.prover, wallet, testEncryptionKey);
     const transact = await contract.transact([serializedTx]);
-    // dir(serializedTx, { depth: null });
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
@@ -266,7 +263,7 @@ describe('Contract/Index', function () {
     const withdraw = new WithdrawNote(etherswallet.address, 100n, token.address);
     const contractHash = await contract.hashCommitment(withdraw.preImage);
 
-    expect(hexlify(contractHash)).to.equal(withdraw.hash);
+    expect(hexlify(contractHash)).to.equal(withdraw.hashHex);
   });
 
   it('[HH] Should create serialized transactions and parse tree updates', async function run() {
@@ -327,6 +324,7 @@ describe('Contract/Index', function () {
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, chainID);
     transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
+    transaction.withdraw(etherswallet.address, 100n);
 
     // Create transact
     const transact = await contract.transact([

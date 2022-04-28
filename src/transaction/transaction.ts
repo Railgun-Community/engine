@@ -193,7 +193,7 @@ class Transaction {
       this.outputs.push(this.withdrawNote);
     }
 
-    const onlyInternalOutputs = this.outputs.filter((note): note is Note => note instanceof WithdrawNote);
+    const onlyInternalOutputs = this.outputs.filter((note) => note instanceof Note) as Note[];
 
     const notesEphemeralKeys = await Promise.all(
       onlyInternalOutputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),

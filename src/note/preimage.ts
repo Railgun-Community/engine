@@ -1,4 +1,4 @@
-import { EncryptedData } from '../models/transaction-types';
+import { CommitmentPreimage, EncryptedData } from '../models/transaction-types';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
@@ -32,12 +32,12 @@ export class WithdrawNote {
     };
   }
 
-  get npk() {
-    return BigInt(this.withdrawAddress);
+  get npk(): string {
+    return this.withdrawAddress;
   }
 
   get notePublicKey() {
-    return BigInt(this.withdrawAddress);
+    return BigInt(this.npk);
   }
 
   get valueHex() {
@@ -57,6 +57,10 @@ export class WithdrawNote {
     ]);
   }
 
+  get hashHex(): string {
+    return nToHex(this.hash, ByteLength.UINT_256);
+  }
+
   serialize(prefix: boolean = false) {
     return {
       npk: formatToByteLength(this.withdrawAddress, 32, prefix),
@@ -65,7 +69,7 @@ export class WithdrawNote {
     };
   }
 
-  get preImage() {
+  get preImage(): CommitmentPreimage {
     const { npk, token, value } = this;
     return { npk, token, value };
   }

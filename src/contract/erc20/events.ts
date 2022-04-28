@@ -2,7 +2,7 @@ import type { BigNumber, Event } from 'ethers';
 import { Commitment, EncryptedCommitment, GeneratedCommitment, Nullifier } from '../../merkletree';
 import { WithdrawNote } from '../../note';
 import { BytesData, EncryptedData } from '../../models/transaction-types';
-import { hexlify } from '../../utils/bytes';
+import { ByteLength, hexlify, nToHex } from '../../utils/bytes';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -74,7 +74,7 @@ export function formatGeneratedCommitmentBatchCommitments(
       item.token.tokenAddress,
     );
     return {
-      hash: note.hash,
+      hash: nToHex(note.hash, ByteLength.UINT_256),
       txid: transactionHash,
       preimage: note.serialize(false),
       encryptedRandom: randomFormatted[index],
