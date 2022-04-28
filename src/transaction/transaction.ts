@@ -88,9 +88,12 @@ class Transaction {
 
   withdraw(originalAddress: string, value: BigIntish, toAddress?: string) {
     this.withdrawNote = new WithdrawNote(originalAddress, BigInt(value), this.token);
-    if (toAddress !== undefined) {
+
+    const isOverride = toAddress !== undefined;
+    this.withdrawFlag = isOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
+
+    if (isOverride) {
       this.overrideOutput = toAddress;
-      this.withdrawFlag = WithdrawFlag.OVERRIDE;
     }
   }
 
