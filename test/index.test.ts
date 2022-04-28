@@ -107,7 +107,7 @@ describe('Lepton', function () {
     expect(balance).to.equal(value);
   });
 
-  it('[HH] Should deposit, transact and update balance', async function run() {
+  it.only('[HH] Should deposit, transact and update balance', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -133,7 +133,7 @@ describe('Lepton', function () {
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
     const balance = await wallet.getBalance(chainID, tokenAddress);
-    expect(balance).to.equal(BigInt('109725685785536159600997'));
+    expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
     const transaction = new Transaction(config.contracts.rail, chainID);
@@ -160,8 +160,8 @@ describe('Lepton', function () {
     await awaitScan(wallet, chainID);
 
     assert.isTrue(
-      // 109725685785536159600997 - (300 - (300 * 10000)/ (10000 + 25) + 1 + 300) * 10^18
-      (await wallet.getBalance(chainID, tokenAddress)) === 109423937655890349127181n, // deposit amount - 300(dec) - withdraw fee - 1(dec)
+      // 109424000000000000000000 - (300 + 1) * 10^18
+      (await wallet.getBalance(chainID, tokenAddress)) === 109424000000000000000000n, // deposit amount - 300(decimals) - 1(decimals)
       'Failed to receive expected balance',
     );
   }).timeout(900000);
