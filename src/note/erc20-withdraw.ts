@@ -57,7 +57,7 @@ export class ERC20WithdrawNote {
    *
    * @returns {bigint} hash
    */
-  getHash(): bigint {
+  private getHash(): bigint {
     return poseidon([
       hexToBigInt(this.withdrawAddress),
       hexToBigInt(this.token.tokenAddress),

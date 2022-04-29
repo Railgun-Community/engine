@@ -52,7 +52,7 @@ export class ERC20Deposit {
   /**
    * Get note hash
    */
-  getHash(): bigint {
+  private getHash(): bigint {
     return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
   }
 

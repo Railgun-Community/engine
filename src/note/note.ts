@@ -59,7 +59,7 @@ export class Note {
    * Get note hash
    * @returns {bigint} hash
    */
-  getHash(): bigint {
+  private getHash(): bigint {
     return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
   }
 
