@@ -5,13 +5,15 @@ import { poseidon } from '../utils/keys-utils';
 import { Note } from './note';
 
 export class ERC20WithdrawNote {
-  public withdrawAddress: string;
+  readonly withdrawAddress: string;
 
-  public value: bigint;
+  readonly value: bigint;
 
-  public tokenAddress: string;
+  readonly tokenAddress: string;
 
-  public tokenType = TokenType.ERC20;
+  readonly tokenType = TokenType.ERC20;
+
+  readonly hash: bigint;
 
   /**
    * Create Note object
@@ -27,6 +29,7 @@ export class ERC20WithdrawNote {
     this.withdrawAddress = withdrawAddress;
     this.value = value;
     this.tokenAddress = tokenAddress;
+    this.hash = this.getHash();
   }
 
   get token(): TokenData {
@@ -54,7 +57,7 @@ export class ERC20WithdrawNote {
    *
    * @returns {bigint} hash
    */
-  get hash(): bigint {
+  getHash(): bigint {
     return poseidon([
       hexToBigInt(this.withdrawAddress),
       hexToBigInt(this.token.tokenAddress),

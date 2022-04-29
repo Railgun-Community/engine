@@ -10,19 +10,23 @@ const { poseidon } = keysUtils;
 
 export class Note {
   // viewing public key (VPK) of recipient - ed25519 curve
-  viewingPublicKey: Uint8Array;
+  readonly viewingPublicKey: Uint8Array;
 
   // master public key (VPK) of recipient
-  masterPublicKey: bigint;
+  readonly masterPublicKey: bigint;
 
   // 32 byte token address
-  token: string;
+  readonly token: string;
 
   // 16 byte random
-  random: string;
+  readonly random: string;
 
   // value to transfer as bigint
-  value: bigint;
+  readonly value: bigint;
+
+  readonly notePublicKey: bigint;
+
+  readonly hash: bigint;
 
   /**
    * Create Note object from values
@@ -39,13 +43,15 @@ export class Note {
     this.random = random;
     this.token = formatToByteLength(token, ByteLength.UINT_256, false);
     this.value = BigInt(value);
+    this.notePublicKey = this.getNotePublicKey();
+    this.hash = this.getHash();
   }
 
   get valueHex(): string {
     return nToHex(this.value, ByteLength.UINT_128);
   }
 
-  get notePublicKey(): bigint {
+  private getNotePublicKey(): bigint {
     return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
   }
 
@@ -53,7 +59,7 @@ export class Note {
    * Get note hash
    * @returns {bigint} hash
    */
-  get hash(): bigint {
+  getHash(): bigint {
     return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
   }
 

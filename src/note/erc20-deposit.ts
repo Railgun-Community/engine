@@ -7,15 +7,19 @@ import { poseidon } from '../utils/keys-utils';
 import { Note } from './note';
 
 export class ERC20Deposit {
-  public masterPublicKey: bigint;
+  readonly masterPublicKey: bigint;
 
-  public random: string;
+  readonly random: string;
 
-  public value: bigint;
+  readonly value: bigint;
 
-  public token: string;
+  readonly token: string;
 
-  public tokenType = TokenType.ERC20;
+  readonly tokenType = TokenType.ERC20;
+
+  readonly notePublicKey: bigint;
+
+  readonly hash: bigint;
 
   constructor(masterPublicKey: bigint, random: string, value: bigint, token: string) {
     Note.assertValidRandom(random);
@@ -25,6 +29,8 @@ export class ERC20Deposit {
     this.random = random;
     this.token = token;
     this.value = value;
+    this.notePublicKey = this.getNotePublicKey();
+    this.hash = this.getHash();
   }
 
   get tokenData() {
@@ -35,7 +41,7 @@ export class ERC20Deposit {
     };
   }
 
-  get notePublicKey(): bigint {
+  private getNotePublicKey(): bigint {
     return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
   }
 
@@ -46,7 +52,7 @@ export class ERC20Deposit {
   /**
    * Get note hash
    */
-  get hash(): bigint {
+  getHash(): bigint {
     return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
   }
 
