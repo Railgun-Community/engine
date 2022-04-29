@@ -36,7 +36,6 @@ export type WalletDetails = {
 export type TXO = {
   tree: number;
   position: number;
-  index: number;
   txid: string;
   spendtxid: string | false;
   dummyKey?: string; // For dummy notes
@@ -270,14 +269,20 @@ class Wallet extends EventEmitter {
    * @param chainID - chainID we're scanning
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async scanLeaves(leaves: Commitment[], tree: number, chainID: number): Promise<boolean> {
+  async scanLeaves(
+    leaves: Commitment[],
+    tree: number,
+    chainID: number,
+    scannedHeight: number,
+  ): Promise<boolean> {
     LeptonDebug.log(`wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}`);
     const vpk = this.getViewingKeyPair().privateKey;
 
     const writeBatch: AbstractBatch[] = [];
 
     // Loop through passed commitments
-    for (let position = 0; position < leaves.length; position += 1) {
+    for (let position = scannedHeight; position < scannedHeight + leaves.length; position += 1) {
+      LeptonDebug.log(`inserting ${leaves.length} at ${position}`);
       let note: Note | undefined;
       const leaf = leaves[position];
       if (leaf == null) {
@@ -399,7 +404,6 @@ class Wallet extends EventEmitter {
         return {
           tree,
           position,
-          index: UTXO.index,
           txid: UTXO.txid,
           spendtxid: UTXO.spendtxid,
           note,
@@ -527,17 +531,11 @@ class Wallet extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         const leaves: Commitment[] = await Promise.all(fetcher);
 
-        const filteredLeaves = leaves.filter((value) => {
-          if (value === undefined) {
-            LeptonDebug.log('wallet.scan: value was undefined');
-            return false;
-          }
-          return true;
-        });
+        const filteredLeaves = leaves.filter((value) => value.hash != null);
 
         // Start scanning primary and change
         // eslint-disable-next-line no-await-in-loop
-        await this.scanLeaves(filteredLeaves, tree, chainID); // @todo add start index
+        await this.scanLeaves(filteredLeaves, tree, chainID, scannedHeight);
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] =

@@ -3,6 +3,7 @@ import { Commitment, EncryptedCommitment, GeneratedCommitment, Nullifier } from 
 import { WithdrawNote } from '../../note';
 import { BytesData, EncryptedData } from '../../models/transaction-types';
 import { ByteLength, hexlify, nToHex } from '../../utils/bytes';
+import LeptonDebug from '../../debugger';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -166,7 +167,7 @@ export function formatNullifierEvents(event: Event): Nullifier[] {
   const { args } = event;
   args!.nullifier.forEach((nullifier: BigNumber) => {
     nullifiers.push({
-      txid: event.transactionHash,
+      txid: hexlify(event.transactionHash),
       nullifier: nullifier.toHexString(),
       treeNumber: args!.treeNumber.toNumber(),
     });

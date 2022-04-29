@@ -39,7 +39,7 @@ export class Deposit {
    * @returns serialized note
    */
   serialize(viewingPrivateKey: Uint8Array): {
-    preImage: Partial<CommitmentPreimage>;
+    preImage: CommitmentPreimage;
     encryptedRandom: EncryptedData;
   } {
     const ciphertext = encryption.aes.gcm.encrypt([this.random], viewingPrivateKey);

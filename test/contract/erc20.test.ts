@@ -348,7 +348,7 @@ describe('Contract/Index', function () {
     expect(result.startPosition).to.equal(1);
     // @ts-ignore
     expect(result.commitments.length).to.equal(2);
-  }).timeout(40000);
+  }).timeout(120000);
 
   afterEach(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {

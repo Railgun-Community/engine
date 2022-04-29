@@ -1,5 +1,5 @@
 /* globals describe it beforeEach, afterEach */
-import chai, { assert, expect } from 'chai';
+import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
@@ -14,6 +14,7 @@ import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
+import LeptonDebug from '../src/debugger';
 
 chai.use(chaiAsPromised);
 
@@ -44,6 +45,7 @@ describe('Lepton', function () {
       return;
     }
 
+    // LeptonDebug.init(console); // uncomment for logs
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
     chainID = (await provider.getNetwork()).chainId;
 
@@ -136,6 +138,7 @@ describe('Lepton', function () {
     // Send deposit on chain
     await etherswallet.sendTransaction(depositTx);
     await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
+
     const balance = await wallet.getBalance(chainID, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 

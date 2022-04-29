@@ -69,9 +69,11 @@ class Lepton {
    * @param leaves - commitments
    */
   async listener(chainID: number, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
-    // Queue leaves to merkle tree
-    await this.merkletree[chainID].erc20.queueLeaves(treeNumber, startingIndex, leaves);
-    LeptonDebug.log(`lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`);
+    if (leaves.length) {
+      LeptonDebug.log(`lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`);
+      // Queue leaves to merkle tree
+      await this.merkletree[chainID].erc20.queueLeaves(treeNumber, startingIndex, leaves);
+    }
   }
 
   /**
@@ -81,8 +83,10 @@ class Lepton {
    * @param txid - txid of nullifier transaction
    */
   async nullifierListener(chainID: number, nullifiers: Nullifier[]) {
-    LeptonDebug.log(`nullifierListener ${nullifiers.length}`);
-    await this.merkletree[chainID].erc20.nullify(nullifiers);
+    if (nullifiers.length) {
+      LeptonDebug.log(`lepton.nullifierListener[${chainID}] ${nullifiers.length}`);
+      await this.merkletree[chainID].erc20.nullify(nullifiers);
+    }
   }
 
   /**

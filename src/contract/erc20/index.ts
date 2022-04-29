@@ -104,6 +104,12 @@ class ERC20RailgunContract {
    * @param listener - listener callback
    */
   treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
+    // listen for nullifiers first so balances aren't "double" before they process
+    this.contract.on(EventName.Nullifiers, async (...rest: any) => {
+      const event = rest.pop();
+      await processNullifierEvents(eventsNullifierListener, [event]);
+    });
+
     this.contract.on(EventName.GeneratedCommitmentBatch, async (...rest: any) => {
       const event = rest.pop();
       await eventsListener(formatGeneratedCommitmentBatchEvent(event));
@@ -113,11 +119,6 @@ class ERC20RailgunContract {
       const event = rest.pop();
       await eventsListener(formatCommitmentBatchEvent(event));
     });
-
-    this.contract.on(
-      EventName.Nullifiers,
-      async (e: Event) => await processNullifierEvents(eventsNullifierListener, [e]),
-    );
   }
 
   private async scanEvents(
@@ -162,9 +163,9 @@ class ERC20RailgunContract {
     let currentStartBlock = startBlock;
     const latest = (await this.contract.provider.getBlock('latest')).number;
 
+    const eventFilterNullifier = this.contract.filters.Nullifiers();
     const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
     const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
-    const eventFilterNullifier = this.contract.filters.Nullifiers();
 
     LeptonDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latest}`);
 
@@ -174,19 +175,19 @@ class ERC20RailgunContract {
         LeptonDebug.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
       const endBlock = Math.min(latest, currentStartBlock + SCAN_CHUNKS);
-      const [eventsGeneratedCommitment, eventsEncryptedCommitment, eventsNullifier] =
+      const [eventsNullifier, eventsGeneratedCommitment, eventsEncryptedCommitment] =
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
+          this.scanEvents(eventFilterNullifier, currentStartBlock, endBlock),
           this.scanEvents(eventFilterGeneratedCommitmentBatch, currentStartBlock, endBlock),
           this.scanEvents(eventFilterEncryptedCommitmentBatch, currentStartBlock, endBlock),
-          this.scanEvents(eventFilterNullifier, currentStartBlock, endBlock),
         ]);
 
       // eslint-disable-next-line no-await-in-loop
       await Promise.all([
+        processNullifierEvents(eventsNullifierListener, eventsNullifier),
         processGeneratedCommitmentEvents(eventsListener, eventsGeneratedCommitment),
         processCommitmentBatchEvents(eventsListener, eventsEncryptedCommitment),
-        processNullifierEvents(eventsNullifierListener, eventsNullifier),
       ]);
 
       // eslint-disable-next-line no-await-in-loop
@@ -199,12 +200,13 @@ class ERC20RailgunContract {
   }
 
   /**
-   * Get generateDeposit populated transaction
-   * @param notes - notes to deposit to
+   * GenerateDeposit populated transaction
+   * @param {CommitmentPreimage[]} inputs - notes to deposit to
+   * @param {EncryptedData[]} encryptedRandom - notes to deposit to
    * @returns Populated transaction
    */
   generateDeposit(
-    inputs: Partial<CommitmentPreimage>[],
+    inputs: CommitmentPreimage[],
     encryptedRandom: EncryptedData[],
   ): Promise<PopulatedTransaction> {
     // Return populated transaction
