@@ -496,63 +496,68 @@ class Wallet extends EventEmitter {
     // Lock scan on this chain
     this.scanLockPerChain[chainID] = true;
 
-    // Fetch wallet details
-    const walletDetails = await this.getWalletDetails(chainID);
+    try {
+      // Fetch wallet details
+      const walletDetails = await this.getWalletDetails(chainID);
 
-    // Get latest tree
-    const latestTree = await this.merkletree[chainID].latestTree();
+      // Get latest tree
+      const latestTree = await this.merkletree[chainID].latestTree();
 
-    // Refresh list of trees
-    while (walletDetails.treeScannedHeights.length < latestTree + 1) {
-      // Instantiate new trees in wallet data
-      walletDetails.treeScannedHeights.push(0);
-    }
-
-    // Loop through each tree and scan
-    for (let tree = 0; tree < walletDetails.treeScannedHeights.length; tree += 1) {
-      // Get scanned height
-      const scannedHeight = walletDetails.treeScannedHeights[tree];
-
-      // Create sparse array of tree
-      // eslint-disable-next-line no-await-in-loop
-      const fetcher = new Array(await this.merkletree[chainID].getTreeLength(tree));
-
-      // Fetch each leaf we need to scan
-      for (let index = scannedHeight; index < fetcher.length; index += 1) {
-        fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
+      // Refresh list of trees
+      while (walletDetails.treeScannedHeights.length < latestTree + 1) {
+        // Instantiate new trees in wallet data
+        walletDetails.treeScannedHeights.push(0);
       }
 
-      // Wait until all leaves are fetched
-      // eslint-disable-next-line no-await-in-loop
-      const leaves: Commitment[] = await Promise.all(fetcher);
+      // Loop through each tree and scan
+      for (let tree = 0; tree < walletDetails.treeScannedHeights.length; tree += 1) {
+        // Get scanned height
+        const scannedHeight = walletDetails.treeScannedHeights[tree];
 
-      const filteredLeaves = leaves.filter((value) => {
-        if (value == null) {
-          LeptonDebug.log('wallet.scan: value was undefined');
-          return false;
+        // Create sparse array of tree
+        // eslint-disable-next-line no-await-in-loop
+        const fetcher = new Array(await this.merkletree[chainID].getTreeLength(tree));
+
+        // Fetch each leaf we need to scan
+        for (let index = scannedHeight; index < fetcher.length; index += 1) {
+          fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
         }
-        return true;
-      });
 
-      // Start scanning primary and change
-      // eslint-disable-next-line no-await-in-loop
-      await this.scanLeaves(filteredLeaves, tree, chainID); // @todo add start index
+        // Wait until all leaves are fetched
+        // eslint-disable-next-line no-await-in-loop
+        const leaves: Commitment[] = await Promise.all(fetcher);
 
-      // Commit new scanned height
-      walletDetails.treeScannedHeights[tree] =
-        filteredLeaves.length > 0 ? filteredLeaves.length - 1 : 0;
+        const filteredLeaves = leaves.filter((value) => {
+          if (value == null) {
+            LeptonDebug.log('wallet.scan: value was undefined');
+            return false;
+          }
+          return true;
+        });
+
+        // Start scanning primary and change
+        // eslint-disable-next-line no-await-in-loop
+        await this.scanLeaves(filteredLeaves, tree, chainID); // @todo add start index
+
+        // Commit new scanned height
+        walletDetails.treeScannedHeights[tree] =
+          filteredLeaves.length > 0 ? filteredLeaves.length - 1 : 0;
+      }
+
+      // Write wallet details to db
+      await this.db.putEncrypted(
+        this.getWalletDetailsPath(chainID),
+        nToHex(this.masterPublicKey, ByteLength.UINT_256),
+        msgpack.encode(walletDetails),
+      );
+
+      // Emit scanned event for this chain
+      LeptonDebug.log(`wallet: scanned ${chainID}`);
+      this.emit('scanned', { chainID } as ScannedEventData);
+    } catch (err: any) {
+      LeptonDebug.log(`wallet.scan error: ${err.message}`);
+      LeptonDebug.error(err);
     }
-
-    // Write wallet details to db
-    await this.db.putEncrypted(
-      this.getWalletDetailsPath(chainID),
-      nToHex(this.masterPublicKey, ByteLength.UINT_256),
-      msgpack.encode(walletDetails),
-    );
-
-    // Emit scanned event for this chain
-    LeptonDebug.log(`wallet: scanned ${chainID}`);
-    this.emit('scanned', { chainID } as ScannedEventData);
 
     // Release lock
     this.scanLockPerChain[chainID] = false;

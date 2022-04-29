@@ -8,8 +8,8 @@
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts",
-    "test": "npm run lint && nyc mocha 'test/**/*.test.ts'",
-    "test-hardhat": "env RUN_HARDHAT_TESTS=1 npm test",
+    "test": "npm run lint && env NODE_ENV=test nyc mocha 'test/**/*.test.ts'",
+    "test-hardhat": "env NODE_ENV=test RUN_HARDHAT_TESTS=1 npm test",
     "compile": "npm run clean && tsc",
     "prepack": "npm install && npm run compile",
     "release": "mkdir -p release && npm pack && mv *.tgz ./release",
