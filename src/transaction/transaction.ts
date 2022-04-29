@@ -80,7 +80,7 @@ class Transaction {
    * @param tree - manually specify a tree
    */
   constructor(token: string, chainID: number, tree: number = 0) {
-    this.token = formatToByteLength(token, 20, false);
+    this.token = formatToByteLength(token, ByteLength.UINT_256, false);
     this.chainID = chainID;
     this.tree = tree;
     this.withdrawNote = WithdrawNote.empty();
@@ -192,7 +192,7 @@ class Transaction {
     const change = totalIn - totalOut;
 
     // Create change output
-    this.outputs.push(new Note(wallet.addressKeys, bytes.random(), change, this.token));
+    this.outputs.push(new Note(wallet.addressKeys, bytes.random(16), change, this.token));
 
     // Push withdraw output if withdraw is requested
     if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {

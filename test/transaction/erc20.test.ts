@@ -11,7 +11,7 @@ import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
 import { Wallet } from '../../src/wallet';
 import { Note } from '../../src/note';
-import { keysUtils } from '../../src/utils';
+import { bytes, keysUtils } from '../../src/utils';
 import { Transaction } from '../../src/transaction';
 import { Prover } from '../../src/prover';
 import { config } from '../config.test';
@@ -37,7 +37,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const random = '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9';
+const random = bytes.random(16);
 type makeNoteFn = (value?: bigint) => Note;
 let makeNote: makeNoteFn;
 
@@ -83,7 +83,7 @@ const depositLeaf = {
   encryptedRandom: [
     '0x7797f244fc1c60af03f25cbe9a798080b920733cc2de2456af21ee7c9eb1ca0c',
     '0x118beef50353ab8512be871c0473e219',
-  ],
+  ] as [string, string],
 };
 
 // eslint-disable-next-line func-names

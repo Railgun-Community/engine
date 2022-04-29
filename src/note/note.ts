@@ -15,7 +15,7 @@ export class Note {
   // master public key (VPK) of recipient
   masterPublicKey: bigint;
 
-  // token address
+  // 32 byte token address
   token: string;
 
   // 16 byte random
@@ -32,9 +32,13 @@ export class Note {
    * @param {BigInt} value - note value
    */
   constructor(addressData: AddressData, random: string, value: BigIntish, token: string) {
+    if (hexlify(random, false).length > 32) {
+      throw new Error(`Random must be length 32 (16 bytes). Got ${hexlify(random, false)}.`);
+    }
+
     this.masterPublicKey = addressData.masterPublicKey;
     this.viewingPublicKey = addressData.viewingPublicKey;
-    this.token = formatToByteLength(token, ByteLength.Address, false);
+    this.token = formatToByteLength(token, ByteLength.UINT_256, false);
     this.random = formatToByteLength(random, ByteLength.UINT_128, false);
     this.value = BigInt(value);
   }
@@ -88,17 +92,16 @@ export class Note {
       .decrypt(encryptedNote, sharedKey)
       .map((value) => hexlify(value));
 
-    const address = {
+    const addressData = {
       masterPublicKey: hexToBigInt(decryptedValues[0]),
       viewingPublicKey: new Uint8Array([]), // dummy
     };
-    // Create new note object and return
-    return new Note(
-      address,
-      decryptedValues[2].substring(0, 32),
-      hexToBigInt(decryptedValues[2].substring(32, 64)),
-      decryptedValues[1],
-    );
+
+    const random = decryptedValues[2].substring(0, 32);
+    const value = hexToBigInt(decryptedValues[2].substring(32, 64));
+    const tokenAddress = decryptedValues[1];
+
+    return new Note(addressData, random, value, tokenAddress);
   }
 
   format(prefix: boolean = false) {

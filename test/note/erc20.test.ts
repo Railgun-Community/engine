@@ -7,7 +7,7 @@ import { ByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes'
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
-// TODO: READ SPEC, token is 32 bytes and random is 16 bytes
+
 const vectors = [
   {
     note: {
@@ -161,14 +161,14 @@ const vectors = [
   },
 ];
 
-// TODO: THIS is an invalid vector, all tests will fail. RANDOM should be 16 bytes
 const ciphertextVectors = [
   {
     note: {
       pubkey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
-      random: '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
+      random: '85b08a7cd73ee433072f1d410aeb4801',
       amount: '000000000000000000000000000000000000000000000000086aa1ade61ccb53',
-      token: '0000000000000000000000000000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      token:
+        '0000000000000000000000000000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
     },
     sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
     ciphertext: {
@@ -184,9 +184,10 @@ const ciphertextVectors = [
   {
     note: {
       pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
-      random: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
+      random: 'f7c477afb5a3eb31dbb96295cdbcf165',
       amount: '00000000000000000000000000000000000000000000000007cf6b5ae17ae75a',
-      token: '000000000000000000000000000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
+      token:
+        '000000000000000000000000000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
     },
     sharedKey: 'c8c2a74bacf6ce3158069f81202d8c2d81fd25d226d7536f26442888c014a755',
     ciphertext: {
@@ -202,9 +203,10 @@ const ciphertextVectors = [
   {
     note: {
       pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
-      random: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
+      random: '6d8a7e26de6b0638cd092c2a2b524705',
       amount: '0000000000000000000000000000000000000000000000000b9df0087cbbd709',
-      token: '00000000000000000000000000000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
+      token:
+        '00000000000000000000000000000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
     },
     sharedKey: '4676adb24e597086894880767f274818f711233eda9d617b348bb1cf92dd35e5',
     ciphertext: {

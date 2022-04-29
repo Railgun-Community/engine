@@ -37,7 +37,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
-const RANDOM = '0x1e686e7506b0f4f21d6991b4cb58d39e';
+const RANDOM = bytes.random(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDeposit: (value?: bigint) => Promise<[ethers.providers.TransactionReceipt, unknown]>;
