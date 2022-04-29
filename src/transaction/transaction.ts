@@ -93,7 +93,7 @@ class Transaction {
 
     this.withdrawNote = new WithdrawNote(originalAddress, BigInt(value), this.token);
 
-    const isOverride = toAddress !== undefined;
+    const isOverride = toAddress != null;
     this.withdrawFlag = isOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
 
     if (isOverride) {

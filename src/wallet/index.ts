@@ -165,8 +165,8 @@ class Wallet extends EventEmitter {
     const path = [fromUTF8String('wallet'), hexlify(this.id), hexlify(new BN(chainID))].map(
       (element) => element.padStart(64, '0'),
     );
-    if (tree !== undefined) path.push(hexlify(padToLength(new BN(tree), 32)));
-    if (position !== undefined) path.push(hexlify(padToLength(new BN(position), 32)));
+    if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
+    if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
     return path;
   }
 
@@ -280,6 +280,9 @@ class Wallet extends EventEmitter {
     for (let position = 0; position < leaves.length; position += 1) {
       let note: Note | undefined;
       const leaf = leaves[position];
+      if (leaf == null) {
+        continue;
+      }
 
       if ('ciphertext' in leaf) {
         // Derive shared secret
@@ -312,7 +315,7 @@ class Wallet extends EventEmitter {
       }
 
       // If this note is addressed to us add to write queue
-      if (note !== undefined) {
+      if (note != null) {
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
@@ -519,24 +522,25 @@ class Wallet extends EventEmitter {
         fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
       }
 
-      // Wait till all leaves are fetched
+      // Wait until all leaves are fetched
       // eslint-disable-next-line no-await-in-loop
       const leaves: Commitment[] = await Promise.all(fetcher);
 
-      // Delete undefined values and return sparse array
-      leaves.forEach((value, index) => {
-        if (value === undefined) {
+      const filteredLeaves = leaves.filter((value) => {
+        if (value == null) {
           LeptonDebug.log('wallet.scan: value was undefined');
-          delete leaves[index];
+          return false;
         }
+        return true;
       });
 
       // Start scanning primary and change
       // eslint-disable-next-line no-await-in-loop
-      await this.scanLeaves(leaves, tree, chainID); // @todo add start index
+      await this.scanLeaves(filteredLeaves, tree, chainID); // @todo add start index
 
       // Commit new scanned height
-      walletDetails.treeScannedHeights[tree] = leaves.length > 0 ? leaves.length - 1 : 0;
+      walletDetails.treeScannedHeights[tree] =
+        filteredLeaves.length > 0 ? filteredLeaves.length - 1 : 0;
     }
 
     // Write wallet details to db
