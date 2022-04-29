@@ -10,6 +10,7 @@ import type { Provider } from '@ethersproject/abstract-provider';
 import { abi } from './abi';
 import {
   BytesData,
+  Commitment,
   CommitmentPreimage,
   EncryptedData,
   SerializedTransaction,
@@ -24,7 +25,6 @@ import {
   processNullifierEvents,
 } from './events';
 import LeptonDebug from '../../debugger';
-import { Commitment } from '../../merkletree';
 import { hexlify } from '../../utils/bytes';
 
 export type CommitmentEvent = {

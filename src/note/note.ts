@@ -1,5 +1,5 @@
 import { Signature } from 'circomlib';
-import { BigIntish, Ciphertext, NoteSerialized } from '../models/transaction-types';
+import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/transaction-types';
 import { encryption, keysUtils } from '../utils';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { AddressData } from '../keyderivation/bech32-encode';
@@ -36,8 +36,8 @@ export class Note {
 
     this.masterPublicKey = addressData.masterPublicKey;
     this.viewingPublicKey = addressData.viewingPublicKey;
+    this.random = random;
     this.token = formatToByteLength(token, ByteLength.UINT_256, false);
-    this.random = formatToByteLength(random, ByteLength.UINT_128, false);
     this.value = BigInt(value);
   }
 
@@ -102,7 +102,7 @@ export class Note {
     return new Note(addressData, random, value, tokenAddress);
   }
 
-  format(prefix: boolean = false) {
+  private format(prefix: boolean = false) {
     return {
       masterPublicKey: nToHex(this.masterPublicKey, ByteLength.UINT_256, prefix),
       npk: nToHex(this.notePublicKey, ByteLength.UINT_256, prefix),
@@ -135,7 +135,7 @@ export class Note {
    * Creates note from serialized note JSON
    * @param noteData - serialized note data
    * @param viewingPrivateKey - viewing private key for decryption
-   * @param masterPublicKey - master public key of the user
+   * @param recipient - addressData of the recipient
    * @returns Note
    */
   static deserialize(
@@ -166,8 +166,39 @@ export class Note {
   }
 
   static assertValidRandom(random: string) {
-    if (hexlify(random, false).length > 32) {
+    if (hexlify(random, false).length !== 32) {
       throw new Error(`Random must be length 32 (16 bytes). Got ${hexlify(random, false)}.`);
+    }
+  }
+
+  static assertValidToken(token: string, tokenType: TokenType) {
+    switch (tokenType) {
+      case TokenType.ERC20: {
+        if (hexlify(token, false).length !== 40 && hexlify(token, false).length !== 64) {
+          throw new Error(
+            `ERC20 token must be length 40 (20 bytes) or 64 (32 bytes). Got ${hexlify(
+              token,
+              false,
+            )}.`,
+          );
+        }
+        break;
+      }
+      case TokenType.ERC721: {
+        if (hexlify(token, false).length !== 64) {
+          throw new Error(`NFT token must be length 64 (32 bytes). Got ${hexlify(token, false)}.`);
+        }
+        break;
+      }
+      case TokenType.ERC1155: {
+        if (hexlify(token, false).length !== 64) {
+          throw new Error(`Random must be length 64 (32 bytes). Got ${hexlify(token, false)}.`);
+        }
+        break;
+      }
+      default: {
+        throw new Error('Unhandled token type.');
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ import type { ethers } from 'ethers';
 import { ERC20RailgunContract } from './contract';
 import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
-import { MerkleTree, Commitment, Nullifier } from './merkletree';
+import { MerkleTree } from './merkletree';
 import { Prover, ArtifactsGetter } from './prover';
 import { Transaction } from './transaction';
 import { Note } from './note';
@@ -13,7 +13,7 @@ import { Wallet } from './wallet';
 import { CommitmentEvent } from './contract/erc20';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
-import { BytesData } from './models/transaction-types';
+import { BytesData, Commitment, Nullifier } from './models/transaction-types';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];

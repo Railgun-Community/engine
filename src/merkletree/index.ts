@@ -2,65 +2,10 @@
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
-import { Ciphertext } from '../models/transaction-types';
 import { constants, hash } from '../utils';
 import { fromUTF8String, numberify, hexlify, formatToByteLength, ByteLength } from '../utils/bytes';
 import LeptonDebug from '../debugger';
-
-export type MerkleProof = {
-  leaf: string; // hash of commitment
-  elements: string[];
-  indices: string;
-  root: string;
-};
-
-export type TokenData = {
-  tokenAddress: string;
-  tokenSubID: string;
-  tokenType: string;
-};
-
-export type PreImage = {
-  npk: string;
-  token: TokenData;
-  value: string;
-};
-
-/**
- * Processed from transaction events
- */
-export type GeneratedCommitment = {
-  hash: string;
-  txid: string;
-  preImage: PreImage;
-  encryptedRandom: [string, string];
-};
-
-export type CommitmentCiphertext = {
-  ciphertext: Ciphertext; // iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
-  ephemeralKeys: string[]; // sender first, recipient second (packed points 32 bytes each)
-  memo: string; // bytes32[]
-};
-
-/**
- * Processed from from transfer transactions with data encrypted to ciphertext
- */
-export type EncryptedCommitment = {
-  hash: string;
-  txid: string;
-  ciphertext: CommitmentCiphertext;
-};
-
-/**
- * Stored Commitments are either GeneratedCommitment or EncryptedCommitment
- */
-export type Commitment = GeneratedCommitment | EncryptedCommitment;
-
-export type Nullifier = {
-  nullifier: string;
-  treeNumber: number;
-  txid: string;
-};
+import { Commitment, MerkleProof, Nullifier } from '../models/transaction-types';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;

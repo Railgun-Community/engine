@@ -1,10 +1,3 @@
-export enum TokenType {
-  ERC20 = '0',
-  ERC721 = '1',
-  ERC1155 = '2',
-}
-
-export const DEFAULT_ERC20_TOKEN_TYPE = TokenType.ERC20;
 export const DEFAULT_TOKEN_SUB_ID = BigInt(0);
 
 export const NOTE_INPUTS = {

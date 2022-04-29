@@ -11,12 +11,12 @@ import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
 import { hexlify } from '../../src/utils/bytes';
-import { Nullifier } from '../../src/merkletree';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../helper';
 import { Deposit } from '../../src/note/deposit';
 import { CommitmentEvent } from '../../src/contract/erc20/events';
 import { EventName } from '../../src/contract/erc20';
 import { bytes } from '../../src/utils';
+import { Nullifier, TokenType } from '../../src/models/transaction-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -78,7 +78,13 @@ describe('Contract/Index', function () {
       value: bigint = BigInt(110000) * DECIMALS_18,
     ): Promise<[ethers.providers.TransactionReceipt, unknown]> => {
       // Create deposit
-      const deposit = new Deposit(wallet.addressKeys.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
+      const deposit = new Deposit(
+        wallet.addressKeys.masterPublicKey,
+        RANDOM,
+        value,
+        TOKEN_ADDRESS,
+        TokenType.ERC20,
+      );
       const { preImage, encryptedRandom } = deposit.serialize(
         wallet.getViewingKeyPair().privateKey,
       );
@@ -109,7 +115,7 @@ describe('Contract/Index', function () {
     }
     await testDeposit();
 
-    const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
 
@@ -127,7 +133,7 @@ describe('Contract/Index', function () {
     }
     await testDeposit();
 
-    const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
     const call = await contract.transact([dummyTx]);
@@ -231,7 +237,7 @@ describe('Contract/Index', function () {
     startingBlock = await provider.getBlockNumber();
 
     // Create transaction
-    const transaction = new Transaction(TOKEN_ADDRESS, chainID, 0);
+    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID, 0);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     transaction.withdraw(etherswallet.address, 100n);
 
@@ -261,7 +267,7 @@ describe('Contract/Index', function () {
       this.skip();
       return;
     }
-    const withdraw = new WithdrawNote(etherswallet.address, 100n, token.address);
+    const withdraw = new WithdrawNote(etherswallet.address, 100n, token.address, TokenType.ERC20);
     const contractHash = await contract.hashCommitment(withdraw.preImage);
 
     expect(hexlify(contractHash)).to.equal(withdraw.hashHex);
@@ -288,7 +294,7 @@ describe('Contract/Index', function () {
     const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
     // Create deposit
-    const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
+    const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS, TokenType.ERC20);
     const { preImage, encryptedRandom } = deposit.serialize(viewingPrivateKey);
 
     const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
@@ -323,7 +329,7 @@ describe('Contract/Index', function () {
     expect(merkleRootAfterDeposit).not.to.equal(merkleRootBefore);
 
     // Create transaction
-    const transaction = new Transaction(TOKEN_ADDRESS, chainID);
+    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
     transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     transaction.withdraw(etherswallet.address, 100n);
 

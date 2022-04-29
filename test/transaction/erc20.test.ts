@@ -17,9 +17,10 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength, hexStringToBytes } from '../../src/utils/bytes';
+import { formatToByteLength } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
+import { TokenType } from '../../src/models/transaction-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -41,32 +42,32 @@ const random = bytes.random(16);
 type makeNoteFn = (value?: bigint) => Note;
 let makeNote: makeNoteFn;
 
-const keypairs = [
-  {
-    // Primary 0
-    privateKey: hexToBytes('0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144'),
-    pubkey: hexToBytes('c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b'),
-    address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
-  },
-  {
-    // Primary 1
-    privateKey: hexToBytes('0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2'),
-    pubkey: hexToBytes('6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005'),
-    address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
-  },
-  {
-    // Primary 5
-    privateKey: hexToBytes('0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3'),
-    pubkey: hexToBytes('49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e'),
-    address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
-  },
-  {
-    // Change 2
-    privateKey: hexToBytes('0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500'),
-    pubkey: hexToBytes('e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07'),
-    address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
-  },
-];
+// const keypairs = [
+//   {
+//     // Primary 0
+//     privateKey: hexToBytes('0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144'),
+//     pubkey: hexToBytes('c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b'),
+//     address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
+//   },
+//   {
+//     // Primary 1
+//     privateKey: hexToBytes('0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2'),
+//     pubkey: hexToBytes('6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005'),
+//     address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
+//   },
+//   {
+//     // Primary 5
+//     privateKey: hexToBytes('0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3'),
+//     pubkey: hexToBytes('49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e'),
+//     address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
+//   },
+//   {
+//     // Change 2
+//     privateKey: hexToBytes('0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500'),
+//     pubkey: hexToBytes('e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07'),
+//     address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
+//   },
+// ];
 
 const depositLeaf = {
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
@@ -75,7 +76,7 @@ const depositLeaf = {
     npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
     token: {
       tokenAddress: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
-      tokenType: '0x0000000000000000000000000000000000000000',
+      tokenType: TokenType.ERC20,
       tokenSubID: '0x0000000000000000000000000000000000000000',
     },
     value: '000000000000021cbfcc6fd98333b5f1',
@@ -111,7 +112,7 @@ describe('Transaction/ERC20', function () {
 
   beforeEach(async () => {
     // deposit = new Deposit(masterPublicKey, random, DECIMALS_18, token);
-    transaction = new Transaction(token, 1);
+    transaction = new Transaction(token, TokenType.ERC20, 1);
   });
 
   it('Should hash bound parameters', async () => {
@@ -201,7 +202,7 @@ describe('Transaction/ERC20', function () {
       transaction.generateInputs(wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
-    const transaction2 = new Transaction('ff', 1);
+    const transaction2 = new Transaction('ff', TokenType.ERC20, 1);
 
     transaction2.withdraw(await ethersWallet.getAddress(), 12n);
 

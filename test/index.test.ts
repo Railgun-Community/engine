@@ -9,11 +9,12 @@ import { config } from './config.test';
 import { Wallet } from '../src/wallet';
 import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync } from './helper';
 import { Deposit } from '../src/note/deposit';
-import { GeneratedCommitment, MerkleTree } from '../src/merkletree';
+import { MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
+import { GeneratedCommitment, TokenType } from '../src/models/transaction-types';
 
 chai.use(chaiAsPromised);
 
@@ -38,7 +39,7 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   const mpk = Lepton.decodeAddress(address).masterPublicKey;
   const vpk = wallet.getViewingKeyPair().privateKey;
   const random = bytes.random(16);
-  const deposit = new Deposit(mpk, random, value, token.address);
+  const deposit = new Deposit(mpk, random, value, token.address, TokenType.ERC20);
 
   const { preImage, encryptedRandom } = deposit.serialize(vpk);
 
@@ -107,7 +108,7 @@ describe('Lepton', function () {
       preImage: {
         npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
         token: {
-          tokenType: ZERO_ADDRESS,
+          tokenType: TokenType.ERC20,
           tokenAddress: `0x${tokenAddress}`,
           tokenSubID: ZERO_ADDRESS,
         },
@@ -144,7 +145,7 @@ describe('Lepton', function () {
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
-    const transaction = new Transaction(config.contracts.rail, chainID);
+    const transaction = new Transaction(config.contracts.rail, TokenType.ERC20, chainID);
     transaction.withdraw(
       etherswallet.address,
       BigInt(300) * DECIMALS_18,

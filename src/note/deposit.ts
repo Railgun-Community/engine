@@ -1,4 +1,4 @@
-import { CommitmentPreimage, EncryptedData } from '../models/transaction-types';
+import { CommitmentPreimage, EncryptedData, TokenType } from '../models/transaction-types';
 import { encryption } from '../utils';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';
@@ -7,25 +7,47 @@ import { poseidon } from '../utils/keys-utils';
 import { Note } from './note';
 
 export class Deposit {
+  public masterPublicKey: bigint;
+
+  public random: string;
+
+  public value: bigint;
+
+  public token: string;
+
+  public tokenType: TokenType;
+
   constructor(
-    public masterPublicKey: bigint,
-    public random: string,
-    public value: bigint,
-    public token: string,
+    masterPublicKey: bigint,
+    random: string,
+    value: bigint,
+    token: string,
+    tokenType: TokenType,
   ) {
     Note.assertValidRandom(random);
+    Note.assertValidToken(token, tokenType);
+
+    this.masterPublicKey = masterPublicKey;
+    this.random = random;
+    this.token = token;
+    this.tokenType = tokenType;
+    this.value = value;
   }
 
   get tokenData() {
     return {
       tokenAddress: this.token,
       tokenSubID: ZERO_ADDRESS,
-      tokenType: ZERO_ADDRESS,
+      tokenType: this.tokenType,
     };
   }
 
   get notePublicKey(): bigint {
     return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
+  }
+
+  get valueHex(): string {
+    return nToHex(this.value, ByteLength.UINT_128);
   }
 
   /**

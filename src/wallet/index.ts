@@ -8,9 +8,9 @@ import { hash, keysUtils } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
-import type { Commitment, MerkleTree } from '../merkletree';
+import { MerkleTree } from '../merkletree';
 import { bech32, Node } from '../keyderivation';
-import { BytesData, NoteSerialized } from '../models/transaction-types';
+import { BytesData, Commitment, NoteSerialized } from '../models/transaction-types';
 import {
   arrayify,
   ByteLength,

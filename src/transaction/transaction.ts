@@ -18,17 +18,12 @@ import {
   AdaptID,
   BigIntish,
   BoundParams,
-  CommitmentCiphertext,
   CommitmentPreimage,
+  OutputCommitmentCiphertext,
   SerializedTransaction,
+  TokenType,
 } from '../models/transaction-types';
-import {
-  DEFAULT_ERC20_TOKEN_TYPE,
-  DEFAULT_TOKEN_SUB_ID,
-  NOTE_INPUTS,
-  NOTE_OUTPUTS,
-  WithdrawFlag,
-} from './constants';
+import { DEFAULT_TOKEN_SUB_ID, NOTE_INPUTS, NOTE_OUTPUTS, WithdrawFlag } from './constants';
 import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 
 const abiCoder = defaultAbiCoder;
@@ -65,7 +60,7 @@ class Transaction {
   // boundParams.withdraw == 2 means withdraw address is not to self and set in overrideOutput
   overrideOutput: string = ZERO_ADDRESS;
 
-  tokenType = DEFAULT_ERC20_TOKEN_TYPE;
+  tokenType: TokenType;
 
   tokenSubID: BigInt = DEFAULT_TOKEN_SUB_ID;
 
@@ -79,8 +74,9 @@ class Transaction {
    * @param chainID - chainID of network transaction will be built for
    * @param tree - manually specify a tree
    */
-  constructor(token: string, chainID: number, tree: number = 0) {
+  constructor(token: string, tokenType: TokenType, chainID: number, tree: number = 0) {
     this.token = formatToByteLength(token, ByteLength.UINT_256, false);
+    this.tokenType = tokenType;
     this.chainID = chainID;
     this.tree = tree;
     this.withdrawNote = WithdrawNote.empty();
@@ -91,7 +87,12 @@ class Transaction {
       throw new Error('You may only call .withdraw once for a given transaction.');
     }
 
-    this.withdrawNote = new WithdrawNote(originalAddress, BigInt(value), this.token);
+    this.withdrawNote = new WithdrawNote(
+      originalAddress,
+      BigInt(value),
+      this.token,
+      this.tokenType,
+    );
 
     const isOverride = toAddress != null;
     this.withdrawFlag = isOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
@@ -213,16 +214,18 @@ class Transaction {
       ),
     );
 
-    const commitmentCiphertext: CommitmentCiphertext[] = onlyInternalOutputs.map((note, index) => {
-      const ciphertext = note.encrypt(sharedKeys[index]);
-      return {
-        ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
-          hexToBigInt(el as string),
-        ),
-        ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))),
-        memo: [],
-      };
-    });
+    const commitmentCiphertext: OutputCommitmentCiphertext[] = onlyInternalOutputs.map(
+      (note, index) => {
+        const ciphertext = note.encrypt(sharedKeys[index]);
+        return {
+          ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
+            hexToBigInt(el as string),
+          ),
+          ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))),
+          memo: [],
+        };
+      },
+    );
     const boundParams: BoundParams = {
       treeNumber: BigInt(this.tree),
       withdraw: this.withdrawFlag,

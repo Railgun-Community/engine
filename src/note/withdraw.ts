@@ -1,33 +1,39 @@
-import { CommitmentPreimage, EncryptedData } from '../models/transaction-types';
+import { CommitmentPreimage, TokenData, TokenType } from '../models/transaction-types';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
-
-export const emptyCommitmentPreimage = {
-  npk: '00',
-  token: {
-    tokenType: '00',
-    tokenAddress: '0x0000000000000000000000000000000000000000',
-    tokenSubID: '00',
-  },
-  value: '0',
-  encryptedRandom: ['00', '00'] as EncryptedData,
-};
+import { Note } from './note';
 
 export class WithdrawNote {
+  public withdrawAddress: string;
+
+  public value: bigint;
+
+  public tokenAddress: string;
+
+  public tokenType: TokenType;
+
   /**
    * Create Note object
    *
    * @param {string} withdrawAddress - address to withdraw to
    * @param {bigint} value - note value
-   * @param {string} token - note token
+   * @param {string} tokenAddress - note token
+   * @param {TokenType} tokenType - note token type
    */
-  constructor(public withdrawAddress: string, public value: bigint, public tokenAddress: string) {}
+  constructor(withdrawAddress: string, value: bigint, tokenAddress: string, tokenType: TokenType) {
+    Note.assertValidToken(tokenAddress, tokenType);
 
-  get token() {
+    this.withdrawAddress = withdrawAddress;
+    this.value = value;
+    this.tokenAddress = tokenAddress;
+    this.tokenType = tokenType;
+  }
+
+  get token(): TokenData {
     return {
       tokenAddress: formatToByteLength(this.tokenAddress, 20, true),
-      tokenType: ZERO_ADDRESS,
+      tokenType: this.tokenType,
       tokenSubID: ZERO_ADDRESS,
     };
   }
@@ -74,7 +80,7 @@ export class WithdrawNote {
     return { npk, token, value };
   }
 
-  static empty() {
-    return new WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS);
+  static empty(tokenType = TokenType.ERC20) {
+    return new WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS, tokenType);
   }
 }
