@@ -1,3 +1,3 @@
-export { WithdrawNote } from './preimage';
+export { WithdrawNote } from './withdraw';
 export { Note } from './note';
 export { Deposit } from './deposit';

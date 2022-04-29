@@ -32,7 +32,7 @@ export type PreImage = {
 export type GeneratedCommitment = {
   hash: string;
   txid: string;
-  preimage: PreImage;
+  preImage: PreImage;
   encryptedRandom: [string, string];
 };
 

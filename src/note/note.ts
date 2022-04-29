@@ -32,9 +32,7 @@ export class Note {
    * @param {BigInt} value - note value
    */
   constructor(addressData: AddressData, random: string, value: BigIntish, token: string) {
-    if (hexlify(random, false).length > 32) {
-      throw new Error(`Random must be length 32 (16 bytes). Got ${hexlify(random, false)}.`);
-    }
+    Note.assertValidRandom(random);
 
     this.masterPublicKey = addressData.masterPublicKey;
     this.viewingPublicKey = addressData.viewingPublicKey;
@@ -165,5 +163,11 @@ export class Note {
    */
   static getNullifier(nullifyingKey: bigint, leafIndex: number): bigint {
     return poseidon([nullifyingKey, BigInt(leafIndex)]);
+  }
+
+  static assertValidRandom(random: string) {
+    if (hexlify(random, false).length > 32) {
+      throw new Error(`Random must be length 32 (16 bytes). Got ${hexlify(random, false)}.`);
+    }
   }
 }

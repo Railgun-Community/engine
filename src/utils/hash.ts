@@ -71,30 +71,30 @@ export type PBKDF2Digest = typeof hashes[number];
 
 /**
  * Calculates sha256 hash of bytes
- * @param preimage - bytesdata
+ * @param preImage - bytesdata
  * @returns hash
  */
-function sha256(preimage: BytesData): string {
+function sha256(preImage: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = arrayify(preimage);
+  const preImageFormatted = arrayify(preImage);
 
   // Hash and return
-  return ethersutils.sha256(preimageFormatted).slice(2);
+  return ethersutils.sha256(preImageFormatted).slice(2);
 }
 
 /**
  * Calculates sha512 hash of bytes
- * @param preimage - bytesdata
+ * @param preImage - bytesdata
  * @returns hash
  */
-function sha512(preimage: BytesData): string {
+function sha512(preImage: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = arrayify(preimage);
+  const preImageFormatted = arrayify(preImage);
 
   // Hash and return
-  return ethersutils.sha512(preimageFormatted).slice(2);
+  return ethersutils.sha512(preImageFormatted).slice(2);
 }
 
 /**
@@ -117,30 +117,30 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
 
 /**
  * Calculates keccak256 hash of bytes
- * @param preimage - bytesdata
+ * @param preImage - bytesdata
  * @returns hash
  */
-function keccak256(preimage: BytesData): string {
+function keccak256(preImage: BytesData): string {
   // TODO: Remove reliance on ethers utils
   // Convert to bytes array
-  const preimageFormatted = arrayify(preimage);
+  const preImageFormatted = arrayify(preImage);
 
   // Hash and return
-  return ethersutils.keccak256(preimageFormatted).slice(2);
+  return ethersutils.keccak256(preImageFormatted).slice(2);
 }
 
 /**
  * Calculates the poseidon hash of an array of bytes32
- * @param preimage - bytes32 array
+ * @param preImage - bytes32 array
  * @returns hash
  */
-function poseidon(preimage: BytesData[]): string {
+function poseidon(preImage: BytesData[]): string {
   // TODO: Remove reliance on circomlib
   // Convert all bytes into bigints (typing issue)
-  const preimageFormatted = preimage.map((bytedata) => BigInt(numberify(bytedata).toString(10)));
+  const preImageFormatted = preImage.map((bytedata) => BigInt(numberify(bytedata).toString(10)));
 
   // Hash
-  const hash = poseidonHash(preimageFormatted).toString(16);
+  const hash = poseidonHash(preImageFormatted).toString(16);
 
   // Pad to even length if needed
   return formatToByteLength(hash, ByteLength.UINT_256, false);

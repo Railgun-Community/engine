@@ -76,7 +76,7 @@ export function formatGeneratedCommitmentBatchCommitments(
     return {
       hash: nToHex(note.hash, ByteLength.UINT_256),
       txid: transactionHash,
-      preimage: note.serialize(false),
+      preImage: note.serialize(false),
       encryptedRandom: randomFormatted[index],
     };
   });

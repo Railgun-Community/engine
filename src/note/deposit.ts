@@ -4,6 +4,7 @@ import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
+import { Note } from './note';
 
 export class Deposit {
   constructor(
@@ -11,7 +12,9 @@ export class Deposit {
     public random: string,
     public value: bigint,
     public token: string,
-  ) {}
+  ) {
+    Note.assertValidRandom(random);
+  }
 
   get tokenData() {
     return {

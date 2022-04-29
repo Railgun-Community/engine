@@ -301,13 +301,13 @@ class Wallet extends EventEmitter {
           // Expect error if leaf not addressed to us.
         }
       } else {
-        // preimage
+        // preImage
         // Deserialize
         const serialized: NoteSerialized = {
-          npk: leaf.preimage.npk,
+          npk: leaf.preImage.npk,
           encryptedRandom: leaf.encryptedRandom,
-          token: leaf.preimage.token.tokenAddress,
-          value: leaf.preimage.value,
+          token: leaf.preImage.token.tokenAddress,
+          value: leaf.preImage.value,
         };
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);

@@ -43,11 +43,11 @@ export function childKeyDerivationHardened(
   // Convert index to bytes as 32bit big endian
   const indexFormatted = bytes.padToLength(new BN(index + offset), 4);
 
-  // Calculate HMAC preimage
-  const preimage = `00${node.chainKey}${indexFormatted}`;
+  // Calculate HMAC preImage
+  const preImage = `00${node.chainKey}${indexFormatted}`;
 
   // Calculate I
-  const I = hash.sha512HMAC(node.chainCode, preimage);
+  const I = hash.sha512HMAC(node.chainCode, preImage);
 
   // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
   const chainKey = I.slice(0, 64);
