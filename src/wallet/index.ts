@@ -270,7 +270,7 @@ class Wallet extends EventEmitter {
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async scanLeaves(
-    leaves: Commitment[],
+    leaves: (Commitment | undefined)[],
     tree: number,
     chainID: number,
     scannedHeight: number,
@@ -524,17 +524,14 @@ class Wallet extends EventEmitter {
 
         // Wait until all leaves are fetched
         // eslint-disable-next-line no-await-in-loop
-        const leaves: Commitment[] = await Promise.all(fetcher);
-
-        const filteredLeaves = leaves.filter((value) => value.hash != null);
+        const leaves: (Commitment | undefined)[] = await Promise.all(fetcher);
 
         // Start scanning primary and change
         // eslint-disable-next-line no-await-in-loop
-        await this.scanLeaves(filteredLeaves, tree, chainID, scannedHeight);
+        await this.scanLeaves(leaves, tree, chainID, scannedHeight);
 
         // Commit new scanned height
-        walletDetails.treeScannedHeights[tree] =
-          filteredLeaves.length > 0 ? filteredLeaves.length - 1 : 0;
+        walletDetails.treeScannedHeights[tree] = leaves.length > 0 ? leaves.length - 1 : 0;
       }
 
       // Write wallet details to db

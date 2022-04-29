@@ -235,7 +235,7 @@ class MerkleTree {
    * @param index - index of commitment
    * @returns commitment
    */
-  getCommitment(tree: number, index: number): Promise<Commitment> {
+  getCommitment(tree: number, index: number): Promise<Commitment | undefined> {
     return this.db.get(this.getCommitmentDBPath(tree, index), 'json');
   }
 
