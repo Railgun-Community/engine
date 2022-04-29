@@ -96,7 +96,7 @@ export class Note {
     return new Note(
       address,
       decryptedValues[2].substring(0, 32),
-      hexToBigInt(decryptedValues[2].substring(32, 96)),
+      hexToBigInt(decryptedValues[2].substring(32, 64)),
       decryptedValues[1],
     );
   }
@@ -105,7 +105,7 @@ export class Note {
     return {
       masterPublicKey: nToHex(this.masterPublicKey, ByteLength.UINT_256, prefix),
       npk: nToHex(this.notePublicKey, ByteLength.UINT_256, prefix),
-      token: formatToByteLength(this.token, ByteLength.Address, prefix),
+      token: formatToByteLength(this.token, ByteLength.UINT_256, prefix),
       value: formatToByteLength(this.valueHex, ByteLength.UINT_128, prefix),
       random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
     };

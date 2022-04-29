@@ -7,12 +7,12 @@ import { ByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes'
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
-
+// TODO: READ SPEC, token is 32 bytes and random is 16 bytes
 const vectors = [
   {
     note: {
       npk: '23da85e72baa8d77f476a893de0964ce1ec2957d056b591a19d05bb4b9a549ed',
-      token: '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      token: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
       value: '0000000000000000086aa1ade61ccb53',
       encryptedRandom: [
         '0x5c4a783fd15546fbad149c673b7139790a9cf62ec849a5a8e6a167815ee2d08d',
@@ -27,7 +27,7 @@ const vectors = [
   {
     note: {
       npk: '0bb21912817ea606faf03c0c3d62b37f75be41daee5e784a6f5db9b4f6591bdb',
-      token: 'df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
+      token: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
       value: '000000000000000007cf6b5ae17ae75a',
       encryptedRandom: [
         '0xf401e001c520b9f40d37736c0ef2309fa9b2dc97bf1634ac1443fc2fe5359f69',
@@ -42,7 +42,7 @@ const vectors = [
   {
     note: {
       npk: '233845eec9a6b6c4d9a40117d54130e9a912d834eedbf819af31782878bb6256',
-      token: '34e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
+      token: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
       value: '00000000000000000b9df0087cbbd709',
       encryptedRandom: [
         '0x4b0b63e8f573bf29cabc8e840c5db89892c0acc3f30bbdf6ad9d39ac9485fa49',
@@ -57,7 +57,7 @@ const vectors = [
   {
     note: {
       npk: '25d40e7f08d6fa7698f389f9654e54895f60fa4f7b54ce0b4e3e1ba7172738b0',
-      token: '9b71cad96341485290d3f1376fb9e969a632694d',
+      token: '0000000000000000000000009b71cad96341485290d3f1376fb9e969a632694d',
       value: '00000000000000000ac76747c40dda3a',
       encryptedRandom: [
         '0xe9abf13a310d1910d3010a1cf8b5c03a50c228f1fe81de21734479398973ec77',
@@ -72,7 +72,7 @@ const vectors = [
   {
     note: {
       npk: '251a55948f8127b1d4f1f50c24a7889efda01dd968055a1e4cde3e9a1706ab8b',
-      token: '89d21609e4ea344c576d1692ceca0f0e0bf4b771',
+      token: '00000000000000000000000089d21609e4ea344c576d1692ceca0f0e0bf4b771',
       value: '00000000000000000475d82f700206b8',
       encryptedRandom: [
         '0x7462849ef8b7bdbb9deeae7983f84334d934d129bd7a7e926bd87b6cf0053e0d',
@@ -87,7 +87,7 @@ const vectors = [
   {
     note: {
       npk: '0e47233036d5a9d5762b3c619d648f77bb6ae78c5897474a08fc221ff1d23abc',
-      token: '6f2870a30f4ff19f073fe894d6fe881f0c04657f',
+      token: '0000000000000000000000006f2870a30f4ff19f073fe894d6fe881f0c04657f',
       value: '000000000000000003426801bd08640b',
       encryptedRandom: [
         '0xe501c3195c8a4cc2134ed19d69ba1208a4c7f4ef6f33c2c5e51655f919d4855e',
@@ -102,7 +102,7 @@ const vectors = [
   {
     note: {
       npk: '1c22a5df62aece44424c3044b6069397ee02933478a1be1c3c1dbde7c3283095',
-      token: '4224904029a556a7cd0bc78d81b165c391fffb45',
+      token: '0000000000000000000000004224904029a556a7cd0bc78d81b165c391fffb45',
       value: '000000000000000003449e13312815a6',
       encryptedRandom: [
         '0x1bef951429c37eaa69190cb635591d122ffe959d690366876e9f1704aa37bb18',
@@ -117,7 +117,7 @@ const vectors = [
   {
     note: {
       npk: '2097ccb284370aad7fae52669f84e1466b0fd00f79c02b18e9ed8b61866d0424',
-      token: '480bdc4d52df318db7b458b171540a936dc39a07',
+      token: '000000000000000000000000480bdc4d52df318db7b458b171540a936dc39a07',
       value: '000000000000000008d210fd771f72ab',
       encryptedRandom: [
         '0x789ee74fc10fd3b8daac3846b307d7d20db76ca9d5b6894c78f58b2ebc0303e4',
@@ -132,7 +132,7 @@ const vectors = [
   {
     note: {
       npk: '1f477464f3c896c4cf74d66019f2dffb27d825c1d38800b671f96a52772f22ee',
-      token: '8afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
+      token: '0000000000000000000000008afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
       value: '0000000000000000060c736c94f022c6',
       encryptedRandom: [
         '0x82df79ed67267bd528f0302a95129bbb56d04fab22f95af35b03d2c07ac75737',
@@ -147,7 +147,7 @@ const vectors = [
   {
     note: {
       npk: '013a628aa76f883a6546a963424eb561d4d3221317d29d7f4a67236fe95aec61',
-      token: '4f53cbc84f501847cf42bd9fb14d63be21dcffc8',
+      token: '0000000000000000000000004f53cbc84f501847cf42bd9fb14d63be21dcffc8',
       value: '0000000000000000005589f7d39c59bf',
       encryptedRandom: [
         '0x4732f678e893c09c6393be8f8fcc5eee1d9a1078a16151dcae2d65f2d78edc4b',
@@ -161,13 +161,14 @@ const vectors = [
   },
 ];
 
+// TODO: THIS is an invalid vector, all tests will fail. RANDOM should be 16 bytes
 const ciphertextVectors = [
   {
     note: {
       pubkey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
       random: '1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
       amount: '000000000000000000000000000000000000000000000000086aa1ade61ccb53',
-      token: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      token: '0000000000000000000000000000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
     },
     sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
     ciphertext: {
@@ -185,7 +186,7 @@ const ciphertextVectors = [
       pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
       random: '11299eb10424d82de500a440a2874d12f7c477afb5a3eb31dbb96295cdbcf165',
       amount: '00000000000000000000000000000000000000000000000007cf6b5ae17ae75a',
-      token: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
+      token: '000000000000000000000000000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
     },
     sharedKey: 'c8c2a74bacf6ce3158069f81202d8c2d81fd25d226d7536f26442888c014a755',
     ciphertext: {
@@ -203,7 +204,7 @@ const ciphertextVectors = [
       pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
       random: '09b57736523cda7412ddfed0d2f1f4a86d8a7e26de6b0638cd092c2a2b524705',
       amount: '0000000000000000000000000000000000000000000000000b9df0087cbbd709',
-      token: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
+      token: '00000000000000000000000000000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
     },
     sharedKey: '4676adb24e597086894880767f274818f711233eda9d617b348bb1cf92dd35e5',
     ciphertext: {
