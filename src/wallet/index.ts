@@ -296,7 +296,7 @@ class Wallet extends EventEmitter {
         try {
           note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
         } catch (e: any) {
-          LeptonDebug.error(e);
+          // Expected error if leaf not addressed to us.
         }
       } else {
         // preimage
@@ -310,7 +310,7 @@ class Wallet extends EventEmitter {
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);
         } catch (e: any) {
-          LeptonDebug.error(e);
+          // Expected error if leaf not addressed to us.
         }
       }
 
@@ -528,7 +528,7 @@ class Wallet extends EventEmitter {
         const leaves: Commitment[] = await Promise.all(fetcher);
 
         const filteredLeaves = leaves.filter((value) => {
-          if (value == null) {
+          if (value === undefined) {
             LeptonDebug.log('wallet.scan: value was undefined');
             return false;
           }

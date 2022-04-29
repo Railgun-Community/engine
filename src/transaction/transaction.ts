@@ -142,8 +142,7 @@ class Transaction {
       formatToByteLength(this.token, 32, false)
     ];
 
-    if (treeSortedBalances === undefined)
-      throw new Error(`Failed to find balances for ${this.token}`);
+    if (treeSortedBalances == null) throw new Error(`Failed to find balances for ${this.token}`);
 
     // Sum balances
     const balance: bigint = treeSortedBalances.reduce(
