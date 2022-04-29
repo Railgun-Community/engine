@@ -4,14 +4,14 @@ import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
 import { Note } from './note';
 
-export class WithdrawNote {
+export class ERC20WithdrawNote {
   public withdrawAddress: string;
 
   public value: bigint;
 
   public tokenAddress: string;
 
-  public tokenType: TokenType;
+  public tokenType = TokenType.ERC20;
 
   /**
    * Create Note object
@@ -21,13 +21,12 @@ export class WithdrawNote {
    * @param {string} tokenAddress - note token
    * @param {TokenType} tokenType - note token type
    */
-  constructor(withdrawAddress: string, value: bigint, tokenAddress: string, tokenType: TokenType) {
-    Note.assertValidToken(tokenAddress, tokenType);
+  constructor(withdrawAddress: string, value: bigint, tokenAddress: string) {
+    Note.assertValidToken(tokenAddress, this.tokenType);
 
     this.withdrawAddress = withdrawAddress;
     this.value = value;
     this.tokenAddress = tokenAddress;
-    this.tokenType = tokenType;
   }
 
   get token(): TokenData {
@@ -80,7 +79,7 @@ export class WithdrawNote {
     return { npk, token, value };
   }
 
-  static empty(tokenType = TokenType.ERC20) {
-    return new WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS, tokenType);
+  static empty() {
+    return new ERC20WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS);
   }
 }

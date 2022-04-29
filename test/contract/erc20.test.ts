@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { CallOverrides, ethers } from 'ethers';
 import memdown from 'memdown';
 import { ERC20RailgunContract } from '../../src/contract';
-import { Note, WithdrawNote } from '../../src/note';
+import { Note } from '../../src/note';
 import { Transaction } from '../../src/transaction';
 import { Lepton } from '../../src';
 import { abi as erc20abi } from '../erc20abi.test';
@@ -12,11 +12,12 @@ import { config } from '../config.test';
 import { ScannedEventData, Wallet } from '../../src/wallet';
 import { hexlify } from '../../src/utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../helper';
-import { Deposit } from '../../src/note/deposit';
+import { ERC20Deposit } from '../../src/note/erc20-deposit';
 import { CommitmentEvent } from '../../src/contract/erc20/events';
 import { EventName } from '../../src/contract/erc20';
 import { bytes } from '../../src/utils';
 import { Nullifier, TokenType } from '../../src/models/transaction-types';
+import { ERC20WithdrawNote } from '../../src/note/erc20-withdraw';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -78,12 +79,11 @@ describe('Contract/Index', function () {
       value: bigint = BigInt(110000) * DECIMALS_18,
     ): Promise<[ethers.providers.TransactionReceipt, unknown]> => {
       // Create deposit
-      const deposit = new Deposit(
+      const deposit = new ERC20Deposit(
         wallet.addressKeys.masterPublicKey,
         RANDOM,
         value,
         TOKEN_ADDRESS,
-        TokenType.ERC20,
       );
       const { preImage, encryptedRandom } = deposit.serialize(
         wallet.getViewingKeyPair().privateKey,
@@ -267,7 +267,7 @@ describe('Contract/Index', function () {
       this.skip();
       return;
     }
-    const withdraw = new WithdrawNote(etherswallet.address, 100n, token.address, TokenType.ERC20);
+    const withdraw = new ERC20WithdrawNote(etherswallet.address, 100n, token.address);
     const contractHash = await contract.hashCommitment(withdraw.preImage);
 
     expect(hexlify(contractHash)).to.equal(withdraw.hashHex);
@@ -294,7 +294,7 @@ describe('Contract/Index', function () {
     const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
     // Create deposit
-    const deposit = new Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS, TokenType.ERC20);
+    const deposit = new ERC20Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
     const { preImage, encryptedRandom } = deposit.serialize(viewingPrivateKey);
 
     const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);

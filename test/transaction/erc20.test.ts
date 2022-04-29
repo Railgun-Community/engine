@@ -111,7 +111,7 @@ describe('Transaction/ERC20', function () {
   });
 
   beforeEach(async () => {
-    // deposit = new Deposit(masterPublicKey, random, DECIMALS_18, token);
+    // deposit = new ERC20Deposit(masterPublicKey, random, DECIMALS_18, token);
     transaction = new Transaction(token, TokenType.ERC20, 1);
   });
 

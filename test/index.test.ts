@@ -8,7 +8,7 @@ import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
 import { Wallet } from '../src/wallet';
 import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync } from './helper';
-import { Deposit } from '../src/note/deposit';
+import { ERC20Deposit } from '../src/note/erc20-deposit';
 import { MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
@@ -39,7 +39,7 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   const mpk = Lepton.decodeAddress(address).masterPublicKey;
   const vpk = wallet.getViewingKeyPair().privateKey;
   const random = bytes.random(16);
-  const deposit = new Deposit(mpk, random, value, token.address, TokenType.ERC20);
+  const deposit = new ERC20Deposit(mpk, random, value, token.address);
 
   const { preImage, encryptedRandom } = deposit.serialize(vpk);
 

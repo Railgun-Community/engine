@@ -1,5 +1,5 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
-import { Note, WithdrawNote } from '../note';
+import { Note } from '../note';
 import { bytes, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
 import { depths } from '../merkletree';
@@ -25,6 +25,7 @@ import {
 } from '../models/transaction-types';
 import { DEFAULT_TOKEN_SUB_ID, NOTE_INPUTS, NOTE_OUTPUTS, WithdrawFlag } from './constants';
 import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
+import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 
 const abiCoder = defaultAbiCoder;
 
@@ -52,7 +53,7 @@ class Transaction {
 
   notesIn: Note[] = [];
 
-  outputs: (Note | WithdrawNote)[] = [];
+  outputs: (Note | ERC20WithdrawNote)[] = [];
 
   // see WithdrawFlag
   withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
@@ -66,7 +67,7 @@ class Transaction {
 
   tree: number;
 
-  withdrawNote: WithdrawNote;
+  withdrawNote: ERC20WithdrawNote;
 
   /**
    * Create ERC20Transaction Object
@@ -79,7 +80,7 @@ class Transaction {
     this.tokenType = tokenType;
     this.chainID = chainID;
     this.tree = tree;
-    this.withdrawNote = WithdrawNote.empty();
+    this.withdrawNote = ERC20WithdrawNote.empty();
   }
 
   withdraw(originalAddress: string, value: BigIntish, toAddress?: string) {
@@ -87,12 +88,7 @@ class Transaction {
       throw new Error('You may only call .withdraw once for a given transaction.');
     }
 
-    this.withdrawNote = new WithdrawNote(
-      originalAddress,
-      BigInt(value),
-      this.token,
-      this.tokenType,
-    );
+    this.withdrawNote = new ERC20WithdrawNote(originalAddress, BigInt(value), this.token);
 
     const isOverride = toAddress != null;
     this.withdrawFlag = isOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;

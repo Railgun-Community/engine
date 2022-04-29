@@ -1,5 +1,4 @@
 import type { BigNumber, Event } from 'ethers';
-import { WithdrawNote } from '../../note';
 import {
   BytesData,
   Commitment,
@@ -7,9 +6,9 @@ import {
   EncryptedData,
   GeneratedCommitment,
   Nullifier,
-  TokenType,
 } from '../../models/transaction-types';
 import { ByteLength, hexlify, nToHex } from '../../utils/bytes';
+import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -75,11 +74,10 @@ export function formatGeneratedCommitmentBatchCommitments(
     (el) => el.map((key) => key.toHexString()) as EncryptedData,
   );
   const generatedCommitments = preImages.map((item, index) => {
-    const note = new WithdrawNote(
+    const note = new ERC20WithdrawNote(
       item.npk.toHexString(),
       item.value.toBigInt(),
       item.token.tokenAddress,
-      TokenType.ERC20,
     );
     return {
       hash: nToHex(note.hash, ByteLength.UINT_256),

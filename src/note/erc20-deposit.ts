@@ -6,7 +6,7 @@ import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/keys-utils';
 import { Note } from './note';
 
-export class Deposit {
+export class ERC20Deposit {
   public masterPublicKey: bigint;
 
   public random: string;
@@ -15,22 +15,15 @@ export class Deposit {
 
   public token: string;
 
-  public tokenType: TokenType;
+  public tokenType = TokenType.ERC20;
 
-  constructor(
-    masterPublicKey: bigint,
-    random: string,
-    value: bigint,
-    token: string,
-    tokenType: TokenType,
-  ) {
+  constructor(masterPublicKey: bigint, random: string, value: bigint, token: string) {
     Note.assertValidRandom(random);
-    Note.assertValidToken(token, tokenType);
+    Note.assertValidToken(token, this.tokenType);
 
     this.masterPublicKey = masterPublicKey;
     this.random = random;
     this.token = token;
-    this.tokenType = tokenType;
     this.value = value;
   }
 
