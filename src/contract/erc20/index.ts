@@ -105,18 +105,18 @@ class ERC20RailgunContract {
    */
   treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
     // listen for nullifiers first so balances aren't "double" before they process
-    this.contract.on(EventName.Nullifiers, async (...rest: any) => {
-      const event = rest.pop();
+    this.contract.on(EventName.Nullifiers, async (...eventData: any) => {
+      const event = eventData.pop();
       await processNullifierEvents(eventsNullifierListener, [event]);
     });
 
-    this.contract.on(EventName.GeneratedCommitmentBatch, async (...rest: any) => {
-      const event = rest.pop();
+    this.contract.on(EventName.GeneratedCommitmentBatch, async (...eventData: any) => {
+      const event = eventData.pop();
       await eventsListener(formatGeneratedCommitmentBatchEvent(event));
     });
 
-    this.contract.on(EventName.CommitmentBatch, async (...rest: any) => {
-      const event = rest.pop();
+    this.contract.on(EventName.CommitmentBatch, async (...eventData: any) => {
+      const event = eventData.pop();
       await eventsListener(formatCommitmentBatchEvent(event));
     });
   }

@@ -519,9 +519,9 @@ describe('MerkleTree/Index', () => {
   });
 
   it('Should store nullifiers', async () => {
-    expect(await merkletree.getNullified('00')).to.equal(false);
+    expect(await merkletree.getStoredNullifier('00')).to.equal(undefined);
     await merkletree.nullify([{ nullifier: '00', treeNumber: 0, txid: '01' }]);
-    expect(await merkletree.getNullified('00')).to.equal('01');
+    expect(await merkletree.getStoredNullifier('00')).to.equal('01');
   });
 
   it('Should return latest tree', async () => {

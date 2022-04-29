@@ -10,12 +10,8 @@ import { Database } from '../../src/database';
 import { bech32 } from '../../src/keyderivation';
 import { MerkleTree } from '../../src/merkletree';
 import { bytes, hash } from '../../src/utils';
-import { fromUTF8String } from '../../src/utils/bytes';
 import { verifyED25519 } from '../../src/utils/keys-utils';
-
 import { Wallet } from '../../src/wallet';
-
-// import type { Commitment } from '../../src/merkletree';
 import { config } from '../config.test';
 
 chai.use(chaiAsPromised);
@@ -29,80 +25,54 @@ const chainID: number = 1;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-// const keypairs = [
-//   {
-//     // Primary 0
-//     privateKey: '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-//     pubkey: 'c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-//     address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
-//   },
-//   {
-//     // Primary 1
-//     privateKey: '0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2',
-//     pubkey: '6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005',
-//     address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
-//   },
-//   {
-//     // Primary 5
-//     privateKey: '0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3',
-//     pubkey: '49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e',
-//     address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
-//   },
-//   {
-//     // Change 2
-//     privateKey: '0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500',
-//     pubkey: 'e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07',
-//     address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
-//   },
+// const TEST_MNEMONICS = [
 // ];
 
-// const senderPubKey = '37e3984a41b34eaac002c140b28e5d080f388098a51d34237f33e84d14b9e491';
+// let testWallets: Wallet[];
+// let leaves: Commitment[];
+// let leaves2: Commitment[];
 
-// const keypairsPopulated = keypairs.map((key) => ({
-//   ...key,
-//   sharedKey: babyjubjub.ecdh(key.privateKey, senderPubKey),
-// }));
+// const setupTestWallets = async () => {
+//   testWallets = await Promise.all(
+//     TEST_MNEMONICS.map((mnemonic) => Wallet.fromMnemonic(db, mnemonic, testEncryptionKey)),
+//   );
 
 // const notesPrep = [0, 1, 2, 3, 2, 0];
-
-// const leaves: Commitment[] = notesPrep.map((keyIndex) => {
+// leaves = notesPrep.map((keyIndex) => {
 //   const note = new Note(
-//     keypairsPopulated[keyIndex].pubkey,
+//     Lepton.decodeAddress(testWallets[0].getAddress(1)),
 //     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
 //     'ffff',
 //     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
 //   );
-
 //   return {
-//     hash: note.hash,
+//     hash: nToHex(note.hash, ByteLength.UINT_256),
 //     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-//     senderPubKey,
-//     ciphertext: note.encrypt(keypairsPopulated[keyIndex].sharedKey),
-//     revealKey: ['01', '02'], // TODO
+//     ciphertext: note.encrypt(sharedKey),
 //   };
 // });
 
 // const notesPrep2 = [0, 1, 2, 3, 2, 0];
-
-// const leaves2: Commitment[] = notesPrep2.map((keyIndex) => {
+// leaves2 = notesPrep2.map((keyIndex) => {
 //   const note = new Note(
-//     keypairsPopulated[keyIndex].pubkey,
+//     Lepton.decodeAddress(testWallets[0].getAddress(1)),
 //     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
 //     'ffff',
 //     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
 //   );
-
 //   return {
 //     hash: note.hash,
 //     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-//     data: note.serialize(viewingPrivateKey),
+//     ciphertext: note.encrypt(sharedKey),
 //   };
 // });
+// };
 
 describe('Wallet/Index', () => {
   beforeEach(async () => {
     // Create database and wallet
     db = new Database(memdown());
+    // await setupTestWallets();
     merkletree = new MerkleTree(db, 1, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     wallet.loadTree(merkletree);
@@ -140,7 +110,7 @@ describe('Wallet/Index', () => {
       ]),
       pubkey: new Uint8Array([
         119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
-        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
       ]),
     });
   });
@@ -171,7 +141,7 @@ describe('Wallet/Index', () => {
         20060431504059690749153982049210720252589378133547582826474262520121417617087n,
       viewingPublicKey: new Uint8Array([
         119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
-        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
       ]),
     });
   });
@@ -244,6 +214,7 @@ describe('Wallet/Index', () => {
   //     {
   //       txid: '000001',
   //       nullifier: '15f75defeb0075ee0e898acc70780d245ab1c19b33cfd2b855dd66faee94a5e0',
+  //       treeNumber: 0,
   //     },
   //   ]);
 
@@ -254,15 +225,14 @@ describe('Wallet/Index', () => {
   //   ).to.equal(11);
 
   //   expect(
-  //     balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
-  //       720885,
-  //     ),
-  //   ).to.equal(true);
+  //     balances2['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance,
+  //   ).to.equal(720885n);
 
   //   await merkletree.nullify([
   //     {
   //       txid: '000001',
   //       nullifier: '1c3ba503ad9e144683649756ce1e9a919afb56d836988435c1528ea8942f286e',
+  //       treeNumber: 0,
   //     },
   //   ]);
 
@@ -273,10 +243,8 @@ describe('Wallet/Index', () => {
   //   ).to.equal(10);
 
   //   expect(
-  //     balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance.eqn(
-  //       655350,
-  //     ),
-  //   ).to.equal(true);
+  //     balances3['0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192'].balance,
+  //   ).to.equal(655350n);
 
   //   expect(
   //     (await wallet.balancesByTree(1))[

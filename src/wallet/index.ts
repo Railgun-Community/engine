@@ -291,17 +291,14 @@ class Wallet extends EventEmitter {
 
       if ('ciphertext' in leaf) {
         // Derive shared secret
+        const ephemeralKey = leaf.ciphertext.ephemeralKeys[0];
         // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await keysUtils.getSharedSymmetricKey(
-          vpk,
-          hexToBytes(leaf.ciphertext.ephemeralKeys[0]),
-        );
-
-        // Decrypt
+        const sharedKey = await keysUtils.getSharedSymmetricKey(vpk, hexToBytes(ephemeralKey));
+        // Try to decrypt.
         try {
           note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
         } catch (e: any) {
-          // Expected error if leaf not addressed to us.
+          // Expect error if leaf not addressed to us.
         }
       } else {
         // preimage
@@ -315,19 +312,17 @@ class Wallet extends EventEmitter {
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);
         } catch (e: any) {
-          // Expected error if leaf not addressed to us.
+          // Expect error if leaf not addressed to us.
         }
       }
 
       // If this note is addressed to us add to write queue
       if (note != null) {
+        const nullifier = Note.getNullifier(this.getNullifyingKey(), position);
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
-          nullifier: nToHex(
-            Note.getNullifier(this.getNullifyingKey(), position),
-            ByteLength.UINT_256,
-          ),
+          nullifier: nullifier ? nToHex(nullifier, ByteLength.UINT_256) : undefined,
           decrypted: note.serialize(vpk),
         };
         writeBatch.push({
@@ -385,11 +380,11 @@ class Wallet extends EventEmitter {
         // If this UTXO hasn't already been marked as spent, check if it has
         if (!UTXO.spendtxid) {
           // Get nullifier
-          const nullifierTX = await this.merkletree[chainID].getNullified(UTXO.nullifier);
+          const storedNullifier = await this.merkletree[chainID].getStoredNullifier(UTXO.nullifier);
 
           // If it's nullified write spend txid to wallet storage
-          if (nullifierTX) {
-            UTXO.spendtxid = nullifierTX;
+          if (storedNullifier) {
+            UTXO.spendtxid = storedNullifier;
 
             // Write nullifier spend txid to db
             await this.db.put(keySplit, msgpack.encode(UTXO));

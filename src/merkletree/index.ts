@@ -257,14 +257,14 @@ class MerkleTree {
   /**
    * Gets if a nullifier has been seen
    * @param nullifier - nullifier to check
-   * @returns txid of spend transaction if spent, else false
+   * @returns txid of spend transaction if spent, else undefined
    */
-  async getNullified(nullifier: string): Promise<string | false> {
+  async getStoredNullifier(nullifier: string): Promise<string | undefined> {
     // Return if nullifier is set
     try {
       return await this.db.get(this.getNullifierDBPath(nullifier));
     } catch {
-      return false;
+      return undefined;
     }
   }
 

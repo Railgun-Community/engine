@@ -3,7 +3,6 @@ import { Commitment, EncryptedCommitment, GeneratedCommitment, Nullifier } from 
 import { WithdrawNote } from '../../note';
 import { BytesData, EncryptedData } from '../../models/transaction-types';
 import { ByteLength, hexlify, nToHex } from '../../utils/bytes';
-import LeptonDebug from '../../debugger';
 
 export type CommitmentEvent = {
   txid: BytesData;

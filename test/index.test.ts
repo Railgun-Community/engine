@@ -35,6 +35,22 @@ let contract: ERC20RailgunContract;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
+const makeTestDeposit = async (address: string, value: bigint) => {
+  const mpk = Lepton.decodeAddress(address).masterPublicKey;
+  const vpk = wallet.getViewingKeyPair().privateKey;
+  const random = bytes.random(16);
+  const deposit = new Deposit(mpk, random, value, token.address);
+
+  const { preImage, encryptedRandom } = deposit.serialize(vpk);
+
+  // Create deposit
+  const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
+
+  // Send deposit on chain
+  await etherswallet.sendTransaction(depositTx);
+  await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
+};
+
 // eslint-disable-next-line func-names
 describe('Lepton', function () {
   this.timeout(240000);
@@ -123,21 +139,7 @@ describe('Lepton', function () {
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chainID);
-
-    const mpk = Lepton.decodeAddress(address).masterPublicKey;
-    const vpk = wallet.getViewingKeyPair().privateKey;
-    const value = BigInt(110000) * DECIMALS_18;
-    const random = bytes.random(16);
-    const deposit = new Deposit(mpk, random, value, token.address);
-
-    const { preImage, encryptedRandom } = deposit.serialize(vpk);
-
-    // Create deposit
-    const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
-
-    // Send deposit on chain
-    await etherswallet.sendTransaction(depositTx);
-    await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
+    await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
 
     const balance = await wallet.getBalance(chainID, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
@@ -151,7 +153,7 @@ describe('Lepton', function () {
     );
 
     // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
-    transaction.outputs = [new Note(wallet2.addressKeys, random, 1n, tokenAddress)];
+    transaction.outputs = [new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress)];
 
     const serializedTransaction = await transaction.prove(
       lepton.prover,
@@ -163,10 +165,14 @@ describe('Lepton', function () {
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
     await awaitScan(wallet, chainID);
+    await awaitScan(wallet2, chainID);
 
     // BALANCE = deposited amount - 300(decimals) - 1
     const newBalance = await wallet.getBalance(chainID, tokenAddress);
     expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
+
+    const newBalance2 = await wallet2.getBalance(chainID, tokenAddress);
+    expect(newBalance2).to.equal(BigInt(1));
   }).timeout(90000);
 
   it('Should set/get last synced block', async () => {
