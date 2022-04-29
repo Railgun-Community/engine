@@ -526,9 +526,11 @@ class Wallet extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         const leaves: (Commitment | undefined)[] = await Promise.all(fetcher);
 
+        const filteredLeaves = leaves.filter((value) => value?.hash != null);
+
         // Start scanning primary and change
         // eslint-disable-next-line no-await-in-loop
-        await this.scanLeaves(leaves, tree, chainID, scannedHeight);
+        await this.scanLeaves(filteredLeaves, tree, chainID, scannedHeight);
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] = leaves.length > 0 ? leaves.length - 1 : 0;
