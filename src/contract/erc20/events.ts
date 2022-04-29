@@ -113,8 +113,8 @@ export function formatCommitmentBatchCommitments(
       txid: transactionHash,
       ciphertext: {
         ciphertext: {
-          iv: ivTag.substring(0, 16),
-          tag: ivTag.substring(16),
+          iv: ivTag.substring(0, 32),
+          tag: ivTag.substring(32),
           data: ciphertext.slice(1),
         },
         ephemeralKeys: ephemeralKeys.map((key) => hexlify(key.toHexString())),

@@ -17,7 +17,7 @@ import { Prover } from '../../src/prover';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
 import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength } from '../../src/utils/bytes';
+import { formatToByteLength, hexStringToBytes } from '../../src/utils/bytes';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
 
