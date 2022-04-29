@@ -89,33 +89,43 @@ class Lepton {
     }
   }
 
-  /**
-   * Scan contract history and sync
-   * @param chainID - chainID to scan
-   */
-  async scanHistory(chainID: number) {
+  async getRecentCommitmentBlock(chainID: number): Promise<number | undefined> {
+    const merkletree = this.merkletree[chainID].erc20;
+
     // Get latest tree
-    const latestTree = await this.merkletree[chainID].erc20.latestTree();
+    const latestTree = await merkletree.latestTree();
 
     // Get latest synced event
-    const treeLength = await this.merkletree[chainID].erc20.getTreeLength(latestTree);
+    const treeLength = await merkletree.getTreeLength(latestTree);
+
     LeptonDebug.log(`scanHistory: treeLength ${treeLength}`);
 
-    let startScanningBlock: number;
+    let startScanningBlock: number | undefined;
 
-    if (treeLength > 0) {
+    let latestEventIndex = treeLength - 1;
+    while (latestEventIndex >= 0 && !startScanningBlock) {
       // Get block number of last scanned event
+      // eslint-disable-next-line no-await-in-loop
       const latestEvent = await this.merkletree[chainID].erc20.getCommitment(
         latestTree,
-        treeLength - 1,
+        latestEventIndex,
       );
+      if (latestEvent) {
+        // eslint-disable-next-line no-await-in-loop
+        const { blockNumber } = await this.contracts[
+          chainID
+        ].contract.provider.getTransactionReceipt(bytes.hexlify(latestEvent.txid, true));
+        startScanningBlock = blockNumber;
+      }
+      latestEventIndex -= 1;
+    }
 
-      startScanningBlock = (
-        await this.contracts[chainID].contract.provider.getTransactionReceipt(
-          bytes.hexlify(latestEvent.txid, true),
-        )
-      ).blockNumber;
-    } else {
+    return startScanningBlock;
+  }
+
+  async getStartScanningBlock(chainID: number): Promise<number> {
+    let startScanningBlock = await this.getRecentCommitmentBlock(chainID);
+    if (startScanningBlock == null) {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chainID];
     }
@@ -124,6 +134,16 @@ class Lepton {
     if (lastSyncedBlock && lastSyncedBlock > startScanningBlock) {
       startScanningBlock = lastSyncedBlock;
     }
+
+    return startScanningBlock;
+  }
+
+  /**
+   * Scan contract history and sync
+   * @param chainID - chainID to scan
+   */
+  async scanHistory(chainID: number) {
+    const startScanningBlock = await this.getStartScanningBlock(chainID);
 
     // Call quicksync
     if (this.quickSync) {
