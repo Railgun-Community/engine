@@ -1,6 +1,6 @@
 {
   "name": "@railgun-community/lepton",
-  "version": "0.0.47",
+  "version": "0.0.48",
   "description": "Wallet framework for Railgun",
   "author": "Railgun Contributors",
   "license": "UNLICENSED",
@@ -27,7 +27,9 @@
   "bugs": {
     "url": "https://github.com/Railgun-Community/lepton/issues"
   },
-  "overrides": { "ffjavascript": "0.1.0" },
+  "overrides": {
+    "ffjavascript": "0.1.0"
+  },
   "dependencies": {
     "@ethersproject/abstract-provider": "^5.6.0",
     "@ethersproject/hdnode": "^5.6.0",
