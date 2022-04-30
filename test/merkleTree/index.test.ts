@@ -9,6 +9,7 @@ import { Database } from '../../src/database';
 import { MERKLE_ZERO_VALUE, MerkleTree } from '../../src/merkletree';
 import type { TreePurpose } from '../../src/merkletree';
 import { ZERO_ADDRESS } from '../../src/utils/constants';
+import { TokenType } from '../../src/models/transaction-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -312,7 +313,11 @@ describe('MerkleTree/Index', () => {
         preImage: {
           npk: '00',
           value: '02',
-          token: { tokenAddress: '0x03', tokenType: ZERO_ADDRESS, tokenSubID: ZERO_ADDRESS },
+          token: {
+            tokenAddress: '0x03',
+            tokenType: TokenType.ERC20,
+            tokenSubID: ZERO_ADDRESS,
+          },
         },
         encryptedRandom: ['01', '01'],
       },
@@ -458,10 +463,10 @@ describe('MerkleTree/Index', () => {
     // Check proof verification
     expect(MerkleTree.verifyProof(proof2)).to.equal(true);
     proof2.root = proof.root;
-    expect(MerkleTree.verifyProof(proof2)).to.equal(false); // @todo no idea why this is verifying
+    expect(MerkleTree.verifyProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
-    expect(MerkleTree.verifyProof(proof2)).to.equal(false); // @todo ^ same
-  }).timeout(0);
+    expect(MerkleTree.verifyProof(proof2)).to.equal(false);
+  }).timeout(12000);
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false

@@ -417,7 +417,7 @@ class MerkleTree {
       // Commit to DB if valid
       await this.writeTreeCache(tree);
     } else {
-      LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'));
+      LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'), true);
       // Clear cache if invalid
       this.clearWriteCache(tree);
     }

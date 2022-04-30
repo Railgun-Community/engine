@@ -4,7 +4,7 @@ import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { HDNode } from '@ethersproject/hdnode';
 import { hexToBytes } from 'ethereum-cryptography/utils';
-import { hash, keysUtils } from '../utils';
+import { hash } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
@@ -18,57 +18,26 @@ import {
   formatToByteLength,
   fromUTF8String,
   hexlify,
-  hexToBigInt,
   nToHex,
   numberify,
   padToLength,
 } from '../utils/bytes';
 import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import LeptonDebug from '../debugger';
-import { signED25519 } from '../utils/keys-utils';
+import { getSharedSymmetricKey, poseidon, signED25519 } from '../utils/keys-utils';
 
-const { poseidon } = keysUtils;
+import {
+  WalletDetails,
+  AddressKeys,
+  Balances,
+  BalancesByTree,
+  ScannedEventData,
+  TXO,
+  WalletData,
+  TreeBalance,
+  WalletNodes,
+} from './types';
 
-export type WalletDetails = {
-  treeScannedHeights: number[];
-};
-
-export type TXO = {
-  tree: number;
-  position: number;
-  txid: string;
-  spendtxid: string | false;
-  dummyKey?: string; // For dummy notes
-  note: Note;
-};
-
-export type TreeBalance = {
-  balance: bigint;
-  utxos: TXO[];
-};
-
-export type Balances = {
-  [key: string]: TreeBalance;
-  // Key: Token
-};
-
-export type BalancesByTree = {
-  [key: string]: TreeBalance[];
-  // Index = tree
-};
-
-export type ScannedEventData = {
-  chainID: number;
-};
-
-export type AddressKeys = {
-  masterPublicKey: bigint;
-  viewingPublicKey: Uint8Array;
-};
-
-export type WalletData = { mnemonic: string; index: number };
-
-export type WalletNodes = { spending: Node; viewing: Node };
 /**
  * constant defining the derivation path prefixes for spending and viewing keys
  * must be appended with index' to form a complete path
@@ -103,11 +72,11 @@ class Wallet extends EventEmitter {
 
   readonly id: string;
 
-  // #viewingKey: Node;
-
   #viewingKeyPair!: ViewingKeyPair;
 
   masterPublicKey!: bigint;
+
+  nullifyingKey!: bigint;
 
   readonly merkletree: MerkleTree[] = [];
 
@@ -123,7 +92,7 @@ class Wallet extends EventEmitter {
    */
   constructor(id: string, db: Database) {
     super();
-    this.id = id;
+    this.id = hexlify(id);
     this.db = db;
   }
 
@@ -131,6 +100,7 @@ class Wallet extends EventEmitter {
     const { spending, viewing } = nodes;
     this.#viewingKeyPair = await viewing.getViewingKeyPair();
     const spendingKeyPair = spending.getSpendingKeyPair();
+    this.nullifyingKey = poseidon([BigInt(hexlify(this.#viewingKeyPair.privateKey, true))]);
     this.masterPublicKey = Node.getMasterPublicKey(spendingKeyPair.pubkey, this.getNullifyingKey());
     this.spendingPublicKey = spendingKeyPair.pubkey;
 
@@ -179,20 +149,26 @@ class Wallet extends EventEmitter {
 
   /**
    * Load encrypted spending key Node from database
-   * @returns Promise<string>
+   * Spending key should be kept private and only accessed on demand
+   * @returns {Promise<SpendingKeyPair>}
    */
   async getSpendingKeyPair(encryptionKey: BytesData): Promise<SpendingKeyPair> {
     const node = await this.loadSpendingKey(encryptionKey);
     return node.getSpendingKeyPair();
   }
 
+  /**
+   * Return object of Viewing privateKey and pubkey
+   * @returns {ViewingKeyPair}
+   */
   getViewingKeyPair(): ViewingKeyPair {
     return this.#viewingKeyPair;
   }
 
   /**
    * Used only to sign Relayer fee messages.
-   * Verified using Relayer's viewingPublicKey, which is contained in its rail address.
+   * Verified using Relayer's viewingPublicKey, which is encoded in its rail address.
+   * @param {Uint8Array} message - message to sign as Uint8Array
    */
   async signWithViewingKey(message: Uint8Array): Promise<Uint8Array> {
     const viewingPrivateKey = this.getViewingKeyPair().privateKey;
@@ -202,22 +178,23 @@ class Wallet extends EventEmitter {
   /**
    * Nullifying Key (ie poseidon hash of Viewing Private Key) aka vpk derived on ed25519 curve
    * Used to decrypt and nullify notes
-   * @todo protect like spending private key
+   * @returns {bigint}
    */
   getNullifyingKey(): bigint {
-    return poseidon([hexToBigInt(hexlify(this.#viewingKeyPair.privateKey, true))]);
+    return this.nullifyingKey;
   }
 
   /**
    * Get Viewing Public Key (VK)
-   * @returns string
+   * @returns {Uint8Array}
    */
   get viewingPublicKey(): Uint8Array {
     return this.#viewingKeyPair.pubkey;
   }
 
   /**
-   * Public keys of wallet encoded in address
+   * Return masterPublicKey and viewingPublicKey used to encode RAILGUN addresses
+   * @returns {AddressKeys}
    */
   get addressKeys(): AddressKeys {
     return {
@@ -228,7 +205,7 @@ class Wallet extends EventEmitter {
 
   /**
    * Encode address from (MPK, VK) + chainID
-   * @returns address
+   * @returns {string} bech32 encoded RAILGUN address
    */
   getAddress(chainID: number | undefined): string {
     return bech32.encode({ ...this.addressKeys, chainID });
@@ -236,6 +213,8 @@ class Wallet extends EventEmitter {
 
   /**
    * Get encrypted wallet details for this wallet
+   * @param {number} chainID
+   * @returns {WalletDetails} including treeScannedHeight
    */
   async getWalletDetails(chainID: number): Promise<WalletDetails> {
     let walletDetails: WalletDetails;
@@ -243,13 +222,7 @@ class Wallet extends EventEmitter {
     try {
       // Try fetching from database
       walletDetails = msgpack.decode(
-        arrayify(
-          // @todo use different key?
-          await this.db.getEncrypted(
-            this.getWalletDetailsPath(chainID),
-            nToHex(this.masterPublicKey, ByteLength.UINT_256),
-          ),
-        ),
+        arrayify(await this.db.get(this.getWalletDetailsPath(chainID))),
       );
     } catch {
       // If details don't exist yet, return defaults
@@ -263,12 +236,12 @@ class Wallet extends EventEmitter {
 
   /**
    * Scans wallet at index for new balances
-   * @param index - index of address to scan
    * Commitment index in array should be same as commitment index in tree
-   * @param tree - tree number we're scanning
-   * @param chainID - chainID we're scanning
+   * @param {Commitment[]} leaves - commitments from events to attempt parsing
+   * @param {number} tree - tree number we're scanning
+   * @param {number} chainID - chainID we're scanning
+   * @param {number} scannedHeight - starting position
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async scanLeaves(
     leaves: (Commitment | undefined)[],
     tree: number,
@@ -293,7 +266,7 @@ class Wallet extends EventEmitter {
         // Derive shared secret
         const ephemeralKey = leaf.ciphertext.ephemeralKeys[0];
         // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await keysUtils.getSharedSymmetricKey(vpk, hexToBytes(ephemeralKey));
+        const sharedKey = await getSharedSymmetricKey(vpk, hexToBytes(ephemeralKey));
         // Try to decrypt.
         try {
           note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
@@ -316,13 +289,13 @@ class Wallet extends EventEmitter {
         }
       }
 
-      // If this note is addressed to us add to write queue
-      if (note != null) {
-        const nullifier = Note.getNullifier(this.getNullifyingKey(), position);
+      // If this note is addressed to us, add to write queue
+      if (note !== undefined) {
+        const nullifier = Note.getNullifier(this.nullifyingKey, position);
         const storedCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
-          nullifier: nullifier ? nToHex(nullifier, ByteLength.UINT_256) : undefined,
+          nullifier: nToHex(nullifier, ByteLength.UINT_256),
           decrypted: note.serialize(vpk),
         };
         writeBatch.push({
@@ -375,6 +348,7 @@ class Wallet extends EventEmitter {
         const keySplit = key.split(':');
 
         // Decode UTXO
+        // @todo clarify stored commitment / UTXO type
         const UTXO = msgpack.decode(arrayify(await this.db.get(keySplit)));
 
         // If this UTXO hasn't already been marked as spent, check if it has
@@ -537,11 +511,7 @@ class Wallet extends EventEmitter {
       }
 
       // Write wallet details to db
-      await this.db.putEncrypted(
-        this.getWalletDetailsPath(chainID),
-        nToHex(this.masterPublicKey, ByteLength.UINT_256),
-        msgpack.encode(walletDetails),
-      );
+      await this.db.put(this.getWalletDetailsPath(chainID), msgpack.encode(walletDetails));
 
       // Emit scanned event for this chain
       LeptonDebug.log(`wallet: scanned ${chainID}`);
@@ -658,4 +628,15 @@ class Wallet extends EventEmitter {
   }
 }
 
-export { Wallet };
+export {
+  Wallet,
+  WalletDetails,
+  AddressKeys,
+  Balances,
+  BalancesByTree,
+  ScannedEventData,
+  TXO,
+  WalletData,
+  TreeBalance,
+  WalletNodes,
+};

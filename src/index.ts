@@ -8,7 +8,7 @@ import { Prover, ArtifactsGetter } from './prover';
 import { Transaction } from './transaction';
 import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
-import { bytes } from './utils';
+import { hexlify } from './utils/bytes';
 import { Wallet } from './wallet';
 import { CommitmentEvent } from './contract/erc20';
 import LeptonDebug from './debugger';
@@ -63,10 +63,10 @@ class Lepton {
 
   /**
    * Handle new commitment events and kick off balance scan on wallets
-   * @param chainID - chainID of commitments
-   * @param treeNumber - tree of commitments
-   * @param startingIndex - starting index of commitments
-   * @param leaves - commitments
+   * @param {number} chainID - chainID of commitments
+   * @param {number} treeNumber - tree of commitments
+   * @param {number} startingIndex - starting index of commitments
+   * @param {Commitment[]} leaves - commitment data from events
    */
   async listener(chainID: number, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
     if (leaves.length) {
@@ -78,9 +78,8 @@ class Lepton {
 
   /**
    * Handle new nullifiers
-   * @param chainID - chainID of nullifiers
-   * @param nullifier - nullifer
-   * @param txid - txid of nullifier transaction
+   * @param {number} chainID - chainID of nullifiers
+   * @param {Nullifier[]} nullifiers - transaction info to nullify commitment
    */
   async nullifierListener(chainID: number, nullifiers: Nullifier[]) {
     if (nullifiers.length) {
@@ -114,7 +113,7 @@ class Lepton {
         // eslint-disable-next-line no-await-in-loop
         const { blockNumber } = await this.contracts[
           chainID
-        ].contract.provider.getTransactionReceipt(bytes.hexlify(latestEvent.txid, true));
+        ].contract.provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
         startScanningBlock = blockNumber;
       }
       latestEventIndex -= 1;
@@ -324,18 +323,9 @@ class Lepton {
     return this.contracts.map((element, index) => index);
   }
 
-  /**
-   * Load existing wallet
-   * @param encryptionKey - encryption key of wallet
-   * @param id - wallet ID
-   * @returns id
-   */
-  async loadExistingWallet(encryptionKey: BytesData, id: string): Promise<string> {
-    // Instantiate wallet
-    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
-
+  private initializeWallet(wallet: Wallet): string {
     // Store wallet against ID
-    this.wallets[bytes.hexlify(id)] = wallet;
+    this.wallets[wallet.id] = wallet;
 
     // Load merkle trees for wallet
     this.merkletree.forEach((tree) => {
@@ -343,13 +333,28 @@ class Lepton {
     });
 
     // Return wallet ID
-    return bytes.hexlify(id);
+    return wallet.id;
+  }
+
+  /**
+   * Load existing wallet
+   * @param {BytesData} encryptionKey - encryption key of wallet
+   * @param {string} _id - wallet ID
+   * @returns id
+   */
+  async loadExistingWallet(encryptionKey: BytesData, _id: string): Promise<string> {
+    const id = hexlify(_id);
+    // Instantiate wallet
+    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
+
+    return this.initializeWallet(wallet);
   }
 
   /**
    * Creates wallet from mnemonic
-   * @param encryptionKey - encryption key of wallet
-   * @param mnemonic - mnemonic to load
+   * @param {string} encryptionKey - encryption key of wallet
+   * @param {string} mnemonic - mnemonic to load
+   * @param {number} index - derivation index to load
    * @returns id
    */
   async createWalletFromMnemonic(
@@ -360,17 +365,7 @@ class Lepton {
     // Instantiate wallet
     const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
 
-    // Store wallet against ID
-    this.wallets[bytes.hexlify(wallet.id)] = wallet;
-
-    // Load merkle trees for wallet
-    this.merkletree.forEach((tree) => {
-      wallet.loadTree(tree.erc20);
-      // TODO: trigger tree scan after loading
-    });
-
-    // Return wallet ID
-    return wallet.id;
+    return this.initializeWallet(wallet);
   }
 
   /**
