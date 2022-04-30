@@ -53,7 +53,7 @@ class Transaction {
 
   notesIn: Note[] = [];
 
-  outputs: (Note | ERC20WithdrawNote)[] = [];
+  outputs: Note[] = [];
 
   // see WithdrawFlag
   withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
@@ -189,15 +189,17 @@ class Transaction {
 
     const change = totalIn - totalOut;
 
+    const allOutputs: (Note | ERC20WithdrawNote)[] = [...this.outputs];
+
     // Create change output
-    this.outputs.push(new Note(wallet.addressKeys, bytes.random(16), change, this.token));
+    allOutputs.push(new Note(wallet.addressKeys, bytes.random(16), change, this.token));
 
     // Push withdraw output if withdraw is requested
     if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
-      this.outputs.push(this.withdrawNote);
+      allOutputs.push(this.withdrawNote);
     }
 
-    const onlyInternalOutputs = this.outputs.filter((note) => note instanceof Note) as Note[];
+    const onlyInternalOutputs = allOutputs.filter((note) => note instanceof Note) as Note[];
 
     const notesEphemeralKeys = await Promise.all(
       onlyInternalOutputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),
@@ -230,7 +232,7 @@ class Transaction {
       commitmentCiphertext,
     };
 
-    const commitmentsOut = this.outputs.map((note) => note.hash);
+    const commitmentsOut = allOutputs.map((note) => note.hash);
 
     const publicInputs: PublicInputs = {
       merkleRoot: hexToBigInt(merkleRoot),
@@ -248,9 +250,9 @@ class Transaction {
       valueIn: utxos.map((utxo) => utxo.note.value),
       pathElements,
       leavesIndices: pathIndices,
-      valueOut: this.outputs.map((note) => note.value),
+      valueOut: allOutputs.map((note) => note.value),
       publicKey: spendingKey.pubkey,
-      npkOut: this.outputs.map((x) => x.notePublicKey),
+      npkOut: allOutputs.map((x) => x.notePublicKey),
       nullifyingKey,
       signature: [...signature.R8, signature.S],
     };
