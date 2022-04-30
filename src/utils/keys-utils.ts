@@ -1,7 +1,8 @@
 import * as curve25519 from '@noble/ed25519';
 import { bytesToHex, randomBytes } from '@noble/hashes/utils';
-import { eddsa, poseidon, Signature } from 'circomlib';
+import { eddsa, Signature } from 'circomlib';
 import { hexlify } from './bytes';
+import { poseidon } from './hash';
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
   return eddsa.prv2pub(Buffer.from(privateKey));
@@ -66,5 +67,4 @@ export {
   verifyED25519,
   getEphemeralKeys,
   getSharedSymmetricKey,
-  poseidon,
 };

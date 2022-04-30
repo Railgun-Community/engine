@@ -3,7 +3,7 @@ import { encryption } from '../utils';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';
 import { ZERO_ADDRESS } from '../utils/constants';
-import { poseidon } from '../utils/keys-utils';
+import { poseidon } from '../utils/hash';
 import { Note } from './note';
 
 export class ERC20Deposit {

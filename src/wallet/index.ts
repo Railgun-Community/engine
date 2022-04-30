@@ -24,7 +24,8 @@ import {
 } from '../utils/bytes';
 import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import LeptonDebug from '../debugger';
-import { getSharedSymmetricKey, poseidon, signED25519 } from '../utils/keys-utils';
+import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
+import { poseidon } from '../utils/hash';
 
 import {
   WalletDetails,

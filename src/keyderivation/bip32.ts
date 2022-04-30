@@ -91,7 +91,7 @@ export class Node {
   }
 
   static getMasterPublicKey(spendingPublicKey: [bigint, bigint], nullifyingKey: bigint): bigint {
-    return keysUtils.poseidon([...spendingPublicKey, nullifyingKey]);
+    return hash.poseidon([...spendingPublicKey, nullifyingKey]);
   }
 
   async getViewingKeyPair(): Promise<ViewingKeyPair> {
@@ -103,7 +103,7 @@ export class Node {
 
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    return keysUtils.poseidon([hexToBigInt(bytesToHex(privateKey))]);
+    return hash.poseidon([hexToBigInt(bytesToHex(privateKey))]);
   }
 
   signBySpendingKey(message: bigint): Signature {

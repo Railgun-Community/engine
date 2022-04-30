@@ -1,25 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* globals describe it beforeEach */
+import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import memdown from 'memdown';
-import { Wallet as EthersWallet } from '@ethersproject/wallet';
-// @ts-ignore
 import { Signature } from 'circomlib';
+import memdown from 'memdown';
 import { Database } from '../../src/database';
+import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
-import { Wallet } from '../../src/wallet';
+import { TokenType } from '../../src/models/transaction-types';
 import { Note } from '../../src/note';
-import { bytes, keysUtils } from '../../src/utils';
-import { Transaction } from '../../src/transaction';
 import { Prover } from '../../src/prover';
+import { Transaction } from '../../src/transaction';
+import { hashBoundParams } from '../../src/transaction/transaction';
+import { bytes } from '../../src/utils';
+import { formatToByteLength } from '../../src/utils/bytes';
+import { poseidon } from "../../src/utils/hash";
+import { getEphemeralKeys, getSharedSymmetricKey, signEDDSA, verifyEDDSA } from '../../src/utils/keys-utils';
+import { Wallet } from '../../src/wallet';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
-import { hashBoundParams } from '../../src/transaction/transaction';
-import { formatToByteLength } from '../../src/utils/bytes';
-import { AddressData } from '../../src/keyderivation/bech32-encode';
-import { getEphemeralKeys, getSharedSymmetricKey, poseidon } from '../../src/utils/keys-utils';
-import { TokenType } from '../../src/models/transaction-types';
+
+
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -162,9 +164,10 @@ describe('Transaction/ERC20', function () {
     const msg = poseidon(Object.values(publicInputs).flatMap((x) => x));
     const sig: Signature = { R8: [signature[0], signature[1]], S: signature[2] };
 
-    assert.isTrue(keysUtils.verifyEDDSA(msg, sig, pubkey));
+    assert.isTrue(verifyEDDSA(msg, sig, pubkey));
 
-    expect(sig).to.deep.equal(keysUtils.signEDDSA(privateKey, msg));
+    // eslint-disable-next-line no-undef
+    expect(sig).to.deep.equal(signEDDSA(privateKey, msg));
   });
 
   it('Should generate inputs for transaction', async () => {

@@ -1,7 +1,7 @@
 import { CommitmentPreimage, TokenData, TokenType } from '../models/transaction-types';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
-import { poseidon } from '../utils/keys-utils';
+import { poseidon } from '../utils/hash';
 import { Note } from './note';
 
 export class ERC20WithdrawNote {

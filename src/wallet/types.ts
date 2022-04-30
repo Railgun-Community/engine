@@ -1,4 +1,5 @@
 import { Note } from '../note';
+import { Node } from '../keyderivation';
 
 export type WalletDetails = {
   treeScannedHeights: number[];

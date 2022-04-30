@@ -3,17 +3,18 @@ import { randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
+import { poseidon } from "../../src/utils/hash";
 import { ByteLength, nToHex } from '../../src/utils/bytes';
 import {
   getPublicSpendingKey,
   getPublicViewingKey,
   getRandomScalar,
-  poseidon,
   signED25519,
   signEDDSA,
   verifyED25519,
-  verifyEDDSA,
+  verifyEDDSA
 } from '../../src/utils/keys-utils';
+
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
