@@ -74,6 +74,8 @@ export function formatGeneratedCommitmentBatchCommitments(
     (el) => el.map((key) => key.toHexString()) as EncryptedData,
   );
   const generatedCommitments = preImages.map((item, index) => {
+    // TODO: This event is formatted exactly like a withdraw note, but
+    // we should not use this type here. It is NOT a withdraw note.
     const note = new ERC20WithdrawNote(
       item.npk.toHexString(),
       item.value.toBigInt(),
