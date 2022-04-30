@@ -3,7 +3,7 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
 import { constants, hash } from '../utils';
-import { fromUTF8String, numberify, hexlify, formatToByteLength, ByteLength } from '../utils/bytes';
+import { fromUTF8String, numberify, hexlify, formatToByteLength, ByteLength, nToHex, hexToBigInt } from '../utils/bytes';
 import LeptonDebug from '../debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/transaction-types';
 
@@ -132,7 +132,7 @@ class MerkleTree {
    * @returns hash
    */
   static hashLeftRight(left: string, right: string): string {
-    return hash.poseidon([left, right]);
+    return nToHex(hash.poseidon([hexToBigInt(left), hexToBigInt(right)]), 32);
   }
 
   /**

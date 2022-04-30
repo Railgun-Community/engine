@@ -38,39 +38,6 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform sha512 hashes', () => {
-    const vectors = [
-      {
-        preImage: '',
-        array: new Uint8Array([]),
-        result:
-          'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e',
-      },
-      {
-        preImage: '5241494c47554e',
-        array: new Uint8Array([82, 65, 73, 76, 71, 85, 78]),
-        result:
-          'ff66fdbf6b51995a981aa4400645a04067d0293863ba961b8b84527f07450f7b513e266aa9e6b25727be754bfe96b7e99c01ac4db2220f8f2ae4d057248ab204',
-      },
-      {
-        preImage: '50524956414359202620414e4f4e594d495459',
-        array: new Uint8Array([
-          80, 82, 73, 86, 65, 67, 89, 32, 38, 32, 65, 78, 79, 78, 89, 77, 73, 84, 89,
-        ]),
-        result:
-          'f2c5c93699191d322d21f23656d91e35a3313f429c17760378d79e4974b178d22d7d4d9c2426e3f3b7e2d2e1c3e9544a136551063def4a38b82420ca6e3a4679',
-      },
-    ];
-
-    vectors.forEach((vector) => {
-      // Test hex string hash
-      expect(hash.sha512(vector.preImage)).to.equal(vector.result);
-
-      // Test bytes array hash
-      expect(hash.sha512(vector.array)).to.equal(vector.result);
-    });
-  });
-
   it('Should perform keccak256 hashes', () => {
     const vectors = [
       {
@@ -144,45 +111,20 @@ describe('Utils/Hash', () => {
     const vectors = [
       {
         preImage: [[0x1], [0x2]],
-        result: '115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a',
+        result: BigInt('0x115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a'),
       },
       {
         preImage: [[0x1], [0x2], [0x3], [0x4]],
-        result: '299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465',
+        result: BigInt('0x299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465'),
       },
       {
-        preImage: ['6b021e0d06d0b2d161cf0ea494e3fc1cbff12cc1b29281f7412170351b708fad'],
-        result: '0b77a7c8dcbf2c84e75b6ff1dd558365532956cb7c1f328a67220a3a47a3ab43',
+        preImage: [BigInt('0x6b021e0d06d0b2d161cf0ea494e3fc1cbff12cc1b29281f7412170351b708fad')],
+        result: BigInt('0x0b77a7c8dcbf2c84e75b6ff1dd558365532956cb7c1f328a67220a3a47a3ab43'),
       },
     ];
 
     vectors.forEach((vector) => {
       expect(hash.poseidon(vector.preImage)).to.equal(vector.result);
-    });
-  });
-
-  it('Should perform pbkdf2 hashes', async () => {
-    const vectors = [
-      {
-        secret:
-          '676c6f7279206d6978206469676974616c206475747920616e616c79737420706879736963616c20636c75737465722067656e75696e65206465736b20696e6469636174652061746f6d20746872697665',
-        salt: '6d6e656d6f6e6963',
-        result:
-          '5fcafbbfe78d319c631598d1f2a13b06d9a39fdda323683c64082945d234660b0c460599f5f1b267be39cb140c5c360273f95cb30bae6fafed966476e5d91dd6',
-      },
-      {
-        secret:
-          '70617469656e742071756f7465207061747465726e207768656e207069656365206d75737420656d65726765206f616b206f626a656374206e61706b696e2074776963652077686970',
-        salt: '6d6e656d6f6e69637465737470617373',
-        result:
-          '89b2d609ff80008fee887c799436c791644cb39ed820fbc4dad2f43713ef781616cbc2036a29f22236ac22ea1e1b1c66a97cc4ecdcf093fb270ae61690d3b0e9',
-      },
-    ];
-
-    vectors.forEach(async (vector) => {
-      expect(await hash.pbkdf2(vector.secret, vector.salt, 2048, 64, 'sha512')).to.equal(
-        vector.result,
-      );
     });
   });
 });
