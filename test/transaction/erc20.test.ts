@@ -2,10 +2,9 @@
 /* globals describe it beforeEach */
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
 import memdown from 'memdown';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
-import { hexToBytes } from 'ethereum-cryptography/utils';
+// @ts-ignore
 import { Signature } from 'circomlib';
 import { Database } from '../../src/database';
 import { MerkleTree } from '../../src/merkletree';
