@@ -1,5 +1,5 @@
 // @ts-ignore
-import { poseidon } from 'circomlib';
+import { poseidon } from 'circomlibjs';
 import { utils as ethersutils } from 'ethers';
 import { BytesData } from '../models/transaction-types';
 import { arrayify } from './bytes';

@@ -1,11 +1,11 @@
-import { Signature } from 'circomlib';
-import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/transaction-types';
-import { encryption, keysUtils } from '../utils';
-import { poseidon } from '../utils/hash';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { Signature } from 'circomlibjs';
 import { AddressData } from '../keyderivation/bech32-encode';
+import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/transaction-types';
 import { PublicInputs } from '../prover/types';
+import { encryption, keysUtils } from '../utils';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
+import { poseidon } from '../utils/hash';
 
 export class Note {
   // viewing public key (VPK) of recipient - ed25519 curve

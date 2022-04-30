@@ -1,6 +1,6 @@
 import * as curve25519 from '@noble/ed25519';
 import { bytesToHex, randomBytes } from '@noble/hashes/utils';
-import { eddsa, Signature } from 'circomlib';
+import { eddsa, Signature } from 'circomlibjs';
 import { hexlify } from './bytes';
 import { poseidon } from './hash';
 
@@ -58,13 +58,14 @@ async function getSharedSymmetricKey(
 }
 
 export {
-  getPublicSpendingKey,
-  getPublicViewingKey,
-  getRandomScalar,
-  signEDDSA,
-  verifyEDDSA,
-  signED25519,
-  verifyED25519,
-  getEphemeralKeys,
-  getSharedSymmetricKey,
+    getPublicSpendingKey,
+    getPublicViewingKey,
+    getRandomScalar,
+    signEDDSA,
+    verifyEDDSA,
+    signED25519,
+    verifyED25519,
+    getEphemeralKeys,
+    getSharedSymmetricKey,
 };
+

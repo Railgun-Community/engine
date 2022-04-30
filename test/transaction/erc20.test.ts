@@ -3,7 +3,7 @@
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Signature } from 'circomlib';
+import { Signature } from 'circomlibjs';
 import memdown from 'memdown';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';

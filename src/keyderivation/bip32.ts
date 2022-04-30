@@ -1,11 +1,11 @@
-import { Signature } from 'circomlib';
+import { Signature } from 'circomlibjs';
 import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
+import { BytesData } from '../models/transaction-types';
+import { KeyNode } from '../models/types';
 import { hash, keysUtils } from '../utils';
+import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
 import { fromUTF8String, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
-import { KeyNode } from '../models/types';
-import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
-import { BytesData } from '../models/transaction-types';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
 const HARDENED_OFFSET = 0x80000000;
