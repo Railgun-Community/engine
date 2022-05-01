@@ -139,8 +139,10 @@ class Transaction {
       formatToByteLength(this.token, 32, false)
     ];
 
-    if (treeSortedBalances === undefined)
-      throw new Error(`Failed to find balances for ${this.token}`);
+    if (treeSortedBalances === undefined) {
+      const formattedTokenAddress = `0x${bytes.trim(this.token, ByteLength.Address)}`;
+      throw new Error(`No wallet balance for token: ${formattedTokenAddress}`);
+    }
 
     // Sum balances
     const balance: bigint = treeSortedBalances.reduce(
