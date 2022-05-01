@@ -15,13 +15,16 @@ import { Transaction } from '../../src/transaction';
 import { hashBoundParams } from '../../src/transaction/transaction';
 import { bytes } from '../../src/utils';
 import { formatToByteLength } from '../../src/utils/bytes';
-import { poseidon } from "../../src/utils/hash";
-import { getEphemeralKeys, getSharedSymmetricKey, signEDDSA, verifyEDDSA } from '../../src/utils/keys-utils';
+import { poseidon } from '../../src/utils/hash';
+import {
+  getEphemeralKeys,
+  getSharedSymmetricKey,
+  signEDDSA,
+  verifyEDDSA,
+} from '../../src/utils/keys-utils';
 import { Wallet } from '../../src/wallet';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
-
-
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -210,7 +213,9 @@ describe('Transaction/ERC20', function () {
 
     await expect(
       transaction2.generateInputs(wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith(`Failed to find balances for ${transaction2.token}`);
+    ).to.eventually.be.rejectedWith(
+      `No wallet balance for token: 0x00000000000000000000000000000000000000ff`,
+    );
 
     transaction.outputs = [makeNote()];
 
