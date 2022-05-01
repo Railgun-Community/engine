@@ -16,10 +16,17 @@ import {
   SerializedTransaction,
 } from '../../models/transaction-types';
 import {
+  CommitmentBatchEventArgs,
+  CommitmentCiphertextArgs,
+  CommitmentPreimageArgs,
+  EncryptedDataArgs,
   EventsListener,
   EventsNullifierListener,
   formatCommitmentBatchEvent,
   formatGeneratedCommitmentBatchEvent,
+  formatNullifierEvents,
+  GeneratedCommitmentBatchEventArgs,
+  NullifierEventArgs,
   processCommitmentBatchEvents,
   processGeneratedCommitmentEvents,
   processNullifierEvents,
@@ -101,24 +108,59 @@ class ERC20RailgunContract {
 
   /**
    * Listens for tree update events
-   * @param listener - listener callback
+   * @param eventsListener - listener callback
+   * @param eventsNullifierListener - nullifier listener callback
    */
   treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
     // listen for nullifiers first so balances aren't "double" before they process
-    this.contract.on(EventName.Nullifiers, async (...eventData: any) => {
-      const event = eventData.pop();
-      await processNullifierEvents(eventsNullifierListener, [event]);
-    });
+    this.contract.on(
+      EventName.Nullifiers,
+      async (treeNumber: BigNumber, nullifier: BigNumber[], event: Event) => {
+        const args: NullifierEventArgs = {
+          treeNumber,
+          nullifier,
+        };
+        await eventsNullifierListener(formatNullifierEvents(args, event.transactionHash));
+      },
+    );
 
-    this.contract.on(EventName.GeneratedCommitmentBatch, async (...eventData: any) => {
-      const event = eventData.pop();
-      await eventsListener(formatGeneratedCommitmentBatchEvent(event));
-    });
+    this.contract.on(
+      EventName.GeneratedCommitmentBatch,
+      async (
+        treeNumber: BigNumber,
+        startPosition: BigNumber,
+        commitments: CommitmentPreimageArgs[],
+        encryptedRandom: EncryptedDataArgs[],
+        event: Event,
+      ) => {
+        const args: GeneratedCommitmentBatchEventArgs = {
+          treeNumber,
+          startPosition,
+          commitments,
+          encryptedRandom,
+        };
+        await eventsListener(formatGeneratedCommitmentBatchEvent(args, event.transactionHash));
+      },
+    );
 
-    this.contract.on(EventName.CommitmentBatch, async (...eventData: any) => {
-      const event = eventData.pop();
-      await eventsListener(formatCommitmentBatchEvent(event));
-    });
+    this.contract.on(
+      EventName.CommitmentBatch,
+      async (
+        treeNumber: BigNumber,
+        startPosition: BigNumber,
+        hash: BigNumber[],
+        ciphertext: CommitmentCiphertextArgs[],
+        event: Event,
+      ) => {
+        const args: CommitmentBatchEventArgs = {
+          treeNumber,
+          startPosition,
+          hash,
+          ciphertext,
+        };
+        await eventsListener(formatCommitmentBatchEvent(args, event.transactionHash));
+      },
+    );
   }
 
   private async scanEvents(

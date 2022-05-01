@@ -44,7 +44,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 let testDeposit: (value?: bigint) => Promise<[ethers.providers.TransactionReceipt, unknown]>;
 
 // eslint-disable-next-line func-names
-describe('Contract/Index', function () {
+describe.only('Contract/Index', function () {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -208,17 +208,33 @@ describe('Contract/Index', function () {
       return;
     }
 
-    let startingBlock = await provider.getBlockNumber();
-
-    const [txResponse] = await testDeposit();
     let resultEvent: CommitmentEvent;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
       resultEvent = commitmentEvent;
     };
-    const resultNullifiers: Nullifier[] = [];
+    let resultNullifiers: Nullifier[] = [];
     const nullifiersListener = async (nullifiers: Nullifier[]) => {
       resultNullifiers.push(...nullifiers);
     };
+
+    let startingBlock = await provider.getBlockNumber();
+
+    // Add a secondary listener.
+    contract.treeUpdates(eventsListener, nullifiersListener);
+
+    const [txResponse] = await testDeposit();
+
+    // Listeners should have been updated automatically by contract events.
+
+    // @ts-ignore
+    expect(resultEvent).to.be.an('object', 'No event in history for deposit');
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers.length).to.equal(0);
+
+    resultEvent = undefined;
+    resultNullifiers = [];
 
     await contract.getHistoricalEvents(
       startingBlock,
@@ -226,6 +242,8 @@ describe('Contract/Index', function () {
       nullifiersListener,
       async () => {},
     );
+
+    // Listeners should have been updated by historical event scan.
 
     // @ts-ignore
     expect(resultEvent).to.be.an('object', 'No event in history for deposit');
@@ -236,18 +254,26 @@ describe('Contract/Index', function () {
 
     startingBlock = await provider.getBlockNumber();
 
-    // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID, 0);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     transaction.withdraw(etherswallet.address, 100n);
-
-    // Create transact
     const serializedTx = await transaction.prove(lepton.prover, wallet, testEncryptionKey);
+
     const transact = await contract.transact([serializedTx]);
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
     const [txResponseTransact] = await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
+
+    // Event should have been scanned by automatic contract events:
+
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
+
+    resultEvent = undefined;
+    resultNullifiers = [];
 
     await contract.getHistoricalEvents(
       startingBlock,
@@ -255,6 +281,8 @@ describe('Contract/Index', function () {
       nullifiersListener,
       async () => {},
     );
+
+    // Event should have been scanned by historical event scan.
 
     // @ts-ignore
     expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
@@ -289,7 +317,7 @@ describe('Contract/Index', function () {
 
     const merkleRootBefore = await contract.merkleRoot();
 
-    const address = await wallet.getAddress(chainID);
+    const address = wallet.getAddress(chainID);
     const { masterPublicKey } = Lepton.decodeAddress(address);
     const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 

@@ -9,6 +9,7 @@ import {
 } from '../../models/transaction-types';
 import { ByteLength, hexlify, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
+import LeptonDebug from '../../debugger';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -62,6 +63,11 @@ export type CommitmentBatchEventArgs = {
   ciphertext: CommitmentCiphertextArgs[];
 };
 
+export type NullifierEventArgs = {
+  treeNumber: BigNumber;
+  nullifier: BigNumber[];
+};
+
 /**
  * Parse event data for database
  */
@@ -91,17 +97,31 @@ export function formatGeneratedCommitmentBatchCommitments(
   return generatedCommitments;
 }
 
-export function formatGeneratedCommitmentBatchEvent(event: Event): CommitmentEvent {
-  const args = event.args as unknown as GeneratedCommitmentBatchEventArgs;
+export function formatGeneratedCommitmentBatchEvent(
+  commitmentBatchArgs: GeneratedCommitmentBatchEventArgs,
+  transactionHash: string,
+): CommitmentEvent {
+  const { treeNumber, startPosition, commitments, encryptedRandom } = commitmentBatchArgs;
+  if (
+    treeNumber == null ||
+    startPosition == null ||
+    commitments == null ||
+    encryptedRandom == null
+  ) {
+    const err = new Error('Invalid GeneratedCommitmentBatchEventArgs');
+    LeptonDebug.error(err);
+    throw err;
+  }
+
   const formattedCommitments = formatGeneratedCommitmentBatchCommitments(
-    event.transactionHash,
-    args.commitments,
-    args.encryptedRandom,
+    transactionHash,
+    commitments,
+    encryptedRandom,
   );
   return {
-    txid: hexlify(event.transactionHash),
-    treeNumber: args.treeNumber.toNumber(),
-    startPosition: args.startPosition.toNumber(),
+    txid: hexlify(transactionHash),
+    treeNumber: treeNumber.toNumber(),
+    startPosition: startPosition.toNumber(),
     commitments: formattedCommitments,
   };
 }
@@ -132,17 +152,20 @@ export function formatCommitmentBatchCommitments(
   });
 }
 
-export function formatCommitmentBatchEvent(event: Event) {
-  const args = event.args as unknown as CommitmentBatchEventArgs;
+export function formatCommitmentBatchEvent(
+  commitmentBatchArgs: CommitmentBatchEventArgs,
+  transactionHash: string,
+) {
+  const { treeNumber, startPosition, hash, ciphertext } = commitmentBatchArgs;
+  if (treeNumber == null || startPosition == null || hash == null || ciphertext == null) {
+    const err = new Error('Invalid CommitmentBatchEventArgs');
+    LeptonDebug.error(err);
+    throw err;
+  }
 
-  const { treeNumber, startPosition, hash, ciphertext } = args;
-  const formattedCommitments = formatCommitmentBatchCommitments(
-    event.transactionHash,
-    hash,
-    ciphertext,
-  );
+  const formattedCommitments = formatCommitmentBatchCommitments(transactionHash, hash, ciphertext);
   return {
-    txid: hexlify(event.transactionHash),
+    txid: hexlify(transactionHash),
     treeNumber: treeNumber.toNumber(),
     startPosition: startPosition.toNumber(),
     commitments: formattedCommitments,
@@ -155,28 +178,44 @@ export async function processGeneratedCommitmentEvents(
 ) {
   const filtered = events.filter((event) => event.args);
   await Promise.all(
-    filtered.map(async (e) => eventsListener(formatGeneratedCommitmentBatchEvent(e))),
-  );
-}
-
-export async function processCommitmentBatchEvents(listener: EventsListener, events: Event[]) {
-  const filtered = events.filter((event) => event.args);
-  await Promise.all(
-    filtered.map(async (e) => {
-      listener(formatCommitmentBatchEvent(e));
+    filtered.map(async (event) => {
+      const { args, transactionHash } = event;
+      eventsListener(
+        formatGeneratedCommitmentBatchEvent(
+          args as unknown as GeneratedCommitmentBatchEventArgs,
+          transactionHash,
+        ),
+      );
     }),
   );
 }
 
-export function formatNullifierEvents(event: Event): Nullifier[] {
+export async function processCommitmentBatchEvents(
+  eventsListener: EventsListener,
+  events: Event[],
+) {
+  const filtered = events.filter((event) => event.args);
+  await Promise.all(
+    filtered.map(async (event) => {
+      const { args, transactionHash } = event;
+      eventsListener(
+        formatCommitmentBatchEvent(args as unknown as CommitmentBatchEventArgs, transactionHash),
+      );
+    }),
+  );
+}
+
+export function formatNullifierEvents(
+  nullifierEventArgs: NullifierEventArgs,
+  transactionHash: string,
+): Nullifier[] {
   const nullifiers: Nullifier[] = [];
 
-  const { args } = event;
-  args!.nullifier.forEach((nullifier: BigNumber) => {
+  nullifierEventArgs.nullifier.forEach((nullifier: BigNumber) => {
     nullifiers.push({
-      txid: hexlify(event.transactionHash),
+      txid: hexlify(transactionHash),
       nullifier: nullifier.toHexString(),
-      treeNumber: args!.treeNumber.toNumber(),
+      treeNumber: nullifierEventArgs.treeNumber.toNumber(),
     });
   });
 
@@ -191,7 +230,10 @@ export async function processNullifierEvents(
 
   const filtered = events.filter((event) => event.args);
   filtered.forEach((event) => {
-    nullifiers.push(...formatNullifierEvents(event));
+    const { args, transactionHash } = event;
+    nullifiers.push(
+      ...formatNullifierEvents(args as unknown as NullifierEventArgs, transactionHash),
+    );
   });
 
   await eventsNullifierListener(nullifiers);
