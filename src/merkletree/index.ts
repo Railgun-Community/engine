@@ -469,12 +469,12 @@ class MerkleTree {
     while (!finishedProcessing) {
       let anyWritesProcessed = false;
 
-      const treeIndeces = this.writeQueue
+      const treeIndices = this.writeQueue
         .map((_tree, treeIndex) => treeIndex)
         .filter((index) => !Number.isNaN(index));
 
       // eslint-disable-next-line no-restricted-syntax
-      for (const treeIndex of treeIndeces) {
+      for (const treeIndex of treeIndices) {
         // eslint-disable-next-line no-await-in-loop
         const writeQueueProcessed = await this.processWriteQueueForTree(treeIndex);
         anyWritesProcessed = anyWritesProcessed || writeQueueProcessed;
