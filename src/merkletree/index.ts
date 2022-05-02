@@ -142,15 +142,18 @@ class MerkleTree {
   /**
    * Construct DB prefix from tree number, level
    * @param tree - tree number
-   * @param level - merkle tree level
    * @returns database prefix
    */
   getTreeDBPrefix(tree: number): string[] {
-    return [
-      fromUTF8String(`merkletree-${this.purpose}`),
-      hexlify(new BN(this.chainID)),
-      hexlify(new BN(tree)),
-    ].map((element) => element.padStart(64, '0'));
+    return [...this.getChainDBPrefix(), hexlify(new BN(tree))].map((element) =>
+      element.padStart(64, '0'),
+    );
+  }
+
+  getChainDBPrefix(): string[] {
+    return [fromUTF8String(`merkletree-${this.purpose}`), hexlify(new BN(this.chainID))].map(
+      (element) => element.padStart(64, '0'),
+    );
   }
 
   /**
@@ -182,27 +185,28 @@ class MerkleTree {
 
   /**
    * Construct DB path from nullifier
+   * @param tree - tree nullifier is for
    * @param nullifier - nullifier to get path for
    * @returns database path
    */
-  getNullifierDBPath(nullifier: string): string[] {
+  getNullifierDBPath(tree: number, nullifier: string): string[] {
     return [
-      fromUTF8String(`merkletree-${this.purpose}`),
-      hexlify(new BN(this.chainID)),
-      hexlify(new BN(0).notn(32)), // 2^256-1
+      ...this.getTreeDBPrefix(tree),
+      hexlify(new BN(0).notn(32).subn(1)), // 2^256-2
       hexlify(nullifier),
     ].map((element) => element.padStart(64, '0'));
   }
 
   /**
    * Gets if a nullifier has been seen
-   * @param nullifier - nullifier to check
+   * @param {number} tree - tree to search
+   * @param {string} nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else undefined
    */
-  async getStoredNullifier(nullifier: string): Promise<string | undefined> {
+  async getStoredNullifier(tree: number, nullifier: string): Promise<string | undefined> {
     // Return if nullifier is set
     try {
-      return await this.db.get(this.getNullifierDBPath(nullifier));
+      return await this.db.get(this.getNullifierDBPath(tree, nullifier));
     } catch {
       return undefined;
     }
@@ -216,7 +220,7 @@ class MerkleTree {
     // Build write batch for nullifiers
     const nullifierWriteBatch: PutBatch[] = nullifiers.map((nullifier) => ({
       type: 'put',
-      key: this.getNullifierDBPath(nullifier.nullifier).join(':'),
+      key: this.getNullifierDBPath(nullifier.treeNumber, nullifier.nullifier).join(':'),
       value: nullifier.txid,
     }));
 
@@ -510,6 +514,7 @@ class MerkleTree {
     }
 
     // Process tree updates
+
     await this.updateTrees();
   }
 
