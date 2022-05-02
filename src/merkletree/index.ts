@@ -199,17 +199,23 @@ class MerkleTree {
 
   /**
    * Gets if a nullifier has been seen
-   * @param {number} tree - tree to search
    * @param {string} nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else undefined
    */
-  async getStoredNullifier(tree: number, nullifier: string): Promise<string | undefined> {
+  async getStoredNullifier(nullifier: string): Promise<string | undefined> {
     // Return if nullifier is set
-    try {
-      return await this.db.get(this.getNullifierDBPath(tree, nullifier));
-    } catch {
-      return undefined;
+    let txid: string | undefined;
+    const latestTree = await this.latestTree();
+    for (let tree = 0; tree < latestTree + 1; tree += 1) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        txid = await this.db.get(this.getNullifierDBPath(tree, nullifier));
+        break;
+      } catch {
+        txid = undefined;
+      }
     }
+    return txid;
   }
 
   /**
