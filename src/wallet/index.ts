@@ -255,7 +255,7 @@ class Wallet extends EventEmitter {
 
     // Loop through passed commitments
     for (let position = scannedHeight; position < scannedHeight + leaves.length; position += 1) {
-      LeptonDebug.log(`inserting ${leaves.length} at ${position}`);
+      LeptonDebug.log(`inserting ${leaves.length} leaves at position ${position}`);
       let note: Note | undefined;
       const leaf = leaves[position];
       if (leaf == null) {
@@ -462,35 +462,35 @@ class Wallet extends EventEmitter {
     LeptonDebug.log(`scan wallet balances: chainID ${chainID}`);
 
     try {
-      // Fetch wallet details
-      const walletDetails = await this.getWalletDetails(chainID);
+      // Fetch wallet details and latest tree.
+      const [walletDetails, latestTree] = await Promise.all([
+        this.getWalletDetails(chainID),
+        this.merkletree[chainID].latestTree(),
+      ]);
 
-      // Get latest tree
-      const latestTree = await this.merkletree[chainID].latestTree();
-
-      // Refresh list of trees
-      while (walletDetails.treeScannedHeights.length < latestTree + 1) {
-        // Instantiate new trees in wallet data
+      // Fill list of tree heights with 0s up to # of trees
+      while (walletDetails.treeScannedHeights.length <= latestTree) {
         walletDetails.treeScannedHeights.push(0);
       }
 
       // Loop through each tree and scan
-      for (let tree = 0; tree < walletDetails.treeScannedHeights.length; tree += 1) {
+      for (let tree = 0; tree <= latestTree; tree += 1) {
         // Get scanned height
         const scannedHeight = walletDetails.treeScannedHeights[tree];
 
         // Create sparse array of tree
         // eslint-disable-next-line no-await-in-loop
-        const fetcher = new Array(await this.merkletree[chainID].getTreeLength(tree));
+        const treeLength = await this.merkletree[chainID].getTreeLength(tree);
+        const fetcher: Promise<Commitment | undefined>[] = new Array(treeLength);
 
         // Fetch each leaf we need to scan
-        for (let index = scannedHeight; index < fetcher.length; index += 1) {
+        for (let index = scannedHeight; index < treeLength; index += 1) {
           fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
         }
 
         // Wait until all leaves are fetched
         // eslint-disable-next-line no-await-in-loop
-        const leaves: (Commitment | undefined)[] = await Promise.all(fetcher);
+        const leaves = await Promise.all(fetcher);
 
         const filteredLeaves = leaves.filter((value) => value?.hash != null);
 

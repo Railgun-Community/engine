@@ -299,15 +299,13 @@ class MerkleTree {
     const nodeWriteBatch: PutBatch[] = [];
     const commitmentWriteBatch: PutBatch[] = [];
 
-    // eslint-disable-next-line no-param-reassign
-    nodeWriteGroup[0] = nodeWriteGroup[0] || [];
     // Get new leaves
     const newTreeLength = nodeWriteGroup[0].length;
 
     // Loop through each level
-    nodeWriteGroup.forEach((levelElement, level) => {
+    nodeWriteGroup.forEach((levelNodes, level) => {
       // Loop through each index
-      levelElement.forEach((node, index) => {
+      levelNodes.forEach((node, index) => {
         // Push to node writeBatch array
         nodeWriteBatch.push({
           type: 'put',
@@ -360,8 +358,7 @@ class MerkleTree {
     const nodeWriteGroup: string[][] = [];
     const commitmentWriteGroup: Commitment[] = [];
 
-    // Ensure writecache array exists
-    nodeWriteGroup[level] = nodeWriteGroup[level] || [];
+    nodeWriteGroup[level] = [];
 
     LeptonDebug.log(
       `insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`,
