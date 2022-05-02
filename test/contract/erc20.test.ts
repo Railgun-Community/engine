@@ -287,6 +287,28 @@ describe('Contract/Index', function () {
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
+  it('[HH] Should scan and rescan history for events', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    await testDeposit();
+
+    const tree = 0;
+
+    expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(1);
+    await lepton.scanHistory(chainID);
+    expect(await lepton.getStartScanningBlock(chainID)).to.be.above(0);
+
+    await lepton.clearSyncedMerkletreeLeaves(chainID);
+    expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(0);
+    expect(await lepton.getStartScanningBlock(chainID)).to.equal(0);
+
+    await lepton.fullRescanMerkletreesAndWallets(chainID);
+    expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(1);
+  });
+
   it('[HH] Should get note hashes', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();

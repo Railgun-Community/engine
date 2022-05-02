@@ -140,19 +140,23 @@ class MerkleTree {
   }
 
   /**
-   * Construct DB prefix from tree number, level
+   * Construct DB prefix for all trees
+   * @returns database prefix
+   */
+  getChainDBPrefix(): string[] {
+    return [fromUTF8String(`merkletree-${this.purpose}`), hexlify(new BN(this.chainID))].map(
+      (element) => element.padStart(64, '0'),
+    );
+  }
+
+  /**
+   * Construct DB prefix from tree number
    * @param tree - tree number
    * @returns database prefix
    */
   getTreeDBPrefix(tree: number): string[] {
     return [...this.getChainDBPrefix(), hexlify(new BN(tree))].map((element) =>
       element.padStart(64, '0'),
-    );
-  }
-
-  getChainDBPrefix(): string[] {
-    return [fromUTF8String(`merkletree-${this.purpose}`), hexlify(new BN(this.chainID))].map(
-      (element) => element.padStart(64, '0'),
     );
   }
 
@@ -275,6 +279,11 @@ class MerkleTree {
       ...this.getTreeDBPrefix(tree),
       hexlify(new BN(0).notn(32)), // 2^256-1
     ]);
+  }
+
+  async clearLeavesFromDB(): Promise<void> {
+    await this.db.clearNamespace(this.getChainDBPrefix());
+    this.treeLengths = [];
   }
 
   /**

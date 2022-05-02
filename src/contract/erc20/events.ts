@@ -180,7 +180,7 @@ export async function processGeneratedCommitmentEvents(
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash } = event;
-      eventsListener(
+      return eventsListener(
         formatGeneratedCommitmentBatchEvent(
           args as unknown as GeneratedCommitmentBatchEventArgs,
           transactionHash,
@@ -198,7 +198,7 @@ export async function processCommitmentBatchEvents(
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash } = event;
-      eventsListener(
+      return eventsListener(
         formatCommitmentBatchEvent(args as unknown as CommitmentBatchEventArgs, transactionHash),
       );
     }),

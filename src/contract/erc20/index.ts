@@ -102,8 +102,13 @@ class ERC20RailgunContract {
    * @returns isValid
    */
   validateRoot(tree: number, root: string): Promise<boolean> {
-    // Return result of root history lookup
-    return this.contract.rootHistory(tree, hexlify(root, true));
+    try {
+      // Return result of root history lookup
+      return this.contract.rootHistory(tree, hexlify(root, true));
+    } catch (err: any) {
+      LeptonDebug.error(err);
+      throw err;
+    }
   }
 
   /**

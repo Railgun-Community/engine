@@ -1,5 +1,6 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
+import BN from 'bn.js';
 import { ERC20RailgunContract } from './contract';
 import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
@@ -8,7 +9,7 @@ import { Prover, ArtifactsGetter } from './prover';
 import { Transaction } from './transaction';
 import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
-import { hexlify } from './utils/bytes';
+import { hexlify, padToLength } from './utils/bytes';
 import { Wallet } from './wallet';
 import { CommitmentEvent } from './contract/erc20';
 import LeptonDebug from './debugger';
@@ -191,7 +192,26 @@ class Lepton {
     }
 
     // Final scan after all leaves added.
-    await this.scanAllWallets(chainID); // @todo tree hardcoded to 0
+    await this.scanAllWallets(chainID);
+  }
+
+  /**
+   * Clears all merkletree leaves stored in database.
+   * @param chainID - chainID to clear
+   */
+  async clearSyncedMerkletreeLeaves(chainID: number) {
+    await this.merkletree[chainID].erc20.clearLeavesFromDB();
+    await this.db.clearNamespace(Lepton.getLastSyncedBlockDBPrefix(chainID));
+  }
+
+  /**
+   * Clears stored merkletree leaves and wallet balances, and re-scans fully.
+   * @param chainID - chainID to rescan
+   */
+  async fullRescanMerkletreesAndWallets(chainID: number) {
+    await this.clearSyncedMerkletreeLeaves(chainID);
+    await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chainID)));
+    await this.scanHistory(chainID);
   }
 
   /**
@@ -215,10 +235,11 @@ class Lepton {
     const contract = new ERC20RailgunContract(address, provider);
     this.contracts[chainID] = contract;
 
-    const validateRoot = (tree: number, root: string) => contract.validateRoot(tree, root);
     // Create tree controllers
     this.merkletree[chainID] = {
-      erc20: new MerkleTree(this.db, chainID, 'erc20', validateRoot),
+      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree, root) =>
+        contract.validateRoot(tree, root),
+      ),
     };
 
     this.deploymentBlocks[chainID] = deploymentBlock;
@@ -261,17 +282,19 @@ class Lepton {
     }
   }
 
+  private static getLastSyncedBlockDBPrefix(chainID?: number): string[] {
+    const path = [DatabaseNamespace.ChainSyncInfo, 'last_synced_block'];
+    if (chainID != null) path.push(hexlify(padToLength(new BN(chainID), 32)));
+    return path;
+  }
+
   /**
    * Sets last synced block to resume syncing on next load.
    * @param lastSyncedBlock - last synced block
    * @param chainID - chain to store value for
    */
   setLastSyncedBlock(lastSyncedBlock: number, chainID: number): Promise<void> {
-    return this.db.put(
-      [`${DatabaseNamespace.ChainSyncInfo}:last_synced_block:${chainID}`],
-      lastSyncedBlock,
-      'utf8',
-    );
+    return this.db.put(Lepton.getLastSyncedBlockDBPrefix(chainID), lastSyncedBlock, 'utf8');
   }
 
   /**
@@ -281,13 +304,17 @@ class Lepton {
    */
   getLastSyncedBlock(chainID: number): Promise<number | undefined> {
     return this.db
-      .get([`${DatabaseNamespace.ChainSyncInfo}:last_synced_block:${chainID}`], 'utf8')
+      .get(Lepton.getLastSyncedBlockDBPrefix(chainID), 'utf8')
       .then((val) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
 
   private async scanAllWallets(chainID: number) {
-    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scanBalances(chainID)));
+    await Promise.all(this.allWallets().map((wallet) => wallet.scanBalances(chainID)));
+  }
+
+  private allWallets(): Wallet[] {
+    return Object.values(this.wallets);
   }
 
   /**
