@@ -155,6 +155,9 @@ class Lepton {
           startScanningBlock,
         );
 
+        // Pass nullifier events to listener
+        await this.nullifierListener(chainID, nullifierEvents);
+
         // Pass events to commitments listener and wait for resolution
         commitmentEvents.forEach(async (commitmentEvent) => {
           const { treeNumber, startPosition, commitments } = commitmentEvent;
@@ -165,9 +168,6 @@ class Lepton {
         if (commitmentEvents.length) {
           await this.scanAllWallets(chainID);
         }
-
-        // Pass nullifier events to listener
-        await this.nullifierListener(chainID, nullifierEvents);
       } catch (err: any) {
         LeptonDebug.error(err);
       }
