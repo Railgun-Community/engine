@@ -282,20 +282,20 @@ class MerkleTree {
    */
   private async writeTreeToDB(
     tree: number,
-    nodeWriteGroup: string[][][],
-    commitmentWriteGroup: Commitment[][],
+    nodeWriteGroup: string[][],
+    commitmentWriteGroup: Commitment[],
   ): Promise<void> {
     // Build write batch operation
     const nodeWriteBatch: PutBatch[] = [];
     const commitmentWriteBatch: PutBatch[] = [];
 
     // eslint-disable-next-line no-param-reassign
-    nodeWriteGroup[tree][0] = nodeWriteGroup[tree][0] || [];
+    nodeWriteGroup[0] = nodeWriteGroup[0] || [];
     // Get new leaves
-    const newTreeLength = nodeWriteGroup[tree][0].length;
+    const newTreeLength = nodeWriteGroup[0].length;
 
     // Loop through each level
-    nodeWriteGroup[tree].forEach((levelElement, level) => {
+    nodeWriteGroup.forEach((levelElement, level) => {
       // Loop through each index
       levelElement.forEach((node, index) => {
         // Push to node writeBatch array
@@ -308,7 +308,7 @@ class MerkleTree {
     });
 
     // Loop through each index
-    commitmentWriteGroup[tree].forEach((commitment, index) => {
+    commitmentWriteGroup.forEach((commitment, index) => {
       // Push to commitment writeBatch array
       commitmentWriteBatch.push({
         type: 'put',
@@ -347,11 +347,11 @@ class MerkleTree {
     // Store next level index for when we begin updating the next level up
     let nextLevelStartIndex = startIndex;
 
-    const nodeWriteGroup: string[][][] = [];
-    const commitmentWriteGroup: Commitment[][] = [];
+    const nodeWriteGroup: string[][] = [];
+    const commitmentWriteGroup: Commitment[] = [];
 
     // Ensure writecache array exists
-    nodeWriteGroup[tree][level] = nodeWriteGroup[tree][level] || [];
+    nodeWriteGroup[level] = nodeWriteGroup[level] || [];
 
     LeptonDebug.log(
       `insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`,
@@ -362,9 +362,9 @@ class MerkleTree {
       LeptonDebug.log(`index ${leafIndex}: leaf ${JSON.stringify(leaf)}`);
 
       // Set writecache value
-      nodeWriteGroup[tree][level][index] = hexlify(leaf.hash);
+      nodeWriteGroup[level][index] = hexlify(leaf.hash);
 
-      commitmentWriteGroup[tree][index] = leaf;
+      commitmentWriteGroup[index] = leaf;
 
       // Increment index
       index += 1;
@@ -376,28 +376,28 @@ class MerkleTree {
       index = nextLevelStartIndex;
 
       // Ensure writecache array exists for next level
-      nodeWriteGroup[tree][level] = nodeWriteGroup[tree][level] || [];
-      nodeWriteGroup[tree][level + 1] = nodeWriteGroup[tree][level + 1] || [];
+      nodeWriteGroup[level] = nodeWriteGroup[level] || [];
+      nodeWriteGroup[level + 1] = nodeWriteGroup[level + 1] || [];
 
       // Loop through every pair
       for (index; index <= endIndex + 1; index += 2) {
         if (index % 2 === 0) {
           // Left
-          nodeWriteGroup[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
+          nodeWriteGroup[level + 1][index >> 1] = MerkleTree.hashLeftRight(
             // eslint-disable-next-line no-await-in-loop
-            nodeWriteGroup[tree][level][index] || (await this.getNode(tree, level, index)),
-            nodeWriteGroup[tree][level][index + 1] ||
+            nodeWriteGroup[level][index] || (await this.getNode(tree, level, index)),
+            nodeWriteGroup[level][index + 1] ||
               // eslint-disable-next-line no-await-in-loop
               (await this.getNode(tree, level, index + 1)),
           );
         } else {
           // Right
-          nodeWriteGroup[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
-            nodeWriteGroup[tree][level][index - 1] ||
+          nodeWriteGroup[level + 1][index >> 1] = MerkleTree.hashLeftRight(
+            nodeWriteGroup[level][index - 1] ||
               // eslint-disable-next-line no-await-in-loop
               (await this.getNode(tree, level, index - 1)),
             // eslint-disable-next-line no-await-in-loop
-            nodeWriteGroup[tree][level][index] || (await this.getNode(tree, level, index)),
+            nodeWriteGroup[level][index] || (await this.getNode(tree, level, index)),
           );
         }
       }
@@ -411,7 +411,7 @@ class MerkleTree {
     }
 
     // If new root is valid, write to DB.
-    if (await this.validateRoot(tree, nodeWriteGroup[tree][this.depth][0])) {
+    if (await this.validateRoot(tree, nodeWriteGroup[this.depth][0])) {
       await this.writeTreeToDB(tree, nodeWriteGroup, commitmentWriteGroup);
       return;
     }
@@ -469,7 +469,9 @@ class MerkleTree {
     while (!finishedProcessing) {
       let anyWritesProcessed = false;
 
-      const treeIndeces = this.writeQueue.map((_tree, treeIndex) => treeIndex);
+      const treeIndeces = this.writeQueue
+        .map((_tree, treeIndex) => treeIndex)
+        .filter((index) => !Number.isNaN(index));
 
       // eslint-disable-next-line no-restricted-syntax
       for (const treeIndex of treeIndeces) {
