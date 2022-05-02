@@ -247,14 +247,17 @@ class Wallet extends EventEmitter {
     tree: number,
     chainID: number,
     scannedHeight: number,
+    treeHeight: number,
   ): Promise<boolean> {
-    LeptonDebug.log(`wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}`);
+    LeptonDebug.log(
+      `wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}, scannedHeight: ${scannedHeight}`,
+    );
     const vpk = this.getViewingKeyPair().privateKey;
 
     const writeBatch: AbstractBatch[] = [];
 
     // Loop through passed commitments
-    for (let position = scannedHeight; position < scannedHeight + leaves.length; position += 1) {
+    for (let position = scannedHeight; position < treeHeight; position += 1) {
       LeptonDebug.log(`inserting ${leaves.length} leaves at position ${position}`);
       let note: Note | undefined;
       const leaf = leaves[position];
@@ -480,11 +483,11 @@ class Wallet extends EventEmitter {
 
         // Create sparse array of tree
         // eslint-disable-next-line no-await-in-loop
-        const treeLength = await this.merkletree[chainID].getTreeLength(tree);
-        const fetcher: Promise<Commitment | undefined>[] = new Array(treeLength);
+        const treeHeight = await this.merkletree[chainID].getTreeLength(tree);
+        const fetcher: Promise<Commitment | undefined>[] = new Array(treeHeight);
 
         // Fetch each leaf we need to scan
-        for (let index = scannedHeight; index < treeLength; index += 1) {
+        for (let index = scannedHeight; index < treeHeight; index += 1) {
           fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
         }
 
@@ -492,14 +495,12 @@ class Wallet extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         const leaves = await Promise.all(fetcher);
 
-        const filteredLeaves = leaves.filter((value) => value?.hash != null);
-
         // Start scanning primary and change
         // eslint-disable-next-line no-await-in-loop
-        await this.scanLeaves(filteredLeaves, tree, chainID, scannedHeight);
+        await this.scanLeaves(leaves, tree, chainID, scannedHeight, treeHeight);
 
         // Commit new scanned height
-        walletDetails.treeScannedHeights[tree] = leaves.length > 0 ? leaves.length - 1 : 0;
+        walletDetails.treeScannedHeights[tree] = leaves.length;
       }
 
       // Write wallet details to db
