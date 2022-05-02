@@ -251,7 +251,7 @@ describe('Contract/Index', function () {
 
     startingBlock = await provider.getBlockNumber();
 
-    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID, 0);
+    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
     transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
     transaction.withdraw(etherswallet.address, 100n);
     const serializedTx = await transaction.prove(lepton.prover, wallet, testEncryptionKey);

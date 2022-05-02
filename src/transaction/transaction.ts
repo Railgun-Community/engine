@@ -2,7 +2,6 @@ import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note } from '../note';
 import { bytes, hash } from '../utils';
 import { Wallet, TXO } from '../wallet';
-import { depths } from '../merkletree';
 import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import {
@@ -65,8 +64,6 @@ class Transaction {
 
   tokenSubID: BigInt = DEFAULT_TOKEN_SUB_ID;
 
-  tree: number;
-
   withdrawNote: ERC20WithdrawNote;
 
   /**
@@ -75,11 +72,10 @@ class Transaction {
    * @param chainID - chainID of network transaction will be built for
    * @param tree - manually specify a tree
    */
-  constructor(token: string, tokenType: TokenType, chainID: number, tree: number = 0) {
+  constructor(token: string, tokenType: TokenType, chainID: number) {
     this.token = formatToByteLength(token, ByteLength.UINT_256, false);
     this.tokenType = tokenType;
     this.chainID = chainID;
-    this.tree = tree;
     this.withdrawNote = ERC20WithdrawNote.empty();
   }
 
@@ -153,10 +149,22 @@ class Transaction {
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired > balance) throw new Error('Wallet balance too low');
 
-    // Loop through each tree with a balance and attempt to find a spending solution
-    const utxos: TXO[] = treeSortedBalances.map((treeBalance, tree) =>
-      findSolutions(this.token, treeBalance, tree, totalRequired),
-    )[this.tree];
+    let spendingTree: number | undefined;
+    let utxos: TXO[] | undefined;
+
+    // Find first tree with spending solutions.
+    treeSortedBalances.forEach((treeBalance, tree) => {
+      const solutions = findSolutions(treeBalance, totalRequired);
+      if (!solutions) {
+        return;
+      }
+      spendingTree = tree;
+      utxos = solutions;
+    });
+
+    if (utxos == null || spendingTree == null) {
+      throw new Error('Not enough spending solutions: balance too low');
+    }
 
     // Get values
     const nullifiers: bigint[] = [];
@@ -171,13 +179,9 @@ class Transaction {
       nullifiers.push(Note.getNullifier(nullifyingKey, utxo.position));
 
       // Push path elements
-      if (utxo.dummyKey) {
-        pathElements.push(new Array(depths.erc20).fill(BigInt(0)));
-      } else {
-        // eslint-disable-next-line no-await-in-loop
-        const proof = await merkleTree.getProof(this.tree, utxo.position);
-        pathElements.push(proof.elements.map((element) => hexToBigInt(element)));
-      }
+      // eslint-disable-next-line no-await-in-loop
+      const proof = await merkleTree.getProof(spendingTree, utxo.position);
+      pathElements.push(proof.elements.map((element) => hexToBigInt(element)));
 
       // Push path indicies
       pathIndices.push(BigInt(utxo.position));
@@ -227,7 +231,7 @@ class Transaction {
       },
     );
     const boundParams: BoundParams = {
-      treeNumber: BigInt(this.tree),
+      treeNumber: BigInt(spendingTree),
       withdraw: this.withdrawFlag,
       adaptContract: this.adaptID.contract,
       adaptParams: this.adaptID.parameters,

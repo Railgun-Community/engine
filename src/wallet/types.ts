@@ -10,7 +10,6 @@ export type TXO = {
   position: number;
   txid: string;
   spendtxid: string | false;
-  dummyKey?: string; // For dummy notes
   note: Note;
 };
 

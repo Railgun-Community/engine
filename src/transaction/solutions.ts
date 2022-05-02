@@ -3,12 +3,7 @@ import { TreeBalance, TXO } from '../wallet';
 const calculateTotalSpend = (utxos: TXO[]) =>
   utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
-export function findSolutions(
-  token: string,
-  treeBalance: TreeBalance,
-  tree: number,
-  totalRequired: bigint,
-): TXO[] {
+export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): TXO[] | undefined {
   // If this tree doesn't have enough to cover this transaction, return false
   if (treeBalance.balance < totalRequired) return [];
 
@@ -35,8 +30,7 @@ export function findSolutions(
   }
 
   if (totalRequired > calculateTotalSpend(utxos)) {
-    throw new Error('Not enough spending solutions: balance too low');
+    return undefined;
   }
-
   return utxos;
 }
