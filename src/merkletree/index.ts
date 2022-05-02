@@ -46,13 +46,7 @@ class MerkleTree {
 
   readonly zeros: string[] = [];
 
-  private treeLengthCache: number[] = [];
-
-  // tree[level[index]]
-  private nodeWriteCache: string[][][] = [];
-
-  // tree[index]
-  private commitmentWriteCache: Commitment[][] = [];
+  private treeLengths: number[] = [];
 
   // tree[startingIndex[leaves]]
   private writeQueue: Commitment[][][] = [];
@@ -60,7 +54,9 @@ class MerkleTree {
   // Check function to test if merkle root is valid
   public validateRoot: Function;
 
-  public tree: bigint[][];
+  public trees: bigint[][];
+
+  private treeUpdateLock = false;
 
   /**
    * Create MerkleTree controller from database
@@ -79,7 +75,7 @@ class MerkleTree {
     // Set passed values
     this.db = db;
     this.chainID = chainID;
-    this.tree = Array(depth)
+    this.trees = Array(depth)
       .fill(0)
       .map(() => []);
     this.purpose = purpose;
@@ -141,15 +137,6 @@ class MerkleTree {
    */
   static hashLeftRight(left: string, right: string): string {
     return nToHex(hash.poseidon([hexToBigInt(left), hexToBigInt(right)]), 32);
-  }
-
-  /**
-   * Clears write cache of merkle tree
-   * @param tree - tree number to clear
-   */
-  clearWriteCache(tree: number) {
-    this.nodeWriteCache[tree] = [];
-    this.commitmentWriteCache[tree] = [];
   }
 
   /**
@@ -269,14 +256,15 @@ class MerkleTree {
    * @returns tree length
    */
   async getTreeLength(tree: number): Promise<number> {
-    this.treeLengthCache[tree] =
-      this.treeLengthCache[tree] ||
-      (await this.db.countNamespace([
-        ...this.getTreeDBPrefix(tree),
-        hexlify(new BN(0).notn(32)), // 2^256-1
-      ]));
+    this.treeLengths[tree] = this.treeLengths[tree] || (await this.getTreeLengthFromDB(tree));
+    return this.treeLengths[tree];
+  }
 
-    return this.treeLengthCache[tree];
+  private async getTreeLengthFromDB(tree: number): Promise<number> {
+    return this.db.countNamespace([
+      ...this.getTreeDBPrefix(tree),
+      hexlify(new BN(0).notn(32)), // 2^256-1
+    ]);
   }
 
   /**
@@ -289,20 +277,25 @@ class MerkleTree {
   }
 
   /**
-   * Write tree cache to DB
+   * Write tree to DB
    * @param tree - tree to write
    */
-  private async writeTreeCache(tree: number): Promise<void> {
+  private async writeTreeToDB(
+    tree: number,
+    nodeWriteGroup: string[][][],
+    commitmentWriteGroup: Commitment[][],
+  ): Promise<void> {
     // Build write batch operation
     const nodeWriteBatch: PutBatch[] = [];
     const commitmentWriteBatch: PutBatch[] = [];
 
-    this.nodeWriteCache[tree][0] = this.nodeWriteCache[tree][0] || [];
+    // eslint-disable-next-line no-param-reassign
+    nodeWriteGroup[tree][0] = nodeWriteGroup[tree][0] || [];
     // Get new leaves
-    const newTreeLength = this.nodeWriteCache[tree][0].length;
+    const newTreeLength = nodeWriteGroup[tree][0].length;
 
     // Loop through each level
-    this.nodeWriteCache[tree].forEach((levelElement, level) => {
+    nodeWriteGroup[tree].forEach((levelElement, level) => {
       // Loop through each index
       levelElement.forEach((node, index) => {
         // Push to node writeBatch array
@@ -315,7 +308,7 @@ class MerkleTree {
     });
 
     // Loop through each index
-    this.commitmentWriteCache[tree].forEach((commitment, index) => {
+    commitmentWriteGroup[tree].forEach((commitment, index) => {
       // Push to commitment writeBatch array
       commitmentWriteBatch.push({
         type: 'put',
@@ -328,10 +321,7 @@ class MerkleTree {
     await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(commitmentWriteBatch, 'json')]);
 
     // Update tree length
-    this.treeLengthCache[tree] = newTreeLength;
-
-    // Clear write cache
-    this.clearWriteCache(tree);
+    this.treeLengths[tree] = newTreeLength;
   }
 
   /**
@@ -345,9 +335,6 @@ class MerkleTree {
     startIndex: number,
     leaves: Commitment[],
   ): Promise<void> {
-    // Clear write cache before starting to avoid errors from leftover data
-    this.clearWriteCache(tree);
-
     // Start insertion at startIndex
     let index = startIndex;
 
@@ -360,8 +347,11 @@ class MerkleTree {
     // Store next level index for when we begin updating the next level up
     let nextLevelStartIndex = startIndex;
 
+    const nodeWriteGroup: string[][][] = [];
+    const commitmentWriteGroup: Commitment[][] = [];
+
     // Ensure writecache array exists
-    this.nodeWriteCache[tree][level] = this.nodeWriteCache[tree][level] || [];
+    nodeWriteGroup[tree][level] = nodeWriteGroup[tree][level] || [];
 
     LeptonDebug.log(
       `insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`,
@@ -372,9 +362,9 @@ class MerkleTree {
       LeptonDebug.log(`index ${leafIndex}: leaf ${JSON.stringify(leaf)}`);
 
       // Set writecache value
-      this.nodeWriteCache[tree][level][index] = hexlify(leaf.hash);
+      nodeWriteGroup[tree][level][index] = hexlify(leaf.hash);
 
-      this.commitmentWriteCache[tree][index] = leaf;
+      commitmentWriteGroup[tree][index] = leaf;
 
       // Increment index
       index += 1;
@@ -386,28 +376,28 @@ class MerkleTree {
       index = nextLevelStartIndex;
 
       // Ensure writecache array exists for next level
-      this.nodeWriteCache[tree][level] = this.nodeWriteCache[tree][level] || [];
-      this.nodeWriteCache[tree][level + 1] = this.nodeWriteCache[tree][level + 1] || [];
+      nodeWriteGroup[tree][level] = nodeWriteGroup[tree][level] || [];
+      nodeWriteGroup[tree][level + 1] = nodeWriteGroup[tree][level + 1] || [];
 
       // Loop through every pair
       for (index; index <= endIndex + 1; index += 2) {
         if (index % 2 === 0) {
           // Left
-          this.nodeWriteCache[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
+          nodeWriteGroup[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
             // eslint-disable-next-line no-await-in-loop
-            this.nodeWriteCache[tree][level][index] || (await this.getNode(tree, level, index)),
-            this.nodeWriteCache[tree][level][index + 1] ||
+            nodeWriteGroup[tree][level][index] || (await this.getNode(tree, level, index)),
+            nodeWriteGroup[tree][level][index + 1] ||
               // eslint-disable-next-line no-await-in-loop
               (await this.getNode(tree, level, index + 1)),
           );
         } else {
           // Right
-          this.nodeWriteCache[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
-            this.nodeWriteCache[tree][level][index - 1] ||
+          nodeWriteGroup[tree][level + 1][index >> 1] = MerkleTree.hashLeftRight(
+            nodeWriteGroup[tree][level][index - 1] ||
               // eslint-disable-next-line no-await-in-loop
               (await this.getNode(tree, level, index - 1)),
             // eslint-disable-next-line no-await-in-loop
-            this.nodeWriteCache[tree][level][index] || (await this.getNode(tree, level, index)),
+            nodeWriteGroup[tree][level][index] || (await this.getNode(tree, level, index)),
           );
         }
       }
@@ -420,67 +410,81 @@ class MerkleTree {
       level += 1;
     }
 
-    // Check if new root is valid
-    if (await this.validateRoot(tree, this.nodeWriteCache[tree][this.depth][0])) {
-      // Commit to DB if valid
-      await this.writeTreeCache(tree);
-    } else {
-      LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'), true);
-      // Clear cache if invalid
-      this.clearWriteCache(tree);
+    // If new root is valid, write to DB.
+    if (await this.validateRoot(tree, nodeWriteGroup[tree][this.depth][0])) {
+      await this.writeTreeToDB(tree, nodeWriteGroup, commitmentWriteGroup);
+      return;
     }
+
+    LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'), true);
+  }
+
+  private async processWriteQueueForTree(treeIndex: number): Promise<boolean> {
+    const treeWriteQueue = this.writeQueue[treeIndex];
+    const currentTreeLength = await this.getTreeLength(treeIndex);
+
+    treeWriteQueue.forEach((_writeQueue, writeQueueIndex) => {
+      const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
+      if (alreadyAddedToTree) {
+        delete treeWriteQueue[writeQueueIndex];
+      }
+    });
+
+    const noElementsInTreeWriteQueue = treeWriteQueue.reduce((x) => x + 1, 0) === 0;
+    if (noElementsInTreeWriteQueue) {
+      // Delete treeWriteQueue.
+      delete this.writeQueue[treeIndex];
+    }
+
+    let writeQueueProcessed = false;
+    if (this.writeQueue[treeIndex]) {
+      // If there is an element in the write queue equal to the tree length, process it.
+      const writeQueueNext = this.writeQueue[treeIndex][currentTreeLength];
+      if (writeQueueNext) {
+        try {
+          await this.insertLeaves(treeIndex, currentTreeLength, writeQueueNext);
+
+          // Delete the batch after processing it.
+          // Ensures bad batches are deleted, therefore halting update loop if one is found.
+          delete this.writeQueue[treeIndex][currentTreeLength];
+
+          writeQueueProcessed = true;
+        } catch (err: any) {
+          LeptonDebug.error(new Error('Could not insert leaves'));
+          LeptonDebug.error(err);
+        }
+      }
+    }
+
+    return writeQueueProcessed;
   }
 
   async updateTrees(): Promise<void> {
-    // Loop until there isn't work to do
-    let workToDo = true;
-
-    while (workToDo) {
-      // Loop through each tree present in write queue and get tree length
-      // eslint-disable-next-line no-await-in-loop
-      const treeLengths = await Promise.all(
-        this.writeQueue.map((_tree, index) => this.getTreeLength(index)),
-      );
-
-      const updatePromises: (Promise<void> | null)[] = [];
-
-      // Loop through each tree and check if there are updates to be made
-      this.writeQueue.forEach((tree, treeIndex) => {
-        // Delete all queue entries less than tree length
-        tree.forEach((element, elementIndex) => {
-          if (elementIndex < treeLengths[treeIndex]) {
-            delete this.writeQueue[treeIndex][elementIndex];
-          }
-        });
-
-        // If there aren't any elements in the write queue delete it
-        if (tree.reduce((x) => x + 1, 0) === 0) {
-          delete this.writeQueue[treeIndex];
-        }
-
-        // If there is an element in the write queue equal to the tree length, process it
-        if (this.writeQueue[treeIndex] && this.writeQueue[treeIndex][treeLengths[treeIndex]]) {
-          updatePromises.push(
-            this.insertLeaves(
-              treeIndex,
-              treeLengths[treeIndex],
-              this.writeQueue[treeIndex][treeLengths[treeIndex]],
-            ),
-          );
-
-          // Delete the batch after processing it
-          // Ensures bad batches are deleted therefore halting update loop if one is found
-          delete this.writeQueue[treeIndex][treeLengths[treeIndex]];
-        }
-      });
-
-      // Wait for updates to complete
-      // eslint-disable-next-line no-await-in-loop
-      await Promise.all(updatePromises);
-
-      // If no work was done exit
-      if (updatePromises.length === 0) workToDo = false;
+    if (this.treeUpdateLock) {
+      return;
     }
+    this.treeUpdateLock = true;
+    let finishedProcessing = false;
+
+    while (!finishedProcessing) {
+      let anyWritesProcessed = false;
+
+      const treeIndeces = this.writeQueue.map((_tree, treeIndex) => treeIndex);
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (const treeIndex of treeIndeces) {
+        // eslint-disable-next-line no-await-in-loop
+        const writeQueueProcessed = await this.processWriteQueueForTree(treeIndex);
+        anyWritesProcessed = anyWritesProcessed || writeQueueProcessed;
+      }
+
+      // If no work was done, exit
+      if (!anyWritesProcessed) {
+        finishedProcessing = true;
+      }
+    }
+
+    this.treeUpdateLock = false;
   }
 
   /**

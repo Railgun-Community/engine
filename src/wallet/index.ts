@@ -81,9 +81,6 @@ class Wallet extends EventEmitter {
 
   readonly merkletree: MerkleTree[] = [];
 
-  // Lock scanning operations to prevent race conditions
-  private scanLockPerChain: boolean[] = [];
-
   public spendingPublicKey!: [bigint, bigint];
 
   /**
@@ -462,15 +459,7 @@ class Wallet extends EventEmitter {
    * @param chainID - chainID to scan
    */
   async scan(chainID: number) {
-    // Don't proceed if scan write is locked
-    if (this.scanLockPerChain[chainID]) {
-      LeptonDebug.log(`scan locked: chainID ${chainID}`);
-      return;
-    }
     LeptonDebug.log(`scan wallet balances: chainID ${chainID}`);
-
-    // Lock scan on this chain
-    this.scanLockPerChain[chainID] = true;
 
     try {
       // Fetch wallet details
@@ -523,9 +512,6 @@ class Wallet extends EventEmitter {
       LeptonDebug.log(`wallet.scan error: ${err.message}`);
       LeptonDebug.error(err);
     }
-
-    // Release lock
-    this.scanLockPerChain[chainID] = false;
   }
 
   static dbPath(id: string): BytesData[] {
