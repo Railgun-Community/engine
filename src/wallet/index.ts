@@ -129,6 +129,8 @@ class Wallet extends EventEmitter {
    * Prefix consists of ['wallet', id, chainID]
    * May be appended with tree and position
    * @param chainID - chainID
+   * @optional tree - without this param, all trees
+   * @optional position - without this param, all positions
    * @returns wallet DB prefix
    */
   getWalletDBPrefix(chainID: number, tree?: number, position?: number): string[] {

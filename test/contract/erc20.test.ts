@@ -44,7 +44,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 let testDeposit: (value?: bigint) => Promise<[ethers.providers.TransactionReceipt, unknown]>;
 
 // eslint-disable-next-line func-names
-describe.only('Contract/Index', function () {
+describe('Contract/Index', function () {
   this.timeout(60000);
 
   beforeEach(async () => {

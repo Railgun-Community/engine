@@ -3,7 +3,15 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import type { Database } from '../database';
 import { constants, hash } from '../utils';
-import { fromUTF8String, numberify, hexlify, formatToByteLength, ByteLength, nToHex, hexToBigInt } from '../utils/bytes';
+import {
+  fromUTF8String,
+  numberify,
+  hexlify,
+  formatToByteLength,
+  ByteLength,
+  nToHex,
+  hexToBigInt,
+} from '../utils/bytes';
 import LeptonDebug from '../debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/transaction-types';
 
@@ -439,13 +447,11 @@ class MerkleTree {
       // Loop through each tree and check if there are updates to be made
       this.writeQueue.forEach((tree, treeIndex) => {
         // Delete all queue entries less than tree length
-        /*
         tree.forEach((element, elementIndex) => {
           if (elementIndex < treeLengths[treeIndex]) {
             delete this.writeQueue[treeIndex][elementIndex];
           }
         });
-        */
 
         // If there aren't any elements in the write queue delete it
         if (tree.reduce((x) => x + 1, 0) === 0) {
