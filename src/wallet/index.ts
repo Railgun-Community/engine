@@ -458,7 +458,7 @@ class Wallet extends EventEmitter {
    * Scans for new balances
    * @param chainID - chainID to scan
    */
-  async scan(chainID: number) {
+  async scanBalances(chainID: number) {
     LeptonDebug.log(`scan wallet balances: chainID ${chainID}`);
 
     try {
@@ -512,6 +512,24 @@ class Wallet extends EventEmitter {
       LeptonDebug.log(`wallet.scan error: ${err.message}`);
       LeptonDebug.error(err);
     }
+  }
+
+  /**
+   * Clears balances scanned from merkletrees and stored to database.
+   * @param chainID - chainID to clear
+   */
+  async clearScannedBalances(chainID: number) {
+    const namespace = this.getWalletDetailsPath(chainID);
+    await this.db.clearNamespace(namespace);
+  }
+
+  /**
+   * Clears stored balances and re-scans fully.
+   * @param chainID - chainID to rescan
+   */
+  async fullRescanBalances(chainID: number) {
+    await this.clearScannedBalances(chainID);
+    return this.scanBalances(chainID);
   }
 
   static dbPath(id: string): BytesData[] {

@@ -287,7 +287,7 @@ class Lepton {
   }
 
   private async scanAllWallets(chainID: number) {
-    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scan(chainID)));
+    await Promise.all(Object.values(this.wallets).map((wallet) => wallet.scanBalances(chainID)));
   }
 
   /**

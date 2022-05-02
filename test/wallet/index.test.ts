@@ -181,10 +181,10 @@ describe('Wallet/Index', () => {
   // it('Should scan ERC20 balances', async () => {
   //   await merkletree.queueLeaves(0, 0, leaves);
 
-  //   const process = wallet.scan(1);
+  //   const process = wallet.scanBalances(1);
 
   //   // Should respect scan lock
-  //   wallet.scan(1);
+  //   wallet.scanBalances(1);
   //   await process;
 
   //   expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
@@ -195,7 +195,7 @@ describe('Wallet/Index', () => {
 
   //   await merkletree.queueLeaves(0, 6, leaves2);
 
-  //   await wallet.scan(1);
+  //   await wallet.scanBalances(1);
 
   //   expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
   //     treeScannedHeights: [11],

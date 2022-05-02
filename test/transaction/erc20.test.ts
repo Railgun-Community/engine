@@ -107,11 +107,11 @@ describe('Transaction/ERC20', function () {
     makeNote = (value: bigint = 65n * DECIMALS_18): Note => new Note(address, random, value, token);
     merkletree.validateRoot = () => true;
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
-    await wallet.scan(chainID);
+    await wallet.scanBalances(chainID);
     // await merkletree.queueLeaves(1, 0, testData.leaves2);
     // await merkletree.queueLeaves(2, 0, testData.leaves3);
     // await merkletree.queueLeaves(3, 0, testData.leaves4);
-    // await wallet.scan(1, chainID);
+    // await wallet.scanBalances(1, chainID);
   });
 
   beforeEach(async () => {

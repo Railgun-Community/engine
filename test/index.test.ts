@@ -94,13 +94,11 @@ describe('Lepton', function () {
     expect(lepton.wallets[walletID].id).to.equal(walletID);
   });
 
-  it('[HH] Should show balance after deposit', async function run() {
+  it('[HH] Should show balance after deposit and rescan', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
-
-    // TODO-balances - needs updated vector.
 
     const commitment: GeneratedCommitment = {
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
@@ -119,14 +117,22 @@ describe('Lepton', function () {
         '0x3d321af08b8fa7a8f70379407706b752',
       ],
     };
-    // override root validator as we're not processing on chain
+    // Override root validator
     merkleTree.validateRoot = () => true;
     await merkleTree.queueLeaves(0, 0, [commitment]);
 
-    await wallet.scan(chainID);
+    await wallet.scanBalances(chainID);
     const balance = await wallet.getBalance(chainID, tokenAddress);
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
+
+    await wallet.fullRescanBalances(chainID);
+    const balanceRescan = await wallet.getBalance(chainID, tokenAddress);
+    expect(balanceRescan).to.equal(value);
+
+    await wallet.clearScannedBalances(chainID);
+    const balanceClear = await wallet.getBalance(chainID, tokenAddress);
+    expect(balanceClear).to.equal(undefined);
   });
 
   it('[HH] Should deposit, transact and update balance', async function run() {
