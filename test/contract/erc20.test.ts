@@ -3,13 +3,14 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { CallOverrides, ethers } from 'ethers';
 import memdown from 'memdown';
+import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { ERC20RailgunContract } from '../../src/contract';
 import { Note } from '../../src/note';
 import { Transaction } from '../../src/transaction';
 import { Lepton } from '../../src';
 import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
-import { ScannedEventData, Wallet } from '../../src/wallet';
+import { Wallet } from '../../src/wallet';
 import { hexlify } from '../../src/utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../helper';
 import { ERC20Deposit } from '../../src/note/erc20-deposit';
@@ -41,20 +42,23 @@ const TOKEN_ADDRESS = config.contracts.rail;
 const RANDOM = bytes.random(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
-let testDeposit: (value?: bigint) => Promise<[ethers.providers.TransactionReceipt, unknown]>;
+let testDeposit: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 // eslint-disable-next-line func-names
 describe('Contract/Index', function () {
   this.timeout(60000);
 
   beforeEach(async () => {
+    lepton = new Lepton(memdown(), artifactsGetter, undefined);
+
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
 
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
     chainID = (await provider.getNetwork()).chainId;
-    contract = new ERC20RailgunContract(config.contracts.proxy, provider);
+    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
+    contract = lepton.contracts[chainID];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -66,10 +70,8 @@ describe('Contract/Index', function () {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(contract.address, balance);
 
-    lepton = new Lepton(memdown(), artifactsGetter, undefined);
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 0);
     wallet = lepton.wallets[walletID];
     wallet2 = lepton.wallets[walletID2];
 
@@ -77,14 +79,9 @@ describe('Contract/Index', function () {
     // tx should be complete and balances updated after await
     testDeposit = async (
       value: bigint = BigInt(110000) * DECIMALS_18,
-    ): Promise<[ethers.providers.TransactionReceipt, unknown]> => {
+    ): Promise<[TransactionReceipt, unknown]> => {
       // Create deposit
-      const deposit = new ERC20Deposit(
-        wallet.addressKeys.masterPublicKey,
-        RANDOM,
-        value,
-        TOKEN_ADDRESS,
-      );
+      const deposit = new ERC20Deposit(wallet.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
       const { preImage, encryptedRandom } = deposit.serialize(
         wallet.getViewingKeyPair().privateKey,
       );
@@ -301,7 +298,7 @@ describe('Contract/Index', function () {
     expect(hexlify(contractHash)).to.equal(withdraw.hashHex);
   });
 
-  it('[HH] Should create serialized transactions and parse tree updates', async function run() {
+  it('[HH] Should deposit', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -314,11 +311,9 @@ describe('Contract/Index', function () {
       },
       async () => {},
     );
-
     const merkleRootBefore = await contract.merkleRoot();
 
-    const address = wallet.getAddress(chainID);
-    const { masterPublicKey } = Lepton.decodeAddress(address);
+    const { masterPublicKey } = wallet;
     const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
     // Create deposit
@@ -327,11 +322,7 @@ describe('Contract/Index', function () {
 
     const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
 
-    const awaiterDeposit = new Promise((resolve, reject) =>
-      wallet.once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
-        returnedChainID === chainID ? resolve(returnedChainID) : reject(),
-      ),
-    );
+    const awaiterDeposit = awaitScan(wallet, chainID);
 
     // Send deposit on chain
     await (await etherswallet.sendTransaction(depositTx)).wait();
@@ -355,7 +346,24 @@ describe('Contract/Index', function () {
 
     // Check merkle root changed
     expect(merkleRootAfterDeposit).not.to.equal(merkleRootBefore);
+  });
 
+  it('[HH] Should create serialized transactions and parse tree updates', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    await testDeposit(1000n);
+    const merkleRootAfterDeposit = await contract.merkleRoot();
+
+    let result: CommitmentEvent;
+    contract.treeUpdates(
+      async (commitmentEvent: CommitmentEvent) => {
+        result = commitmentEvent;
+      },
+      async () => {},
+    );
     // Create transaction
     const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
     transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
@@ -373,7 +381,8 @@ describe('Contract/Index', function () {
     await new Promise((resolve) => contract.contract.once(EventName.CommitmentBatch, resolve));
 
     // Check merkle root changed
-    expect(await contract.merkleRoot()).to.not.equal(merkleRootAfterDeposit);
+    const merkleRootAfterTransact = await contract.merkleRoot();
+    expect(merkleRootAfterTransact).to.not.equal(merkleRootAfterDeposit);
 
     // Check result
     // @ts-ignore
@@ -388,7 +397,7 @@ describe('Contract/Index', function () {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    contract.unload();
+    lepton.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });
