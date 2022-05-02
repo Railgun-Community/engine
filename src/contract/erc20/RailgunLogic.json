@@ -110,7 +110,7 @@
           {
             "components": [
               {
-                "internalType": "uint8",
+                "internalType": "enum TokenType",
                 "name": "tokenType",
                 "type": "uint8"
               },
@@ -373,6 +373,19 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "vector",
+        "type": "uint256"
+      }
+    ],
+    "name": "addVector",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint120",
         "name": "_depositFee",
         "type": "uint120"
@@ -408,6 +421,13 @@
   },
   {
     "inputs": [],
+    "name": "checkSafetyVectors",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "depositFee",
     "outputs": [
       {
@@ -417,6 +437,13 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "forceNewTree",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -431,7 +458,7 @@
           {
             "components": [
               {
-                "internalType": "uint8",
+                "internalType": "enum TokenType",
                 "name": "tokenType",
                 "type": "uint8"
               },
@@ -468,7 +495,7 @@
     ],
     "name": "generateDeposit",
     "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -510,7 +537,7 @@
       {
         "components": [
           {
-            "internalType": "uint8",
+            "internalType": "enum TokenType",
             "name": "tokenType",
             "type": "uint8"
           },
@@ -667,7 +694,7 @@
             "type": "uint16"
           },
           {
-            "internalType": "uint8",
+            "internalType": "enum WithdrawType",
             "name": "withdraw",
             "type": "uint8"
           },
@@ -732,7 +759,7 @@
           {
             "components": [
               {
-                "internalType": "uint8",
+                "internalType": "enum TokenType",
                 "name": "tokenType",
                 "type": "uint8"
               },
@@ -907,6 +934,19 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "vector",
+        "type": "uint256"
+      }
+    ],
+    "name": "removeVector",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
@@ -1055,6 +1095,25 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "snarkSafetyVector",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "",
         "type": "address"
@@ -1156,7 +1215,7 @@
                 "type": "uint16"
               },
               {
-                "internalType": "uint8",
+                "internalType": "enum WithdrawType",
                 "name": "withdraw",
                 "type": "uint8"
               },
@@ -1207,7 +1266,7 @@
               {
                 "components": [
                   {
-                    "internalType": "uint8",
+                    "internalType": "enum TokenType",
                     "name": "tokenType",
                     "type": "uint8"
                   },
@@ -1249,7 +1308,7 @@
     ],
     "name": "transact",
     "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1376,7 +1435,7 @@
                 "type": "uint16"
               },
               {
-                "internalType": "uint8",
+                "internalType": "enum WithdrawType",
                 "name": "withdraw",
                 "type": "uint8"
               },
@@ -1427,7 +1486,7 @@
               {
                 "components": [
                   {
-                    "internalType": "uint8",
+                    "internalType": "enum TokenType",
                     "name": "tokenType",
                     "type": "uint8"
                   },
