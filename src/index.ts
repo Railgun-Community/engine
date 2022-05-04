@@ -89,7 +89,7 @@ class Lepton {
     }
   }
 
-  async getRecentCommitmentBlock(chainID: number): Promise<number | undefined> {
+  async getMostRecentValidCommitmentBlock(chainID: number): Promise<number | undefined> {
     const merkletree = this.merkletree[chainID].erc20;
 
     // Get latest tree
@@ -124,7 +124,7 @@ class Lepton {
   }
 
   async getStartScanningBlock(chainID: number): Promise<number> {
-    let startScanningBlock = await this.getRecentCommitmentBlock(chainID);
+    let startScanningBlock = await this.getMostRecentValidCommitmentBlock(chainID);
     if (startScanningBlock == null) {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chainID];
@@ -143,7 +143,7 @@ class Lepton {
    * @param chainID - chainID to scan
    */
   async scanHistory(chainID: number) {
-    const startScanningBlock = await this.getStartScanningBlock(chainID);
+    const startScanningBlockQuickSync = await this.getStartScanningBlock(chainID);
 
     // Call quicksync
     if (this.quickSync) {
@@ -153,7 +153,7 @@ class Lepton {
         // Fetch events
         const { commitmentEvents, nullifierEvents } = await this.quickSync(
           chainID,
-          startScanningBlock,
+          startScanningBlockQuickSync,
         );
 
         // Pass nullifier events to listener
@@ -174,10 +174,13 @@ class Lepton {
       }
     }
 
+    // Get updated start-scanning block from new valid merkletree.
+    const startScanningBlockSlowScan = await this.getStartScanningBlock(chainID);
+
     try {
       // Run slow scan
       await this.contracts[chainID].getHistoricalEvents(
-        startScanningBlock,
+        startScanningBlockSlowScan,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.listener(chainID, treeNumber, startPosition, commitments);
         },
