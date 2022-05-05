@@ -338,7 +338,7 @@ export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
 }
 
 /**
- * Convert hex string to Uint8Array
+ * Convert hex string to Uint8Array. Handles prefixed or non-prefixed.
  * @param {bigint} value
  * @returns {Uint8Array}
  */

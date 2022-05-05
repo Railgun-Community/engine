@@ -1,6 +1,7 @@
 import * as bip39 from 'ethereum-cryptography/bip39';
 import { wordlist } from 'ethereum-cryptography/bip39/wordlists/english';
-import { hexToBytes, toHex } from 'ethereum-cryptography/utils';
+import { toHex } from 'ethereum-cryptography/utils';
+import { hexStringToBytes } from '../utils/bytes';
 
 function generateMnemonic(strength: 128 | 192 | 256 = 128): string {
   return bip39.generateMnemonic(wordlist, strength);
@@ -19,13 +20,7 @@ function mnemonicToEntropy(mnemonic: string): string {
 }
 
 function entropyToMnemonic(entropy: string): string {
-  return bip39.entropyToMnemonic(hexToBytes(entropy), wordlist);
+  return bip39.entropyToMnemonic(hexStringToBytes(entropy), wordlist);
 }
 
-export {
-  generateMnemonic,
-  validateMnemonic,
-  mnemonicToSeed,
-  mnemonicToEntropy,
-  entropyToMnemonic,
-};
+export { generateMnemonic, validateMnemonic, mnemonicToSeed, mnemonicToEntropy, entropyToMnemonic };

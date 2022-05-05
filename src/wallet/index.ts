@@ -3,7 +3,6 @@ import msgpack from 'msgpack-lite';
 import EventEmitter from 'events';
 import type { AbstractBatch } from 'abstract-leveldown';
 import { HDNode } from '@ethersproject/hdnode';
-import { hexToBytes } from 'ethereum-cryptography/utils';
 import { hash } from '../utils';
 import { Database } from '../database';
 import { mnemonicToSeed } from '../keyderivation/bip39';
@@ -18,6 +17,7 @@ import {
   formatToByteLength,
   fromUTF8String,
   hexlify,
+  hexStringToBytes,
   nToHex,
   numberify,
   padToLength,
@@ -273,7 +273,7 @@ class Wallet extends EventEmitter {
         // Derive shared secret
         const ephemeralKey = leaf.ciphertext.ephemeralKeys[0];
         // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await getSharedSymmetricKey(vpk, hexToBytes(ephemeralKey));
+        const sharedKey = await getSharedSymmetricKey(vpk, hexStringToBytes(ephemeralKey));
         // Try to decrypt.
         try {
           note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);

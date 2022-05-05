@@ -1,10 +1,10 @@
 import { Signature } from 'circomlibjs';
-import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
+import { bytesToHex } from 'ethereum-cryptography/utils';
 import { BytesData } from '../models/transaction-types';
 import { KeyNode } from '../models/types';
 import { hash, keysUtils } from '../utils';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
-import { fromUTF8String, hexToBigInt } from '../utils/bytes';
+import { fromUTF8String, hexStringToBytes, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
@@ -82,7 +82,7 @@ export class Node {
    * @returns keypair
    */
   getSpendingKeyPair(): SpendingKeyPair {
-    const privateKey = hexToBytes(this.#chainKey);
+    const privateKey = hexStringToBytes(this.#chainKey);
     const pubkey = keysUtils.getPublicSpendingKey(privateKey);
     return {
       privateKey,
@@ -96,7 +96,7 @@ export class Node {
 
   async getViewingKeyPair(): Promise<ViewingKeyPair> {
     // TODO: THIS should be a separate node chainkey
-    const privateKey = hexToBytes(this.#chainKey);
+    const privateKey = hexStringToBytes(this.#chainKey);
     const pubkey = await keysUtils.getPublicViewingKey(privateKey);
     return { privateKey, pubkey };
   }

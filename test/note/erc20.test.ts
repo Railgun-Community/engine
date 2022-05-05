@@ -1,9 +1,8 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { hexToBytes } from 'ethereum-cryptography/utils';
 import { Note } from '../../src/note';
-import { ByteLength, hexlify, hexToBigInt, nToHex } from '../../src/utils/bytes';
+import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -224,7 +223,7 @@ const ciphertextVectors = [
 describe('Note/ERC20', () => {
   it('Should encrypt and decrypt notes', () => {
     ciphertextVectors.forEach((vector) => {
-      const viewingPublicKey = hexToBytes(vector.note.pubkey);
+      const viewingPublicKey = hexStringToBytes(vector.note.pubkey);
 
       // Create Note object
       const address = {
@@ -238,7 +237,7 @@ describe('Note/ERC20', () => {
         vector.note.token,
       );
 
-      const sharedKeyBytes = hexToBytes(vector.sharedKey);
+      const sharedKeyBytes = hexStringToBytes(vector.sharedKey);
 
       // Get encrypted values
       const encrypted = note.encrypt(sharedKeyBytes);
@@ -266,9 +265,9 @@ describe('Note/ERC20', () => {
     vectors.forEach((vector) => {
       const address = {
         masterPublicKey: hexToBigInt(vector.pubkey),
-        viewingPublicKey: hexToBytes(vector.pubkey),
+        viewingPublicKey: hexStringToBytes(vector.pubkey),
       };
-      const vectorBytes = hexToBytes(vector.vpk);
+      const vectorBytes = hexStringToBytes(vector.vpk);
       const note = Note.deserialize(vector.note, vectorBytes, address);
       expect(hexlify(note.random)).to.equal(vector.random);
 
