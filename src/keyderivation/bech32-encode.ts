@@ -1,9 +1,15 @@
 // import BN from 'bn.js';
 import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
-import { hexToBytes } from 'ethereum-cryptography/utils';
 import { bytes, constants } from '../utils';
-import { ByteLength, formatToByteLength, hexToBigInt, nToHex, padToLength } from '../utils/bytes';
+import {
+  ByteLength,
+  formatToByteLength,
+  hexStringToBytes,
+  hexToBigInt,
+  nToHex,
+  padToLength,
+} from '../utils/bytes';
 
 export type AddressData = {
   masterPublicKey: bigint;
@@ -67,7 +73,7 @@ function decode(address: string): AddressData {
     const version = parseInt(data.slice(0, 2), 16);
     const masterPublicKey = hexToBigInt(data.slice(2, 66));
     const networkID = xorChainID(data.slice(66, 82));
-    const viewingPublicKey = hexToBytes(data.slice(82, 146));
+    const viewingPublicKey = hexStringToBytes(data.slice(82, 146));
 
     // return undefined if XORed network matches the value we use to indicate undefined chain
     const chainID = networkID === UNDEFINED_CHAIN ? undefined : parseInt(networkID, 16);

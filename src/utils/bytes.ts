@@ -343,7 +343,7 @@ export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
  * @returns {Uint8Array}
  */
 export function hexStringToBytes(hex: string): Uint8Array {
-  return hexToBytes(hex);
+  return hexToBytes(strip0x(hex));
 }
 
 /**

@@ -7,7 +7,7 @@ import {
   GeneratedCommitment,
   Nullifier,
 } from '../../models/transaction-types';
-import { ByteLength, hexlify, nToHex } from '../../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 import LeptonDebug from '../../debugger';
 
@@ -133,7 +133,9 @@ export function formatCommitmentBatchCommitments(
 ): EncryptedCommitment[] {
   return commitments.map((commitment, index) => {
     const { ephemeralKeys, memo } = commitment;
-    const ciphertext = commitment.ciphertext.map((el) => hexlify(el.toHexString()));
+    const ciphertext = commitment.ciphertext.map(
+      (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256, false), // 32 bytes each.
+    );
     const ivTag = ciphertext[0];
 
     return {
@@ -145,7 +147,9 @@ export function formatCommitmentBatchCommitments(
           tag: ivTag.substring(32),
           data: ciphertext.slice(1),
         },
-        ephemeralKeys: ephemeralKeys.map((key) => hexlify(key.toHexString())),
+        ephemeralKeys: ephemeralKeys.map(
+          (key) => formatToByteLength(key.toHexString(), ByteLength.UINT_256, false), // 32 bytes each.
+        ),
         memo,
       },
     };
