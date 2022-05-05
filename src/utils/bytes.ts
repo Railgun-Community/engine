@@ -312,7 +312,7 @@ function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'):
  * @param length - length to format to
  * @returns formatted data
  */
-function formatToByteLength(data: BytesData, length: ByteLength, prefix = true): string {
+function formatToByteLength(data: BytesData, length: ByteLength, prefix = false): string {
   return trim(padToLength(hexlify(data, prefix), length), length) as string;
 }
 

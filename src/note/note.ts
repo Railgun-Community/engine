@@ -40,7 +40,7 @@ export class Note {
     this.masterPublicKey = addressData.masterPublicKey;
     this.viewingPublicKey = addressData.viewingPublicKey;
     this.random = random;
-    this.token = formatToByteLength(token, ByteLength.UINT_256, false);
+    this.token = formatToByteLength(token, ByteLength.UINT_256);
     this.value = BigInt(value);
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();

@@ -37,7 +37,7 @@ const xorChainID = (chainID: string) =>
 function encode(data: AddressData): string {
   const { chainID } = data;
   const masterPublicKey = nToHex(data.masterPublicKey, ByteLength.UINT_256, false);
-  const viewingPublicKey = formatToByteLength(data.viewingPublicKey, ByteLength.UINT_256, false);
+  const viewingPublicKey = formatToByteLength(data.viewingPublicKey, ByteLength.UINT_256);
 
   const formattedChainID = chainID
     ? (padToLength(chainID.toString(16), 8) as string)

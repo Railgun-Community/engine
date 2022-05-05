@@ -33,7 +33,6 @@ export const MERKLE_ZERO_VALUE: string = formatToByteLength(
     .mod(constants.SNARK_PRIME)
     .toString('hex'),
   ByteLength.UINT_256,
-  false,
 );
 class MerkleTree {
   private db: Database;

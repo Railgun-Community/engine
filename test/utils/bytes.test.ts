@@ -340,12 +340,12 @@ describe('Utils/Bytes', () => {
   });
 
   it('Should format data to byte length', () => {
-    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.UINT_8)).to.equal('0xd9');
-    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.Address)).to.equal(
+    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.UINT_8, true)).to.equal('0xd9');
+    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.Address, true)).to.equal(
       '0x0000000000000000000000000000000017b3c8d9',
     );
     expect(bytes.formatToByteLength('17b3c8d9', ByteLength.UINT_256)).to.equal(
-      '0x0000000000000000000000000000000000000000000000000000000017b3c8d9',
+      '0000000000000000000000000000000000000000000000000000000017b3c8d9',
     );
   });
 });

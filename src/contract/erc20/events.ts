@@ -134,7 +134,7 @@ export function formatCommitmentBatchCommitments(
   return commitments.map((commitment, index) => {
     const { ephemeralKeys, memo } = commitment;
     const ciphertext = commitment.ciphertext.map(
-      (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256, false), // 32 bytes each.
+      (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256), // 32 bytes each.
     );
     const ivTag = ciphertext[0];
 
@@ -148,7 +148,7 @@ export function formatCommitmentBatchCommitments(
           data: ciphertext.slice(1),
         },
         ephemeralKeys: ephemeralKeys.map(
-          (key) => formatToByteLength(key.toHexString(), ByteLength.UINT_256, false), // 32 bytes each.
+          (key) => formatToByteLength(key.toHexString(), ByteLength.UINT_256), // 32 bytes each.
         ),
         memo,
       },
