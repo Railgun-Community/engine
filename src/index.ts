@@ -189,13 +189,14 @@ class Lepton {
         },
         (block: number) => this.setLastSyncedBlock(block, chainID),
       );
+
+      // Final scan after all leaves added.
+      await this.scanAllWallets(chainID);
     } catch (err: any) {
       LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
       LeptonDebug.error(err);
+      await this.scanAllWallets(chainID);
     }
-
-    // Final scan after all leaves added.
-    await this.scanAllWallets(chainID);
   }
 
   /**
