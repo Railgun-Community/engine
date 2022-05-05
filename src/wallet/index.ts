@@ -250,7 +250,7 @@ class Wallet extends EventEmitter {
     treeHeight: number,
   ): Promise<boolean> {
     LeptonDebug.log(
-      `wallet:scanLeaves ${tree} ${chainID} leaves.length: ${leaves.length}, scannedHeight: ${scannedHeight}`,
+      `wallet:scanLeaves tree:${tree} chain:${chainID} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
     );
     const vpk = this.getViewingKeyPair().privateKey;
 
@@ -258,7 +258,11 @@ class Wallet extends EventEmitter {
 
     // Loop through passed commitments
     for (let position = scannedHeight; position < treeHeight; position += 1) {
-      LeptonDebug.log(`inserting ${leaves.length} leaves at position ${position}`);
+      LeptonDebug.log(
+        `Inserting ${leaves.length - scannedHeight} leaves. Current position ${position}/${
+          leaves.length - 1
+        }`,
+      );
       let note: Note | undefined;
       const leaf = leaves[position];
       if (leaf == null) {
