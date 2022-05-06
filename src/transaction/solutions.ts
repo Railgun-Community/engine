@@ -12,6 +12,10 @@ const isValidNullifierCount = (utxoCount: number): boolean =>
 export const shouldAddMoreUTXOsToConsolidateBalances = (utxoCount: number) =>
   !isValidNullifierCount(utxoCount) && utxoCount < MAX_NULLIFIERS;
 
+const requiresMoreUTXOs = (utxos: TXO[], totalRequired: bigint) =>
+  calculateTotalSpend(utxos) < totalRequired ||
+  shouldAddMoreUTXOsToConsolidateBalances(utxos.length);
+
 export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): TXO[] | undefined {
   // If this tree doesn't have enough to cover this transaction, return false
   if (treeBalance.balance < totalRequired) return [];
@@ -43,10 +47,7 @@ export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): 
   const utxos: TXO[] = [];
 
   // Check if sum of UTXOs selected is greater than target
-  while (
-    calculateTotalSpend(utxos) < totalRequired ||
-    shouldAddMoreUTXOsToConsolidateBalances(utxos.length)
-  ) {
+  while (treeBalance.utxos.length > utxos.length && requiresMoreUTXOs(utxos, totalRequired)) {
     // If sum is not greater than target, push the next largest UTXO
     utxos.push(treeBalance.utxos[utxos.length]);
   }
@@ -54,5 +55,6 @@ export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): 
   if (totalRequired > calculateTotalSpend(utxos)) {
     return undefined;
   }
-  return utxos;
+
+  if (!isValidNullifierCount) return utxos;
 }
