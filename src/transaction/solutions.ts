@@ -53,8 +53,14 @@ export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): 
   }
 
   if (totalRequired > calculateTotalSpend(utxos)) {
+    // Search next tree.
     return undefined;
   }
 
-  if (!isValidNullifierCount) return utxos;
+  if (!isValidNullifierCount(utxos.length)) {
+    // Search next tree.
+    return undefined;
+  }
+
+  return utxos;
 }
