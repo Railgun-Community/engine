@@ -163,7 +163,9 @@ class Transaction {
     });
 
     if (utxos == null || spendingTree == null) {
-      throw new Error('Not enough spending solutions: balance too low');
+      throw new Error(
+        'Not enough spending solutions: balance too low in each tree. Balance consolidation required.',
+      );
     }
 
     // Get values
