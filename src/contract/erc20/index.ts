@@ -33,6 +33,7 @@ import {
 } from './events';
 import LeptonDebug from '../../debugger';
 import { hexlify } from '../../utils/bytes';
+import { promiseTimeout } from '../../utils/promises';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -42,7 +43,8 @@ export type CommitmentEvent = {
 };
 
 const SCAN_CHUNKS = 499;
-const MAX_SCAN_RETRIES = 5;
+const MAX_SCAN_RETRIES = 30;
+const EVENTS_SCAN_TIMEOUT = 2500;
 
 export enum EventName {
   GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
@@ -175,11 +177,12 @@ class ERC20RailgunContract {
     retryCount = 0,
   ): Promise<Event[]> {
     try {
-      const events = await this.contract
-        .queryFilter(eventFilter, startBlock, endBlock)
-        .catch((err: any) => {
-          throw err;
-        });
+      const events = await promiseTimeout(
+        this.contract.queryFilter(eventFilter, startBlock, endBlock),
+        EVENTS_SCAN_TIMEOUT,
+      ).catch((err) => {
+        throw err;
+      });
       return events;
     } catch (err: any) {
       if (retryCount < MAX_SCAN_RETRIES) {
