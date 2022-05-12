@@ -62,7 +62,7 @@ describe('Test keys-utils', () => {
     // eslint-disable-next-line no-unused-expressions
     expect(verifyED25519(message, signature, randomBytes(32))).to.eventually.be.rejected;
   });
-  it.only('Should get shared key from two ephemeral keys', async () => {
+  it('Should get shared key from two ephemeral keys', async () => {
     const a = randomBytes(32);
     const A = await getPublicViewingKey(a);
 
