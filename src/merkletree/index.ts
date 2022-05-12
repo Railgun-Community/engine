@@ -181,7 +181,7 @@ class MerkleTree {
   getCommitmentDBPath(tree: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      hexlify(new BN(0).notn(32)), // 2^256-1
+      hexlify(new BN(0).notn(32)), // 2^32-1
       hexlify(new BN(index)),
     ].map((element) => element.padStart(64, '0'));
   }
@@ -195,7 +195,7 @@ class MerkleTree {
   getNullifierDBPath(tree: number, nullifier: string): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      hexlify(new BN(0).notn(32).subn(1)), // 2^256-2
+      hexlify(new BN(0).notn(32).subn(1)), // 2^32-2
       hexlify(nullifier),
     ].map((element) => element.padStart(64, '0'));
   }
@@ -276,7 +276,7 @@ class MerkleTree {
   private async getTreeLengthFromDB(tree: number): Promise<number> {
     return this.db.countNamespace([
       ...this.getTreeDBPrefix(tree),
-      hexlify(new BN(0).notn(32)), // 2^256-1
+      hexlify(new BN(0).notn(32)), // 2^32-1
     ]);
   }
 
