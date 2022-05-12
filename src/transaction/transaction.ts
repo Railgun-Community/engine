@@ -210,7 +210,9 @@ class Transaction {
     const onlyInternalOutputs = allOutputs.filter((note) => note instanceof Note) as Note[];
 
     const notesEphemeralKeys = await Promise.all(
-      onlyInternalOutputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey, note.random)),
+      onlyInternalOutputs.map((note) =>
+        getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey, note.random),
+      ),
     );
 
     // calculate symmetric key using sender privateKey and recipient ephemeral key
@@ -222,7 +224,12 @@ class Transaction {
 
     const commitmentCiphertext: OutputCommitmentCiphertext[] = onlyInternalOutputs.map(
       (note, index) => {
-        const ciphertext = note.encrypt(sharedKeys[index]);
+        const sharedKey = sharedKeys[index];
+        if (!sharedKey) {
+          throw new Error('Shared symmetric key is not defined.');
+        }
+
+        const ciphertext = note.encrypt(sharedKey);
         return {
           ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
             hexToBigInt(el as string),

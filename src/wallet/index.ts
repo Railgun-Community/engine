@@ -275,10 +275,12 @@ class Wallet extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         const sharedKey = await getSharedSymmetricKey(vpk, hexStringToBytes(ephemeralKey));
         // Try to decrypt.
-        try {
-          note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
-        } catch (e: any) {
-          // Expect error if leaf not addressed to us.
+        if (sharedKey) {
+          try {
+            note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
+          } catch (e: any) {
+            // Expect error if leaf not addressed to us.
+          }
         }
       } else {
         // preImage

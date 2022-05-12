@@ -48,7 +48,7 @@ function adjustRandom(random: string): bigint {
 async function getEphemeralKeys(
   senderVPK: Uint8Array,
   recipientVPK: Uint8Array,
-  random: string
+  random: string,
 ): Promise<Uint8Array[]> {
   const r = adjustRandom(random);
   const S = curve25519.Point.fromHex(bytesToHex(senderVPK));
@@ -68,10 +68,14 @@ function unblindedEphemeralKey(VPK: Uint8Array, random: string): Uint8Array {
 async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   publicKey: Uint8Array,
-): Promise<Uint8Array> {
-  const pk = curve25519.Point.fromHex(bytesToHex(publicKey));
-  const {scalar} = await curve25519.utils.getExtendedPublicKey(privateKey);
-  return pk.multiply(scalar).toRawBytes();
+): Promise<Uint8Array | undefined> {
+  try {
+    const pk = curve25519.Point.fromHex(bytesToHex(publicKey));
+    const { scalar } = await curve25519.utils.getExtendedPublicKey(privateKey);
+    return pk.multiply(scalar).toRawBytes();
+  } catch (err: any) {
+    return undefined;
+  }
 }
 
 export {
@@ -86,4 +90,3 @@ export {
   unblindedEphemeralKey,
   getSharedSymmetricKey,
 };
-
