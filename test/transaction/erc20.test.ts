@@ -145,7 +145,7 @@ describe('Transaction/ERC20', function () {
     const receiver = wallet2.getViewingKeyPair();
 
     assert.isTrue(note.viewingPublicKey === receiver.pubkey);
-    const ephemeralKeys = await getEphemeralKeys(sender.pubkey, note.viewingPublicKey);
+    const ephemeralKeys = await getEphemeralKeys(sender.pubkey, note.viewingPublicKey, note.random);
 
     const senderShared = await getSharedSymmetricKey(sender.privateKey, ephemeralKeys[1]);
     const receiverShared = await getSharedSymmetricKey(receiver.privateKey, ephemeralKeys[0]);

@@ -1,8 +1,9 @@
 import * as curve25519 from '@noble/ed25519';
-import { bytesToHex, randomBytes } from '@noble/hashes/utils';
 import { eddsa, Signature } from 'circomlibjs';
-import { hexlify } from './bytes';
-import { poseidon } from './hash';
+import { hexlify, hexToBytes } from './bytes';
+import { poseidon, sha256 } from './hash';
+
+const { bytesToHex, randomBytes } = curve25519.utils;
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
   return eddsa.prv2pub(Buffer.from(privateKey));
@@ -36,16 +37,24 @@ function verifyED25519(
   return curve25519.verify(signature, message, pubkey);
 }
 
+function adjustRandom(random: string): bigint {
+  const randomArray = hexToBytes(sha256(random));
+  randomArray[0] &= 248;
+  randomArray[31] &= 127;
+  randomArray[31] |= 64;
+  return BigInt(`0x${bytesToHex(randomArray)}`) % curve25519.CURVE.n;
+}
+
 async function getEphemeralKeys(
   senderVPK: Uint8Array,
   recipientVPK: Uint8Array,
+  random: string
 ): Promise<Uint8Array[]> {
-  const random = randomBytes(32);
-  const S = curve25519.Point.fromHex(bytesToHex(senderVPK)).toX25519();
-  const R = curve25519.Point.fromHex(bytesToHex(recipientVPK)).toX25519();
-  const { head } = await curve25519.utils.getExtendedPublicKey(random);
-  const rS = curve25519.curve25519.scalarMult(head, S);
-  const rR = curve25519.curve25519.scalarMult(head, R);
+  const r = adjustRandom(random);
+  const S = curve25519.Point.fromHex(bytesToHex(senderVPK));
+  const R = curve25519.Point.fromHex(bytesToHex(recipientVPK));
+  const rS = S.multiply(r).toRawBytes();
+  const rR = R.multiply(r).toRawBytes();
   return [rS, rR];
 }
 
@@ -53,19 +62,20 @@ async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   publicKey: Uint8Array,
 ): Promise<Uint8Array> {
-  const { head } = await curve25519.utils.getExtendedPublicKey(privateKey);
-  return curve25519.curve25519.scalarMult(head, publicKey);
+  const pk = curve25519.Point.fromHex(bytesToHex(publicKey));
+  const {scalar} = await curve25519.utils.getExtendedPublicKey(privateKey);
+  return pk.multiply(scalar).toRawBytes();
 }
 
 export {
-    getPublicSpendingKey,
-    getPublicViewingKey,
-    getRandomScalar,
-    signEDDSA,
-    verifyEDDSA,
-    signED25519,
-    verifyED25519,
-    getEphemeralKeys,
-    getSharedSymmetricKey,
+  getPublicSpendingKey,
+  getPublicViewingKey,
+  getRandomScalar,
+  signEDDSA,
+  verifyEDDSA,
+  signED25519,
+  verifyED25519,
+  getEphemeralKeys,
+  getSharedSymmetricKey,
 };
 

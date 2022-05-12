@@ -210,7 +210,7 @@ class Transaction {
     const onlyInternalOutputs = allOutputs.filter((note) => note instanceof Note) as Note[];
 
     const notesEphemeralKeys = await Promise.all(
-      onlyInternalOutputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey)),
+      onlyInternalOutputs.map((note) => getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey, note.random)),
     );
 
     // calculate symmetric key using sender privateKey and recipient ephemeral key
