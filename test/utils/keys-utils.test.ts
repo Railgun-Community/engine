@@ -13,6 +13,7 @@ import {
   getSharedSymmetricKey,
   signED25519,
   signEDDSA,
+  unblindedEphemeralKey,
   verifyED25519,
   verifyEDDSA
 } from '../../src/utils/keys-utils';
@@ -76,6 +77,23 @@ describe('Test keys-utils', () => {
     const k2 = await getSharedSymmetricKey(b, rA);
 
     expect(k1).to.eql(k2);
+    
+  })
+  it('Should unblind ephemeral keys', async () => {
+    const a = randomBytes(32);
+    const A = await getPublicViewingKey(a);
+
+    const b = randomBytes(32);
+    const B = await getPublicViewingKey(b);
+
+    const r = bytesToHex(randomBytes(16));
+    const [rA, rB]= await getEphemeralKeys(A, B, r);
+
+    const A1 = unblindedEphemeralKey(rA, r);
+    const B1 = unblindedEphemeralKey(rB, r);
+
+    expect(A).to.eql(A1);
+    expect(B).to.eql(B1);
     
   })
 });

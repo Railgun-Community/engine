@@ -58,6 +58,13 @@ async function getEphemeralKeys(
   return [rS, rR];
 }
 
+function unblindedEphemeralKey(VPK: Uint8Array, random: string): Uint8Array {
+  const r = adjustRandom(random);
+  const rInverse = curve25519.utils.invert(r, curve25519.CURVE.n);
+  const point = curve25519.Point.fromHex(bytesToHex(VPK));
+  return point.multiply(rInverse).toRawBytes();
+}
+
 async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   publicKey: Uint8Array,
@@ -76,6 +83,7 @@ export {
   signED25519,
   verifyED25519,
   getEphemeralKeys,
+  unblindedEphemeralKey,
   getSharedSymmetricKey,
 };
 
