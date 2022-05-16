@@ -13,7 +13,7 @@ import {
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe.only('Ciphertext', () => {
+describe('Ciphertext', () => {
   it('Should translate ciphertext to encrypted random and back', () => {
     const plaintext: BytesData[] = [random(16)];
     const key = random(32);
