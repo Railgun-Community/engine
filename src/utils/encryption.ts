@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { arrayify, hexlify, padToLength, random, trim } from './bytes';
+import { arrayify, ByteLength, formatToByteLength, padToLength, random, trim } from './bytes';
 import { BytesData, Ciphertext } from '../models/transaction-types';
 
 const aes = {
@@ -35,8 +35,8 @@ const aes = {
 
       // Return encrypted data bundle
       return {
-        iv: hexlify(ivFormatted),
-        tag: hexlify(tagFormatted),
+        iv: formatToByteLength(ivFormatted, ByteLength.UINT_128, false),
+        tag: formatToByteLength(tagFormatted, ByteLength.UINT_128, false),
         data,
       };
     },

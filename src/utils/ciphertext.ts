@@ -13,10 +13,8 @@ export const ciphertextToEncryptedJSONData = (ciphertext: Ciphertext): Encrypted
   const ivTag =
     formatToByteLength(ciphertext.iv, ByteLength.UINT_128, true) +
     formatToByteLength(ciphertext.tag, ByteLength.UINT_128, false);
-  const data = combine(
-    ciphertext.data.map((el) => formatToByteLength(el, ByteLength.UINT_256, true)),
-  );
-  return [ivTag, data];
+  const data = combine(ciphertext.data);
+  return [ivTag, `0x${data}`];
 };
 
 export const encryptedDataToCiphertext = (encryptedData: EncryptedData): Ciphertext => {
