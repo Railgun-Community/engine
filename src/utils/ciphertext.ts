@@ -1,24 +1,30 @@
 import { Ciphertext, EncryptedData } from '../models/transaction-types';
-import { chunk, combine, hexlify } from './bytes';
+import { ByteLength, chunk, combine, formatToByteLength } from './bytes';
 
 export const ciphertextToEncryptedRandomData = (ciphertext: Ciphertext): EncryptedData => {
-  const ivTag = hexlify(ciphertext.iv, true) + hexlify(ciphertext.tag);
-  const data = hexlify(ciphertext.data[0], true);
+  const ivTag =
+    formatToByteLength(ciphertext.iv, ByteLength.UINT_128, true) +
+    formatToByteLength(ciphertext.tag, ByteLength.UINT_128, false);
+  const data = formatToByteLength(ciphertext.data[0], ByteLength.UINT_128, true);
   return [ivTag, data];
 };
 
 export const ciphertextToEncryptedJSONData = (ciphertext: Ciphertext): EncryptedData => {
-  const ivTag = hexlify(ciphertext.iv, true) + hexlify(ciphertext.tag);
-  const data = combine(ciphertext.data.map((el) => hexlify(el)));
+  const ivTag =
+    formatToByteLength(ciphertext.iv, ByteLength.UINT_128, true) +
+    formatToByteLength(ciphertext.tag, ByteLength.UINT_128, false);
+  const data = combine(
+    ciphertext.data.map((el) => formatToByteLength(el, ByteLength.UINT_256, true)),
+  );
   return [ivTag, data];
 };
 
 export const encryptedDataToCiphertext = (encryptedData: EncryptedData): Ciphertext => {
-  const hexlified = encryptedData.map((r) => hexlify(r));
+  const hexlifiedIvTag = formatToByteLength(encryptedData[0], ByteLength.UINT_256, false);
   const ciphertext = {
-    iv: hexlified[0].substring(0, 32),
-    tag: hexlified[0].substring(32),
-    data: chunk(hexlified[1]),
+    iv: hexlifiedIvTag.substring(0, 32),
+    tag: hexlifiedIvTag.substring(32),
+    data: chunk(encryptedData[1], ByteLength.UINT_256),
   };
   return ciphertext;
 };
