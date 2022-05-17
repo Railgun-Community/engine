@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import crypto from 'crypto';
 import { hexToBytes } from 'ethereum-cryptography/utils';
-import { BytesData } from '../models/transaction-types';
+import { BytesData } from '../models/formatted-types';
 
 export enum ByteLength {
   UINT_8 = 1,

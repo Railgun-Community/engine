@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { arrayify, ByteLength, formatToByteLength, padToLength, random, trim } from './bytes';
-import { BytesData, Ciphertext } from '../models/transaction-types';
+import { BytesData, Ciphertext } from '../models/formatted-types';
 
 const aes = {
   gcm: {

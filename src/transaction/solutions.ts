@@ -3,7 +3,7 @@ import { TreeBalance, TXO } from '../wallet';
 export const VALID_NULLIFIER_COUNTS = [1, 2, 8];
 const MAX_NULLIFIERS = Math.max(...VALID_NULLIFIER_COUNTS);
 
-const calculateTotalSpend = (utxos: TXO[]) =>
+export const calculateTotalSpend = (utxos: TXO[]) =>
   utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
 const isValidNullifierCount = (utxoCount: number): boolean =>
@@ -16,12 +16,18 @@ const requiresMoreUTXOs = (utxos: TXO[], totalRequired: bigint) =>
   calculateTotalSpend(utxos) < totalRequired ||
   shouldAddMoreUTXOsToConsolidateBalances(utxos.length);
 
-export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): TXO[] | undefined {
+export function findSolutions(
+  treeBalance: TreeBalance,
+  totalRequired: bigint,
+  excludedUTXOIDs: string[],
+): TXO[] | undefined {
   // If this tree doesn't have enough to cover this transaction, return false
   if (treeBalance.balance < totalRequired) return [];
 
+  const filteredUTXOs = treeBalance.utxos.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
+
   // Sort UTXOs by size
-  treeBalance.utxos.sort((left, right) => {
+  filteredUTXOs.sort((left, right) => {
     const leftNum = left.note.value;
     const rightNum = right.note.value;
 
@@ -35,7 +41,7 @@ export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): 
   // Optimized UTXO selection:
   // Select the utxo whose balance is above the required value, but closest to required value.
   // This will leave larger balances unbroken, supporting larger transactions.
-  const utxosSupportingRequiredValue = treeBalance.utxos.filter(
+  const utxosSupportingRequiredValue = filteredUTXOs.filter(
     (utxo) => utxo.note.value >= totalRequired,
   );
   if (utxosSupportingRequiredValue.length) {
@@ -47,9 +53,9 @@ export function findSolutions(treeBalance: TreeBalance, totalRequired: bigint): 
   const utxos: TXO[] = [];
 
   // Check if sum of UTXOs selected is greater than target
-  while (treeBalance.utxos.length > utxos.length && requiresMoreUTXOs(utxos, totalRequired)) {
+  while (filteredUTXOs.length > utxos.length && requiresMoreUTXOs(utxos, totalRequired)) {
     // If sum is not greater than target, push the next largest UTXO
-    utxos.push(treeBalance.utxos[utxos.length]);
+    utxos.push(filteredUTXOs[utxos.length]);
   }
 
   if (totalRequired > calculateTotalSpend(utxos)) {

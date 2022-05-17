@@ -14,7 +14,7 @@ import { Wallet } from './wallet';
 import { CommitmentEvent } from './contract/erc20';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
-import { BytesData, Commitment, Nullifier } from './models/transaction-types';
+import { BytesData, Commitment, Nullifier } from './models/formatted-types';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];

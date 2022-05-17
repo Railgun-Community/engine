@@ -1,4 +1,4 @@
-import { Ciphertext, EncryptedData } from '../models/transaction-types';
+import { Ciphertext, EncryptedData } from '../models/formatted-types';
 import { ByteLength, chunk, combine, formatToByteLength } from './bytes';
 
 export const ciphertextToEncryptedRandomData = (ciphertext: Ciphertext): EncryptedData => {

@@ -3,7 +3,7 @@ import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
-import { Lepton, Note, Transaction } from '../src';
+import { Lepton, Note } from '../src';
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
 import { Wallet } from '../src/wallet';
@@ -14,7 +14,8 @@ import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { ERC20RailgunContract } from '../src/contract';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
-import { GeneratedCommitment, TokenType } from '../src/models/transaction-types';
+import { GeneratedCommitment, TokenType } from '../src/models/formatted-types';
+import { TransactionBatch } from '../src/transaction/transaction-batch';
 
 chai.use(chaiAsPromised);
 
@@ -151,22 +152,22 @@ describe('Lepton', function () {
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
-    const transaction = new Transaction(config.contracts.rail, TokenType.ERC20, chainID);
-    transaction.withdraw(
+    const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chainID);
+    transactionBatch.setWithdraw(
       etherswallet.address,
       BigInt(300) * DECIMALS_18,
       config.contracts.treasury,
     );
 
     // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
-    transaction.outputs = [new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress)];
+    transactionBatch.addOutput(new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress));
 
-    const serializedTransaction = await transaction.prove(
+    const serializedTransactions = await transactionBatch.generateSerializedTransactions(
       lepton.prover,
       lepton.wallets[walletID],
       testEncryptionKey,
     );
-    const transact = await contract.transact([serializedTransaction]);
+    const transact = await contract.transact(serializedTransactions);
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();

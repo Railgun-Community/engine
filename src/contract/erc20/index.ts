@@ -14,7 +14,7 @@ import {
   CommitmentPreimage,
   EncryptedData,
   SerializedTransaction,
-} from '../../models/transaction-types';
+} from '../../models/formatted-types';
 import {
   CommitmentBatchEventArgs,
   CommitmentCiphertextArgs,

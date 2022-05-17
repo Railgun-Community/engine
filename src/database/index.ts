@@ -2,7 +2,7 @@ import type { AbstractBatch, AbstractLevelDOWN } from 'abstract-leveldown';
 import encode from 'encoding-down';
 import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
-import { BytesData, Ciphertext } from '../models/transaction-types';
+import { BytesData, Ciphertext } from '../models/formatted-types';
 import { bytes, encryption } from '../utils';
 
 // TODO: Remove JSON encoding and standardize everything as msgpack

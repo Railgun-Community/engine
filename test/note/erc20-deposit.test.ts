@@ -2,13 +2,13 @@
 import { randomBytes } from '@noble/hashes/utils';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { TokenType } from '../../src/models/transaction-types';
 import { ERC20Deposit } from '../../src/note';
 import { formatToByteLength, hexlify, hexToBigInt, random } from '../../src/utils/bytes';
 import { ZERO_ADDRESS } from '../../src/utils/constants';
 import { getRandomScalar } from '../../src/utils/keys-utils';
 import { poseidon } from '../../src/utils/hash';
 import { config } from '../config.test';
+import { TokenType } from '../../src/models/formatted-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

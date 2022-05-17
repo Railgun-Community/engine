@@ -1,4 +1,4 @@
-import { CommitmentPreimage, EncryptedData, TokenType } from '../models/transaction-types';
+import { CommitmentPreimage, EncryptedData, TokenType } from '../models/formatted-types';
 import { encryption } from '../utils';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';

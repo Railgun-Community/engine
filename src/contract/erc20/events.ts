@@ -6,7 +6,7 @@ import {
   EncryptedData,
   GeneratedCommitment,
   Nullifier,
-} from '../../models/transaction-types';
+} from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, hexlify, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 import LeptonDebug from '../../debugger';

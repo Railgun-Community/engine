@@ -9,7 +9,7 @@ import { mnemonicToSeed } from '../keyderivation/bip39';
 import { Note } from '../note';
 import { MerkleTree } from '../merkletree';
 import { bech32, Node } from '../keyderivation';
-import { BytesData, Commitment, NoteSerialized } from '../models/transaction-types';
+import { BytesData, Commitment, NoteSerialized } from '../models/formatted-types';
 import {
   arrayify,
   ByteLength,
@@ -33,11 +33,12 @@ import {
   Balances,
   BalancesByTree,
   ScannedEventData,
-  TXO,
   WalletData,
   TreeBalance,
-  WalletNodes,
 } from './types';
+import { TXO } from '../models/txo-types';
+
+type WalletNodes = { spending: Node; viewing: Node };
 
 /**
  * constant defining the derivation path prefixes for spending and viewing keys

@@ -1,7 +1,7 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note } from '../note';
 import { bytes, hash } from '../utils';
-import { Wallet, TXO } from '../wallet';
+import { Wallet } from '../wallet';
 import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import {
@@ -12,19 +12,18 @@ import {
   hexToBigInt,
   nToHex,
 } from '../utils/bytes';
-import { findSolutions } from './solutions';
 import {
   AdaptID,
-  BigIntish,
   BoundParams,
   CommitmentPreimage,
   OutputCommitmentCiphertext,
   SerializedTransaction,
   TokenType,
-} from '../models/transaction-types';
-import { DEFAULT_TOKEN_SUB_ID, NOTE_INPUTS, NOTE_OUTPUTS, WithdrawFlag } from './constants';
+} from '../models/formatted-types';
+import { DEFAULT_TOKEN_SUB_ID, WithdrawFlag } from './constants';
 import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { ERC20WithdrawNote } from '../note/erc20-withdraw';
+import { TXO } from '../models/txo-types';
 
 const abiCoder = defaultAbiCoder;
 
@@ -41,56 +40,71 @@ export function hashBoundParams(boundParams: BoundParams) {
 }
 
 class Transaction {
-  adaptID: AdaptID = {
+  private adaptID: AdaptID = {
     contract: '0x0000000000000000000000000000000000000000',
     parameters: HashZero,
   };
 
-  chainID: number;
+  private chainID: number;
 
-  token: string;
+  private tokenAddress: string;
 
-  notesIn: Note[] = [];
+  private outputs: Note[] = [];
 
-  outputs: Note[] = [];
+  private withdrawNote: ERC20WithdrawNote = ERC20WithdrawNote.empty();
 
-  // see WithdrawFlag
-  withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
+  private withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
 
-  // boundParams.withdraw == 2 means withdraw address is not to self and set in overrideOutput
-  overrideOutput: string = ZERO_ADDRESS;
+  private overrideWithdrawAddress: string = ZERO_ADDRESS;
 
-  tokenType: TokenType;
+  private tokenType: TokenType;
 
-  tokenSubID: BigInt = DEFAULT_TOKEN_SUB_ID;
+  private tokenSubID: BigInt = DEFAULT_TOKEN_SUB_ID;
 
-  withdrawNote: ERC20WithdrawNote;
+  private spendingTree: number;
+
+  private utxos: TXO[];
 
   /**
    * Create ERC20Transaction Object
-   * @param token - token address
+   * @param tokenAddress - token address, unformatted
+   * @param tokenType - enum of token type
    * @param chainID - chainID of network transaction will be built for
-   * @param tree - manually specify a tree
+   * @param spendingTree - tree index to spend from
+   * @param utxos - UTXOs to spend from
    */
-  constructor(token: string, tokenType: TokenType, chainID: number) {
-    this.token = formatToByteLength(token, ByteLength.UINT_256);
+  constructor(
+    tokenAddress: string,
+    tokenType: TokenType,
+    chainID: number,
+    spendingTree: number,
+    utxos: TXO[],
+  ) {
+    this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
     this.tokenType = tokenType;
     this.chainID = chainID;
-    this.withdrawNote = ERC20WithdrawNote.empty();
+    this.spendingTree = spendingTree;
+    this.utxos = utxos;
   }
 
-  withdraw(originalAddress: string, value: BigIntish, toAddress?: string) {
+  setOutputs(outputs: Note[]) {
+    if (this.outputs.length > 2) {
+      throw new Error('Can not add more than 2 outputs.');
+    }
+    this.outputs = outputs;
+  }
+
+  withdraw(withdrawAddress: string, value: bigint, overrideWithdrawAddress?: string) {
     if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
       throw new Error('You may only call .withdraw once for a given transaction.');
     }
 
-    this.withdrawNote = new ERC20WithdrawNote(originalAddress, BigInt(value), this.token);
+    this.withdrawNote = new ERC20WithdrawNote(withdrawAddress, value, this.tokenAddress);
 
-    const isOverride = toAddress != null;
+    const isOverride = overrideWithdrawAddress != null;
     this.withdrawFlag = isOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
-
     if (isOverride) {
-      this.overrideOutput = toAddress;
+      this.overrideWithdrawAddress = overrideWithdrawAddress;
     }
   }
 
@@ -112,66 +126,20 @@ class Transaction {
     boundParams: BoundParams;
   }> {
     const merkleTree = wallet.merkletree[this.chainID];
-    const merkleRoot = await merkleTree.getRoot(0);
+    const merkleRoot = await merkleTree.getRoot(this.spendingTree); // TODO: Is this correct tree?
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();
     const viewingKey = wallet.getViewingKeyPair();
 
-    const outputTotal = this.outputs.reduce((left, right) => left + right.value, BigInt(0));
-
-    // Calculate total required to be supplied by UTXOs
-    const totalRequired = outputTotal + this.withdrawValue;
-
     // Check if there's too many outputs
-    if (this.outputs.length > 3) throw new Error('Too many outputs specified');
-
-    // Check if output token fields match tokenID for this transaction
-    this.outputs.forEach((output, index) => {
-      if (output.token !== this.token) throw new Error(`TokenID mismatch on output ${index}`);
-    });
-
-    // Get UTXOs sorted by tree
-    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[
-      formatToByteLength(this.token, 32, false)
-    ];
-
-    if (treeSortedBalances === undefined) {
-      const formattedTokenAddress = `0x${bytes.trim(this.token, ByteLength.Address)}`;
-      throw new Error(`No wallet balance for token: ${formattedTokenAddress}`);
-    }
-
-    // Sum balances
-    const balance: bigint = treeSortedBalances.reduce(
-      (left, right) => left + right.balance,
-      BigInt(0),
-    );
-
-    // Check if wallet balance is enough to cover this transaction
-    if (totalRequired > balance) throw new Error('Wallet balance too low');
-
-    let spendingTree: number | undefined;
-    let utxos: TXO[] | undefined;
-
-    // Find first tree with spending solutions.
-    treeSortedBalances.forEach((treeBalance, tree) => {
-      const solutions = findSolutions(treeBalance, totalRequired);
-      if (!solutions) {
-        return;
-      }
-      spendingTree = tree;
-      utxos = solutions;
-    });
-
-    if (utxos == null || spendingTree == null) {
-      throw new Error(
-        'Not enough spending solutions: balance too low in each tree. Balance consolidation required.',
-      );
-    }
+    if (this.outputs.length > 2) throw new Error('Too many transaction outputs');
 
     // Get values
     const nullifiers: bigint[] = [];
     const pathElements: bigint[][] = [];
     const pathIndices: bigint[] = [];
+
+    const { utxos } = this;
 
     for (let i = 0; i < utxos.length; i += 1) {
       // Get UTXO
@@ -182,7 +150,7 @@ class Transaction {
 
       // Push path elements
       // eslint-disable-next-line no-await-in-loop
-      const proof = await merkleTree.getProof(spendingTree, utxo.position);
+      const proof = await merkleTree.getProof(this.spendingTree, utxo.position);
       pathElements.push(proof.elements.map((element) => hexToBigInt(element)));
 
       // Push path indicies
@@ -196,14 +164,17 @@ class Transaction {
       this.outputs.reduce((left, right) => left + right.value, BigInt(0)) + this.withdrawValue;
 
     const change = totalIn - totalOut;
+    if (change < 0) {
+      throw new Error('Negative change value - transaction not possible.');
+    }
 
     const allOutputs: (Note | ERC20WithdrawNote)[] = [...this.outputs];
 
     // Create change output
-    allOutputs.push(new Note(wallet.addressKeys, bytes.random(16), change, this.token));
+    allOutputs.push(new Note(wallet.addressKeys, bytes.random(16), change, this.tokenAddress));
 
     // Push withdraw output if withdraw is requested
-    if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
+    if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW && this.withdrawNote) {
       allOutputs.push(this.withdrawNote);
     }
 
@@ -240,7 +211,7 @@ class Transaction {
       },
     );
     const boundParams: BoundParams = {
-      treeNumber: BigInt(spendingTree),
+      treeNumber: BigInt(this.spendingTree), // TODO: Is this correct tree?
       withdraw: this.withdrawFlag,
       adaptContract: this.adaptID.contract,
       adaptParams: this.adaptID.parameters,
@@ -260,7 +231,7 @@ class Transaction {
 
     // Format inputs
     const inputs: PrivateInputs = {
-      token: hexToBigInt(this.token),
+      token: hexToBigInt(this.tokenAddress),
       randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
       pathElements,
@@ -301,12 +272,12 @@ class Transaction {
       proof,
       publicInputs,
       boundParams,
-      this.overrideOutput,
+      this.overrideWithdrawAddress,
       this.withdrawNote.preImage,
     );
   }
 
-  static get zeroProof(): Proof {
+  private static get zeroProof(): Proof {
     const zero = nToHex(BigInt(0), ByteLength.UINT_8);
     // prettier-ignore
     return {
@@ -332,7 +303,7 @@ class Transaction {
       dummyProof,
       publicInputs,
       boundParams,
-      this.overrideOutput,
+      this.overrideWithdrawAddress,
       this.withdrawNote.preImage,
     );
   }
@@ -341,7 +312,7 @@ class Transaction {
     proof: Proof,
     publicInputs: PublicInputs,
     boundParams: BoundParams,
-    overrideOutput: string,
+    overrideWithdrawAddress: string,
     withdrawPreimage: CommitmentPreimage,
   ): SerializedTransaction {
     const formatted = Prover.formatProof(proof);
@@ -352,9 +323,9 @@ class Transaction {
       boundParams,
       commitments: publicInputs.commitmentsOut,
       withdrawPreimage,
-      overrideOutput,
+      overrideOutput: overrideWithdrawAddress,
     };
   }
 }
 
-export { Transaction, NOTE_INPUTS, NOTE_OUTPUTS };
+export { Transaction };

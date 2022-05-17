@@ -1,6 +1,6 @@
 import { Signature } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { BytesData } from '../models/transaction-types';
+import { BytesData } from '../models/formatted-types';
 import { KeyNode } from '../models/types';
 import { hash, keysUtils } from '../utils';
 import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';

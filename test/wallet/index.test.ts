@@ -9,7 +9,6 @@ import memdown from 'memdown';
 import { Database } from '../../src/database';
 import { bech32 } from '../../src/keyderivation';
 import { MerkleTree } from '../../src/merkletree';
-import { Commitment, Nullifier } from '../../src/models/transaction-types';
 import { bytes, hash } from '../../src/utils';
 import { verifyED25519 } from '../../src/utils/keys-utils';
 import { Wallet } from '../../src/wallet';

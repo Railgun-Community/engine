@@ -1,10 +1,8 @@
 // @ts-ignore
 import { poseidon } from 'circomlibjs';
 import { utils as ethersutils } from 'ethers';
-import { BytesData } from '../models/transaction-types';
+import { BytesData } from '../models/formatted-types';
 import { arrayify } from './bytes';
-
-
 
 /**
  * Calculates sha256 hash of bytes
@@ -19,7 +17,6 @@ function sha256(preImage: BytesData): string {
   // Hash and return
   return ethersutils.sha256(preImageFormatted).slice(2);
 }
-
 
 /**
  * Calculates sha512 hmac

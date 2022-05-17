@@ -1,4 +1,4 @@
-import { CommitmentPreimage, TokenData, TokenType } from '../models/transaction-types';
+import { CommitmentPreimage, TokenData, TokenType } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { poseidon } from '../utils/hash';

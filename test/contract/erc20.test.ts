@@ -6,7 +6,6 @@ import memdown from 'memdown';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { ERC20RailgunContract } from '../../src/contract';
 import { Note } from '../../src/note';
-import { Transaction } from '../../src/transaction';
 import { Lepton } from '../../src';
 import { abi as erc20abi } from '../erc20abi.test';
 import { config } from '../config.test';
@@ -17,8 +16,9 @@ import { ERC20Deposit } from '../../src/note/erc20-deposit';
 import { CommitmentEvent } from '../../src/contract/erc20/events';
 import { EventName } from '../../src/contract/erc20';
 import { bytes } from '../../src/utils';
-import { Nullifier, TokenType } from '../../src/models/transaction-types';
 import { ERC20WithdrawNote } from '../../src/note/erc20-withdraw';
+import { Nullifier, TokenType } from '../../src/models/formatted-types';
+import { TransactionBatch } from '../../src/transaction/transaction-batch';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -112,11 +112,11 @@ describe('Contract/Index', function () {
     }
     await testDeposit();
 
-    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
-    const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
-
-    const tx = await contract.transact([dummyTx]);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    transactionBatch.addOutput(new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+    const tx = await contract.transact(
+      await transactionBatch.generateDummySerializedTransactions(wallet, testEncryptionKey),
+    );
 
     tx.from = '0x000000000000000000000000000000000000dEaD';
 
@@ -130,10 +130,13 @@ describe('Contract/Index', function () {
     }
     await testDeposit();
 
-    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
-    const dummyTx = await transaction.dummyProve(wallet, testEncryptionKey);
-    const call = await contract.transact([dummyTx]);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    transactionBatch.addOutput(new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+    const dummyTxs = await transactionBatch.generateDummySerializedTransactions(
+      wallet,
+      testEncryptionKey,
+    );
+    const call = await contract.transact(dummyTxs);
 
     // @todo Copy from overrides from above when updating this
 
@@ -143,7 +146,7 @@ describe('Contract/Index', function () {
       from: '0x000000000000000000000000000000000000dEaD',
     };
 
-    expect((await contract.relay([dummyTx], random, true, [call], overrides)).gasLimit).to.throw(); // greaterThanOrEqual(0);
+    expect((await contract.relay(dummyTxs, random, true, [call], overrides)).gasLimit).to.throw(); // greaterThanOrEqual(0);
   });
 
   /*
@@ -251,12 +254,15 @@ describe('Contract/Index', function () {
 
     startingBlock = await provider.getBlockNumber();
 
-    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transaction.outputs = [new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
-    transaction.withdraw(etherswallet.address, 100n);
-    const serializedTx = await transaction.prove(lepton.prover, wallet, testEncryptionKey);
-
-    const transact = await contract.transact([serializedTx]);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    transactionBatch.addOutput(new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+    transactionBatch.setWithdraw(etherswallet.address, 100n);
+    const serializedTxs = await transactionBatch.generateSerializedTransactions(
+      lepton.prover,
+      wallet,
+      testEncryptionKey,
+    );
+    const transact = await contract.transact(serializedTxs);
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
@@ -387,14 +393,18 @@ describe('Contract/Index', function () {
       async () => {},
     );
     // Create transaction
-    const transaction = new Transaction(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transaction.outputs = [new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS)];
-    transaction.withdraw(etherswallet.address, 100n);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    transactionBatch.addOutput(new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+    transactionBatch.setWithdraw(etherswallet.address, 100n);
 
     // Create transact
-    const transact = await contract.transact([
-      await transaction.prove(lepton.prover, wallet, testEncryptionKey),
-    ]);
+    const transact = await contract.transact(
+      await transactionBatch.generateSerializedTransactions(
+        lepton.prover,
+        wallet,
+        testEncryptionKey,
+      ),
+    );
 
     // Send transact on chain
     await (await etherswallet.sendTransaction(transact)).wait();

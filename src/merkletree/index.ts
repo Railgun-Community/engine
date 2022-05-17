@@ -13,7 +13,7 @@ import {
   hexToBigInt,
 } from '../utils/bytes';
 import LeptonDebug from '../debugger';
-import { Commitment, MerkleProof, Nullifier } from '../models/transaction-types';
+import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;

@@ -1,6 +1,6 @@
 import { Signature } from 'circomlibjs';
 import { AddressData } from '../keyderivation/bech32-encode';
-import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/transaction-types';
+import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/formatted-types';
 import { PublicInputs } from '../prover/types';
 import { encryption, keysUtils } from '../utils';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';

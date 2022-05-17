@@ -58,7 +58,7 @@ export type SerializedTransaction = {
   nullifiers: bigint[];
   commitments: bigint[];
   boundParams: BoundParams;
-  withdrawPreimage?: CommitmentPreimage;
+  withdrawPreimage: CommitmentPreimage;
   overrideOutput: string;
 };
 

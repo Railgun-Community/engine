@@ -9,7 +9,7 @@ import { Database } from '../../src/database';
 import { MERKLE_ZERO_VALUE, MerkleTree } from '../../src/merkletree';
 import type { TreePurpose } from '../../src/merkletree';
 import { ZERO_ADDRESS } from '../../src/utils/constants';
-import { TokenType } from '../../src/models/transaction-types';
+import { TokenType } from '../../src/models/formatted-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

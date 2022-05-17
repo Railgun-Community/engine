@@ -1,4 +1,4 @@
-import { EncryptedData } from '../models/transaction-types';
+import { EncryptedData } from '../models/formatted-types';
 import { toUTF8String, combine, chunk, fromUTF8String } from './bytes';
 import { encryptedDataToCiphertext, ciphertextToEncryptedJSONData } from './ciphertext';
 import { aes } from './encryption';

@@ -1,16 +1,7 @@
-import { Note } from '../note';
-import { Node } from '../keyderivation';
+import { TXO } from '../models/txo-types';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
-};
-
-export type TXO = {
-  tree: number;
-  position: number;
-  txid: string;
-  spendtxid: string | false;
-  note: Note;
 };
 
 export type TreeBalance = {
@@ -38,5 +29,3 @@ export type AddressKeys = {
 };
 
 export type WalletData = { mnemonic: string; index: number };
-
-export type WalletNodes = { spending: Node; viewing: Node };

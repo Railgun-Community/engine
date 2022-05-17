@@ -8,11 +8,11 @@ import memdown from 'memdown';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
-import { TokenType } from '../../src/models/transaction-types';
+import { TokenType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Prover } from '../../src/prover';
-import { Transaction } from '../../src/transaction';
 import { hashBoundParams } from '../../src/transaction/transaction';
+import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { bytes } from '../../src/utils';
 import { formatToByteLength } from '../../src/utils/bytes';
 import { poseidon } from '../../src/utils/hash';
@@ -34,7 +34,7 @@ let merkletree: MerkleTree;
 let wallet: Wallet;
 let chainID: number;
 let ethersWallet: EthersWallet;
-let transaction: Transaction;
+let transactionBatch: TransactionBatch;
 let prover: Prover;
 let address: AddressData;
 
@@ -116,7 +116,7 @@ describe('Transaction/ERC20', function () {
 
   beforeEach(async () => {
     // deposit = new ERC20Deposit(masterPublicKey, random, DECIMALS_18, token);
-    transaction = new Transaction(token, TokenType.ERC20, 1);
+    transactionBatch = new TransactionBatch(token, TokenType.ERC20, 1);
   });
 
   it('Should hash bound parameters', async () => {
@@ -159,8 +159,15 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should generate a valid signature for transaction', async () => {
-    transaction.outputs = [makeNote()];
+    transactionBatch.addOutput(makeNote());
+    const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
+      wallet,
+    );
+    expect(spendingSolutionGroups.length).to.equal(1);
 
+    const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
+      spendingSolutionGroups[0],
+    );
     const { inputs, publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
     const { signature } = inputs;
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
@@ -169,91 +176,111 @@ describe('Transaction/ERC20', function () {
 
     assert.isTrue(verifyEDDSA(msg, sig, pubkey));
 
-    // eslint-disable-next-line no-undef
     expect(sig).to.deep.equal(signEDDSA(privateKey, msg));
   });
 
-  it('Should generate inputs for transaction', async () => {
-    transaction.outputs = [makeNote()];
+  it('Should generate validated inputs for transaction batch', async () => {
+    transactionBatch.addOutput(makeNote());
+    const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
+      wallet,
+    );
+    expect(spendingSolutionGroups.length).to.equal(1);
 
+    const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
+      spendingSolutionGroups[0],
+    );
     const { publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
     const { nullifiers, commitmentsOut } = publicInputs;
     expect(nullifiers.length).to.equal(1);
     expect(commitmentsOut.length).to.equal(2);
 
-    transaction.outputs = [makeNote(), makeNote(), makeNote(), makeNote()];
-
+    transactionBatch.addOutput(makeNote());
+    transactionBatch.addOutput(makeNote());
     await expect(
-      transaction.generateInputs(wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith('Too many outputs specified');
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+    ).to.eventually.be.rejectedWith('Too many transaction outputs');
 
-    transaction.outputs = [
+    transactionBatch.resetOutputs();
+    transactionBatch.addOutput(
       new Note(address, random, 6500000000000n, '000925cdf66ddf5b88016df1fe915e68eff8f192'),
-    ];
+    );
 
     await expect(
-      transaction.generateInputs(wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith('TokenID mismatch on output 0');
+      transactionBatch.generateValidSpendingSolutionGroups(wallet),
+    ).to.eventually.be.rejectedWith('Token address mismatch on output 0');
 
-    transaction.outputs = [makeNote(21000000000027360000000000n)];
-
+    transactionBatch.resetOutputs();
+    transactionBatch.addOutput(makeNote(21000000000027360000000000n));
     await expect(
-      transaction.generateInputs(wallet, testEncryptionKey),
+      transactionBatch.generateValidSpendingSolutionGroups(wallet),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
-    transaction.outputs = [makeNote(11000000000027360000000000n)];
-
+    transactionBatch.resetOutputs();
+    transactionBatch.addOutput(makeNote(11000000000027360000000000n));
     await expect(
-      transaction.generateInputs(wallet, testEncryptionKey),
+      transactionBatch.generateValidSpendingSolutionGroups(wallet),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
-    const transaction2 = new Transaction('ff', TokenType.ERC20, 1);
+    const transaction2 = new TransactionBatch('ff', TokenType.ERC20, 1);
 
-    transaction2.withdraw(await ethersWallet.getAddress(), 12n);
+    transaction2.setWithdraw(ethersWallet.address, 12n);
 
     await expect(
-      transaction2.generateInputs(wallet, testEncryptionKey),
+      transaction2.generateValidSpendingSolutionGroups(wallet),
     ).to.eventually.be.rejectedWith(
       `No wallet balance for token: 0x00000000000000000000000000000000000000ff`,
     );
-
-    transaction.outputs = [makeNote()];
-
-    transaction.withdraw(await ethersWallet.getAddress(), 2n, '01');
-
-    expect(
-      (await transaction.generateInputs(wallet, testEncryptionKey)).publicInputs.nullifiers.length,
-    ).to.equal(1);
-
-    // transaction.setDeposit('00');
-    // transaction.setWithdraw('00');
-
-    /*
-    await expect(
-      transaction.generateInputs(wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith("Withdraw shouldn't be set");
-    */
   });
 
-  it('Should create transaction proofs', async () => {
-    transaction.outputs = [makeNote(1n)];
-    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
-    expect(tx.nullifiers.length).to.equal(1);
-    expect(tx.commitments.length).to.equal(2);
+  it('Should generate validated inputs for transaction batch - withdraw', async () => {
+    transactionBatch.addOutput(makeNote());
+    transactionBatch.setWithdraw(ethersWallet.address, 2n, '01');
+    const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
+      wallet,
+    );
+    expect(spendingSolutionGroups.length).to.equal(1);
 
-    transaction.outputs = [makeNote(1715000000000n)];
+    const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
+      spendingSolutionGroups[0],
+    );
+    const { publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
+    const { nullifiers, commitmentsOut } = publicInputs;
+    expect(nullifiers.length).to.equal(1);
+    expect(commitmentsOut.length).to.equal(3);
+  });
 
-    // transaction.tree = 3;
+  it('Should create transaction proofs and serialized transactions', async () => {
+    transactionBatch.addOutput(makeNote(1n));
+    const txs = await transactionBatch.generateSerializedTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+    );
+    expect(txs.length).to.equal(1);
+    expect(txs[0].nullifiers.length).to.equal(1);
+    expect(txs[0].commitments.length).to.equal(2);
 
-    const tx2 = await transaction.prove(prover, wallet, testEncryptionKey);
+    transactionBatch.resetOutputs();
+    transactionBatch.addOutput(makeNote(1715000000000n));
 
-    expect(tx2.nullifiers.length).to.equal(1);
+    const txs2 = await transactionBatch.generateSerializedTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+    );
+    expect(txs2.length).to.equal(1);
+    expect(txs2[0].nullifiers.length).to.equal(1);
   });
 
   it('Should create dummy transaction proofs', async () => {
-    transaction.outputs = [makeNote()];
-    const tx = await transaction.prove(prover, wallet, testEncryptionKey);
-    expect(tx.nullifiers.length).to.equal(1);
+    transactionBatch.addOutput(makeNote());
+    const txs = await transactionBatch.generateDummySerializedTransactions(
+      wallet,
+      testEncryptionKey,
+    );
+    expect(txs.length).to.equal(1);
+    expect(txs[0].nullifiers.length).to.equal(1);
+    expect(txs[0].commitments.length).to.equal(2);
   });
 
   // it('Generator', async () => {
