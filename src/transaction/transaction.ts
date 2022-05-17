@@ -211,7 +211,7 @@ class Transaction {
       },
     );
     const boundParams: BoundParams = {
-      treeNumber: BigInt(this.spendingTree), // TODO: Is this correct tree?
+      treeNumber: BigInt(this.spendingTree),
       withdraw: this.withdrawFlag,
       adaptContract: this.adaptID.contract,
       adaptParams: this.adaptID.parameters,
