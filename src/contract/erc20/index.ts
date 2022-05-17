@@ -6,6 +6,7 @@ import {
   EventFilter,
   CallOverrides,
 } from 'ethers';
+import EventEmitter from 'events';
 import type { Provider } from '@ethersproject/abstract-provider';
 import { abi } from './abi';
 import {
@@ -34,6 +35,7 @@ import {
 import LeptonDebug from '../../debugger';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
+import { LeptonEvent } from '../../wallet/types';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -52,11 +54,12 @@ export enum EventName {
   Nullifiers = 'Nullifiers',
 }
 
-class ERC20RailgunContract {
+class ERC20RailgunContract extends EventEmitter {
   contract: Contract;
 
   // Contract address
   address: string;
+
 
   /**
    * Connect to Railgun instance on network
@@ -64,6 +67,7 @@ class ERC20RailgunContract {
    * @param provider - Network provider
    */
   constructor(address: string, provider: Provider) {
+    super();
     this.address = address;
     this.contract = new Contract(address, abi, provider);
   }
@@ -127,7 +131,9 @@ class ERC20RailgunContract {
           treeNumber,
           nullifier,
         };
-        await eventsNullifierListener(formatNullifierEvents(args, event.transactionHash));
+        const formattedEventArgs = formatNullifierEvents(args, event.transactionHash);
+        this.emit(LeptonEvent.Nullified, formattedEventArgs);
+        await eventsNullifierListener(formattedEventArgs);
       },
     );
 

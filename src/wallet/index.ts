@@ -35,6 +35,8 @@ import {
   ScannedEventData,
   WalletData,
   TreeBalance,
+  WalletNodes,
+  LeptonEvent,
 } from './types';
 import { TXO } from '../models/txo-types';
 
@@ -513,7 +515,7 @@ class Wallet extends EventEmitter {
 
       // Emit scanned event for this chain
       LeptonDebug.log(`wallet: scanned ${chainID}`);
-      this.emit('scanned', { chainID } as ScannedEventData);
+      this.emit(LeptonEvent.Scanned, { chainID } as ScannedEventData);
     } catch (err: any) {
       LeptonDebug.log(`wallet.scan error: ${err.message}`);
       LeptonDebug.error(err);

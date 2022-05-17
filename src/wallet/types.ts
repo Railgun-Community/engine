@@ -1,4 +1,5 @@
-import { TXO } from '../models/txo-types';
+import { Node } from '../keyderivation';
+import { Note } from '../note';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -29,3 +30,8 @@ export type AddressKeys = {
 };
 
 export type WalletData = { mnemonic: string; index: number };
+
+export enum LeptonEvent {
+  Scanned = 'scanned',
+  Nullified = 'nullified',
+}
