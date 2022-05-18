@@ -332,9 +332,8 @@ class Wallet extends EventEmitter {
     const address = this.addressKeys;
     const vpk = this.getViewingKeyPair().privateKey;
 
-    const latestTree = await this.merkletree[chainID].latestTree();
     // Get chain namespace
-    const namespace = this.getWalletDBPrefix(chainID, latestTree);
+    const namespace = this.getWalletDBPrefix(chainID);
 
     // Stream list of keys out
     const keys: string[] = await new Promise((resolve) => {
