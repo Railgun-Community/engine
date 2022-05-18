@@ -350,12 +350,11 @@ class Wallet extends EventEmitter {
         });
     });
 
+    const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
+
     // Calculate UTXOs
     return Promise.all(
-      keys.map(async (key) => {
-        // Split key into path components
-        const keySplit = key.split(':');
-
+      keySplits.map(async (keySplit) => {
         // Decode UTXO
         // @todo clarify stored commitment / UTXO type
         const UTXO = msgpack.decode(arrayify(await this.db.get(keySplit)));

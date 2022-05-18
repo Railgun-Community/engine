@@ -92,9 +92,9 @@ describe('Transaction/Transaction Batch', function () {
       wallet,
       testEncryptionKey,
     );
-    expect(txs.length).to.equal(1);
-    expect(txs[0].nullifiers.length).to.equal(1);
-    expect(txs[0].commitments.length).to.equal(2);
+    expect(txs.length).to.equal(4);
+    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
+    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(makeNote(depositValue * 6n));
