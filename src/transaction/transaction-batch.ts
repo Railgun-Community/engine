@@ -11,11 +11,9 @@ import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
   createSpendingSolutionGroupsForWithdraw,
-  extractSpendingSolutionGroupsData,
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isValidFor3Outputs } from '../solutions/nullifiers';
-import LeptonDebug from '../debugger';
 
 class TransactionBatch {
   private chainID: number;
