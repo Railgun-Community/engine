@@ -222,6 +222,13 @@ describe('Contract/Index', function () {
     // Add a secondary listener.
     contract.treeUpdates(eventsListener, nullifiersListener);
 
+    // Subscribe to Nullified event
+    const resultNullifiers2: Nullifier[] = [];
+    const nullifiersListener2 =  (nullifiers: Nullifier[]) => {
+      resultNullifiers2.push(...nullifiers);
+    };
+    contract.on(LeptonEvent.ContractNullifierReceived, nullifiersListener2 )
+
     const [txResponse] = await testDeposit();
 
     // Listeners should have been updated automatically by contract events.
@@ -274,6 +281,7 @@ describe('Contract/Index', function () {
     expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
     // @ts-ignore
     expect(resultNullifiers[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    expect(resultNullifiers2[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
 
     resultEvent = undefined;
     resultNullifiers = [];

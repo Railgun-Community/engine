@@ -128,8 +128,9 @@ class ERC20RailgunContract extends EventEmitter {
           nullifier,
         };
         const formattedEventArgs = formatNullifierEvents(args, event.transactionHash);
-        this.emit(LeptonEvent.ContractNullifierReceived, formattedEventArgs);
         await eventsNullifierListener(formattedEventArgs);
+        // @todo why is it emitted twice for a transaction of 1 input?
+        this.emit(LeptonEvent.ContractNullifierReceived, formattedEventArgs);
       },
     );
 
