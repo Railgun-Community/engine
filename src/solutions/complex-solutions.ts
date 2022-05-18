@@ -138,7 +138,7 @@ export const createSpendingSolutionGroupsForWithdraw = (
  */
 export const consolidateBalanceError = (): Error => {
   throw new Error(
-    'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
+    'Please consolidate balances before multi-sending. Send tokens to one destination address, or select a different Relayer fee token, to resolve.',
   );
 };
 
