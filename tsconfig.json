@@ -21,7 +21,7 @@
     "src/**/*.ts"
   ],
   "exclude": [
-    "dist/*",
-    "test/*"
+    "dist",
+    "test"
   ]
 }
