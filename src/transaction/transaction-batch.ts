@@ -204,7 +204,6 @@ class TransactionBatch {
       const withdrawSpendingSolutionGroups = createSpendingSolutionGroupsForWithdraw(
         treeSortedBalances,
         this.withdrawTotal,
-        remainingOutputs,
         excludedUTXOIDs,
       );
 

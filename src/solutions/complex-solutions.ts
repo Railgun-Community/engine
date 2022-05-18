@@ -5,13 +5,20 @@ import { TreeBalance } from '../wallet/types';
 import { VALID_NULLIFIER_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
 
-export const createSpendingSolutionGroupsForOutput = (
+type SolutionSpendingGroupGenerator = (
+  tree: number,
+  solutionValue: bigint,
+  utxos: TXO[],
+) => SpendingSolutionGroup;
+
+const createSpendingSolutionsForValue = (
   treeSortedBalances: TreeBalance[],
-  output: Note,
-  remainingOutputs: Note[],
+  value: bigint,
   excludedUTXOIDs: string[],
-): SpendingSolutionGroup[] => {
-  let amountLeft = output.value;
+  spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator,
+  updateOutputsCallback?: (amountLeft: bigint) => void,
+) => {
+  let amountLeft = value;
 
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
@@ -26,35 +33,24 @@ export const createSpendingSolutionGroupsForOutput = (
       // Don't allow these UTXOs to be used twice.
       excludedUTXOIDs.push(...utxos.map((utxo) => utxo.txid));
 
-      const requiredOutputValue = amountLeft;
-
       // Decrement amount left by total spend in UTXOs.
       const totalSpend = calculateTotalSpend(utxos);
-      amountLeft -= totalSpend;
 
       // Solution Value is the smaller of Solution spend value, or required output value.
-      const solutionValue = minBigInt(totalSpend, requiredOutputValue);
+      const solutionValue = minBigInt(totalSpend, amountLeft);
 
-      // Generate new output note and spending solution group, which will
-      // be used to create a Transaction.
-      const solutionOutput = output.newNoteWithValue(solutionValue);
-      spendingSolutionGroups.push({
-        spendingTree: tree,
-        utxos,
-        outputs: [solutionOutput],
-        withdrawValue: BigInt(0),
-      });
+      // Generate spending solution group, which will be used to create a Transaction.
+      const spendingSolutionGroup = spendingSolutionGroupGenerator(tree, solutionValue, utxos);
+      spendingSolutionGroups.push(spendingSolutionGroup);
 
-      // Remove this "used" output note.
-      remainingOutputs.splice(0, 1);
+      amountLeft -= totalSpend;
 
-      const needsMoreUTXOs = amountLeft > 0;
-      if (needsMoreUTXOs) {
-        // Add another remaining output note for any Amount Left.
-        remainingOutputs.unshift(output.newNoteWithValue(amountLeft));
+      // For "outputs" search only, we iteratively search through and update an array of output notes.
+      if (updateOutputsCallback) {
+        updateOutputsCallback(amountLeft);
       }
 
-      if (!needsMoreUTXOs) {
+      if (amountLeft < 0) {
         // Break out from the forEach loop, and continue with next output.
         return;
       }
@@ -69,61 +65,70 @@ export const createSpendingSolutionGroupsForOutput = (
   return spendingSolutionGroups;
 };
 
-export const createSpendingSolutionGroupsForWithdraw = (
+export const createSpendingSolutionGroupsForOutput = (
   treeSortedBalances: TreeBalance[],
-  withdrawValue: bigint,
+  output: Note,
   remainingOutputs: Note[],
   excludedUTXOIDs: string[],
 ): SpendingSolutionGroup[] => {
-  let amountLeft = withdrawValue;
+  const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
+    tree: number,
+    solutionValue: bigint,
+    utxos: TXO[],
+  ): SpendingSolutionGroup => {
+    const solutionOutput = output.newNoteWithValue(solutionValue);
 
-  const spendingSolutionGroups: SpendingSolutionGroup[] = [];
+    return {
+      spendingTree: tree,
+      utxos,
+      outputs: [solutionOutput],
+      withdrawValue: BigInt(0),
+    };
+  };
 
-  treeSortedBalances.forEach((treeBalance, tree) => {
-    while (amountLeft > 0) {
-      const utxos = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDs);
-      if (!utxos) {
-        // No more solutions in this tree.
-        break;
-      }
+  const updateOutputsCallback = (amountLeft: bigint) => {
+    // Remove the "used" output note.
+    remainingOutputs.splice(0, 1);
 
-      // Don't allow these UTXOs to be used twice.
-      excludedUTXOIDs.push(...utxos.map((utxo) => utxo.txid));
-
-      const requiredOutputValue = amountLeft;
-
-      // Decrement amount left by total spend in UTXOs.
-      const totalSpend = calculateTotalSpend(utxos);
-      amountLeft -= totalSpend;
-
-      // Solution Value is the smaller of Solution spend value, or required output value.
-      const solutionValue = minBigInt(totalSpend, requiredOutputValue);
-
-      // Generate spending solution group with solutionValue set for its withdraw value.
-      spendingSolutionGroups.push({
-        spendingTree: tree,
-        utxos,
-        outputs: [],
-        withdrawValue: solutionValue,
-      });
-
-      // Remove this "used" output note.
-      remainingOutputs.splice(0, 1);
-
-      const needsMoreUTXOs = amountLeft > 0;
-      if (!needsMoreUTXOs) {
-        // Break out from the forEach loop, and continue with next output.
-        return;
-      }
+    if (amountLeft > 0) {
+      // Add another remaining output note for any Amount Left.
+      remainingOutputs.unshift(output.newNoteWithValue(amountLeft));
     }
-  });
+  };
 
-  if (amountLeft > 0) {
-    // Could not find enough solutions.
-    throw consolidateBalanceError();
-  }
+  return createSpendingSolutionsForValue(
+    treeSortedBalances,
+    output.value,
+    excludedUTXOIDs,
+    spendingSolutionGroupGenerator,
+    updateOutputsCallback,
+  );
+};
 
-  return spendingSolutionGroups;
+export const createSpendingSolutionGroupsForWithdraw = (
+  treeSortedBalances: TreeBalance[],
+  withdrawValue: bigint,
+  excludedUTXOIDs: string[],
+): SpendingSolutionGroup[] => {
+  const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
+    tree: number,
+    solutionValue: bigint,
+    utxos: TXO[],
+  ): SpendingSolutionGroup => {
+    return {
+      spendingTree: tree,
+      utxos,
+      outputs: [],
+      withdrawValue: solutionValue,
+    };
+  };
+
+  return createSpendingSolutionsForValue(
+    treeSortedBalances,
+    withdrawValue,
+    excludedUTXOIDs,
+    spendingSolutionGroupGenerator,
+  );
 };
 
 /**

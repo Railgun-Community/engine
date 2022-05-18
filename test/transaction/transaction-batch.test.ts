@@ -8,7 +8,7 @@ import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
 import { Commitment, TokenType } from '../../src/models/formatted-types';
-import { ERC20WithdrawNote, Note } from '../../src/note';
+import { Note } from '../../src/note';
 import { Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { bytes } from '../../src/utils';
