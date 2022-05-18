@@ -110,9 +110,25 @@ describe('Transaction/Transaction Batch', function () {
     transactionBatch.addOutput(makeNote(depositValue));
     transactionBatch.addOutput(makeNote(depositValue));
     transactionBatch.addOutput(makeNote(depositValue));
+    const txs2 = await transactionBatch.generateSerializedTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+    );
+    expect(txs2.length).to.equal(6);
+    expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
+    expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
+
+    transactionBatch.resetOutputs();
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
-    ).to.eventually.be.rejectedWith('');
+    ).to.eventually.be.rejectedWith(
+      'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
+    );
   });
 
   this.afterAll(() => {
