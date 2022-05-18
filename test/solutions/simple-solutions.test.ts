@@ -7,7 +7,7 @@ import { VALID_NULLIFIER_COUNTS } from '../../src/solutions/nullifiers';
 import { shouldAddMoreUTXOsToConsolidateBalances } from '../../src/solutions/simple-solutions';
 import { artifactsGetter } from '../helper';
 
-describe('Transaction/Solutions', () => {
+describe('Solutions/Simple Solutions', () => {
   it('Should test basic artifacts exist for each valid nullifier', () => {
     VALID_NULLIFIER_COUNTS.forEach((nullifierCount) => {
       // Test that nullifier X 2 artifacts.

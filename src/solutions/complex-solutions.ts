@@ -82,36 +82,30 @@ export const consolidateBalanceError = (): Error => {
 /**
  * Finds next valid nullifier count above the current nullifier count.
  */
-const nextNullifierTarget = (utxoCount: number): number | undefined =>
+export const nextNullifierTarget = (utxoCount: number): number | undefined =>
   VALID_NULLIFIER_COUNTS.find((n) => n > utxoCount);
 
-const shouldAddMoreUTXOsForSolutionBatch = (
-  spendingUTXOs: TXO[],
-  allUTXOs: TXO[],
+export const shouldAddMoreUTXOsForSolutionBatch = (
+  currentNullifierCount: number,
+  totalNullifierCount: number,
+  currentSpend: bigint,
   totalRequired: bigint,
 ) => {
-  const nullifierCount = spendingUTXOs.length;
-  const totalSpend = calculateTotalSpend(spendingUTXOs);
-
-  if (totalSpend >= totalRequired) {
+  if (currentSpend >= totalRequired) {
     // We've hit the target required.
     // Keep adding nullifiers until the count is valid.
-    return !isValidNullifierCount(nullifierCount);
+    return !isValidNullifierCount(currentNullifierCount);
   }
 
-  const nullifierTarget = nextNullifierTarget(nullifierCount);
-
+  const nullifierTarget = nextNullifierTarget(currentNullifierCount);
   if (!nullifierTarget) {
-    // No next nullifiers.
-    // Keep adding nullifiers until the count is valid.
-    return !isValidNullifierCount(nullifierCount);
+    // No next nullifier target.
+    return false;
   }
 
-  const totalNullifierCount = allUTXOs.length;
-  if (nextNullifierTarget(nullifierCount) > totalNullifierCount) {
-    // Not reachable.
-    // Keep adding nullifiers until the count is valid.
-    return !isValidNullifierCount(nullifierCount);
+  if (nextNullifierTarget(currentNullifierCount) > totalNullifierCount) {
+    // Next target is not reachable. Don't add any more UTXOs.
+    return false;
   }
 
   // Total spend < total required, and next nullifier target is reachable.
@@ -138,12 +132,19 @@ export function findNextSolutionBatch(
   const utxos: TXO[] = [];
 
   // Check if sum of UTXOs selected is greater than target
-  while (shouldAddMoreUTXOsForSolutionBatch(utxos, filteredUTXOs, totalRequired)) {
+  while (
+    shouldAddMoreUTXOsForSolutionBatch(
+      utxos.length,
+      filteredUTXOs.length,
+      calculateTotalSpend(utxos),
+      totalRequired,
+    )
+  ) {
     utxos.push(filteredUTXOs[utxos.length]);
   }
 
   if (!isValidNullifierCount(utxos.length)) {
-    throw new Error('Invalid nullifier count');
+    return undefined;
   }
 
   return utxos;
