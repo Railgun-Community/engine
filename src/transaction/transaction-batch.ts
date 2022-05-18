@@ -10,6 +10,7 @@ import { TokenType, BigIntish, SerializedTransaction } from '../models/formatted
 import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
+  createSpendingSolutionGroupsForWithdraw,
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 
@@ -56,6 +57,12 @@ class TransactionBatch {
     this.withdrawAddress = withdrawAddress;
     this.withdrawTotal = BigInt(value);
     this.overrideWithdrawAddress = overrideWithdrawAddress;
+  }
+
+  resetWithdraw() {
+    this.withdrawAddress = undefined;
+    this.withdrawTotal = BigInt(0);
+    this.overrideWithdrawAddress = undefined;
   }
 
   /**
@@ -191,6 +198,21 @@ class TransactionBatch {
     if (remainingOutputs.length > 0) {
       // Could not find enough solutions.
       throw consolidateBalanceError();
+    }
+
+    if (this.withdrawTotal > 0) {
+      const withdrawSpendingSolutionGroups = createSpendingSolutionGroupsForWithdraw(
+        treeSortedBalances,
+        this.withdrawTotal,
+        remainingOutputs,
+        excludedUTXOIDs,
+      );
+
+      if (!withdrawSpendingSolutionGroups.length) {
+        throw consolidateBalanceError();
+      }
+
+      spendingSolutionGroups.push(...withdrawSpendingSolutionGroups);
     }
 
     return spendingSolutionGroups;

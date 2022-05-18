@@ -69,6 +69,63 @@ export const createSpendingSolutionGroupsForOutput = (
   return spendingSolutionGroups;
 };
 
+export const createSpendingSolutionGroupsForWithdraw = (
+  treeSortedBalances: TreeBalance[],
+  withdrawValue: bigint,
+  remainingOutputs: Note[],
+  excludedUTXOIDs: string[],
+): SpendingSolutionGroup[] => {
+  let amountLeft = withdrawValue;
+
+  const spendingSolutionGroups: SpendingSolutionGroup[] = [];
+
+  treeSortedBalances.forEach((treeBalance, tree) => {
+    while (amountLeft > 0) {
+      const utxos = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDs);
+      if (!utxos) {
+        // No more solutions in this tree.
+        break;
+      }
+
+      // Don't allow these UTXOs to be used twice.
+      excludedUTXOIDs.push(...utxos.map((utxo) => utxo.txid));
+
+      const requiredOutputValue = amountLeft;
+
+      // Decrement amount left by total spend in UTXOs.
+      const totalSpend = calculateTotalSpend(utxos);
+      amountLeft -= totalSpend;
+
+      // Solution Value is the smaller of Solution spend value, or required output value.
+      const solutionValue = minBigInt(totalSpend, requiredOutputValue);
+
+      // Generate spending solution group with solutionValue set for its withdraw value.
+      spendingSolutionGroups.push({
+        spendingTree: tree,
+        utxos,
+        outputs: [],
+        withdrawValue: solutionValue,
+      });
+
+      // Remove this "used" output note.
+      remainingOutputs.splice(0, 1);
+
+      const needsMoreUTXOs = amountLeft > 0;
+      if (!needsMoreUTXOs) {
+        // Break out from the forEach loop, and continue with next output.
+        return;
+      }
+    }
+  });
+
+  if (amountLeft > 0) {
+    // Could not find enough solutions.
+    throw consolidateBalanceError();
+  }
+
+  return spendingSolutionGroups;
+};
+
 /**
  * Wallet has appropriate balance in aggregate, but no solutions remain.
  * This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.

@@ -8,7 +8,7 @@ import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
 import { Commitment, TokenType } from '../../src/models/formatted-types';
-import { Note } from '../../src/note';
+import { ERC20WithdrawNote, Note } from '../../src/note';
 import { Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { bytes } from '../../src/utils';
@@ -124,6 +124,69 @@ describe('Transaction/Transaction Batch', function () {
     transactionBatch.addOutput(makeNote(depositValue + 1n));
     transactionBatch.addOutput(makeNote(depositValue + 1n));
     transactionBatch.addOutput(makeNote(depositValue + 1n));
+    await expect(
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+    ).to.eventually.be.rejectedWith(
+      'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
+    );
+  });
+
+  it('Should validate transaction batch outputs w/ withdraws', async () => {
+    transactionBatch.setWithdraw(ethersWallet.address, depositValue * 6n);
+    const txs = await transactionBatch.generateSerializedTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+    );
+    expect(txs.length).to.equal(4);
+    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
+    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
+    expect(txs.map((tx) => tx.withdrawPreimage.value)).to.deep.equal([
+      depositValue,
+      2n * depositValue,
+      2n * depositValue,
+      depositValue,
+    ]);
+
+    transactionBatch.resetOutputs();
+    transactionBatch.resetWithdraw();
+    transactionBatch.addOutput(makeNote(depositValue * 6n));
+    transactionBatch.setWithdraw(ethersWallet.address, depositValue * 1n);
+    await expect(
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+    ).to.eventually.be.rejectedWith('Wallet balance too low');
+
+    transactionBatch.resetOutputs();
+    transactionBatch.resetWithdraw();
+    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.setWithdraw(ethersWallet.address, depositValue);
+    const txs2 = await transactionBatch.generateSerializedTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+    );
+    expect(txs2.length).to.equal(6);
+    expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
+    expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
+    expect(txs2.map((tx) => tx.withdrawPreimage.value)).to.deep.equal([
+      0n,
+      0n,
+      0n,
+      0n,
+      0n,
+      depositValue,
+    ]);
+
+    transactionBatch.resetOutputs();
+    transactionBatch.resetWithdraw();
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.setWithdraw(ethersWallet.address, depositValue + 1n);
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
