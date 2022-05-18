@@ -239,8 +239,8 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    LeptonDebug.log('Actual spending solution groups:');
-    LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
+    // LeptonDebug.log('Actual spending solution groups:');
+    // LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
 
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
@@ -263,8 +263,8 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    LeptonDebug.log('Dummy spending solution groups:');
-    LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
+    // LeptonDebug.log('Dummy spending solution groups:');
+    // LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
 
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
