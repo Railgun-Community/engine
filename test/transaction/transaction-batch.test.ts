@@ -85,7 +85,7 @@ describe('Transaction/Transaction Batch', function () {
     transactionBatch = new TransactionBatch(token, TokenType.ERC20, 1);
   });
 
-  it('Should create transaction batch with single output', async () => {
+  it('Should validate transaction batch outputs', async () => {
     transactionBatch.addOutput(makeNote(depositValue * 6n));
     const txs = await transactionBatch.generateSerializedTransactions(
       prover,
