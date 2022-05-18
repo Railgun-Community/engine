@@ -104,7 +104,7 @@ export const shouldAddMoreUTXOsForSolutionBatch = (
     return false;
   }
 
-  if (nextNullifierTarget(currentNullifierCount) > totalNullifierCount) {
+  if (nullifierTarget > totalNullifierCount) {
     // Next target is not reachable. Don't add any more UTXOs.
     return false;
   }

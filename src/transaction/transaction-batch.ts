@@ -252,7 +252,7 @@ class TransactionBatch {
       utxos,
     );
     transaction.setOutputs(outputs);
-    if (withdrawValue > 0) {
+    if (this.withdrawAddress && withdrawValue > 0) {
       transaction.withdraw(this.withdrawAddress, withdrawValue, this.overrideWithdrawAddress);
     }
     return transaction;
