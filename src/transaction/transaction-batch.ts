@@ -3,15 +3,15 @@ import { bytes } from '../utils';
 import { Wallet, TXO, TreeBalance } from '../wallet';
 import { Prover } from '../prover';
 import { ByteLength, formatToByteLength } from '../utils/bytes';
-import {
-  calculateTotalSpend,
-  findExactSolutionsOverTargetValue,
-  findNextSolutionBatch,
-} from './solutions';
+import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup } from '../models/txo-types';
 import { TokenType, BigIntish, SerializedTransaction } from '../models/formatted-types';
-import { minBigInt } from '../utils/bigint';
+import {
+  consolidateBalanceError,
+  createSpendingSolutionGroupsForOutput,
+} from '../solutions/complex-solutions';
+import { calculateTotalSpend } from '../solutions/utxos';
 
 class TransactionBatch {
   private chainID: number;
@@ -94,7 +94,7 @@ class TransactionBatch {
     if (totalRequired > balance) throw new Error('Wallet balance too low');
 
     // If single group possible, return it.
-    const singleSpendingSolutionGroup = this.createSingleSpendingSolutionGroupIfPossible(
+    const singleSpendingSolutionGroup = this.createSimpleSpendingSolutionGroupIfPossible(
       treeSortedBalances,
       totalRequired,
     );
@@ -103,15 +103,15 @@ class TransactionBatch {
     }
 
     // Single group not possible - need a more complex model.
-    return this.createSatisfyingSpendingSolutionGroups(treeSortedBalances, totalRequired);
+    return this.createComplexSatisfyingSpendingSolutionGroups(treeSortedBalances);
   }
 
-  private createSingleSpendingSolutionGroupIfPossible(
+  private createSimpleSpendingSolutionGroupIfPossible(
     treeSortedBalances: TreeBalance[],
     totalRequired: bigint,
   ): SpendingSolutionGroup | undefined {
     try {
-      const { utxos, spendingTree, amount } = TransactionBatch.createSatisfyingUTXOGroup(
+      const { utxos, spendingTree, amount } = TransactionBatch.createSimpleSatisfyingUTXOGroup(
         treeSortedBalances,
         totalRequired,
       );
@@ -135,7 +135,7 @@ class TransactionBatch {
   /**
    * Finds exact group of UTXOs above required amount.
    */
-  private static createSatisfyingUTXOGroup(
+  private static createSimpleSatisfyingUTXOGroup(
     treeSortedBalances: TreeBalance[],
     amountRequired: bigint,
   ): { utxos: TXO[]; spendingTree: number; amount: bigint } {
@@ -153,11 +153,7 @@ class TransactionBatch {
     });
 
     if (utxos == null || spendingTree == null) {
-      // Wallet has appropriate balance in aggregate, but no solutions remain.
-      // This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
-      throw new Error(
-        'You must consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
-      );
+      throw new Error('No spending solutions found. Must use complex UTXO aggregator.');
     }
 
     return {
@@ -170,80 +166,31 @@ class TransactionBatch {
   /**
    * Finds array of UTXOs groups that satisfies the required amount, excluding an already-used array of UTXO IDs.
    */
-  private createSatisfyingSpendingSolutionGroups(
+  private createComplexSatisfyingSpendingSolutionGroups(
     treeSortedBalances: TreeBalance[],
   ): SpendingSolutionGroup[] {
     const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
     let excludedUTXOIDs: string[];
-
-    let remainingOutputs = [...this.outputs];
+    const remainingOutputs = [...this.outputs];
 
     while (remainingOutputs.length > 0) {
       const output = remainingOutputs[0];
-      const requiredOutputValue = output.value;
-      let amountLeft = output.value;
-
-      // eslint-disable-next-line no-loop-func
-      treeSortedBalances.forEach((treeBalance, tree) => {
-        while (amountLeft > 0) {
-          const nextSolutionBatch = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDs);
-          if (!nextSolutionBatch) {
-            // No more solutions in this tree.
-            break;
-          }
-          excludedUTXOIDs.push(...nextSolutionBatch.map((utxo) => utxo.txid));
-          const totalSpend = calculateTotalSpend(nextSolutionBatch);
-          amountLeft -= totalSpend;
-
-          // Find the smaller of Solution spend value, or required output value.
-          const newNoteValue = minBigInt(totalSpend, requiredOutputValue);
-
-          const newNote = new Note(
-            output.addressData,
-            bytes.random(16),
-            newNoteValue,
-            output.token,
-          );
-          spendingSolutionGroups.push({
-            spendingTree: tree,
-            utxos: nextSolutionBatch,
-            outputs: [newNote],
-            withdrawValue: BigInt(0),
-          });
-
-          // Remove this output note.
-          remainingOutputs = remainingOutputs.slice(1);
-
-          if (amountLeft > 0) {
-            // Add another output note for the Amount Left.
-            remainingOutputs.unshift(
-              new Note(output.addressData, bytes.random(16), amountLeft, output.token),
-            );
-          } else {
-            // Break out from the forEach loop, and continue with next output.
-            return;
-          }
-        }
-      });
-
-      if (amountLeft > 0) {
-        // Wallet has appropriate balance in aggregate, but no solutions remain.
-        // This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
-        // eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of outputs.
-        throw new Error(
-          'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
-        );
+      const outputSpendingSolutionGroups = createSpendingSolutionGroupsForOutput(
+        treeSortedBalances,
+        output,
+        remainingOutputs,
+        excludedUTXOIDs,
+      );
+      if (!outputSpendingSolutionGroups.length) {
+        break;
       }
+      spendingSolutionGroups.push(...outputSpendingSolutionGroups);
     }
 
     if (remainingOutputs.length > 0) {
-      // Wallet has appropriate balance in aggregate, but no solutions remain.
-      // This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
-      // eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of outputs.
-      throw new Error(
-        'You must consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
-      );
+      // Could not find enough solutions.
+      throw consolidateBalanceError();
     }
 
     return spendingSolutionGroups;

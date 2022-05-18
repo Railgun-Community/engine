@@ -3,10 +3,8 @@
 
 import { expect } from 'chai';
 import { PublicInputs } from '../../src/prover';
-import {
-  shouldAddMoreUTXOsToConsolidateBalances,
-  VALID_NULLIFIER_COUNTS,
-} from '../../src/transaction/solutions';
+import { VALID_NULLIFIER_COUNTS } from '../../src/solutions/nullifiers';
+import { shouldAddMoreUTXOsToConsolidateBalances } from '../../src/solutions/simple-solutions';
 import { artifactsGetter } from '../helper';
 
 describe('Transaction/Solutions', () => {

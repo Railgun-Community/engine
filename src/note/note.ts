@@ -2,7 +2,7 @@ import { Signature } from 'circomlibjs';
 import { AddressData } from '../keyderivation/bech32-encode';
 import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/formatted-types';
 import { PublicInputs } from '../prover/types';
-import { encryption, keysUtils } from '../utils';
+import { bytes, encryption, keysUtils } from '../utils';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { poseidon } from '../utils/hash';
@@ -209,5 +209,9 @@ export class Note {
         throw new Error('Unhandled token type.');
       }
     }
+  }
+
+  newNoteWithValue(value: bigint): Note {
+    return new Note(this.addressData, bytes.random(16), value, this.token);
   }
 }

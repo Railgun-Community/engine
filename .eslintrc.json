@@ -30,14 +30,16 @@
     ],
     "no-shadow": "off",
     "no-return-await": "off",
-    "@typescript-eslint/no-shadow": "error",
+    "@typescript-eslint/no-shadow": "warn",
     "no-useless-constructor": "off",
     "no-empty-function": "off",
     "no-unused-vars": "off",
     "no-bitwise": "off",
     "@typescript-eslint/no-unused-vars": "error",
     "no-promise-executor-return": "off",
-    "no-continue": "off"
+    "no-continue": "off",
+    "no-use-before-define": "off",
+    "arrow-body-style": "off"
   },
   "ignorePatterns": [
     "dist/*"
