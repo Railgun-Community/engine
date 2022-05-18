@@ -1,41 +1,37 @@
+import type { Provider } from '@ethersproject/abstract-provider';
 import {
-  Contract,
-  PopulatedTransaction,
-  BigNumber,
-  Event,
-  EventFilter,
-  CallOverrides,
+    BigNumber, CallOverrides, Contract, Event,
+    EventFilter, PopulatedTransaction
 } from 'ethers';
 import EventEmitter from 'events';
-import type { Provider } from '@ethersproject/abstract-provider';
-import { abi } from './abi';
-import {
-  BytesData,
-  Commitment,
-  CommitmentPreimage,
-  EncryptedData,
-  SerializedTransaction,
-} from '../../models/formatted-types';
-import {
-  CommitmentBatchEventArgs,
-  CommitmentCiphertextArgs,
-  CommitmentPreimageArgs,
-  EncryptedDataArgs,
-  EventsListener,
-  EventsNullifierListener,
-  formatCommitmentBatchEvent,
-  formatGeneratedCommitmentBatchEvent,
-  formatNullifierEvents,
-  GeneratedCommitmentBatchEventArgs,
-  NullifierEventArgs,
-  processCommitmentBatchEvents,
-  processGeneratedCommitmentEvents,
-  processNullifierEvents,
-} from './events';
 import LeptonDebug from '../../debugger';
+import {
+    BytesData,
+    Commitment,
+    CommitmentPreimage,
+    EncryptedData,
+    SerializedTransaction
+} from '../../models/transaction-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
 import { LeptonEvent } from '../../wallet/types';
+import { abi } from './abi';
+import {
+    CommitmentBatchEventArgs,
+    CommitmentCiphertextArgs,
+    CommitmentPreimageArgs,
+    EncryptedDataArgs,
+    EventsListener,
+    EventsNullifierListener,
+    formatCommitmentBatchEvent,
+    formatGeneratedCommitmentBatchEvent,
+    formatNullifierEvents,
+    GeneratedCommitmentBatchEventArgs,
+    NullifierEventArgs,
+    processCommitmentBatchEvents,
+    processGeneratedCommitmentEvents,
+    processNullifierEvents
+} from './events';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -132,7 +128,7 @@ class ERC20RailgunContract extends EventEmitter {
           nullifier,
         };
         const formattedEventArgs = formatNullifierEvents(args, event.transactionHash);
-        this.emit(LeptonEvent.Nullified, formattedEventArgs);
+        this.emit(LeptonEvent.ContractNullifierReceived, formattedEventArgs);
         await eventsNullifierListener(formattedEventArgs);
       },
     );

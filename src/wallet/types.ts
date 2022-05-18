@@ -32,6 +32,6 @@ export type AddressKeys = {
 export type WalletData = { mnemonic: string; index: number };
 
 export enum LeptonEvent {
-  Scanned = 'scanned',
-  Nullified = 'nullified',
+  WalletScanComplete = 'scanned',
+  ContractNullifierReceived = 'nullified',
 }

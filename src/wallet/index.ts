@@ -1,32 +1,30 @@
-import BN from 'bn.js';
-import msgpack from 'msgpack-lite';
-import EventEmitter from 'events';
-import type { AbstractBatch } from 'abstract-leveldown';
 import { HDNode } from '@ethersproject/hdnode';
-import { hash } from '../utils';
+import type { AbstractBatch } from 'abstract-leveldown';
+import BN from 'bn.js';
+import EventEmitter from 'events';
+import msgpack from 'msgpack-lite';
 import { Database } from '../database';
+import LeptonDebug from '../debugger';
+import { bech32, Node } from '../keyderivation';
+import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import { mnemonicToSeed } from '../keyderivation/bip39';
-import { Note } from '../note';
 import { MerkleTree } from '../merkletree';
 import { bech32, Node } from '../keyderivation';
 import { BytesData, Commitment, NoteSerialized } from '../models/formatted-types';
 import {
-  arrayify,
-  ByteLength,
-  combine,
-  formatToByteLength,
-  fromUTF8String,
-  hexlify,
-  hexStringToBytes,
-  nToHex,
-  numberify,
-  padToLength,
+    arrayify,
+    ByteLength,
+    combine,
+    formatToByteLength,
+    fromUTF8String,
+    hexlify,
+    hexStringToBytes,
+    nToHex,
+    numberify,
+    padToLength
 } from '../utils/bytes';
-import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
-import LeptonDebug from '../debugger';
-import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import { poseidon } from '../utils/hash';
-
+import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   WalletDetails,
   AddressKeys,
@@ -41,6 +39,7 @@ import {
 import { TXO } from '../models/txo-types';
 
 type WalletNodes = { spending: Node; viewing: Node };
+
 
 /**
  * constant defining the derivation path prefixes for spending and viewing keys
@@ -515,7 +514,7 @@ class Wallet extends EventEmitter {
 
       // Emit scanned event for this chain
       LeptonDebug.log(`wallet: scanned ${chainID}`);
-      this.emit(LeptonEvent.Scanned, { chainID } as ScannedEventData);
+      this.emit(LeptonEvent.WalletScanComplete, { chainID } as ScannedEventData);
     } catch (err: any) {
       LeptonDebug.log(`wallet.scan error: ${err.message}`);
       LeptonDebug.error(err);
@@ -644,14 +643,15 @@ class Wallet extends EventEmitter {
 }
 
 export {
-  Wallet,
-  WalletDetails,
-  AddressKeys,
-  Balances,
-  BalancesByTree,
-  ScannedEventData,
-  TXO,
-  WalletData,
-  TreeBalance,
-  WalletNodes,
+    Wallet,
+    WalletDetails,
+    AddressKeys,
+    Balances,
+    BalancesByTree,
+    ScannedEventData,
+    TXO,
+    WalletData,
+    TreeBalance,
+    WalletNodes,
 };
+
