@@ -13,6 +13,7 @@ import {
   createSpendingSolutionGroupsForWithdraw,
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
+import { isValidFor3Outputs } from '../solutions/nullifiers';
 
 class TransactionBatch {
   private chainID: number;
@@ -101,7 +102,7 @@ class TransactionBatch {
     if (totalRequired > balance) throw new Error('Wallet balance too low');
 
     // If single group possible, return it.
-    const singleSpendingSolutionGroup = this.createSimpleSpendingSolutionGroupIfPossible(
+    const singleSpendingSolutionGroup = this.createSimpleSpendingSolutionGroupsIfPossible(
       treeSortedBalances,
       totalRequired,
     );
@@ -113,7 +114,7 @@ class TransactionBatch {
     return this.createComplexSatisfyingSpendingSolutionGroups(treeSortedBalances);
   }
 
-  private createSimpleSpendingSolutionGroupIfPossible(
+  private createSimpleSpendingSolutionGroupsIfPossible(
     treeSortedBalances: TreeBalance[],
     totalRequired: bigint,
   ): SpendingSolutionGroup | undefined {
@@ -124,6 +125,10 @@ class TransactionBatch {
       );
       if (amount < totalRequired) {
         throw new Error('Could not find UTXOs to satisfy required amount.');
+      }
+      if (!isValidFor3Outputs(utxos.length) && this.outputs.length > 0 && this.withdrawTotal > 0) {
+        // Cannot have 3 outputs. Can't include withdraw in note.
+        throw new Error('Requires 3 outputs, given a withdraw and at least one standard output.');
       }
 
       const spendingSolutionGroup: SpendingSolutionGroup = {
