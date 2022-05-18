@@ -13,19 +13,41 @@ import {
 import { sortUTXOsBySize } from '../../src/solutions/utxos';
 import { bytes } from '../../src/utils';
 import { TreeBalance, TXO } from '../../src/wallet';
+import { TransactionBatch } from '../../src/transaction/transaction-batch';
+import { TokenType } from '../../src/models/formatted-types';
+import { AddressData } from '../../src/keyderivation/bech32-encode';
 
-const addressData = Lepton.decodeAddress(
+const addressData1 = Lepton.decodeAddress(
+  '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
+);
+const addressData2 = Lepton.decodeAddress(
   '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
 );
+const addressData3 = Lepton.decodeAddress(
+  '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
+);
 
-const createMockNote = (value: bigint) => {
-  const token = 'abc';
-  return new Note(addressData, bytes.random(16), value, token);
+const TOKEN_ADDRESS = 'abc';
+const CHAIN_ID = 1;
+
+const createMockNote = (addressData: AddressData, value: bigint) => {
+  return new Note(addressData, bytes.random(16), value, TOKEN_ADDRESS);
 };
 
 const createMockTXO = (txid: string, value: bigint): TXO => {
-  const note = createMockNote(value);
+  const note = createMockNote(addressData1, value);
   return { txid, note } as TXO;
+};
+
+const extractSpendingSolutionGroupsData = (
+  spendingSolutionGroups: SpendingSolutionGroup[],
+): { utxoTxids: string[]; utxoValues: bigint[]; outputValues: bigint[] }[] => {
+  return spendingSolutionGroups.map((spendingSolutionGroup) => ({
+    utxoTxids: spendingSolutionGroup.utxos.map((utxo) => utxo.txid),
+    utxoValues: spendingSolutionGroup.utxos.map((utxo) => utxo.note.value),
+    outputValues: spendingSolutionGroup.outputs.map((note) => note.value),
+    outputAddressDatas: spendingSolutionGroup.outputs.map((note) => note.addressData),
+  }));
 };
 
 describe('Solutions/Complex Solutions', () => {
@@ -181,21 +203,11 @@ describe('Solutions/Complex Solutions', () => {
 
     const sortedTreeBalances = [treeBalance0, treeBalance1];
 
-    const extractSpendingSolutionGroupsData = (
-      spendingSolutionGroups: SpendingSolutionGroup[],
-    ): { utxoTxids: string[]; utxoValues: bigint[]; outputValues: bigint[] }[] => {
-      return spendingSolutionGroups.map((spendingSolutionGroup) => ({
-        utxoTxids: spendingSolutionGroup.utxos.map((utxo) => utxo.txid),
-        utxoValues: spendingSolutionGroup.utxos.map((utxo) => utxo.note.value),
-        outputValues: spendingSolutionGroup.outputs.map((note) => note.value),
-      }));
-    };
-
     // Case 1.
     const remainingOutputs1: Note[] = [
-      createMockNote(BigInt(80)),
-      createMockNote(BigInt(70)),
-      createMockNote(BigInt(60)),
+      createMockNote(addressData1, BigInt(80)),
+      createMockNote(addressData2, BigInt(70)),
+      createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups1 = createSpendingSolutionGroupsForOutput(
       sortedTreeBalances,
@@ -211,19 +223,21 @@ describe('Solutions/Complex Solutions', () => {
         utxoTxids: ['aa', 'ab'],
         utxoValues: [20n, 0n],
         outputValues: [20n],
+        outputAddressDatas: [addressData1],
       },
       {
         utxoTxids: ['i'],
         utxoValues: [90n],
         outputValues: [60n],
+        outputAddressDatas: [addressData1],
       },
     ]);
 
     // Case 2.
     const remainingOutputs2: Note[] = [
-      createMockNote(BigInt(150)),
-      createMockNote(BigInt(70)),
-      createMockNote(BigInt(60)),
+      createMockNote(addressData1, BigInt(150)),
+      createMockNote(addressData2, BigInt(70)),
+      createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups2 = createSpendingSolutionGroupsForOutput(
       sortedTreeBalances,
@@ -239,16 +253,18 @@ describe('Solutions/Complex Solutions', () => {
         utxoTxids: ['aa', 'ab'],
         utxoValues: [20n, 0n],
         outputValues: [20n],
+        outputAddressDatas: [addressData1],
       },
       {
         utxoTxids: ['i', 'h'],
         utxoValues: [90n, 80n],
         outputValues: [130n],
+        outputAddressDatas: [addressData1],
       },
     ]);
 
     // Case 3.
-    const remainingOutputs3: Note[] = [createMockNote(BigInt(500))];
+    const remainingOutputs3: Note[] = [createMockNote(addressData1, BigInt(500))];
     expect(() =>
       createSpendingSolutionGroupsForOutput(
         sortedTreeBalances,
@@ -259,5 +275,70 @@ describe('Solutions/Complex Solutions', () => {
     ).to.throw(
       'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
     );
+  });
+
+  it('Should create complex spending solution groups for transaction batch', () => {
+    const treeBalance0: TreeBalance = {
+      balance: BigInt(20),
+      utxos: [
+        createMockTXO('aa', BigInt(20)),
+        createMockTXO('ab', BigInt(0)),
+        createMockTXO('ac', BigInt(0)),
+      ],
+    };
+    const treeBalance1: TreeBalance = {
+      balance: BigInt(450),
+      utxos: [
+        createMockTXO('a', BigInt(30)),
+        createMockTXO('b', BigInt(40)),
+        createMockTXO('c', BigInt(50)),
+        createMockTXO('d', BigInt(10)),
+        createMockTXO('e', BigInt(20)),
+        createMockTXO('f', BigInt(60)),
+        createMockTXO('g', BigInt(70)),
+        createMockTXO('h', BigInt(80)),
+        createMockTXO('i', BigInt(90)),
+      ],
+    };
+
+    const sortedTreeBalances = [treeBalance0, treeBalance1];
+
+    // Case 1.
+    const transactionBatch1 = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, CHAIN_ID);
+    const outputs1: Note[] = [
+      createMockNote(addressData1, BigInt(80)),
+      createMockNote(addressData2, BigInt(70)),
+      createMockNote(addressData3, BigInt(60)),
+    ];
+    outputs1.forEach((output) => transactionBatch1.addOutput(output));
+    const spendingSolutionGroups1 =
+      transactionBatch1.createComplexSatisfyingSpendingSolutionGroups(sortedTreeBalances);
+    const extractedData1 = extractSpendingSolutionGroupsData(spendingSolutionGroups1);
+    expect(extractedData1).to.deep.equal([
+      {
+        utxoTxids: ['aa', 'ab'],
+        utxoValues: [20n, 0n],
+        outputValues: [20n],
+        outputAddressDatas: [addressData1],
+      },
+      {
+        utxoTxids: ['i'],
+        utxoValues: [90n],
+        outputValues: [60n],
+        outputAddressDatas: [addressData1],
+      },
+      {
+        utxoTxids: ['h'],
+        utxoValues: [80n],
+        outputValues: [70n],
+        outputAddressDatas: [addressData2],
+      },
+      {
+        utxoTxids: ['g'],
+        utxoValues: [70n],
+        outputValues: [60n],
+        outputAddressDatas: [addressData3],
+      },
+    ]);
   });
 });

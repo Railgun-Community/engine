@@ -166,12 +166,12 @@ class TransactionBatch {
   /**
    * Finds array of UTXOs groups that satisfies the required amount, excluding an already-used array of UTXO IDs.
    */
-  private createComplexSatisfyingSpendingSolutionGroups(
+  createComplexSatisfyingSpendingSolutionGroups(
     treeSortedBalances: TreeBalance[],
   ): SpendingSolutionGroup[] {
     const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
-    let excludedUTXOIDs: string[];
+    const excludedUTXOIDs: string[] = [];
     const remainingOutputs = [...this.outputs];
 
     while (remainingOutputs.length > 0) {
