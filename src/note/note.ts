@@ -8,6 +8,9 @@ import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../u
 import { poseidon } from '../utils/hash';
 
 export class Note {
+  // address data of recipient
+  readonly addressData: AddressData;
+
   // viewing public key (VPK) of recipient - ed25519 curve
   readonly viewingPublicKey: Uint8Array;
 
@@ -37,6 +40,7 @@ export class Note {
   constructor(addressData: AddressData, random: string, value: BigIntish, token: string) {
     Note.assertValidRandom(random);
 
+    this.addressData = addressData;
     this.masterPublicKey = addressData.masterPublicKey;
     this.viewingPublicKey = addressData.viewingPublicKey;
     this.random = random;

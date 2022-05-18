@@ -3,10 +3,15 @@ import { bytes } from '../utils';
 import { Wallet, TXO, TreeBalance } from '../wallet';
 import { Prover } from '../prover';
 import { ByteLength, formatToByteLength } from '../utils/bytes';
-import { calculateTotalSpend, findSolutions } from './solutions';
+import {
+  calculateTotalSpend,
+  findExactSolutionsOverTargetValue,
+  findNextSolutionBatch,
+} from './solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup } from '../models/txo-types';
 import { TokenType, BigIntish, SerializedTransaction } from '../models/formatted-types';
+import { minBigInt } from '../utils/bigint';
 
 class TransactionBatch {
   private chainID: number;
@@ -98,9 +103,7 @@ class TransactionBatch {
     }
 
     // Single group not possible - need a more complex model.
-    throw new Error(
-      'Complex TXO spending group required. Please consolidate balances or send in increments.',
-    );
+    return this.createSatisfyingSpendingSolutionGroups(treeSortedBalances, totalRequired);
   }
 
   private createSingleSpendingSolutionGroupIfPossible(
@@ -108,11 +111,9 @@ class TransactionBatch {
     totalRequired: bigint,
   ): SpendingSolutionGroup | undefined {
     try {
-      const excludedUTXOIDs: string[] = [];
       const { utxos, spendingTree, amount } = TransactionBatch.createSatisfyingUTXOGroup(
         treeSortedBalances,
         totalRequired,
-        excludedUTXOIDs,
       );
       if (amount < totalRequired) {
         throw new Error('Could not find UTXOs to satisfy required amount.');
@@ -132,19 +133,18 @@ class TransactionBatch {
   }
 
   /**
-   * Finds group of UTXOs above required amount, excluding an already-used array of UTXO IDs.
+   * Finds exact group of UTXOs above required amount.
    */
   private static createSatisfyingUTXOGroup(
     treeSortedBalances: TreeBalance[],
     amountRequired: bigint,
-    excludedUTXOIDs: string[],
   ): { utxos: TXO[]; spendingTree: number; amount: bigint } {
     let spendingTree: number | undefined;
     let utxos: TXO[] | undefined;
 
     // Find first tree with spending solutions.
     treeSortedBalances.forEach((treeBalance, tree) => {
-      const solutions = findSolutions(treeBalance, amountRequired, excludedUTXOIDs);
+      const solutions = findExactSolutionsOverTargetValue(treeBalance, amountRequired);
       if (!solutions) {
         return;
       }
@@ -165,6 +165,88 @@ class TransactionBatch {
       spendingTree,
       amount: calculateTotalSpend(utxos),
     };
+  }
+
+  /**
+   * Finds array of UTXOs groups that satisfies the required amount, excluding an already-used array of UTXO IDs.
+   */
+  private createSatisfyingSpendingSolutionGroups(
+    treeSortedBalances: TreeBalance[],
+  ): SpendingSolutionGroup[] {
+    const spendingSolutionGroups: SpendingSolutionGroup[] = [];
+
+    let excludedUTXOIDs: string[];
+
+    let remainingOutputs = [...this.outputs];
+
+    while (remainingOutputs.length > 0) {
+      const output = remainingOutputs[0];
+      const requiredOutputValue = output.value;
+      let amountLeft = output.value;
+
+      // eslint-disable-next-line no-loop-func
+      treeSortedBalances.forEach((treeBalance, tree) => {
+        while (amountLeft > 0) {
+          const nextSolutionBatch = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDs);
+          if (!nextSolutionBatch) {
+            // No more solutions in this tree.
+            break;
+          }
+          excludedUTXOIDs.push(...nextSolutionBatch.map((utxo) => utxo.txid));
+          const totalSpend = calculateTotalSpend(nextSolutionBatch);
+          amountLeft -= totalSpend;
+
+          // Find the smaller of Solution spend value, or required output value.
+          const newNoteValue = minBigInt(totalSpend, requiredOutputValue);
+
+          const newNote = new Note(
+            output.addressData,
+            bytes.random(16),
+            newNoteValue,
+            output.token,
+          );
+          spendingSolutionGroups.push({
+            spendingTree: tree,
+            utxos: nextSolutionBatch,
+            outputs: [newNote],
+            withdrawValue: BigInt(0),
+          });
+
+          // Remove this output note.
+          remainingOutputs = remainingOutputs.slice(1);
+
+          if (amountLeft > 0) {
+            // Add another output note for the Amount Left.
+            remainingOutputs.unshift(
+              new Note(output.addressData, bytes.random(16), amountLeft, output.token),
+            );
+          } else {
+            // Break out from the forEach loop, and continue with next output.
+            return;
+          }
+        }
+      });
+
+      if (amountLeft > 0) {
+        // Wallet has appropriate balance in aggregate, but no solutions remain.
+        // This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
+        // eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of outputs.
+        throw new Error(
+          'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
+        );
+      }
+    }
+
+    if (remainingOutputs.length > 0) {
+      // Wallet has appropriate balance in aggregate, but no solutions remain.
+      // This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
+      // eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of outputs.
+      throw new Error(
+        'You must consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
+      );
+    }
+
+    return spendingSolutionGroups;
   }
 
   /**

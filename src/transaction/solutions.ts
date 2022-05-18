@@ -16,38 +16,97 @@ const requiresMoreUTXOs = (utxos: TXO[], totalRequired: bigint) =>
   calculateTotalSpend(utxos) < totalRequired ||
   shouldAddMoreUTXOsToConsolidateBalances(utxos.length);
 
-export function findSolutions(
+const sortUTXOsBySize = (utxos: TXO[]) => {
+  utxos.sort((left, right) => {
+    const leftNum = left.note.value;
+    const rightNum = right.note.value;
+    if (leftNum < rightNum) return 1;
+    if (leftNum > rightNum) return -1;
+    return 0;
+  });
+};
+
+/**
+ * Finds next valid nullifier count above the current nullifier count.
+ */
+const nextNullifierTarget = (utxoCount: number): number | undefined =>
+  VALID_NULLIFIER_COUNTS.find((n) => n > utxoCount);
+
+const shouldAddMoreUTXOsForSolutionBatch = (
+  spendingUTXOs: TXO[],
+  allUTXOs: TXO[],
+  totalRequired: bigint,
+) => {
+  const nullifierCount = spendingUTXOs.length;
+  const totalSpend = calculateTotalSpend(spendingUTXOs);
+
+  if (totalSpend >= totalRequired) {
+    // We've hit the target required.
+    // Keep adding nullifiers until the count is valid.
+    return !isValidNullifierCount(nullifierCount);
+  }
+
+  const nullifierTarget = nextNullifierTarget(nullifierCount);
+
+  if (!nullifierTarget) {
+    // No next nullifiers.
+    // Keep adding nullifiers until the count is valid.
+    return !isValidNullifierCount(nullifierCount);
+  }
+
+  const totalNullifierCount = allUTXOs.length;
+  if (nextNullifierTarget(nullifierCount) > totalNullifierCount) {
+    // Not reachable.
+    // Keep adding nullifiers until the count is valid.
+    return !isValidNullifierCount(nullifierCount);
+  }
+
+  // Total spend < total required, and next nullifier target is reachable.
+  // Continue adding nullifiers.
+  return true;
+};
+
+export function findNextSolutionBatch(
   treeBalance: TreeBalance,
   totalRequired: bigint,
   excludedUTXOIDs: string[],
 ): TXO[] | undefined {
+  const filteredUTXOs = treeBalance.utxos.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
+
+  if (!filteredUTXOs.length) {
+    // No more solutions in this tree.
+    return undefined;
+  }
+
+  // Sort UTXOs by size
+  sortUTXOsBySize(filteredUTXOs);
+
+  // Accumulate UTXOs until we hit the target value
+  const utxos: TXO[] = [];
+
+  // Check if sum of UTXOs selected is greater than target
+  while (shouldAddMoreUTXOsForSolutionBatch(utxos, filteredUTXOs, totalRequired)) {
+    utxos.push(filteredUTXOs[utxos.length]);
+  }
+
+  if (!isValidNullifierCount(utxos.length)) {
+    throw new Error('Invalid nullifier count');
+  }
+
+  return utxos;
+}
+
+export function findExactSolutionsOverTargetValue(
+  treeBalance: TreeBalance,
+  totalRequired: bigint,
+): TXO[] | undefined {
   // If this tree doesn't have enough to cover this transaction, return false
   if (treeBalance.balance < totalRequired) return [];
 
-  const filteredUTXOs = treeBalance.utxos.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
+  const filteredUTXOs = treeBalance.utxos;
 
   // Sort UTXOs by size
-  filteredUTXOs.sort((left, right) => {
-    const leftNum = left.note.value;
-    const rightNum = right.note.value;
-
-    if (leftNum < rightNum) return 1;
-
-    if (leftNum > rightNum) return -1;
-
-    return 0;
-  });
-
-  // Optimized UTXO selection:
-  // Select the utxo whose balance is above the required value, but closest to required value.
-  // This will leave larger balances unbroken, supporting larger transactions.
-  const utxosSupportingRequiredValue = filteredUTXOs.filter(
-    (utxo) => utxo.note.value >= totalRequired,
-  );
-  if (utxosSupportingRequiredValue.length) {
-    // Last element will be the smallest (pre-sorted array).
-    return [utxosSupportingRequiredValue.pop()!];
-  }
+  sortUTXOsBySize(filteredUTXOs);
 
   // Accumulate UTXOs until we hit the target value
   const utxos: TXO[] = [];
@@ -59,12 +118,12 @@ export function findSolutions(
   }
 
   if (totalRequired > calculateTotalSpend(utxos)) {
-    // Search next tree.
+    // Fallback to next tree, or transaction batch.
     return undefined;
   }
 
   if (!isValidNullifierCount(utxos.length)) {
-    // Search next tree.
+    // Fallback to next tree, or transaction batch.
     return undefined;
   }
 
