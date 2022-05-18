@@ -11,7 +11,6 @@ export const createSpendingSolutionGroupsForOutput = (
   remainingOutputs: Note[],
   excludedUTXOIDs: string[],
 ): SpendingSolutionGroup[] => {
-  const requiredOutputValue = output.value;
   let amountLeft = output.value;
 
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
@@ -26,6 +25,8 @@ export const createSpendingSolutionGroupsForOutput = (
 
       // Don't allow these UTXOs to be used twice.
       excludedUTXOIDs.push(...utxos.map((utxo) => utxo.txid));
+
+      const requiredOutputValue = amountLeft;
 
       // Decrement amount left by total spend in UTXOs.
       const totalSpend = calculateTotalSpend(utxos);
@@ -119,7 +120,6 @@ export function findNextSolutionBatch(
   excludedUTXOIDs: string[],
 ): TXO[] | undefined {
   const filteredUTXOs = treeBalance.utxos.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
-
   if (!filteredUTXOs.length) {
     // No more solutions in this tree.
     return undefined;
@@ -127,6 +127,11 @@ export function findNextSolutionBatch(
 
   // Sort UTXOs by size
   sortUTXOsBySize(filteredUTXOs);
+
+  if (filteredUTXOs[0].note.value === 0n) {
+    // No valuable notes in this tree.
+    return undefined;
+  }
 
   // Accumulate UTXOs until we hit the target value
   const utxos: TXO[] = [];
