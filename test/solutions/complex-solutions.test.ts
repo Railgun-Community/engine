@@ -3,9 +3,9 @@
 
 import { expect } from 'chai';
 import { Lepton, Note } from '../../src';
-import { SpendingSolutionGroup } from '../../src/models/txo-types';
 import {
   createSpendingSolutionGroupsForOutput,
+  extractSpendingSolutionGroupsData,
   findNextSolutionBatch,
   nextNullifierTarget,
   shouldAddMoreUTXOsForSolutionBatch,
@@ -37,17 +37,6 @@ const createMockNote = (addressData: AddressData, value: bigint) => {
 const createMockTXO = (txid: string, value: bigint): TXO => {
   const note = createMockNote(addressData1, value);
   return { txid, note } as TXO;
-};
-
-const extractSpendingSolutionGroupsData = (
-  spendingSolutionGroups: SpendingSolutionGroup[],
-): { utxoTxids: string[]; utxoValues: bigint[]; outputValues: bigint[] }[] => {
-  return spendingSolutionGroups.map((spendingSolutionGroup) => ({
-    utxoTxids: spendingSolutionGroup.utxos.map((utxo) => utxo.txid),
-    utxoValues: spendingSolutionGroup.utxos.map((utxo) => utxo.note.value),
-    outputValues: spendingSolutionGroup.outputs.map((note) => note.value),
-    outputAddressDatas: spendingSolutionGroup.outputs.map((note) => note.addressData),
-  }));
 };
 
 describe('Solutions/Complex Solutions', () => {

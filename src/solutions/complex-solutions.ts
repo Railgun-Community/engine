@@ -216,3 +216,14 @@ export function findNextSolutionBatch(
 
   return utxos;
 }
+
+export const extractSpendingSolutionGroupsData = (
+  spendingSolutionGroups: SpendingSolutionGroup[],
+): { utxoTxids: string[]; utxoValues: bigint[]; outputValues: bigint[] }[] => {
+  return spendingSolutionGroups.map((spendingSolutionGroup) => ({
+    utxoTxids: spendingSolutionGroup.utxos.map((utxo) => utxo.txid),
+    utxoValues: spendingSolutionGroup.utxos.map((utxo) => utxo.note.value),
+    outputValues: spendingSolutionGroup.outputs.map((note) => note.value),
+    outputAddressDatas: spendingSolutionGroup.outputs.map((note) => note.addressData),
+  }));
+};

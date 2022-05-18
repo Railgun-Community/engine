@@ -11,9 +11,11 @@ import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
   createSpendingSolutionGroupsForWithdraw,
+  extractSpendingSolutionGroupsData,
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isValidFor3Outputs } from '../solutions/nullifiers';
+import LeptonDebug from '../debugger';
 
 class TransactionBatch {
   private chainID: number;
@@ -237,6 +239,9 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
+    LeptonDebug.log('Actual spending solution groups:');
+    LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
+
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
       proofPromises.push(transaction.prove(prover, wallet, encryptionKey));
@@ -258,6 +263,9 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
+    LeptonDebug.log('Dummy spending solution groups:');
+    LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
+
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
       proofPromises.push(transaction.dummyProve(wallet, encryptionKey));
