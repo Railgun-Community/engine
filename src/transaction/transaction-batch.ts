@@ -14,6 +14,12 @@ import {
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isValidFor3Outputs } from '../solutions/nullifiers';
+import LeptonDebug from '../debugger';
+import {
+  extractSpendingSolutionGroupsData,
+  serializeExtractedSpendingSolutionGroupsData,
+} from '../solutions/spending-group-extractor';
+import { stringifySafe } from '../utils/stringify';
 
 class TransactionBatch {
   private chainID: number;
@@ -237,8 +243,14 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    // LeptonDebug.log('Actual spending solution groups:');
-    // LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
+    LeptonDebug.log('Actual spending solution groups:');
+    LeptonDebug.log(
+      stringifySafe(
+        serializeExtractedSpendingSolutionGroupsData(
+          extractSpendingSolutionGroupsData(spendingSolutionGroups),
+        ),
+      ),
+    );
 
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
@@ -261,8 +273,14 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    // LeptonDebug.log('Dummy spending solution groups:');
-    // LeptonDebug.log(JSON.stringify(extractSpendingSolutionGroupsData(spendingSolutionGroups)));
+    LeptonDebug.log('Dummy spending solution groups:');
+    LeptonDebug.log(
+      stringifySafe(
+        serializeExtractedSpendingSolutionGroupsData(
+          extractSpendingSolutionGroupsData(spendingSolutionGroups),
+        ),
+      ),
+    );
 
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);

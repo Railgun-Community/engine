@@ -5,7 +5,6 @@ import { expect } from 'chai';
 import { Lepton, Note } from '../../src';
 import {
   createSpendingSolutionGroupsForOutput,
-  extractSpendingSolutionGroupsData,
   findNextSolutionBatch,
   nextNullifierTarget,
   shouldAddMoreUTXOsForSolutionBatch,
@@ -16,6 +15,7 @@ import { TreeBalance, TXO } from '../../src/wallet';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { TokenType } from '../../src/models/formatted-types';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
+import { extractSpendingSolutionGroupsData } from '../../src/solutions/spending-group-extractor';
 
 const addressData1 = Lepton.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
@@ -262,7 +262,7 @@ describe('Solutions/Complex Solutions', () => {
         [],
       ),
     ).to.throw(
-      'Please consolidate balances before multi-sending. Send tokens to one destination address at a time to resolve.',
+      'Please consolidate balances before multi-sending. Send tokens to one destination address, or select a different Relayer fee token, to resolve.',
     );
   });
 
