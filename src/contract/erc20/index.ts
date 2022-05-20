@@ -1,36 +1,40 @@
 import type { Provider } from '@ethersproject/abstract-provider';
 import {
-    BigNumber, CallOverrides, Contract, Event,
-    EventFilter, PopulatedTransaction
+  BigNumber,
+  CallOverrides,
+  Contract,
+  Event,
+  EventFilter,
+  PopulatedTransaction,
 } from 'ethers';
 import EventEmitter from 'events';
 import LeptonDebug from '../../debugger';
 import {
-    BytesData,
-    Commitment,
-    CommitmentPreimage,
-    EncryptedData,
-    SerializedTransaction
-} from '../../models/transaction-types';
+  BytesData,
+  Commitment,
+  CommitmentPreimage,
+  EncryptedData,
+  SerializedTransaction,
+} from '../../models/formatted-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
 import { LeptonEvent } from '../../wallet/types';
 import { abi } from './abi';
 import {
-    CommitmentBatchEventArgs,
-    CommitmentCiphertextArgs,
-    CommitmentPreimageArgs,
-    EncryptedDataArgs,
-    EventsListener,
-    EventsNullifierListener,
-    formatCommitmentBatchEvent,
-    formatGeneratedCommitmentBatchEvent,
-    formatNullifierEvents,
-    GeneratedCommitmentBatchEventArgs,
-    NullifierEventArgs,
-    processCommitmentBatchEvents,
-    processGeneratedCommitmentEvents,
-    processNullifierEvents
+  CommitmentBatchEventArgs,
+  CommitmentCiphertextArgs,
+  CommitmentPreimageArgs,
+  EncryptedDataArgs,
+  EventsListener,
+  EventsNullifierListener,
+  formatCommitmentBatchEvent,
+  formatGeneratedCommitmentBatchEvent,
+  formatNullifierEvents,
+  GeneratedCommitmentBatchEventArgs,
+  NullifierEventArgs,
+  processCommitmentBatchEvents,
+  processGeneratedCommitmentEvents,
+  processNullifierEvents,
 } from './events';
 
 export type CommitmentEvent = {
@@ -55,7 +59,6 @@ class ERC20RailgunContract extends EventEmitter {
 
   // Contract address
   address: string;
-
 
   /**
    * Connect to Railgun instance on network

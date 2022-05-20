@@ -5,23 +5,22 @@ import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
 import { Database } from '../database';
 import LeptonDebug from '../debugger';
-import { bech32, Node } from '../keyderivation';
 import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { MerkleTree } from '../merkletree';
 import { bech32, Node } from '../keyderivation';
 import { BytesData, Commitment, NoteSerialized } from '../models/formatted-types';
 import {
-    arrayify,
-    ByteLength,
-    combine,
-    formatToByteLength,
-    fromUTF8String,
-    hexlify,
-    hexStringToBytes,
-    nToHex,
-    numberify,
-    padToLength
+  arrayify,
+  ByteLength,
+  combine,
+  formatToByteLength,
+  fromUTF8String,
+  hexlify,
+  hexStringToBytes,
+  nToHex,
+  numberify,
+  padToLength,
 } from '../utils/bytes';
 import { poseidon } from '../utils/hash';
 import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
@@ -33,13 +32,13 @@ import {
   ScannedEventData,
   WalletData,
   TreeBalance,
-  WalletNodes,
   LeptonEvent,
 } from './types';
 import { TXO } from '../models/txo-types';
+import { hash } from '../utils';
+import { Note } from '../note';
 
 type WalletNodes = { spending: Node; viewing: Node };
-
 
 /**
  * constant defining the derivation path prefixes for spending and viewing keys
@@ -643,15 +642,14 @@ class Wallet extends EventEmitter {
 }
 
 export {
-    Wallet,
-    WalletDetails,
-    AddressKeys,
-    Balances,
-    BalancesByTree,
-    ScannedEventData,
-    TXO,
-    WalletData,
-    TreeBalance,
-    WalletNodes,
+  Wallet,
+  WalletDetails,
+  AddressKeys,
+  Balances,
+  BalancesByTree,
+  ScannedEventData,
+  TXO,
+  WalletData,
+  TreeBalance,
+  WalletNodes,
 };
-

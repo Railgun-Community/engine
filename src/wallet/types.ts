@@ -1,5 +1,4 @@
-import { Node } from '../keyderivation';
-import { Note } from '../note';
+import { TXO } from '../models/txo-types';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
