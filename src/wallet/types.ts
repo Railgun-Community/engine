@@ -19,18 +19,9 @@ export type BalancesByTree = {
   // Index = tree
 };
 
-export type ScannedEventData = {
-  chainID: number;
-};
-
 export type AddressKeys = {
   masterPublicKey: bigint;
   viewingPublicKey: Uint8Array;
 };
 
 export type WalletData = { mnemonic: string; index: number };
-
-export enum LeptonEvent {
-  WalletScanComplete = 'scanned',
-  ContractNullifierReceived = 'nullified',
-}

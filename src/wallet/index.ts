@@ -29,14 +29,13 @@ import {
   AddressKeys,
   Balances,
   BalancesByTree,
-  ScannedEventData,
   WalletData,
   TreeBalance,
-  LeptonEvent,
 } from './types';
 import { TXO } from '../models/txo-types';
 import { hash } from '../utils';
 import { Note } from '../note';
+import { LeptonEvent, ScannedEventData } from '../types';
 
 type WalletNodes = { spending: Node; viewing: Node };
 

@@ -19,7 +19,7 @@ import { bytes } from '../../src/utils';
 import { ERC20WithdrawNote } from '../../src/note/erc20-withdraw';
 import { Nullifier, TokenType } from '../../src/models/formatted-types';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
-import { LeptonEvent } from '../../src/wallet/types';
+import { LeptonEvent } from '../../src/types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -313,7 +313,13 @@ describe('Contract/Index', function () {
     const tree = 0;
 
     expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(1);
+    let historyScanCompletedForChainID;
+    const historyScanListener = (data) => {
+      historyScanCompletedForChainID = data.chainID;
+    };
+    lepton.on(LeptonEvent.MerkletreeHistoryScanComplete, historyScanListener);
     await lepton.scanHistory(chainID);
+    expect(historyScanCompletedForChainID).to.equal(chainID);
     expect(await lepton.getStartScanningBlock(chainID)).to.be.above(0);
 
     await lepton.clearSyncedMerkletreeLeaves(chainID);

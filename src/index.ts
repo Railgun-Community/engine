@@ -1,6 +1,7 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import BN from 'bn.js';
+import EventEmitter from 'events';
 import { ERC20RailgunContract } from './contract';
 import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
@@ -15,6 +16,7 @@ import { CommitmentEvent } from './contract/erc20';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
 import { BytesData, Commitment, Nullifier } from './models/formatted-types';
+import { LeptonEvent, MerkletreeHistoryScanEventData } from './types';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
@@ -23,7 +25,7 @@ export type AccumulatedEvents = {
 
 export type QuickSync = (chainID: number, startingBlock: number) => Promise<AccumulatedEvents>;
 
-class Lepton {
+class Lepton extends EventEmitter {
   readonly db;
 
   readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
@@ -50,6 +52,7 @@ class Lepton {
     quickSync?: QuickSync,
     leptonDebugger?: LeptonDebugger,
   ) {
+    super();
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
     this.quickSync = quickSync;
@@ -192,10 +195,16 @@ class Lepton {
 
       // Final scan after all leaves added.
       await this.scanAllWallets(chainID);
+      this.emit(LeptonEvent.MerkletreeHistoryScanComplete, {
+        chainID,
+      } as MerkletreeHistoryScanEventData);
     } catch (err: any) {
       LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
       LeptonDebug.error(err);
       await this.scanAllWallets(chainID);
+      this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, {
+        chainID,
+      } as MerkletreeHistoryScanEventData);
     }
   }
 

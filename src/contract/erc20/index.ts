@@ -16,9 +16,9 @@ import {
   EncryptedData,
   SerializedTransaction,
 } from '../../models/formatted-types';
+import { LeptonEvent } from '../../types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
-import { LeptonEvent } from '../../wallet/types';
 import { abi } from './abi';
 import {
   CommitmentBatchEventArgs,
