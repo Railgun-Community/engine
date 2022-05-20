@@ -16,7 +16,7 @@ import { CommitmentEvent } from './contract/erc20';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
 import { BytesData, Commitment, Nullifier } from './models/formatted-types';
-import { LeptonEvent, MerkletreeHistoryScanEventData } from './types';
+import { LeptonEvent, MerkletreeHistoryScanEventData } from './models/event-types';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];

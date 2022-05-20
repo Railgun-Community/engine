@@ -19,7 +19,7 @@ import { bytes } from '../../src/utils';
 import { ERC20WithdrawNote } from '../../src/note/erc20-withdraw';
 import { Nullifier, TokenType } from '../../src/models/formatted-types';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
-import { LeptonEvent } from '../../src/types';
+import { LeptonEvent } from '../../src/models/event-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

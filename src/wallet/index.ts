@@ -35,7 +35,7 @@ import {
 import { TXO } from '../models/txo-types';
 import { hash } from '../utils';
 import { Note } from '../note';
-import { LeptonEvent, ScannedEventData } from '../types';
+import { LeptonEvent, ScannedEventData } from '../models/event-types';
 
 type WalletNodes = { spending: Node; viewing: Node };
 
