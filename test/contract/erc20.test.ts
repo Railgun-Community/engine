@@ -19,6 +19,7 @@ import { bytes } from '../../src/utils';
 import { ERC20WithdrawNote } from '../../src/note/erc20-withdraw';
 import { Nullifier, TokenType } from '../../src/models/formatted-types';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
+import { LeptonEvent } from '../../src/wallet/types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -224,10 +225,10 @@ describe('Contract/Index', function () {
 
     // Subscribe to Nullified event
     const resultNullifiers2: Nullifier[] = [];
-    const nullifiersListener2 =  (nullifiers: Nullifier[]) => {
+    const nullifiersListener2 = (nullifiers: Nullifier[]) => {
       resultNullifiers2.push(...nullifiers);
     };
-    contract.on(LeptonEvent.ContractNullifierReceived, nullifiersListener2 )
+    contract.on(LeptonEvent.ContractNullifierReceived, nullifiersListener2);
 
     const [txResponse] = await testDeposit();
 
