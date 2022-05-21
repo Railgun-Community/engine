@@ -7,7 +7,7 @@ import {
   GeneratedCommitment,
   Nullifier,
 } from '../../models/formatted-types';
-import { ByteLength, formatToByteLength, hexlify, nToHex } from '../../utils/bytes';
+import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 import LeptonDebug from '../../debugger';
 
@@ -74,16 +74,20 @@ export type NullifierEventArgs = {
 export function formatGeneratedCommitmentBatchCommitments(
   transactionHash: string,
   preImages: CommitmentPreimageArgs[],
-  encryptedRandom: EncryptedDataArgs[],
+  encryptedRandoms: EncryptedDataArgs[],
 ): GeneratedCommitment[] {
-  const randomFormatted = encryptedRandom.map(
-    (el) => el.map((key) => key.toHexString()) as EncryptedData,
+  const randomFormatted = encryptedRandoms.map(
+    (encryptedRandom) =>
+      [
+        formatToByteLength(encryptedRandom[0].toHexString(), ByteLength.UINT_256),
+        formatToByteLength(encryptedRandom[1].toHexString(), ByteLength.UINT_128),
+      ] as EncryptedData,
   );
   const generatedCommitments = preImages.map((item, index) => {
     // TODO: This event is formatted exactly like a withdraw note, but
     // we should not use this type here. It is NOT a withdraw note.
-    const note = new ERC20WithdrawNote(
-      item.npk.toHexString(),
+    const note = new ERC20WithdrawNote( // SEE TODO
+      formatToByteLength(item.npk.toHexString(), ByteLength.UINT_256),
       item.value.toBigInt(),
       item.token.tokenAddress,
     );
@@ -119,7 +123,7 @@ export function formatGeneratedCommitmentBatchEvent(
     encryptedRandom,
   );
   return {
-    txid: hexlify(transactionHash),
+    txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
     treeNumber: treeNumber.toNumber(),
     startPosition: startPosition.toNumber(),
     commitments: formattedCommitments,
@@ -139,7 +143,7 @@ export function formatCommitmentBatchCommitments(
     const ivTag = ciphertext[0];
 
     return {
-      hash: hash[index].toHexString(),
+      hash: formatToByteLength(hash[index].toHexString(), ByteLength.UINT_256),
       txid: transactionHash,
       ciphertext: {
         ciphertext: {
@@ -169,7 +173,7 @@ export function formatCommitmentBatchEvent(
 
   const formattedCommitments = formatCommitmentBatchCommitments(transactionHash, hash, ciphertext);
   return {
-    txid: hexlify(transactionHash),
+    txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
     treeNumber: treeNumber.toNumber(),
     startPosition: startPosition.toNumber(),
     commitments: formattedCommitments,
@@ -217,8 +221,8 @@ export function formatNullifierEvents(
 
   nullifierEventArgs.nullifier.forEach((nullifier: BigNumber) => {
     nullifiers.push({
-      txid: hexlify(transactionHash),
-      nullifier: nullifier.toHexString(),
+      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      nullifier: formatToByteLength(nullifier.toHexString(), ByteLength.UINT_256),
       treeNumber: nullifierEventArgs.treeNumber.toNumber(),
     });
   });
