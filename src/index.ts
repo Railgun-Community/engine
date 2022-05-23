@@ -146,6 +146,10 @@ class Lepton extends EventEmitter {
    * @param chainID - chainID to scan
    */
   async scanHistory(chainID: number) {
+    this.emit(LeptonEvent.MerkletreeHistoryScanStarted, {
+      chainID,
+    } as MerkletreeHistoryScanEventData);
+
     const startScanningBlockQuickSync = await this.getStartScanningBlock(chainID);
 
     // Call quicksync
