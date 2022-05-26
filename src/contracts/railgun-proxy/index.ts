@@ -47,20 +47,19 @@ export enum EventName {
 }
 
 class RailgunProxyContract extends EventEmitter {
-  contract: Contract;
+  readonly contract: Contract;
 
-  // Contract address
-  address: string;
+  readonly address: string;
 
   /**
    * Connect to Railgun instance on network
-   * @param address - address of Railgun instance (Proxy contract)
+   * @param proxyContractAddress - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(address: string, provider: Provider) {
+  constructor(proxyContractAddress: string, provider: Provider) {
     super();
-    this.address = address;
-    this.contract = new Contract(address, ABIRailgunLogic, provider);
+    this.address = proxyContractAddress;
+    this.contract = new Contract(proxyContractAddress, ABIRailgunLogic, provider);
   }
 
   /**
