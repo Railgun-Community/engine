@@ -15,6 +15,7 @@ import { bytes } from '../../../src/utils';
 import { EventName, RailgunProxyContract } from '../../../src/contracts/railgun-proxy';
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import { TokenType } from '../../../src/models/formatted-types';
+import { ERC20WithdrawNote } from '../../../src/note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -45,6 +46,9 @@ describe('Relay Adapt/Index', function test() {
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
 
+    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
+    wallet = lepton.wallets[walletID];
+
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
@@ -70,9 +74,6 @@ describe('Relay Adapt/Index', function test() {
     token = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(relayAdaptContract.address, balance);
-
-    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
-    wallet = lepton.wallets[walletID];
 
     testDepositBaseToken = async (
       value: bigint = BigInt(110000) * DECIMALS_18,
@@ -138,11 +139,12 @@ describe('Relay Adapt/Index', function test() {
   //   expect((await provider.estimateGas(tx)).toNumber()).to.be.greaterThanOrEqual(0);
   // });
 
-  it.skip('Should create and set relay adapt params for transaction batch', async () => {
+  it.skip('Should create and set relay adapt params for withdraw base token', async () => {
     await testDepositBaseToken();
 
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transactionBatch.setWithdraw(etherswallet.address, 300n);
+    const withdrawNote = new ERC20WithdrawNote(etherswallet.address, 300n, WETH_TOKEN_ADDRESS);
+    transactionBatch.setWithdraw(withdrawNote.withdrawAddress, withdrawNote.value);
 
     const serializedTransactions = await transactionBatch.generateDummySerializedTransactions(
       wallet,
@@ -150,14 +152,45 @@ describe('Relay Adapt/Index', function test() {
     );
 
     const random = '0x1234567890abcdef';
-    const requireSuccess = true;
 
-    const relayAdaptParams = RelayAdaptContract.getRelayAdaptParams(
+    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsWithdrawBaseToken(
       serializedTransactions,
+      withdrawNote,
       random,
-      requireSuccess,
-      orderedCalls,
     );
+
+    expect(relayAdaptParams).to.deep.equal({});
+  });
+
+  it('Should generate relay deposit notes and inputs', () => {
+    const depositTokens: string[] = [config.contracts.weth9, config.contracts.rail];
+
+    const random = '10203040506070809000102030405060';
+
+    const relayDeposits = RelayAdaptContract.generateRelayDeposits(
+      wallet.masterPublicKey,
+      random,
+      depositTokens,
+    );
+
+    expect(relayDeposits.length).to.equal(2);
+    relayDeposits.forEach((relayDeposit) => {
+      expect(relayDeposit.notePublicKey).to.equal(
+        3348140451435708797167073859596593490034226162440317170509481065740328487080n,
+      );
+      expect(relayDeposit.tokenType).to.equal('0x0000000000000000000000000000000000000000');
+    });
+
+    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
+    const relayDepositInputs = RelayAdaptContract.generateRelayDepositInputs(
+      viewingPrivateKey,
+      relayDeposits,
+    );
+
+    expect(relayDepositInputs.length).to.equal(2);
+    expect(
+      relayDepositInputs.map((depositInput) => depositInput.preImage.token.tokenAddress),
+    ).to.deep.equal(depositTokens);
   });
 
   afterEach(async () => {

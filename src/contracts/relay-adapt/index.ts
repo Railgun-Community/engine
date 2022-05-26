@@ -36,14 +36,17 @@ class RelayAdaptContract {
     });
   }
 
-  static generateRelayDeposits(masterPublicKey: bigint, tokens: string[]): ERC20Deposit[] {
-    const random = bytesRandom(16);
+  static generateRelayDeposits(
+    masterPublicKey: bigint,
+    random: string,
+    tokens: string[],
+  ): ERC20Deposit[] {
     return tokens.map((token) => {
       return new ERC20Deposit(masterPublicKey, random, 0n, token);
     });
   }
 
-  private static generateRelayDepositInputs(
+  static generateRelayDepositInputs(
     viewingPrivateKey: Uint8Array,
     relayDeposits: ERC20Deposit[],
   ): DepositInput[] {
