@@ -11,7 +11,7 @@ import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync
 import { ERC20Deposit } from '../src/note/erc20-deposit';
 import { MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
-import { RailgunLogicContract } from '../src/contracts/railgun-logic';
+import { RailgunProxyContract } from '../src/contracts/railgun-proxy';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
 import { GeneratedCommitment, TokenType } from '../src/models/formatted-types';
@@ -31,7 +31,7 @@ let walletID2: string;
 let wallet2: Wallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
-let contract: RailgunLogicContract;
+let proxyContract: RailgunProxyContract;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -42,10 +42,10 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   const random = bytes.random(16);
   const deposit = new ERC20Deposit(mpk, random, value, token.address);
 
-  const { preImage, encryptedRandom } = deposit.serialize(vpk);
+  const depositInput = deposit.serialize(vpk);
 
   // Create deposit
-  const depositTx = await contract.generateDeposit([preImage], [encryptedRandom]);
+  const depositTx = await proxyContract.generateDeposit([depositInput]);
 
   // Send deposit on chain
   await etherswallet.sendTransaction(depositTx);
@@ -79,9 +79,15 @@ describe('Lepton', function () {
     wallet = lepton.wallets[walletID];
     walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
     wallet2 = lepton.wallets[walletID2];
-    await lepton.loadNetwork(chainID, config.contracts.proxy, provider, 24);
+    await lepton.loadNetwork(
+      chainID,
+      config.contracts.proxy,
+      config.contracts.relayAdapt,
+      provider,
+      24,
+    );
     merkleTree = lepton.merkletree[chainID].erc20;
-    contract = lepton.contracts[chainID];
+    proxyContract = lepton.proxyContracts[chainID];
   });
 
   it('[HH] Should load existing wallets', async function run() {
@@ -156,7 +162,7 @@ describe('Lepton', function () {
     transactionBatch.setWithdraw(
       etherswallet.address,
       BigInt(300) * DECIMALS_18,
-      config.contracts.treasury,
+      true, // allowOverride
     );
 
     // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
@@ -167,7 +173,7 @@ describe('Lepton', function () {
       lepton.wallets[walletID],
       testEncryptionKey,
     );
-    const transact = await contract.transact(serializedTransactions);
+    const transact = await proxyContract.transact(serializedTransactions);
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();

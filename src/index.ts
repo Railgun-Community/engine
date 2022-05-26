@@ -2,7 +2,8 @@ import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import BN from 'bn.js';
 import EventEmitter from 'events';
-import { RailgunLogicContract, CommitmentEvent } from './contracts/railgun-logic';
+import { RailgunProxyContract, CommitmentEvent } from './contracts/railgun-proxy';
+import { RelayAdaptContract } from './contracts/relay-adapt';
 import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
 import { MerkleTree } from './merkletree';
@@ -29,7 +30,9 @@ class Lepton extends EventEmitter {
 
   readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
 
-  readonly contracts: RailgunLogicContract[] = [];
+  readonly proxyContracts: RailgunProxyContract[] = [];
+
+  readonly relayAdaptContracts: RelayAdaptContract[] = [];
 
   readonly prover: Prover;
 
@@ -114,7 +117,7 @@ class Lepton extends EventEmitter {
       );
       if (latestEvent) {
         // eslint-disable-next-line no-await-in-loop
-        const { blockNumber } = await this.contracts[
+        const { blockNumber } = await this.proxyContracts[
           chainID
         ].contract.provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
         startScanningBlock = blockNumber;
@@ -185,7 +188,7 @@ class Lepton extends EventEmitter {
 
     try {
       // Run slow scan
-      await this.contracts[chainID].getHistoricalEvents(
+      await this.proxyContracts[chainID].getHistoricalEvents(
         startScanningBlockSlowScan,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.listener(chainID, treeNumber, startPosition, commitments);
@@ -232,29 +235,40 @@ class Lepton extends EventEmitter {
 
   /**
    * Load network
-   * @param address - address of railgun instance (proxy contract)
+   * @param proxyContractAddress - address of railgun instance (proxy contract)
+   * @param relayAdaptContractAddress - address of railgun instance (proxy contract)
    * @param provider - ethers provider for network
    * @param deploymentBlock - block number to start scanning from
    */
   async loadNetwork(
     chainID: number,
-    address: string,
+    proxyContractAddress: string,
+    relayAdaptContractAddress: string,
     provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
     LeptonDebug.log(`loadNetwork: ${chainID}`);
 
     // If a network with this chainID exists, unload it and load the provider as a new network
-    if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
+    if (
+      this.merkletree[chainID] ||
+      this.proxyContracts[chainID] ||
+      this.relayAdaptContracts[chainID]
+    )
+      this.unloadNetwork(chainID);
 
-    // Create contract instance
-    const contract = new RailgunLogicContract(address, provider);
-    this.contracts[chainID] = contract;
+    // Create proxy contract instance
+    const proxyContract = new RailgunProxyContract(proxyContractAddress, provider);
+    this.proxyContracts[chainID] = proxyContract;
+
+    // Create relay adapt contract instance
+    const relayAdaptContract = new RelayAdaptContract(relayAdaptContractAddress, provider);
+    this.relayAdaptContracts[chainID] = relayAdaptContract;
 
     // Create tree controllers
     this.merkletree[chainID] = {
       erc20: new MerkleTree(this.db, chainID, 'erc20', (tree, root) =>
-        contract.validateRoot(tree, root),
+        proxyContract.validateRoot(tree, root),
       ),
     };
 
@@ -273,7 +287,7 @@ class Lepton extends EventEmitter {
       await this.nullifierListener(chainID, nullifiers);
     };
     // Setup listeners
-    this.contracts[chainID].treeUpdates(eventsListener, nullifierListener);
+    this.proxyContracts[chainID].treeUpdates(eventsListener, nullifierListener);
 
     await this.scanHistory(chainID);
   }
@@ -283,9 +297,9 @@ class Lepton extends EventEmitter {
    * @param chainID - chainID of network to unload
    */
   unloadNetwork(chainID: number) {
-    if (this.contracts[chainID]) {
+    if (this.proxyContracts[chainID]) {
       // Unload listeners
-      this.contracts[chainID].unload();
+      this.proxyContracts[chainID].unload();
 
       // Unlaod tree from wallets
       Object.values(this.wallets).forEach((wallet) => {
@@ -293,7 +307,7 @@ class Lepton extends EventEmitter {
       });
 
       // Delete contract and merkle tree objects
-      delete this.contracts[chainID];
+      delete this.proxyContracts[chainID];
       delete this.merkletree[chainID];
     }
   }
@@ -346,7 +360,7 @@ class Lepton extends EventEmitter {
    */
   unload() {
     // Unload chains
-    this.contracts.forEach((contract, chainID) => {
+    this.proxyContracts.forEach((contract, chainID) => {
       LeptonDebug.log(`unload contract for ${chainID}`);
       this.unloadNetwork(chainID);
     });
@@ -363,7 +377,7 @@ class Lepton extends EventEmitter {
    * Get list of loaded networks
    */
   get networks(): number[] {
-    return this.contracts.map((element, index) => index);
+    return this.proxyContracts.map((element, index) => index);
   }
 
   private initializeWallet(wallet: Wallet): string {

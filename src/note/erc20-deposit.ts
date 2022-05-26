@@ -1,4 +1,4 @@
-import { CommitmentPreimage, EncryptedData, TokenType } from '../models/formatted-types';
+import { DepositInput, TokenType } from '../models/formatted-types';
 import { encryption } from '../utils';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';
@@ -62,10 +62,7 @@ export class ERC20Deposit {
    * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
    * @returns serialized note
    */
-  serialize(viewingPrivateKey: Uint8Array): {
-    preImage: CommitmentPreimage;
-    encryptedRandom: EncryptedData;
-  } {
+  serialize(viewingPrivateKey: Uint8Array): DepositInput {
     const ciphertext = encryption.aes.gcm.encrypt([this.random], viewingPrivateKey);
     return {
       preImage: {

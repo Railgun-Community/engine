@@ -1,25 +1,17 @@
 import type { Provider } from '@ethersproject/abstract-provider';
-import {
-  BigNumber,
-  CallOverrides,
-  Contract,
-  Event,
-  EventFilter,
-  PopulatedTransaction,
-} from 'ethers';
+import { BigNumber, Contract, Event, EventFilter, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
 import LeptonDebug from '../../debugger';
 import {
   BytesData,
   Commitment,
-  CommitmentPreimage,
-  EncryptedData,
+  DepositInput,
   SerializedTransaction,
 } from '../../models/formatted-types';
 import { LeptonEvent } from '../../models/event-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
-import { abi } from '../../abi/abi';
+import { ABIRailgunLogic } from '../../abi/abi';
 import {
   CommitmentBatchEventArgs,
   CommitmentCiphertextArgs,
@@ -54,7 +46,7 @@ export enum EventName {
   Nullifiers = 'Nullifiers',
 }
 
-class RailgunLogicContract extends EventEmitter {
+class RailgunProxyContract extends EventEmitter {
   contract: Contract;
 
   // Contract address
@@ -68,7 +60,7 @@ class RailgunLogicContract extends EventEmitter {
   constructor(address: string, provider: Provider) {
     super();
     this.address = address;
-    this.contract = new Contract(address, abi, provider);
+    this.contract = new Contract(address, ABIRailgunLogic, provider);
   }
 
   /**
@@ -257,16 +249,13 @@ class RailgunLogicContract extends EventEmitter {
 
   /**
    * GenerateDeposit populated transaction
-   * @param {CommitmentPreimage[]} inputs - notes to deposit to
-   * @param {EncryptedData[]} encryptedRandom - notes to deposit to
+   * @param {DepositInput[]} depositInputs - array of preImage and encryptedRandom for each deposit note
    * @returns Populated transaction
    */
-  generateDeposit(
-    inputs: CommitmentPreimage[],
-    encryptedRandom: EncryptedData[],
-  ): Promise<PopulatedTransaction> {
-    // Return populated transaction
-    return this.contract.populateTransaction.generateDeposit(inputs, encryptedRandom);
+  generateDeposit(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
+    const preImages = depositInputs.map((depositInput) => depositInput.preImage);
+    const encryptedRandoms = depositInputs.map((depositInput) => depositInput.encryptedRandom);
+    return this.contract.populateTransaction.generateDeposit(preImages, encryptedRandoms);
   }
 
   /**
@@ -275,9 +264,6 @@ class RailgunLogicContract extends EventEmitter {
    * @returns - populated ETH transaction
    */
   transact(transactions: SerializedTransaction[]): Promise<PopulatedTransaction> {
-    // Calculate inputs
-
-    // Return populated transaction
     return this.contract.populateTransaction.transact(transactions);
   }
 
@@ -287,94 +273,6 @@ class RailgunLogicContract extends EventEmitter {
   }
 
   /**
-   *
-   * @param
-   * @returns
-   */
-  relay(
-    transactions: SerializedTransaction[],
-    random: BytesData,
-    requireSuccess: boolean,
-    calls: PopulatedTransaction[],
-    overrides: CallOverrides = {},
-  ): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.relay(
-      transactions,
-      random,
-      requireSuccess,
-      calls.map((call) => {
-        if (!call.to) {
-          throw new Error('Must specify to address');
-        }
-
-        return {
-          to: call.to,
-          data: call.data || '',
-          value: call.value || '0',
-        };
-      }),
-      overrides,
-    );
-  }
-
-  // TODO: Needs new implementation with newer keys.
-  // depositEth(
-  //   amount: BigNumber,
-  //   wethAddress: BytesData,
-  //   pubKey: BytesData,
-  // ): Promise<PopulatedTransaction> {
-
-  //   const random = bytes.random();
-
-  //   const calls = [
-  //     this.contract.interface.encodeFunctionData('wrapAllEth'),
-  //     this.contract.interface.encodeFunctionData('deposit', [
-  //       [wethAddress],
-  //       random,
-  //       pubkeyUnpacked,
-  //     ]),
-  //   ];
-
-  //   const requireSuccess = true;
-
-  //   return this.relay(
-  //     [],
-  //     random,
-  //     requireSuccess,
-  //     calls.map((call) => ({
-  //       to: this.contract.address,
-  //       data: call,
-  //     })),
-  //     { value: amount },
-  //   );
-  // }
-
-  // withdrawEth(amount: BigNumber, to: BytesData): Promise<PopulatedTransaction> {
-  //   const random = bytes.random();
-
-  //   const calls = [
-  //     this.contract.interface.encodeFunctionData('unWrapEth'),
-  //     this.contract.interface.encodeFunctionData('send', [
-  //       ['0x0000000000000000000000000000000000000000'],
-  //       to,
-  //     ]),
-  //   ];
-
-  //   const requireSuccess = true;
-
-  //   return this.relay(
-  //     [],
-  //     random,
-  //     requireSuccess,
-  //     calls.map((call) => ({
-  //       to: this.contract.address,
-  //       data: call,
-  //     })),
-  //     { value: amount },
-  //   );
-  // }
-
-  /**
    * Remove all listeners and shutdown contract instance
    */
   unload() {
@@ -382,4 +280,4 @@ class RailgunLogicContract extends EventEmitter {
   }
 }
 
-export { RailgunLogicContract };
+export { RailgunProxyContract };

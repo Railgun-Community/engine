@@ -1,3 +1,4 @@
-import abi from './RailgunLogic.json';
+import ABIRailgunLogic from './RailgunLogic.json';
+import ABIRelayAdapt from './RelayAdapt.json';
 
-export { abi };
+export { ABIRailgunLogic, ABIRelayAdapt };

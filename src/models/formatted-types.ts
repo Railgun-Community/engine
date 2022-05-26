@@ -82,6 +82,11 @@ export type PreImage = {
   value: string;
 };
 
+export type DepositInput = {
+  preImage: CommitmentPreimage;
+  encryptedRandom: EncryptedData;
+};
+
 /**
  * Processed from transaction events
  */
