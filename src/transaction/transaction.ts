@@ -55,8 +55,6 @@ class Transaction {
 
   private withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
 
-  private overrideWithdrawAddress: string = ZERO_ADDRESS;
-
   private tokenType: TokenType;
 
   private tokenSubID: BigInt = DEFAULT_TOKEN_SUB_ID;
@@ -94,18 +92,13 @@ class Transaction {
     this.outputs = outputs;
   }
 
-  withdraw(withdrawAddress: string, value: bigint, overrideWithdrawAddress?: string) {
+  withdraw(withdrawAddress: string, value: bigint, allowOverride?: boolean) {
     if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
       throw new Error('You may only call .withdraw once for a given transaction.');
     }
 
     this.withdrawNote = new ERC20WithdrawNote(withdrawAddress, value, this.tokenAddress);
-
-    const isOverride = overrideWithdrawAddress != null;
-    this.withdrawFlag = isOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
-    if (isOverride) {
-      this.overrideWithdrawAddress = overrideWithdrawAddress;
-    }
+    this.withdrawFlag = allowOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
   }
 
   get withdrawValue() {
@@ -268,11 +261,13 @@ class Transaction {
     // Calculate proof
     const { proof } = await prover.prove(publicInputs, inputs);
 
+    const overrideWithdrawAddress = ZERO_ADDRESS;
+
     return Transaction.generateSerializedTransaction(
       proof,
       publicInputs,
       boundParams,
-      this.overrideWithdrawAddress,
+      overrideWithdrawAddress,
       this.withdrawNote.preImage,
     );
   }
@@ -299,11 +294,13 @@ class Transaction {
 
     const dummyProof = Transaction.zeroProof;
 
+    const overrideWithdrawAddress = ZERO_ADDRESS;
+
     return Transaction.generateSerializedTransaction(
       dummyProof,
       publicInputs,
       boundParams,
-      this.overrideWithdrawAddress,
+      overrideWithdrawAddress,
       this.withdrawNote.preImage,
     );
   }

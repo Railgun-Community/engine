@@ -34,7 +34,7 @@ class TransactionBatch {
 
   private withdrawTotal: bigint = BigInt(0);
 
-  private overrideWithdrawAddress: string | undefined;
+  private allowOverride: boolean | undefined;
 
   /**
    * Create ERC20Transaction Object
@@ -56,20 +56,20 @@ class TransactionBatch {
     this.outputs = [];
   }
 
-  setWithdraw(withdrawAddress: string, value: BigIntish, overrideWithdrawAddress?: string) {
+  setWithdraw(withdrawAddress: string, value: BigIntish, allowOverride?: boolean) {
     if (this.withdrawAddress != null) {
       throw new Error('You may only call .withdraw once for a given transaction batch.');
     }
 
     this.withdrawAddress = withdrawAddress;
     this.withdrawTotal = BigInt(value);
-    this.overrideWithdrawAddress = overrideWithdrawAddress;
+    this.allowOverride = allowOverride;
   }
 
   resetWithdraw() {
     this.withdrawAddress = undefined;
     this.withdrawTotal = BigInt(0);
-    this.overrideWithdrawAddress = undefined;
+    this.allowOverride = undefined;
   }
 
   /**
@@ -303,7 +303,7 @@ class TransactionBatch {
     );
     transaction.setOutputs(outputs);
     if (this.withdrawAddress && withdrawValue > 0) {
-      transaction.withdraw(this.withdrawAddress, withdrawValue, this.overrideWithdrawAddress);
+      transaction.withdraw(this.withdrawAddress, withdrawValue, this.allowOverride);
     }
     return transaction;
   }
