@@ -123,6 +123,7 @@ describe.skip('Relay Adapt/Index', function test() {
 
     await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(awaiterDeposit).to.be.fulfilled;
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
   });
 
   it('[HH] Should return gas estimate for withdraw base token', async function run() {
@@ -132,6 +133,7 @@ describe.skip('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const relayerFee = new Note(wallet.addressKeys, bytes.random(16), 100n, WETH_TOKEN_ADDRESS);
@@ -190,7 +192,7 @@ describe.skip('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(10n);
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
@@ -253,7 +255,7 @@ describe.skip('Relay Adapt/Index', function test() {
     await expect(awaiterWithdraw).to.be.fulfilled;
 
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(10000 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
+      BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
   });
 
@@ -264,7 +266,7 @@ describe.skip('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(10000n);
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
@@ -287,7 +289,7 @@ describe.skip('Relay Adapt/Index', function test() {
     // Cross contract call: send 1 WETH token to Dead address.
     const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
     const sendToAddress = '0x000000000000000000000000000000000000dEaD';
-    const sendAmount = 975n;
+    const sendAmount = 990n;
     const crossContractCalls: PopulatedTransaction[] = [
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
@@ -350,7 +352,10 @@ describe.skip('Relay Adapt/Index', function test() {
     expect(await wethTokenContract.balanceOf(sendToAddress)).to.equal(BigNumber.from(sendAmount));
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(
-        10000 /* original */ - 300 /* relayer fee */ - 1000 /* withdraw + cross contract send */,
+        9975 /* original */ -
+          300 /* relayer fee */ -
+          1000 /* withdraw + cross contract send */ +
+          8 /* change after sending and withdraw fee */,
       ),
     );
   });
@@ -362,7 +367,7 @@ describe.skip('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(10000n);
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
@@ -385,7 +390,7 @@ describe.skip('Relay Adapt/Index', function test() {
     // Cross contract call: send 1 WETH token to Dead address.
     const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
     const sendToAddress = '0x000000000000000000000000000000000000dEaD';
-    const sendAmount = BigInt(2); // More than is available.
+    const sendAmount = 100n; // More than is available (after 0.25% withdraw fee).
     const crossContractCalls: PopulatedTransaction[] = [
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
@@ -448,9 +453,7 @@ describe.skip('Relay Adapt/Index', function test() {
     expect(await wethTokenContract.balanceOf(sendToAddress)).to.equal(BigNumber.from(sendAmount));
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(
-        10000 /* original */ -
-          100 /* relayer fee */ -
-          0 /* failed cross contract send: no change */,
+        9975 /* original */ - 100 /* relayer fee */ - 0 /* failed cross contract send: no change */,
       ),
     );
   });
