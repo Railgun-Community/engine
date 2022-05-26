@@ -4,6 +4,7 @@ import { ABIRelayAdapt } from '../../abi/abi';
 import { DepositInput, SerializedTransaction, TokenData } from '../../models/formatted-types';
 import { ERC20Deposit, ERC20WithdrawNote } from '../../note';
 import { ByteLength, formatToByteLength, random as bytesRandom } from '../../utils/bytes';
+import { Wallet } from '../../wallet';
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -36,25 +37,6 @@ class RelayAdaptContract {
     });
   }
 
-  static generateRelayDeposits(
-    masterPublicKey: bigint,
-    random: string,
-    tokens: string[],
-  ): ERC20Deposit[] {
-    return tokens.map((token) => {
-      return new ERC20Deposit(masterPublicKey, random, 0n, token);
-    });
-  }
-
-  static generateRelayDepositInputs(
-    viewingPrivateKey: Uint8Array,
-    relayDeposits: ERC20Deposit[],
-  ): DepositInput[] {
-    return relayDeposits.map((deposit) => {
-      return deposit.serialize(viewingPrivateKey);
-    });
-  }
-
   /**
    * @returns Populated transaction
    */
@@ -70,7 +52,7 @@ class RelayAdaptContract {
   }
 
   async getRelayAdaptParamsWithdrawBaseToken(
-    dummyWithdrawTransactions: SerializedTransaction[],
+    dummyTransactions: SerializedTransaction[],
     withdrawNote: ERC20WithdrawNote,
     random: string,
   ): Promise<string> {
@@ -82,7 +64,7 @@ class RelayAdaptContract {
     const requireSuccess = true;
 
     return RelayAdaptContract.getRelayAdaptParams(
-      dummyWithdrawTransactions,
+      dummyTransactions,
       random,
       requireSuccess,
       orderedCalls,
@@ -90,7 +72,7 @@ class RelayAdaptContract {
   }
 
   async withdrawBaseToken(
-    withdrawTransactions: SerializedTransaction[],
+    transactions: SerializedTransaction[],
     withdrawNote: ERC20WithdrawNote,
     random: string,
   ): Promise<PopulatedTransaction> {
@@ -101,7 +83,7 @@ class RelayAdaptContract {
 
     const requireSuccess = true;
 
-    return this.relay(withdrawTransactions, random, requireSuccess, orderedCalls, {});
+    return this.relay(transactions, random, requireSuccess, orderedCalls, {});
   }
 
   /**

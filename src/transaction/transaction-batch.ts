@@ -77,6 +77,10 @@ class TransactionBatch {
     this.allowOverride = undefined;
   }
 
+  setAdaptID(adaptID: AdaptID) {
+    this.adaptID = adaptID;
+  }
+
   /**
    * Generates spending solution groups for outputs
    * @param wallet - wallet to spend from

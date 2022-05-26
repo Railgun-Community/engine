@@ -234,7 +234,7 @@ describe('Transaction/Transaction ERC20', function () {
 
   it('Should generate validated inputs for transaction batch - withdraw', async () => {
     transactionBatch.addOutput(makeNote());
-    transactionBatch.setWithdraw(ethersWallet.address, 2n, '01');
+    transactionBatch.setWithdraw(ethersWallet.address, 2n, true);
     const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
       wallet,
     );
