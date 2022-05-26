@@ -10,7 +10,7 @@ import { Lepton } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
 import { config } from '../../config.test';
 import { Wallet } from '../../../src/wallet';
-import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../helper';
+import { artifactsGetter, awaitScan } from '../../helper';
 import { ERC20Deposit } from '../../../src/note/erc20-deposit';
 import { bytes } from '../../../src/utils';
 import { EventName, RailgunProxyContract } from '../../../src/contracts/railgun-proxy';
@@ -27,7 +27,6 @@ let chainID: number;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
-let token: ethers.Contract;
 let relayAdaptContract: RelayAdaptContract;
 let proxyContract: RailgunProxyContract;
 let walletID: string;
@@ -40,11 +39,10 @@ const testEncryptionKey = config.encryptionKey;
 
 const WETH_TOKEN_ADDRESS = config.contracts.weth9;
 const RANDOM = bytes.random(16);
-const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Relay Adapt/Index', function test() {
+describe.skip('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -77,18 +75,21 @@ describe('Relay Adapt/Index', function test() {
     etherswallet = new ethers.Wallet(privateKey, provider);
     snapshot = await provider.send('evm_snapshot', []);
 
-    token = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
-    const balance = await token.balanceOf(etherswallet.address);
-    await token.approve(relayAdaptContract.address, balance);
+    const railToken = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet);
+    const railBalance = await railToken.balanceOf(etherswallet.address);
+    const ethBalance = await etherswallet.getBalance();
+    console.log(railBalance);
+    console.log(ethBalance);
 
     testDepositBaseToken = async (
-      value: bigint = BigInt(110000) * DECIMALS_18,
+      value: bigint = 10000n,
     ): Promise<[TransactionReceipt, unknown]> => {
       // Create deposit
       const deposit = new ERC20Deposit(wallet.masterPublicKey, RANDOM, value, WETH_TOKEN_ADDRESS);
-      const depositInput = deposit.serialize(wallet.getViewingKeyPair().privateKey);
+      const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
+      const depositInput = deposit.serialize(viewingPrivateKey);
 
-      const depositTx = await relayAdaptContract.depositBaseToken(depositInput);
+      const depositTx = await relayAdaptContract.populateDepositBaseToken(depositInput);
 
       // Send deposit on chain
       const tx = await etherswallet.sendTransaction(depositTx);
@@ -96,7 +97,7 @@ describe('Relay Adapt/Index', function test() {
     };
   });
 
-  it.only('[HH] Should wrap and deposit base token', async function run() {
+  it('[HH] Should wrap and deposit base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -106,10 +107,10 @@ describe('Relay Adapt/Index', function test() {
     const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
     // Create deposit
-    const deposit = new ERC20Deposit(masterPublicKey, RANDOM, VALUE, WETH_TOKEN_ADDRESS);
+    const deposit = new ERC20Deposit(masterPublicKey, RANDOM, 10000n, WETH_TOKEN_ADDRESS);
     const depositInput = deposit.serialize(viewingPrivateKey);
 
-    const depositTx = await relayAdaptContract.depositBaseToken(depositInput);
+    const depositTx = await relayAdaptContract.populateDepositBaseToken(depositInput);
 
     const awaiterDeposit = awaitScan(wallet, chainID);
 
@@ -136,8 +137,12 @@ describe('Relay Adapt/Index', function test() {
     const relayerFee = new Note(wallet.addressKeys, bytes.random(16), 100n, WETH_TOKEN_ADDRESS);
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
 
-    const withdrawNote = new ERC20WithdrawNote(etherswallet.address, 300n, WETH_TOKEN_ADDRESS);
-    transactionBatch.setWithdraw(withdrawNote.withdrawAddress, withdrawNote.value);
+    const withdrawNote = new ERC20WithdrawNote(
+      relayAdaptContract.address,
+      300n,
+      WETH_TOKEN_ADDRESS,
+    );
+    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
       wallet,
@@ -168,7 +173,7 @@ describe('Relay Adapt/Index', function test() {
     //   testEncryptionKey,
     // );
 
-    const relayTransaction = await relayAdaptContract.withdrawBaseToken(
+    const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
       dummyTransactions,
       withdrawNote,
       random,
@@ -185,16 +190,18 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(10000) * DECIMALS_18,
-    );
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(10n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 100n, WETH_TOKEN_ADDRESS);
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(etherswallet.address, 300n, WETH_TOKEN_ADDRESS);
-    transactionBatch.setWithdraw(withdrawNote.withdrawAddress, withdrawNote.value);
+    const withdrawNote = new ERC20WithdrawNote(
+      relayAdaptContract.address,
+      300n,
+      WETH_TOKEN_ADDRESS,
+    );
+    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
@@ -227,7 +234,7 @@ describe('Relay Adapt/Index', function test() {
     });
 
     // 5: Generate final relay transaction for withdraw base token.
-    const relayTransaction = await relayAdaptContract.withdrawBaseToken(
+    const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
       transactions,
       withdrawNote,
       random,
@@ -246,8 +253,7 @@ describe('Relay Adapt/Index', function test() {
     await expect(awaiterWithdraw).to.be.fulfilled;
 
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(10000 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */) *
-        DECIMALS_18,
+      BigInt(10000 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
   });
 
@@ -258,16 +264,18 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(10000) * DECIMALS_18,
-    );
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(10000n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 100n, WETH_TOKEN_ADDRESS);
+    const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 300n, WETH_TOKEN_ADDRESS);
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(etherswallet.address, 1n, WETH_TOKEN_ADDRESS);
-    transactionBatch.setWithdraw(withdrawNote.withdrawAddress, withdrawNote.value);
+    const withdrawNote = new ERC20WithdrawNote(
+      relayAdaptContract.address,
+      1000n,
+      WETH_TOKEN_ADDRESS,
+    );
+    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
@@ -279,7 +287,7 @@ describe('Relay Adapt/Index', function test() {
     // Cross contract call: send 1 WETH token to Dead address.
     const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
     const sendToAddress = '0x000000000000000000000000000000000000dEaD';
-    const sendAmount = BigInt(1) * DECIMALS_18;
+    const sendAmount = 975n;
     const crossContractCalls: PopulatedTransaction[] = [
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
@@ -319,7 +327,7 @@ describe('Relay Adapt/Index', function test() {
     });
 
     // 7. Generate real relay transaction for cross contract call.
-    const relayTransaction = await relayAdaptContract.crossContractCalls(
+    const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
       relayDepositInputs,
@@ -341,8 +349,9 @@ describe('Relay Adapt/Index', function test() {
     // Dead address should have 1 WETH.
     expect(await wethTokenContract.balanceOf(sendToAddress)).to.equal(BigNumber.from(sendAmount));
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(10000 /* original */ - 100 /* relayer fee */ - 1 /* cross contract send */) *
-        DECIMALS_18,
+      BigInt(
+        10000 /* original */ - 300 /* relayer fee */ - 1000 /* withdraw + cross contract send */,
+      ),
     );
   });
 
@@ -353,16 +362,18 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(10000) * DECIMALS_18,
-    );
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(10000n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 100n, WETH_TOKEN_ADDRESS);
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(etherswallet.address, 1n, WETH_TOKEN_ADDRESS);
-    transactionBatch.setWithdraw(withdrawNote.withdrawAddress, withdrawNote.value);
+    const withdrawNote = new ERC20WithdrawNote(
+      relayAdaptContract.address,
+      100n,
+      WETH_TOKEN_ADDRESS,
+    );
+    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
@@ -374,7 +385,7 @@ describe('Relay Adapt/Index', function test() {
     // Cross contract call: send 1 WETH token to Dead address.
     const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
     const sendToAddress = '0x000000000000000000000000000000000000dEaD';
-    const sendAmount = BigInt(2) * DECIMALS_18; // More than is available.
+    const sendAmount = BigInt(2); // More than is available.
     const crossContractCalls: PopulatedTransaction[] = [
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
@@ -414,7 +425,7 @@ describe('Relay Adapt/Index', function test() {
     });
 
     // 7. Generate real relay transaction for cross contract call.
-    const relayTransaction = await relayAdaptContract.crossContractCalls(
+    const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
       relayDepositInputs,
@@ -440,7 +451,7 @@ describe('Relay Adapt/Index', function test() {
         10000 /* original */ -
           100 /* relayer fee */ -
           0 /* failed cross contract send: no change */,
-      ) * DECIMALS_18,
+      ),
     );
   });
 

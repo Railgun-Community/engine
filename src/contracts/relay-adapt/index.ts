@@ -1,9 +1,10 @@
 import { Provider } from '@ethersproject/abstract-provider';
-import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
+import { CallOverrides, Contract, PopulatedTransaction } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import { DepositInput, SerializedTransaction, TokenData } from '../../models/formatted-types';
 import { ERC20WithdrawNote } from '../../note';
 import { ByteLength, formatToByteLength, random as bytesRandom } from '../../utils/bytes';
+import { RelayAdaptHelper } from './relay-adapt-helper';
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -20,10 +21,10 @@ class RelayAdaptContract {
     this.contract = new Contract(relayAdaptContractAddress, ABIRelayAdapt, provider);
   }
 
-  async depositBaseToken(depositInput: DepositInput): Promise<PopulatedTransaction> {
+  async populateDepositBaseToken(depositInput: DepositInput): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await Promise.all([
       this.contract.populateTransaction.wrapAllBase(),
-      this.relayDeposit([depositInput]),
+      this.populateRelayDeposit([depositInput]),
     ]);
 
     // Empty transactions array for deposit.
@@ -31,7 +32,7 @@ class RelayAdaptContract {
     const random = bytesRandom(16);
     const requireSuccess = true;
 
-    return this.relay(transactions, random, requireSuccess, orderedCalls, {
+    return this.populateRelay(transactions, random, requireSuccess, orderedCalls, {
       value: depositInput.preImage.value,
     });
   }
@@ -39,15 +40,20 @@ class RelayAdaptContract {
   /**
    * @returns Populated transaction
    */
-  private relayDeposit(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
+  private populateRelayDeposit(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
     const tokens: TokenData[] = depositInputs.map((depositInput) => depositInput.preImage.token);
+    RelayAdaptHelper.validateDepositInputs(depositInputs);
     const { encryptedRandom, preImage } = depositInputs[0];
-    depositInputs.forEach((depositInput) => {
-      if (depositInput.preImage.npk !== preImage.npk) {
-        throw new Error('Relay deposits must all contain the same npk/random.');
-      }
-    });
     return this.contract.populateTransaction.deposit(tokens, encryptedRandom, preImage.npk);
+  }
+
+  private async getOrderedCallsForWithdrawBaseToken(
+    withdrawNote: ERC20WithdrawNote,
+  ): Promise<PopulatedTransaction[]> {
+    return Promise.all([
+      this.contract.populateTransaction.unwrapAllBase(),
+      this.populateRelaySend(withdrawNote.token, withdrawNote.withdrawAddress),
+    ]);
   }
 
   async getRelayAdaptParamsWithdrawBaseToken(
@@ -55,14 +61,12 @@ class RelayAdaptContract {
     withdrawNote: ERC20WithdrawNote,
     random: string,
   ): Promise<string> {
-    const orderedCalls: PopulatedTransaction[] = await Promise.all([
-      this.contract.populateTransaction.unwrapAllBase(),
-      this.relaySend(withdrawNote.token, withdrawNote.withdrawAddress),
-    ]);
+    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForWithdrawBaseToken(
+      withdrawNote,
+    );
 
     const requireSuccess = true;
-
-    return RelayAdaptContract.getRelayAdaptParams(
+    return RelayAdaptHelper.getRelayAdaptParams(
       dummyTransactions,
       random,
       requireSuccess,
@@ -70,26 +74,37 @@ class RelayAdaptContract {
     );
   }
 
-  async withdrawBaseToken(
+  async populateWithdrawBaseToken(
     transactions: SerializedTransaction[],
     withdrawNote: ERC20WithdrawNote,
     random: string,
   ): Promise<PopulatedTransaction> {
-    const orderedCalls: PopulatedTransaction[] = await Promise.all([
-      this.contract.populateTransaction.unwrapAllBase(),
-      this.relaySend(withdrawNote.token, withdrawNote.withdrawAddress),
-    ]);
+    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForWithdrawBaseToken(
+      withdrawNote,
+    );
 
     const requireSuccess = true;
-
-    return this.relay(transactions, random, requireSuccess, orderedCalls, {});
+    return this.populateRelay(transactions, random, requireSuccess, orderedCalls, {});
   }
 
   /**
    * @returns Populated transaction
    */
-  private relaySend(tokenData: TokenData, toAddress: string): Promise<PopulatedTransaction> {
+  private populateRelaySend(
+    tokenData: TokenData,
+    toAddress: string,
+  ): Promise<PopulatedTransaction> {
     return this.contract.populateTransaction.send(tokenData, toAddress);
+  }
+
+  private async getOrderedCallsForCrossContractCalls(
+    crossContractCalls: PopulatedTransaction[],
+    relayDepositInputs: DepositInput[],
+  ): Promise<PopulatedTransaction[]> {
+    return Promise.all([
+      ...crossContractCalls,
+      await this.populateRelayDeposit(relayDepositInputs),
+    ]);
   }
 
   async getRelayAdaptParamsCrossContractCalls(
@@ -98,14 +113,13 @@ class RelayAdaptContract {
     relayDepositInputs: DepositInput[],
     random: string,
   ): Promise<string> {
-    const orderedCalls: PopulatedTransaction[] = [
-      ...crossContractCalls,
-      await this.relayDeposit(relayDepositInputs),
-    ];
+    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
+      crossContractCalls,
+      relayDepositInputs,
+    );
 
     const requireSuccess = true;
-
-    return RelayAdaptContract.getRelayAdaptParams(
+    return RelayAdaptHelper.getRelayAdaptParams(
       dummyWithdrawTransactions,
       random,
       requireSuccess,
@@ -113,26 +127,26 @@ class RelayAdaptContract {
     );
   }
 
-  async crossContractCalls(
+  async populateCrossContractCalls(
     withdrawTransactions: SerializedTransaction[],
     crossContractCalls: PopulatedTransaction[],
     relayDepositInputs: DepositInput[],
     random: string,
   ): Promise<PopulatedTransaction> {
-    const orderedCalls: PopulatedTransaction[] = [
-      ...crossContractCalls,
-      await this.relayDeposit(relayDepositInputs),
-    ];
+    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
+      crossContractCalls,
+      relayDepositInputs,
+    );
 
     const requireSuccess = true;
-    return this.relay(withdrawTransactions, random, requireSuccess, orderedCalls, {});
+    return this.populateRelay(withdrawTransactions, random, requireSuccess, orderedCalls, {});
   }
 
   /**
    * Generates Relay call given a list of serialized transactions.
    * @returns populated transaction
    */
-  private relay(
+  private populateRelay(
     serializedTransactions: SerializedTransaction[],
     random: string,
     requireSuccess: boolean,
@@ -144,71 +158,9 @@ class RelayAdaptContract {
       serializedTransactions,
       formattedRandom,
       requireSuccess,
-      RelayAdaptContract.formatCalls(calls),
+      RelayAdaptHelper.formatCalls(calls),
       overrides,
     );
-  }
-
-  /**
-   * Calculate hash of adapt params.
-   *
-   * @param {SerializedTransaction[]} serializedTransactions - serialized transactions
-   * @param {string} additionalData - additional byte data to add to adapt params
-   * @returns {string} adapt params
-   */
-  private static getAdaptParamsHash(
-    serializedTransactions: SerializedTransaction[],
-    additionalData: string,
-  ): string {
-    const firstNullifiers = serializedTransactions.map((tx) => tx.nullifiers[0]);
-
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    return ethers.utils.keccak256(
-      abiCoder.encode(
-        ['uint256[]', 'uint256', 'bytes'],
-        [firstNullifiers, serializedTransactions.length, additionalData],
-      ),
-    );
-  }
-
-  /**
-   * Get relay adapt params field.
-   * Hashes transaction data and params to ensure that transaction is not modified by MITM.
-   *
-   * @param {SerializedTransaction[]} serializedTransactions - serialized transactions
-   * @param {string} random - random value
-   * @param {boolean} requireSuccess - require success on calls
-   * @param {object[]} calls - calls list
-   * @returns {string} adapt params
-   */
-  private static getRelayAdaptParams(
-    serializedTransactions: SerializedTransaction[],
-    random: string,
-    requireSuccess: boolean,
-    calls: PopulatedTransaction[],
-  ): string {
-    const formattedRandom = formatToByteLength(random, ByteLength.UINT_256, true);
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const additionalData = abiCoder.encode(
-      ['uint256', 'bool', 'tuple(address to, bytes data, uint256 value)[] calls'],
-      [formattedRandom, requireSuccess, calls],
-    );
-
-    return RelayAdaptContract.getAdaptParamsHash(serializedTransactions, additionalData);
-  }
-
-  /**
-   * Strips all unnecessary fields from populated transactions
-   *
-   * @param {object[]} calls - calls list
-   * @returns {object[]} formatted calls
-   */
-  private static formatCalls(calls: PopulatedTransaction[]): PopulatedTransaction[] {
-    return calls.map((call) => ({
-      to: call.to,
-      data: call.data,
-      value: call.value ?? BigNumber.from(0),
-    }));
   }
 }
 
