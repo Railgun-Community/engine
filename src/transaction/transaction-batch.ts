@@ -2,11 +2,11 @@ import { Note } from '../note';
 import { bytes } from '../utils';
 import { Wallet, TXO, TreeBalance } from '../wallet';
 import { Prover } from '../prover';
-import { ByteLength, formatToByteLength } from '../utils/bytes';
+import { ByteLength, formatToByteLength, HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup } from '../models/txo-types';
-import { TokenType, BigIntish, SerializedTransaction } from '../models/formatted-types';
+import { TokenType, BigIntish, SerializedTransaction, AdaptID } from '../models/formatted-types';
 import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
@@ -22,6 +22,11 @@ import {
 import { stringifySafe } from '../utils/stringify';
 
 class TransactionBatch {
+  private adaptID: AdaptID = {
+    contract: '0x0000000000000000000000000000000000000000',
+    parameters: HashZero,
+  };
+
   private chainID: number;
 
   private tokenAddress: string;
@@ -300,6 +305,7 @@ class TransactionBatch {
       this.chainID,
       spendingTree,
       utxos,
+      this.adaptID,
     );
     transaction.setOutputs(outputs);
     if (this.withdrawAddress && withdrawValue > 0) {

@@ -4,14 +4,7 @@ import { bytes, hash } from '../utils';
 import { Wallet } from '../wallet';
 import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
-import {
-  ByteLength,
-  formatToByteLength,
-  HashZero,
-  hexlify,
-  hexToBigInt,
-  nToHex,
-} from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import {
   AdaptID,
   BoundParams,
@@ -40,10 +33,7 @@ export function hashBoundParams(boundParams: BoundParams) {
 }
 
 class Transaction {
-  private adaptID: AdaptID = {
-    contract: '0x0000000000000000000000000000000000000000',
-    parameters: HashZero,
-  };
+  private adaptID: AdaptID;
 
   private chainID: number;
 
@@ -77,12 +67,14 @@ class Transaction {
     chainID: number,
     spendingTree: number,
     utxos: TXO[],
+    adaptID: AdaptID,
   ) {
     this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
     this.tokenType = tokenType;
     this.chainID = chainID;
     this.spendingTree = spendingTree;
     this.utxos = utxos;
+    this.adaptID = adaptID;
   }
 
   setOutputs(outputs: Note[]) {
