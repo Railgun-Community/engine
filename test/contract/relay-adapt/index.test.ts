@@ -44,7 +44,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe.skip('Relay Adapt/Index', function test() {
+describe('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -96,7 +96,7 @@ describe.skip('Relay Adapt/Index', function test() {
     };
   });
 
-  it('[HH] Should wrap and deposit base token', async function run() {
+  it.only('[HH] Should wrap and deposit base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

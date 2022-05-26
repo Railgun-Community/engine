@@ -2,9 +2,8 @@ import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import { DepositInput, SerializedTransaction, TokenData } from '../../models/formatted-types';
-import { ERC20Deposit, ERC20WithdrawNote } from '../../note';
+import { ERC20WithdrawNote } from '../../note';
 import { ByteLength, formatToByteLength, random as bytesRandom } from '../../utils/bytes';
-import { Wallet } from '../../wallet';
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -45,7 +44,7 @@ class RelayAdaptContract {
     const { encryptedRandom, preImage } = depositInputs[0];
     depositInputs.forEach((depositInput) => {
       if (depositInput.preImage.npk !== preImage.npk) {
-        throw new Error('Relay deposits must all contain the same random.');
+        throw new Error('Relay deposits must all contain the same npk/random.');
       }
     });
     return this.contract.populateTransaction.deposit(tokens, encryptedRandom, preImage.npk);

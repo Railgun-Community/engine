@@ -45,7 +45,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 let testDeposit: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 // eslint-disable-next-line func-names
-describe('Railgun Proxy/Index', function () {
+describe.skip('Railgun Proxy/Index', function () {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -126,28 +126,6 @@ describe('Railgun Proxy/Index', function () {
 
     expect((await provider.estimateGas(tx)).toNumber()).to.be.greaterThanOrEqual(0);
   });
-
-  /*
-  it('[HH] Should return deposit weth amount', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
-      this.skip();
-      return;
-    }
-
-    const amount = BigNumber.from(1);
-    const wethAddress = '0x0a180A76e4466bF68A7F86fB029BEd3cCcFaAac5';
-
-    const randomPubKey1 = babyjubjub.privateKeyToPubKey(
-      babyjubjub.seedToPrivateKey(bytes.random(32)),
-    );
-
-    expect(
-      await (
-        await contract.depositEth(amount, wethAddress, randomPubKey1)
-      ).value,
-    ).to.greaterThanOrEqual(1);
-  });
-  */
 
   it('[HH] Should return valid merkle roots', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
