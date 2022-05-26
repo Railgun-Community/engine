@@ -54,7 +54,7 @@ export enum EventName {
   Nullifiers = 'Nullifiers',
 }
 
-class ERC20RailgunContract extends EventEmitter {
+class RailgunLogicContract extends EventEmitter {
   contract: Contract;
 
   // Contract address
@@ -382,4 +382,4 @@ class ERC20RailgunContract extends EventEmitter {
   }
 }
 
-export { ERC20RailgunContract };
+export { RailgunLogicContract };

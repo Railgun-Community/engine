@@ -2,7 +2,7 @@ import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import BN from 'bn.js';
 import EventEmitter from 'events';
-import { ERC20RailgunContract } from './contract';
+import { RailgunLogicContract } from './contracts/railgun-logic';
 import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
 import { MerkleTree } from './merkletree';
@@ -12,7 +12,7 @@ import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { hexlify, padToLength } from './utils/bytes';
 import { Wallet } from './wallet';
-import { CommitmentEvent } from './contract/erc20';
+import { CommitmentEvent } from './contracts/railgun-logic/erc20';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
 import { BytesData, Commitment, Nullifier } from './models/formatted-types';
@@ -30,7 +30,7 @@ class Lepton extends EventEmitter {
 
   readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
 
-  readonly contracts: ERC20RailgunContract[] = [];
+  readonly contracts: RailgunLogicContract[] = [];
 
   readonly prover: Prover;
 
@@ -249,7 +249,7 @@ class Lepton extends EventEmitter {
     if (this.merkletree[chainID] || this.contracts[chainID]) this.unloadNetwork(chainID);
 
     // Create contract instance
-    const contract = new ERC20RailgunContract(address, provider);
+    const contract = new RailgunLogicContract(address, provider);
     this.contracts[chainID] = contract;
 
     // Create tree controllers

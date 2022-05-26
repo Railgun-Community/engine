@@ -6,7 +6,7 @@ import { bytesToHex } from 'ethereum-cryptography/utils';
 import { PublicInputs } from '../src/prover';
 import { ScannedEventData, Wallet } from '../src/wallet';
 import { AccumulatedEvents, QuickSync } from '../src';
-import { CommitmentEvent } from '../src/contract/erc20/events';
+import { CommitmentEvent } from '../src/contracts/railgun-logic/events';
 import { Nullifier } from '../src/models/formatted-types';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);

@@ -11,7 +11,7 @@ import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync
 import { ERC20Deposit } from '../src/note/erc20-deposit';
 import { MerkleTree } from '../src/merkletree';
 import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
-import { ERC20RailgunContract } from '../src/contract';
+import { RailgunLogicContract } from '../src/contracts/railgun-logic';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
 import { GeneratedCommitment, TokenType } from '../src/models/formatted-types';
@@ -31,7 +31,7 @@ let walletID2: string;
 let wallet2: Wallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
-let contract: ERC20RailgunContract;
+let contract: RailgunLogicContract;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
