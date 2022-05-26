@@ -19,7 +19,7 @@ import {
 import { LeptonEvent } from '../../models/event-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
-import { abi } from './abi';
+import { abi } from '../../abi/abi';
 import {
   CommitmentBatchEventArgs,
   CommitmentCiphertextArgs,
