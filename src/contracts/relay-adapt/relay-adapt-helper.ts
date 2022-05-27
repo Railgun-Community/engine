@@ -85,7 +85,7 @@ class RelayAdaptHelper {
     const abiCoder = ethers.utils.defaultAbiCoder;
     const additionalData = abiCoder.encode(
       ['uint256', 'bool', 'tuple(address to, bytes data, uint256 value)[] calls'],
-      [formattedRandom, requireSuccess, calls],
+      [formattedRandom, requireSuccess, this.formatCalls(calls)],
     );
 
     return RelayAdaptHelper.getAdaptParamsHash(serializedTransactions, additionalData);
@@ -99,6 +99,7 @@ class RelayAdaptHelper {
    */
   static formatCalls(calls: PopulatedTransaction[]): PopulatedTransaction[] {
     return calls.map((call) => ({
+      from: call.from,
       to: call.to,
       data: call.data,
       value: call.value ?? BigNumber.from(0),

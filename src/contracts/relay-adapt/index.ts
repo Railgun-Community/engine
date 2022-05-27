@@ -24,7 +24,7 @@ class RelayAdaptContract {
   async populateDepositBaseToken(depositInput: DepositInput): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await Promise.all([
       this.contract.populateTransaction.wrapAllBase(),
-      this.populateRelayDeposit([depositInput]),
+      this.populateRelayDeposits([depositInput]),
     ]);
 
     // Empty transactions array for deposit.
@@ -40,7 +40,7 @@ class RelayAdaptContract {
   /**
    * @returns Populated transaction
    */
-  private populateRelayDeposit(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
+  private populateRelayDeposits(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
     const tokens: TokenData[] = depositInputs.map((depositInput) => depositInput.preImage.token);
     RelayAdaptHelper.validateDepositInputs(depositInputs);
     const { encryptedRandom, preImage } = depositInputs[0];
@@ -52,7 +52,7 @@ class RelayAdaptContract {
   ): Promise<PopulatedTransaction[]> {
     return Promise.all([
       this.contract.populateTransaction.unwrapAllBase(),
-      this.populateRelaySend(withdrawNote.token, withdrawNote.withdrawAddress),
+      this.populateRelaySend([withdrawNote.token], withdrawNote.withdrawAddress),
     ]);
   }
 
@@ -91,7 +91,7 @@ class RelayAdaptContract {
    * @returns Populated transaction
    */
   private populateRelaySend(
-    tokenData: TokenData,
+    tokenData: TokenData[],
     toAddress: string,
   ): Promise<PopulatedTransaction> {
     return this.contract.populateTransaction.send(tokenData, toAddress);
@@ -103,7 +103,7 @@ class RelayAdaptContract {
   ): Promise<PopulatedTransaction[]> {
     return Promise.all([
       ...crossContractCalls,
-      await this.populateRelayDeposit(relayDepositInputs),
+      await this.populateRelayDeposits(relayDepositInputs),
     ]);
   }
 
