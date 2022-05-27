@@ -44,7 +44,7 @@ const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Relay Adapt/Index', function test() {
+describe.only('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -151,7 +151,7 @@ describe('Relay Adapt/Index', function test() {
 
     const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
       dummyTransactions,
-      withdrawNote,
+      etherswallet.address,
       random,
     );
 
@@ -191,11 +191,11 @@ describe('Relay Adapt/Index', function test() {
     const random = '0x1234567890abcdef';
     const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsWithdrawBaseToken(
       dummyTransactions,
-      withdrawNote,
+      etherswallet.address,
       random,
     );
     expect(relayAdaptParams).to.equal(
-      '0x0866e1f1c461e4531c7630a40dea2b3afce9edc8a05bc5772697626425291949',
+      '0xcb149c2bcbac51233445696c67bf4d3eddecfefa41ea709ee496374414eba74c',
     );
 
     // 4. Create real transactions with relay adapt params.
@@ -213,10 +213,12 @@ describe('Relay Adapt/Index', function test() {
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
+    const preEthBalance = await etherswallet.getBalance();
+
     // 5: Generate final relay transaction for withdraw base token.
     const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
       transactions,
-      withdrawNote,
+      etherswallet.address,
       random,
     );
 
@@ -229,12 +231,19 @@ describe('Relay Adapt/Index', function test() {
       proxyContract.contract.once(EventName.CommitmentBatch, resolve),
     );
 
+    // const [{ gasUsed }] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(awaiterWithdraw).to.be.fulfilled;
 
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
+
+    // TODO: Fix this assertion for final ETH balance.
+    // const postEthBalance = await etherswallet.getBalance();
+    // expect(preEthBalance.toBigInt() - gasUsed.toBigInt() + 300n).to.equal(
+    //   postEthBalance.toBigInt(),
+    // );
   });
 
   it.skip('[HH] Should execute relay adapt transaction for cross contract call', async function run() {

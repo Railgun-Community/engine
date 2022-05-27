@@ -1,9 +1,14 @@
 import { Provider } from '@ethersproject/abstract-provider';
 import { CallOverrides, Contract, PopulatedTransaction } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
-import { DepositInput, SerializedTransaction, TokenData } from '../../models/formatted-types';
-import { ERC20WithdrawNote } from '../../note';
+import {
+  DepositInput,
+  SerializedTransaction,
+  TokenData,
+  TokenType,
+} from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, random as bytesRandom } from '../../utils/bytes';
+import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 
 class RelayAdaptContract {
@@ -48,21 +53,27 @@ class RelayAdaptContract {
   }
 
   private async getOrderedCallsForWithdrawBaseToken(
-    withdrawNote: ERC20WithdrawNote,
+    withdrawAddress: string,
   ): Promise<PopulatedTransaction[]> {
+    const baseTokenData: TokenData = {
+      tokenAddress: ZERO_ADDRESS,
+      tokenType: TokenType.ERC20,
+      tokenSubID: ZERO_ADDRESS,
+    };
+
     return Promise.all([
       this.contract.populateTransaction.unwrapAllBase(),
-      this.populateRelaySend([withdrawNote.token], withdrawNote.withdrawAddress),
+      this.populateRelaySend([baseTokenData], withdrawAddress),
     ]);
   }
 
   async getRelayAdaptParamsWithdrawBaseToken(
     dummyTransactions: SerializedTransaction[],
-    withdrawNote: ERC20WithdrawNote,
+    withdrawAddress: string,
     random: string,
   ): Promise<string> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForWithdrawBaseToken(
-      withdrawNote,
+      withdrawAddress,
     );
 
     const requireSuccess = true;
@@ -76,11 +87,11 @@ class RelayAdaptContract {
 
   async populateWithdrawBaseToken(
     transactions: SerializedTransaction[],
-    withdrawNote: ERC20WithdrawNote,
+    withdrawAddress: string,
     random: string,
   ): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForWithdrawBaseToken(
-      withdrawNote,
+      withdrawAddress,
     );
 
     const requireSuccess = true;
