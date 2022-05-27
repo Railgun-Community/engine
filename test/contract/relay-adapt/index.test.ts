@@ -213,7 +213,7 @@ describe.only('Relay Adapt/Index', function test() {
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
-    const preEthBalance = await etherswallet.getBalance();
+    // const preEthBalance = await etherswallet.getBalance();
 
     // 5: Generate final relay transaction for withdraw base token.
     const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
