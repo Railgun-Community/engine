@@ -44,7 +44,7 @@ const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe.only('Relay Adapt/Index', function test() {
+describe('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
