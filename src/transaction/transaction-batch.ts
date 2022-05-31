@@ -282,7 +282,7 @@ class TransactionBatch {
     const proofPromises: Promise<SerializedTransaction>[] = [];
 
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    LeptonDebug.log('Dummy spending solution groups:');
+    LeptonDebug.log(`Dummy spending solution groups: token ${this.tokenAddress}`);
     LeptonDebug.log(
       stringifySafe(
         serializeExtractedSpendingSolutionGroupsData(
