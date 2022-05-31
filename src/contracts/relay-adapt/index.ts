@@ -129,7 +129,9 @@ class RelayAdaptContract {
       relayDepositInputs,
     );
 
-    const requireSuccess = true;
+    // If the cross contract call fails, the Relayer Fee and Deposits will continue to process.
+    const requireSuccess = false;
+
     return RelayAdaptHelper.getRelayAdaptParams(
       dummyWithdrawTransactions,
       random,
@@ -149,7 +151,9 @@ class RelayAdaptContract {
       relayDepositInputs,
     );
 
-    const requireSuccess = true;
+    // If the cross contract call fails, the Relayer Fee and Deposits will continue to process.
+    const requireSuccess = false;
+
     return this.populateRelay(withdrawTransactions, random, requireSuccess, orderedCalls, {});
   }
 
