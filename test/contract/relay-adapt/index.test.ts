@@ -18,7 +18,6 @@ import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import { TokenType } from '../../../src/models/formatted-types';
 import { ERC20WithdrawNote, Note } from '../../../src/note';
 import { ByteLength, nToHex } from '../../../src/utils/bytes';
-import { ABIRelayAdapt } from '../../../src/abi/abi';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -45,7 +44,7 @@ const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe.only('Relay Adapt/Index', function test() {
+describe('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -120,6 +119,7 @@ describe.only('Relay Adapt/Index', function test() {
 
     await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(awaiterDeposit).to.be.fulfilled;
+
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
   });
 
@@ -232,20 +232,23 @@ describe.only('Relay Adapt/Index', function test() {
       proxyContract.contract.once(EventName.CommitmentBatch, resolve),
     );
 
-    const [{ gasUsed }] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
+    const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(awaiterWithdraw).to.be.fulfilled;
 
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
 
+    const callResultError = relayAdaptContract.getCallResultError(txReceipt);
+    expect(callResultError).to.equal(undefined);
+
     const postEthBalance = await etherswallet.getBalance();
-    expect(preEthBalance.toBigInt() - gasUsed.toBigInt() + 300n).to.equal(
+    expect(preEthBalance.toBigInt() - txReceipt.gasUsed.toBigInt() + 300n).to.equal(
       postEthBalance.toBigInt(),
     );
   });
 
-  it.skip('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
+  it.only('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -256,8 +259,8 @@ describe.only('Relay Adapt/Index', function test() {
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 300n, WETH_TOKEN_ADDRESS);
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    // const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 300n, WETH_TOKEN_ADDRESS);
+    // transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(
       relayAdaptContract.address,
       1000n,
@@ -449,7 +452,7 @@ describe.only('Relay Adapt/Index', function test() {
     expect(sendAddressBalance.toBigInt()).to.equal(0n);
 
     const callResultError = relayAdaptContract.getCallResultError(txReceipt);
-    expect(callResultError).to.equal('[ERROR NEEDED]');
+    expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(
