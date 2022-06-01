@@ -1,5 +1,5 @@
-import { Provider } from '@ethersproject/abstract-provider';
-import { CallOverrides, Contract, PopulatedTransaction } from 'ethers';
+import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
+import { CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import {
   DepositInput,
@@ -10,6 +10,17 @@ import {
 import { ByteLength, formatToByteLength, random as bytesRandom } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
+
+const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
+
+enum RelayAdaptEvent {
+  CallResult = 'CallResult',
+}
+
+type CallResult = {
+  success: boolean;
+  returnData: string;
+};
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -176,6 +187,52 @@ class RelayAdaptContract {
       RelayAdaptHelper.formatCalls(calls),
       overrides,
     );
+  }
+
+  getCallResultError(receipt: TransactionReceipt): string | undefined {
+    const iface = this.contract.interface;
+    const topic = iface.getEventTopic(RelayAdaptEvent.CallResult);
+    let results: {
+      success: boolean;
+      error?: string;
+    }[] = [];
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const log of receipt.logs) {
+      if (log.topics[0] === topic) {
+        const parsed = iface.parseLog(log);
+        results = parsed.args.callResults.map((callResult: CallResult) => {
+          if (!callResult.success) {
+            return {
+              success: false,
+              error: RelayAdaptContract.parseCallResultError(callResult.returnData),
+            };
+          }
+          return {
+            success: true,
+          };
+        });
+      }
+    }
+
+    if (!results.length) {
+      throw new Error('Call Result events not found.');
+    }
+    const firstErrorResult = results.find((r) => r.error);
+    if (firstErrorResult) {
+      return firstErrorResult.error as string;
+    }
+    return undefined;
+  }
+
+  private static parseCallResultError(returnData: string): string {
+    if (returnData.match(RETURN_DATA_STRING_PREFIX)) {
+      const strippedReturnValue = returnData.replace(RETURN_DATA_STRING_PREFIX, '0x');
+      const result = ethers.utils.defaultAbiCoder.decode(['string'], strippedReturnValue);
+      return result[0];
+    }
+
+    return 'Unknown Relay Adapt error.';
   }
 }
 

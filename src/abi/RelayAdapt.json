@@ -16,6 +16,31 @@
     "type": "constructor"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "bool",
+            "name": "success",
+            "type": "bool"
+          },
+          {
+            "internalType": "bytes",
+            "name": "returnData",
+            "type": "bytes"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct RelayAdapt.Result[]",
+        "name": "callResults",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "CallResult",
+    "type": "event"
+  },
+  {
     "inputs": [],
     "name": "VERIFICATION_BYPASS",
     "outputs": [
@@ -887,25 +912,7 @@
       }
     ],
     "name": "relay",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "bool",
-            "name": "success",
-            "type": "bool"
-          },
-          {
-            "internalType": "bytes",
-            "name": "returnData",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct RelayAdapt.Result[]",
-        "name": "",
-        "type": "tuple[]"
-      }
-    ],
+    "outputs": [],
     "stateMutability": "payable",
     "type": "function"
   },
