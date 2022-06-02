@@ -189,8 +189,8 @@ class RelayAdaptContract {
     );
   }
 
-  getCallResultError(receipt: TransactionReceipt): string | undefined {
-    const iface = this.contract.interface;
+  static getCallResultError(receipt: TransactionReceipt): string | undefined {
+    const iface = new ethers.utils.Interface(ABIRelayAdapt);
     const topic = iface.getEventTopic(RelayAdaptEvent.CallResult);
     let results: {
       success: boolean;

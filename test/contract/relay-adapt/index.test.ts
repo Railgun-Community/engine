@@ -44,7 +44,6 @@ const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
 console.log('DEPLOYMENT_BLOCK', DEPLOYMENT_BLOCK);
 
-
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Relay Adapt/Index', function test() {
@@ -165,7 +164,7 @@ describe('Relay Adapt/Index', function test() {
     expect(gasEstimate.toNumber()).to.be.greaterThan(0);
   });
 
-  it.skip('[HH] Should execute relay adapt transaction for withdraw base token', async function run() {
+  it('[HH] Should execute relay adapt transaction for withdraw base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -242,7 +241,7 @@ describe('Relay Adapt/Index', function test() {
       BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
 
-    const callResultError = relayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
     expect(callResultError).to.equal(undefined);
 
     const postEthBalance = await etherswallet.getBalance();
@@ -397,7 +396,7 @@ describe('Relay Adapt/Index', function test() {
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
     // TODO: Fix this assertion.
-    const callResultError = relayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
     expect(callResultError).to.equal(undefined);
 
     // TODO: Fix this assertion.
@@ -411,7 +410,7 @@ describe('Relay Adapt/Index', function test() {
     );
   });
 
-  it.skip('[HH] Should revert send for failing cross contract call', async function run() {
+  it('[HH] Should revert send for failing cross contract call', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -504,12 +503,12 @@ describe('Relay Adapt/Index', function test() {
     const sendAddressBalance: BigNumber = await wethTokenContract.balanceOf(sendToAddress);
     expect(sendAddressBalance.toBigInt()).to.equal(0n);
 
-    const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
-      relayAdaptContract.address,
-    );
-    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
+    // const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+    //   relayAdaptContract.address,
+    // );
+    // expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = relayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
