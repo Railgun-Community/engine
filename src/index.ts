@@ -117,10 +117,12 @@ class Lepton extends EventEmitter {
       );
       if (latestEvent) {
         // eslint-disable-next-line no-await-in-loop
-        const { blockNumber } = await this.proxyContracts[
+        const txReceipt = await this.proxyContracts[
           chainID
         ].contract.provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
-        startScanningBlock = blockNumber;
+        if (txReceipt) {
+          startScanningBlock = txReceipt.blockNumber;
+        }
       }
       latestEventIndex -= 1;
     }
