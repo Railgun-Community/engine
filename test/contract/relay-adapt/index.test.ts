@@ -41,6 +41,9 @@ const WETH_TOKEN_ADDRESS = config.contracts.weth9;
 const RANDOM = bytes.random(16);
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
+const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
+console.log('DEPLOYMENT_BLOCK', DEPLOYMENT_BLOCK);
+
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
@@ -66,7 +69,7 @@ describe('Relay Adapt/Index', function test() {
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
-      0,
+      DEPLOYMENT_BLOCK,
     );
     proxyContract = lepton.proxyContracts[chainID];
     relayAdaptContract = lepton.relayAdaptContracts[chainID];
