@@ -248,7 +248,52 @@ describe('Relay Adapt/Index', function test() {
     );
   });
 
-  it.only('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
+  it.only('[HH] Should deposit all leftover WETH in relay adapt contract', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    await testDepositBaseToken();
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+
+    // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    // const relayerFee = new Note(wallet2.addressKeys, bytes.random(16), 300n, WETH_TOKEN_ADDRESS);
+    // transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    const withdrawNote = new ERC20WithdrawNote(
+      relayAdaptContract.address,
+      1000n,
+      WETH_TOKEN_ADDRESS,
+    );
+    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+
+    const serializedTxs = await transactionBatch.generateSerializedTransactions(
+      lepton.prover,
+      wallet,
+      testEncryptionKey,
+    );
+    const transact = await proxyContract.transact(serializedTxs);
+
+    // Withdraw to relay adapt.
+    const txTransact = await etherswallet.sendTransaction(transact);
+    await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
+
+    const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
+
+    let relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+      relayAdaptContract.address,
+    );
+    expect(relayAdaptAddressBalance.toBigInt()).to.equal(998n);
+
+    // Value 0n doesn't matter - all WETH should be deposited anyway.
+    await testDepositBaseToken(0n);
+
+    relayAdaptAddressBalance = await wethTokenContract.balanceOf(relayAdaptContract.address);
+    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
+  });
+
+  it('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -342,6 +387,11 @@ describe('Relay Adapt/Index', function test() {
     // Dead address should have 990n WETH.
     const sendAddressBalance: BigNumber = await wethTokenContract.balanceOf(sendToAddress);
     expect(sendAddressBalance.toBigInt()).to.equal(sendAmount);
+
+    const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+      relayAdaptContract.address,
+    );
+    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
     // TODO: Fix this assertion.
     const callResultError = relayAdaptContract.getCallResultError(txReceipt);
@@ -450,6 +500,11 @@ describe('Relay Adapt/Index', function test() {
     // Dead address should have 0 WETH.
     const sendAddressBalance: BigNumber = await wethTokenContract.balanceOf(sendToAddress);
     expect(sendAddressBalance.toBigInt()).to.equal(0n);
+
+    const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+      relayAdaptContract.address,
+    );
+    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
     const callResultError = relayAdaptContract.getCallResultError(txReceipt);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
