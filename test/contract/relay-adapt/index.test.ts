@@ -248,7 +248,7 @@ describe('Relay Adapt/Index', function test() {
     );
   });
 
-  it.only('[HH] Should deposit all leftover WETH in relay adapt contract', async function run() {
+  it('[HH] Should deposit all leftover WETH in relay adapt contract', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
