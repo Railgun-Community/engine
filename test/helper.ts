@@ -8,6 +8,7 @@ import { ScannedEventData, Wallet } from '../src/wallet';
 import { AccumulatedEvents, QuickSync } from '../src';
 import { CommitmentEvent } from '../src/contracts/railgun-proxy/events';
 import { Nullifier } from '../src/models/formatted-types';
+import { LeptonEvent } from '../src/models/event-types';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 const WALLET_PATH = "m/44'/60'/0'/0/0";
@@ -38,10 +39,20 @@ export const mockQuickSync: QuickSync = (
 
 export const awaitScan = (wallet: Wallet, chainID: number) =>
   new Promise((resolve, reject) =>
-    wallet.once('scanned', ({ chainID: returnedChainID }: ScannedEventData) =>
+    wallet.once(LeptonEvent.WalletScanComplete, ({ chainID: returnedChainID }: ScannedEventData) =>
       returnedChainID === chainID ? resolve(returnedChainID) : reject(),
     ),
   );
+
+export const awaitMultipleScans = async (wallet: Wallet, chainID: number, numScans: number) => {
+  let i = 0;
+  while (i < numScans) {
+    // eslint-disable-next-line no-await-in-loop
+    await awaitScan(wallet, chainID);
+    i += 1;
+  }
+  return Promise.resolve();
+};
 
 export const getEthersWallet = (
   mnemonic: string,
