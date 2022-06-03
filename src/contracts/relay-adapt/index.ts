@@ -22,7 +22,9 @@ type CallResult = {
   returnData: string;
 };
 
-const MAXIMUM_GAS = BigNumber.from(3_000_000);
+// A low (or undefined) gas limit can cause the Relay Adapt module to fail.
+// Set a high default that can be overridden by a developer.
+const DEFAULT_RELAY_ADAPT_GAS_LIMIT = BigNumber.from(3_000_000);
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -189,7 +191,7 @@ class RelayAdaptContract {
       RelayAdaptHelper.formatCalls(calls),
       overrides,
     );
-    populatedTransaction.gasLimit = MAXIMUM_GAS;
+    populatedTransaction.gasLimit = DEFAULT_RELAY_ADAPT_GAS_LIMIT;
     return populatedTransaction;
   }
 
