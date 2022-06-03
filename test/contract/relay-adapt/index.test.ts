@@ -546,22 +546,21 @@ describe('Relay Adapt/Index', function test() {
     const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
-    // TODO: Fix this assertion.
-    // const expectedPrivateWethBalance = BigInt(
-    //   99750 /* original */ -
-    //     300 /* relayer fee */ -
-    //     10000 /* withdraw amount */ -
-    //     0 /* failed cross contract send: no change */ +
-    //     9750 /* re-deposit amount */ -
-    //     24 /* deposit fee */,
-    // );
-    // const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
+    const expectedPrivateWethBalance = BigInt(
+      99750 /* original */ -
+        300 /* relayer fee */ -
+        10000 /* withdraw amount */ -
+        0 /* failed cross contract send: no change */ +
+        9975 /* re-deposit amount */ -
+        24 /* deposit fee */,
+    );
+    const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
-    // const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
-    // const privateWalletBalance = await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS);
+    const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
+    const privateWalletBalance = await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS);
 
-    // expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
-    // expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
+    expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
+    expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
   it('Should generate relay deposit notes and inputs', () => {
