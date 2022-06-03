@@ -42,11 +42,10 @@ const RANDOM = bytes.random(16);
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
-console.log('DEPLOYMENT_BLOCK', DEPLOYMENT_BLOCK);
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Relay Adapt/Index', function test() {
+describe.only('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {

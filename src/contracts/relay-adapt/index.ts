@@ -1,5 +1,5 @@
 import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
-import { CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
+import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import {
   DepositInput,
@@ -21,6 +21,8 @@ type CallResult = {
   success: boolean;
   returnData: string;
 };
+
+const MAXIMUM_GAS = BigNumber.from(3_000_000);
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -172,7 +174,7 @@ class RelayAdaptContract {
    * Generates Relay call given a list of serialized transactions.
    * @returns populated transaction
    */
-  private populateRelay(
+  private async populateRelay(
     serializedTransactions: SerializedTransaction[],
     random: string,
     requireSuccess: boolean,
@@ -180,13 +182,15 @@ class RelayAdaptContract {
     overrides: CallOverrides,
   ): Promise<PopulatedTransaction> {
     const formattedRandom = formatToByteLength(random, ByteLength.UINT_256, true);
-    return this.contract.populateTransaction.relay(
+    const populatedTransaction = await this.contract.populateTransaction.relay(
       serializedTransactions,
       formattedRandom,
       requireSuccess,
       RelayAdaptHelper.formatCalls(calls),
       overrides,
     );
+    populatedTransaction.gasLimit = MAXIMUM_GAS;
+    return populatedTransaction;
   }
 
   static getCallResultError(receipt: TransactionReceipt): string | undefined {
