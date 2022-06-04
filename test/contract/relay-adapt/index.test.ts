@@ -359,8 +359,8 @@ describe.only('Relay Adapt/Index', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_300_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_400_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -387,8 +387,8 @@ describe.only('Relay Adapt/Index', function test() {
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
 
     expect(gasEstimate.sub(gasEstimateFinal).abs().toNumber()).to.be.below(
-      2000,
-      'Gas difference from estimate (dummy) to final transaction should be less than 2000',
+      10000,
+      'Gas difference from estimate (dummy) to final transaction should be less than 10000',
     );
 
     // Add 20% to gasEstimate for gasLimit.
@@ -497,8 +497,8 @@ describe.only('Relay Adapt/Index', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_300_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_400_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -631,8 +631,8 @@ describe.only('Relay Adapt/Index', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_300_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_400_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
