@@ -7,7 +7,7 @@ import {
   TokenData,
   TokenType,
 } from '../../models/formatted-types';
-import { ByteLength, formatToByteLength, random as bytesRandom } from '../../utils/bytes';
+import { random as bytesRandom } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 
@@ -24,7 +24,9 @@ type CallResult = {
 
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
-const DEFAULT_RELAY_ADAPT_GAS_LIMIT = BigNumber.from(3_000_000);
+export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigNumber.from(2_400_000);
+// Contract call needs ~50,000 less gas than the gasLimit setting.
+const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigNumber.from(2_350_000);
 
 class RelayAdaptContract {
   private readonly contract: Contract;
@@ -152,6 +154,7 @@ class RelayAdaptContract {
       random,
       requireSuccess,
       orderedCalls,
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT,
     );
   }
 
@@ -169,7 +172,19 @@ class RelayAdaptContract {
     // If the cross contract call fails, the Relayer Fee and Deposits will continue to process.
     const requireSuccess = false;
 
-    return this.populateRelay(withdrawTransactions, random, requireSuccess, orderedCalls, {});
+    const populatedTransaction = await this.populateRelay(
+      withdrawTransactions,
+      random,
+      requireSuccess,
+      orderedCalls,
+      {},
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT,
+    );
+
+    // Set default gas limit for cross-contract calls.
+    populatedTransaction.gasLimit = MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
+
+    return populatedTransaction;
   }
 
   /**
@@ -182,16 +197,18 @@ class RelayAdaptContract {
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
     overrides: CallOverrides,
+    minimumGas: BigNumber = BigNumber.from(1),
   ): Promise<PopulatedTransaction> {
-    const formattedRandom = formatToByteLength(random, ByteLength.UINT_256, true);
+    const formattedRandom = RelayAdaptHelper.formatRandom(random);
+    const minGas = RelayAdaptHelper.formatMinimumGas(minimumGas);
     const populatedTransaction = await this.contract.populateTransaction.relay(
       serializedTransactions,
       formattedRandom,
       requireSuccess,
+      minGas,
       RelayAdaptHelper.formatCalls(calls),
       overrides,
     );
-    populatedTransaction.gasLimit = DEFAULT_RELAY_ADAPT_GAS_LIMIT;
     return populatedTransaction;
   }
 

@@ -80,12 +80,14 @@ class RelayAdaptHelper {
     random: string,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
+    minimumGas: BigNumber = BigNumber.from(1),
   ): string {
-    const formattedRandom = formatToByteLength(random, ByteLength.UINT_256, true);
+    const formattedRandom = this.formatRandom(random);
+    const minGas = this.formatMinimumGas(minimumGas);
     const abiCoder = ethers.utils.defaultAbiCoder;
     const additionalData = abiCoder.encode(
-      ['uint256', 'bool', 'tuple(address to, bytes data, uint256 value)[] calls'],
-      [formattedRandom, requireSuccess, this.formatCalls(calls)],
+      ['uint256', 'bool', 'uint256', 'tuple(address to, bytes data, uint256 value)[] calls'],
+      [formattedRandom, requireSuccess, minGas, this.formatCalls(calls)],
     );
 
     return RelayAdaptHelper.getAdaptParamsHash(serializedTransactions, additionalData);
@@ -104,6 +106,14 @@ class RelayAdaptHelper {
       data: call.data,
       value: call.value ?? BigNumber.from(0),
     }));
+  }
+
+  static formatRandom(random: string): string {
+    return formatToByteLength(random, ByteLength.UINT_256, true);
+  }
+
+  static formatMinimumGas(minimumGas: BigNumber): string {
+    return formatToByteLength(minimumGas.toHexString(), ByteLength.UINT_256, true);
   }
 }
 

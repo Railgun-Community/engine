@@ -471,6 +471,11 @@
         "type": "bool"
       },
       {
+        "internalType": "uint256",
+        "name": "_minGas",
+        "type": "uint256"
+      },
+      {
         "components": [
           {
             "internalType": "address",
@@ -887,6 +892,11 @@
         "internalType": "bool",
         "name": "_requireSuccess",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_minGas",
+        "type": "uint256"
       },
       {
         "components": [
