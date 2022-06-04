@@ -11,8 +11,6 @@ import { random as bytesRandom } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 
-const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
-
 enum RelayAdaptEvent {
   CallResult = 'CallResult',
 }
@@ -129,10 +127,11 @@ class RelayAdaptContract {
     crossContractCalls: PopulatedTransaction[],
     relayDepositInputs: DepositInput[],
   ): Promise<PopulatedTransaction[]> {
-    return Promise.all([
-      ...crossContractCalls,
-      await this.populateRelayDeposits(relayDepositInputs),
-    ]);
+    const orderedCallPromises: PopulatedTransaction[] = [...crossContractCalls];
+    if (relayDepositInputs.length) {
+      orderedCallPromises.push(await this.populateRelayDeposits(relayDepositInputs));
+    }
+    return orderedCallPromises;
   }
 
   async getRelayAdaptParamsCrossContractCalls(
