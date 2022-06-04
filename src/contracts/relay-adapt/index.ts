@@ -249,10 +249,8 @@ class RelayAdaptContract {
   }
 
   private static parseCallResultError(returnData: string): string {
-    if (returnData.match(RETURN_DATA_STRING_PREFIX)) {
-      const strippedReturnValue = returnData.replace(RETURN_DATA_STRING_PREFIX, '0x');
-      const result = ethers.utils.defaultAbiCoder.decode(['string'], strippedReturnValue);
-      return result[0];
+    if (returnData.length) {
+      return returnData;
     }
 
     return 'Unknown Relay Adapt error.';
