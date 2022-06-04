@@ -26,9 +26,9 @@
             "type": "bool"
           },
           {
-            "internalType": "bytes",
+            "internalType": "string",
             "name": "returnData",
-            "type": "bytes"
+            "type": "string"
           }
         ],
         "indexed": false,
