@@ -31,7 +31,7 @@ import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   AddressKeys,
   Balances,
-  BalancesByTree, TransactionsLog, TransferDirection, TreeBalance, WalletData, WalletDetails
+  BalancesByTree, TransactionLogEntry, TransactionsLog, TransferDirection, TreeBalance, WalletData, WalletDetails
 } from './types';
 
 type WalletNodes = { spending: Node; viewing: Node };
@@ -418,18 +418,20 @@ class Wallet extends EventEmitter {
     });
 
     // eslint-disable-next-line func-names
-    const groupBy = function<T extends Record<string, any>, K extends keyof T>(
-      array: T[],
-      key: K | { (obj: T): string }
-    ): Record<string, T[]> {
-      const keyFn = key instanceof Function ? key : (obj: T) => obj[key];
-      return array.reduce((objectsByKeyValue, obj) => {
-        const value = keyFn(obj);
-        // eslint-disable-next-line no-param-reassign
-        objectsByKeyValue[value] = (objectsByKeyValue[value] || []).concat(obj);
-        return objectsByKeyValue;
-      }, {} as Record<string, T[]>);
-    }
+    
+    function groupBy(list: TransactionLogEntry[]): Map<string, TransactionLogEntry[]> {
+      const map = new Map();
+      list.forEach((item) => {
+           const key = item.txid;
+           const collection = map.get(key);
+           if (!collection) {
+               map.set(key, [item]);
+           } else {
+               collection.push(item);
+           }
+      });
+      return map;
+  }
 
     // process history by handling joinsplit of TXOs within transactions
     const history: TransactionsLog = {};
@@ -440,9 +442,9 @@ class Wallet extends EventEmitter {
       }
       // group entries by txid 
       const entries = tmpHistory[token];
-      const transactions = groupBy(entries, (entry) => entry.txid);
+      const transactions = groupBy(entries);
       // eslint-disable-next-line no-restricted-syntax
-      for(const [key, value] of Object.entries(transactions)) {
+      for(const [key, value] of transactions) {
         let spent = 0n;
         let received = 0n;
         const txid = key;
