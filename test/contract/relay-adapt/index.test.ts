@@ -45,7 +45,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Relay Adapt/Index', function test() {
+describe.only('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -359,8 +359,8 @@ describe('Relay Adapt/Index', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_250_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_300_000);
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -497,8 +497,8 @@ describe('Relay Adapt/Index', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_250_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_300_000);
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -631,8 +631,8 @@ describe('Relay Adapt/Index', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_250_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_300_000);
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
