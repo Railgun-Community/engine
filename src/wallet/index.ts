@@ -102,6 +102,25 @@ class Wallet extends EventEmitter {
     return this;
   }
 
+/**
+ * Groups a list of transaction logs by txid
+ * @param list - list of transaction logs 
+ * @returns map of transaction logs by txid
+ */
+  private static groupBy(list: TransactionLogEntry[]): Map<string, TransactionLogEntry[]> {
+    const map = new Map();
+    list.forEach((item) => {
+         const key = item.txid;
+         const collection = map.get(key);
+         if (!collection) {
+             map.set(key, [item]);
+         } else {
+             collection.push(item);
+         }
+    });
+    return map;
+  }
+
   /**
    * Loads merkle tree into wallet
    * @param merkletree - merkletree to load
@@ -415,23 +434,7 @@ class Wallet extends EventEmitter {
           direction: TransferDirection.Outgoing
         })
       }
-    });
-
-    // eslint-disable-next-line func-names
-    
-    function groupBy(list: TransactionLogEntry[]): Map<string, TransactionLogEntry[]> {
-      const map = new Map();
-      list.forEach((item) => {
-           const key = item.txid;
-           const collection = map.get(key);
-           if (!collection) {
-               map.set(key, [item]);
-           } else {
-               collection.push(item);
-           }
-      });
-      return map;
-  }
+    });  
 
     // process history by handling joinsplit of TXOs within transactions
     const history: TransactionsLog = {};
@@ -442,7 +445,7 @@ class Wallet extends EventEmitter {
       }
       // group entries by txid 
       const entries = tmpHistory[token];
-      const transactions = groupBy(entries);
+      const transactions = Wallet.groupBy(entries);
       // eslint-disable-next-line no-restricted-syntax
       for(const [key, value] of transactions) {
         let spent = 0n;
