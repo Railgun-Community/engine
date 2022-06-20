@@ -14,7 +14,8 @@
     "sourceType": "module"
   },
   "plugins": [
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "es"
   ],
   "rules": {
     "import/prefer-default-export": "off",
@@ -39,7 +40,8 @@
     "no-promise-executor-return": "off",
     "no-continue": "off",
     "no-use-before-define": "off",
-    "arrow-body-style": "off"
+    "arrow-body-style": "off",
+    "es/no-nullish-coalescing-operators": "error"
   },
   "ignorePatterns": [
     "dist/*"
