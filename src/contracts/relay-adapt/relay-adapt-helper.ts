@@ -104,7 +104,7 @@ class RelayAdaptHelper {
       from: call.from,
       to: call.to,
       data: call.data,
-      value: call.value ?? BigNumber.from(0),
+      value: call.value || BigNumber.from(0),
     }));
   }
 

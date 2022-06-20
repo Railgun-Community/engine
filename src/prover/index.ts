@@ -29,7 +29,7 @@ export class Prover {
   }
 
   private getGroth16Impl() {
-    return this.groth16Override ?? groth16;
+    return this.groth16Override || groth16;
   }
 
   async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
