@@ -134,11 +134,11 @@ export const createSpendingSolutionGroupsForWithdraw = (
 /**
  * Wallet has appropriate balance in aggregate, but no solutions remain.
  * This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
- * eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of outputs.
+ * eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of circuit outputs.
  */
 export const consolidateBalanceError = (): Error => {
   throw new Error(
-    'Please consolidate balances before multi-sending. Send tokens to one destination address, or select a different Relayer fee token, to resolve.',
+    'Circuit not supported by RAILGUN at this time. Select a different Relayer fee token to resolve.',
   );
 };
 

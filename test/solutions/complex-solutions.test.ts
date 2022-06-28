@@ -262,7 +262,7 @@ describe('Solutions/Complex Solutions', () => {
         [],
       ),
     ).to.throw(
-      'Please consolidate balances before multi-sending. Send tokens to one destination address, or select a different Relayer fee token, to resolve.',
+      'Circuit not supported by RAILGUN at this time. Select a different Relayer fee token to resolve.',
     );
   });
 
