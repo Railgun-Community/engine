@@ -262,7 +262,7 @@ describe('Solutions/Complex Solutions', () => {
         [],
       ),
     ).to.throw(
-      'Circuit not supported by RAILGUN at this time. Select a different Relayer fee token to resolve.',
+      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
   });
 

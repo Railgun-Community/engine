@@ -127,7 +127,7 @@ describe('Transaction/Transaction Batch', function () {
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
-      'Circuit not supported by RAILGUN at this time. Select a different Relayer fee token to resolve.',
+      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
   });
 
@@ -181,6 +181,8 @@ describe('Transaction/Transaction Batch', function () {
       depositValue,
     ]);
 
+    // TODO: Unhandled case.
+    // Fix by using change from one note for the next output note... and so on.
     transactionBatch.resetOutputs();
     transactionBatch.resetWithdraw();
     transactionBatch.addOutput(makeNote(depositValue + 1n));
@@ -190,7 +192,21 @@ describe('Transaction/Transaction Batch', function () {
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
-      'Circuit not supported by RAILGUN at this time. Select a different Relayer fee token to resolve.',
+      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
+    );
+
+    // TODO: Unhandled case: 8x3 circuit.
+    // Fix by adding 8x3 circuit, or using change from one note for next output note.
+    // Or... fix logic to create a number of 2x2 and 2x3 circuits.
+    await merkletree.queueLeaves(1, 0, [depositLeaf('g'), depositLeaf('h')]);
+    transactionBatch.resetOutputs();
+    transactionBatch.resetWithdraw();
+    transactionBatch.addOutput(makeNote(0n));
+    transactionBatch.setWithdraw(ethersWallet.address, depositValue * 5n);
+    await expect(
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+    ).to.eventually.be.rejectedWith(
+      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
   });
 
