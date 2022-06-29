@@ -1,6 +1,7 @@
 /* eslint-disable camelcase */
 // @ts-ignore-next-line
 import { groth16 } from 'snarkjs';
+import { ByteLength, nToHex } from '../utils/bytes';
 import {
   ArtifactsGetter,
   FormattedCircuitInputs,
@@ -43,6 +44,22 @@ export class Prover {
       ...publicInputs.commitmentsOut,
     ];
     return this.getGroth16Impl().verify(artifacts.vkey, publicSignals, proof);
+  }
+
+  private static get zeroProof(): Proof {
+    const zero = nToHex(BigInt(0), ByteLength.UINT_8);
+    // prettier-ignore
+    return {
+      pi_a: [zero, zero],
+      pi_b: [[zero, zero], [zero, zero]],
+      pi_c: [zero, zero],
+    };
+  }
+
+  async dummyProve(publicInputs: PublicInputs): Promise<Proof> {
+    // Make sure we have valid artifacts for this number of inputs.
+    await this.artifactsGetter(publicInputs);
+    return Prover.zeroProof;
   }
 
   async prove(

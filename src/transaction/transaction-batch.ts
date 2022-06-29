@@ -276,6 +276,7 @@ class TransactionBatch {
    * @returns serialized transaction
    */
   async generateDummySerializedTransactions(
+    prover: Prover,
     wallet: Wallet,
     encryptionKey: string,
   ): Promise<SerializedTransaction[]> {
@@ -293,7 +294,7 @@ class TransactionBatch {
 
     spendingSolutionGroups.forEach((spendingSolutionGroup) => {
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-      proofPromises.push(transaction.dummyProve(wallet, encryptionKey));
+      proofPromises.push(transaction.dummyProve(prover, wallet, encryptionKey));
     });
 
     return Promise.all(proofPromises);

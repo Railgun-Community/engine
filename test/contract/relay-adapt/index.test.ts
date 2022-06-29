@@ -135,18 +135,22 @@ describe('Relay Adapt/Index', function test() {
     await testDepositBaseToken();
     expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
+    await testDepositBaseToken();
+    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(19950n);
+
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    const relayerFee = new Note(wallet.addressKeys, bytes.random(16), 100n, WETH_TOKEN_ADDRESS);
+    const relayerFee = new Note(wallet.addressKeys, bytes.random(16), 0n, WETH_TOKEN_ADDRESS);
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
 
     const withdrawNote = new ERC20WithdrawNote(
       relayAdaptContract.address,
-      300n,
+      19900n,
       WETH_TOKEN_ADDRESS,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+      lepton.prover,
       wallet,
       testEncryptionKey,
     );
@@ -187,6 +191,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+      lepton.prover,
       wallet,
       testEncryptionKey,
     );
@@ -319,6 +324,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+      lepton.prover,
       wallet,
       testEncryptionKey,
     );
@@ -456,6 +462,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+      lepton.prover,
       wallet,
       testEncryptionKey,
     );
@@ -590,6 +597,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+      lepton.prover,
       wallet,
       testEncryptionKey,
     );

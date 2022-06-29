@@ -4,7 +4,7 @@ import { bytes, hash } from '../utils';
 import { Wallet } from '../wallet';
 import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt } from '../utils/bytes';
 import {
   AdaptID,
   BoundParams,
@@ -264,27 +264,21 @@ class Transaction {
     );
   }
 
-  private static get zeroProof(): Proof {
-    const zero = nToHex(BigInt(0), ByteLength.UINT_8);
-    // prettier-ignore
-    return {
-      pi_a: [zero, zero],
-      pi_b: [[zero, zero], [zero, zero]],
-      pi_c: [zero, zero],
-    };
-  }
-
   /**
    * Return serialized transaction with zero'd proof for gas estimates.
    * @param wallet - wallet to spend from
    * @param encryptionKey - encryption key for wallet
    * @returns serialized transaction
    */
-  async dummyProve(wallet: Wallet, encryptionKey: string): Promise<SerializedTransaction> {
+  async dummyProve(
+    prover: Prover,
+    wallet: Wallet,
+    encryptionKey: string,
+  ): Promise<SerializedTransaction> {
     // Get inputs
     const { publicInputs, boundParams } = await this.generateInputs(wallet, encryptionKey);
 
-    const dummyProof = Transaction.zeroProof;
+    const dummyProof: Proof = await prover.dummyProve(publicInputs);
 
     const overrideWithdrawAddress = ZERO_ADDRESS;
 

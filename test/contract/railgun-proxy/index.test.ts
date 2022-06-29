@@ -119,7 +119,11 @@ describe('Railgun Proxy/Index', function () {
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
     transactionBatch.addOutput(new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
     const tx = await proxyContract.transact(
-      await transactionBatch.generateDummySerializedTransactions(wallet, testEncryptionKey),
+      await transactionBatch.generateDummySerializedTransactions(
+        lepton.prover,
+        wallet,
+        testEncryptionKey,
+      ),
     );
 
     tx.from = '0x000000000000000000000000000000000000dEaD';

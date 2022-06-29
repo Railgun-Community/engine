@@ -275,6 +275,7 @@ describe('Transaction/Transaction ERC20', function () {
   it('Should create dummy transaction proofs', async () => {
     transactionBatch.addOutput(makeNote());
     const txs = await transactionBatch.generateDummySerializedTransactions(
+      prover,
       wallet,
       testEncryptionKey,
     );
