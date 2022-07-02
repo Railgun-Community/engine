@@ -122,7 +122,15 @@ class Lepton extends EventEmitter {
         ].contract.provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
         if (txReceipt) {
           startScanningBlock = txReceipt.blockNumber;
+        } else {
+          LeptonDebug.log(
+            `Could not find tx receipt for latest event: ${latestEvent.txid}. Trying prior index.`,
+          );
         }
+      } else {
+        LeptonDebug.log(
+          `Could not find latest event for index ${latestEventIndex}. Trying prior index.`,
+        );
       }
       latestEventIndex -= 1;
     }
@@ -132,12 +140,14 @@ class Lepton extends EventEmitter {
 
   async getStartScanningBlock(chainID: number): Promise<number> {
     let startScanningBlock = await this.getMostRecentValidCommitmentBlock(chainID);
+    LeptonDebug.log(`most recent valid commitment block: ${startScanningBlock}`);
     if (startScanningBlock == null) {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chainID];
     }
 
     const lastSyncedBlock = await this.getLastSyncedBlock(chainID);
+    LeptonDebug.log(`last synced block: ${startScanningBlock}`);
     if (lastSyncedBlock && lastSyncedBlock > startScanningBlock) {
       startScanningBlock = lastSyncedBlock;
     }
@@ -187,6 +197,7 @@ class Lepton extends EventEmitter {
 
     // Get updated start-scanning block from new valid merkletree.
     const startScanningBlockSlowScan = await this.getStartScanningBlock(chainID);
+    LeptonDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
     try {
       // Run slow scan
