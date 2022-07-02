@@ -369,7 +369,9 @@ class MerkleTree {
     nodeWriteGroup[level] = [];
 
     LeptonDebug.log(
-      `insertLeaves: level ${level}, depth ${this.depth}, leaves ${JSON.stringify(leaves)}`,
+      `insertLeaves: startIndex ${startIndex}, length ${leaves.length}, leaves ${JSON.stringify(
+        leaves,
+      )}`,
     );
 
     // Push values to leaves of write index
