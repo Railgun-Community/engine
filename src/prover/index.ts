@@ -8,7 +8,7 @@ import {
   SnarkProof,
 } from './types';
 
-type Groth16 = {
+export type Groth16 = {
   verify: (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>;
   fullProve: (
     formattedInputs: FormattedCircuitInputs,
