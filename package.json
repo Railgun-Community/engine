@@ -42,9 +42,7 @@
     "ethereum-cryptography": "^1.0.3",
     "ethers": "^5.6.4",
     "levelup": "^5.1.1",
-    "msgpack-lite": "^0.1.26",
-    "railgun-artifacts-node": "https://npm.railgun.org/railgun-artifacts-node-0.1.0.tgz",
-    "snarkjs": "^0.4.16"
+    "msgpack-lite": "^0.1.26"
   },
   "devDependencies": {
     "@ethersproject/wallet": "^5.6.0",
@@ -74,6 +72,8 @@
     "prettier": "^2.6.2",
     "rimraf": "^3.0.2",
     "ts-node": "^10.7.0",
-    "typescript": "^4.6.3"
+    "typescript": "^4.6.3",
+    "snarkjs": "^0.4.16",
+    "railgun-artifacts-node": "https://npm.railgun.org/railgun-artifacts-node-0.1.0.tgz"
   }
 }

@@ -4,6 +4,7 @@ import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
+import { groth16 } from 'snarkjs';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
@@ -56,8 +57,7 @@ const depositLeaf = (txid: string): Commitment => ({
 
 const depositValue = 9975062344139650872817n;
 
-// eslint-disable-next-line func-names
-describe('Transaction/Transaction Batch', function () {
+describe('Transaction/Transaction Batch', function run() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
@@ -66,6 +66,7 @@ describe('Transaction/Transaction Batch', function () {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
+    prover.setGroth16(groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     makeNote = (value: bigint = 65n * DECIMALS_18): Note => new Note(address, random, value, token);

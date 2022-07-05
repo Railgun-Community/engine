@@ -3,6 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BigNumber, ethers, PopulatedTransaction } from 'ethers';
 import memdown from 'memdown';
+import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { RelayAdaptContract } from '../../../src/contracts/relay-adapt';
 import { RelayAdaptHelper } from '../../../src/contracts/relay-adapt/relay-adapt-helper';
@@ -49,9 +50,8 @@ describe('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
-    // Lepton.setLeptonDebugger(console);
-
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
+    lepton.prover.setGroth16(groth16);
 
     walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet = lepton.wallets[walletID];

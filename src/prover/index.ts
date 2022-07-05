@@ -1,6 +1,3 @@
-/* eslint-disable camelcase */
-// @ts-ignore-next-line
-import { groth16 } from 'snarkjs';
 import { ByteLength, nToHex } from '../utils/bytes';
 import {
   ArtifactsGetter,
@@ -11,39 +8,48 @@ import {
   SnarkProof,
 } from './types';
 
+type Groth16 = {
+  verify: (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>;
+  fullProve: (
+    formattedInputs: FormattedCircuitInputs,
+    wasm: ArrayLike<number>,
+    zkey: ArrayLike<number>,
+  ) => Promise<{ proof: Proof }>;
+};
+
 export { ArtifactsGetter, FormattedCircuitInputs, PrivateInputs, Proof, PublicInputs, SnarkProof };
 
 export class Prover {
   private artifactsGetter: ArtifactsGetter;
 
-  private groth16Override: any;
+  private groth16: Groth16 | undefined;
 
   constructor(artifactsGetter: ArtifactsGetter) {
     this.artifactsGetter = artifactsGetter;
   }
 
   /**
-   * Used in browser to override with implementation from snarkjs.min.js.
+   * Used to set implementation from snarkjs.min.js, snarkjs or Native Prover.
    */
-  overrideGroth16(groth16Override: any) {
-    this.groth16Override = groth16Override;
-  }
-
-  private getGroth16Impl() {
-    return this.groth16Override || groth16;
+  setGroth16(groth16Implementation: Groth16) {
+    this.groth16 = groth16Implementation;
   }
 
   async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
+    if (!this.groth16) {
+      throw new Error('Requires groth16 verification implementation');
+    }
+
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(publicInputs);
     // Return output of groth16 verify
-    const publicSignals = [
+    const publicSignals: bigint[] = [
       publicInputs.merkleRoot,
       publicInputs.boundParamsHash,
       ...publicInputs.nullifiers,
       ...publicInputs.commitmentsOut,
     ];
-    return this.getGroth16Impl().verify(artifacts.vkey, publicSignals, proof);
+    return this.groth16.verify(artifacts.vkey, publicSignals, proof);
   }
 
   private static get zeroProof(): Proof {
@@ -57,7 +63,8 @@ export class Prover {
   }
 
   async dummyProve(publicInputs: PublicInputs): Promise<Proof> {
-    // Make sure we have valid artifacts for this number of inputs.
+    // Pull artifacts to make sure we have valid artifacts for this number of inputs.
+    // Note that the artifacts are not used in the dummy proof.
     await this.artifactsGetter(publicInputs);
     return Prover.zeroProof;
   }
@@ -66,6 +73,10 @@ export class Prover {
     publicInputs: PublicInputs,
     privateInputs: PrivateInputs,
   ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
+    if (!this.groth16) {
+      throw new Error('Requires groth16 full prover implementation');
+    }
+
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(publicInputs);
@@ -74,11 +85,7 @@ export class Prover {
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
     // Generate proof
-    const { proof } = await this.getGroth16Impl().fullProve(
-      formattedInputs,
-      artifacts.wasm,
-      artifacts.zkey,
-    );
+    const { proof } = await this.groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
 
     // Throw if proof is invalid
     const verified = await this.verify(publicInputs, proof);

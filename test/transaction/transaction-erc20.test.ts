@@ -5,6 +5,7 @@ import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { Signature } from 'circomlibjs';
 import memdown from 'memdown';
+import { groth16 } from 'snarkjs';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
@@ -101,6 +102,7 @@ describe('Transaction/Transaction ERC20', function () {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
+    prover.setGroth16(groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     // testData = getTestData();

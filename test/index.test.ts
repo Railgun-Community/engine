@@ -3,6 +3,7 @@ import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
+import { groth16 } from 'snarkjs';
 import { Lepton, Note } from '../src';
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
@@ -58,6 +59,8 @@ describe('Lepton', function () {
 
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter, mockQuickSync);
+    lepton.prover.setGroth16(groth16);
+
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }

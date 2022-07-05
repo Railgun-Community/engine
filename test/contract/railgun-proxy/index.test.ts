@@ -3,6 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
+import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { RailgunProxyContract, EventName } from '../../../src/contracts/railgun-proxy';
 import { Note } from '../../../src/note';
@@ -50,6 +51,7 @@ describe('Railgun Proxy/Index', function () {
 
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
+    lepton.prover.setGroth16(groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
