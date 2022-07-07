@@ -12,7 +12,8 @@ export type Groth16 = {
   verify: (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>;
   fullProve: (
     formattedInputs: FormattedCircuitInputs,
-    wasm: ArrayLike<number>,
+    wasm: ArrayLike<number> | undefined,
+    dat: ArrayLike<number> | undefined,
     zkey: ArrayLike<number>,
   ) => Promise<{ proof: Proof }>;
 };
@@ -80,12 +81,20 @@ export class Prover {
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(publicInputs);
+    if (!artifacts.wasm && !artifacts.dat) {
+      throw new Error('Requires WASM or DAT prover artifact');
+    }
 
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
     // Generate proof
-    const { proof } = await this.groth16.fullProve(formattedInputs, artifacts.wasm, artifacts.zkey);
+    const { proof } = await this.groth16.fullProve(
+      formattedInputs,
+      artifacts.wasm,
+      artifacts.dat,
+      artifacts.zkey,
+    );
 
     // Throw if proof is invalid
     const verified = await this.verify(publicInputs, proof);

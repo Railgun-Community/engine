@@ -1,6 +1,7 @@
 export type Artifacts = {
   zkey: ArrayLike<number>;
-  wasm: ArrayLike<number>;
+  wasm: ArrayLike<number> | undefined;
+  dat: ArrayLike<number> | undefined;
   vkey: object;
 };
 
