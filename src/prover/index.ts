@@ -13,8 +13,8 @@ export type Groth16 = {
   fullProve: (
     formattedInputs: FormattedCircuitInputs,
     wasm: ArrayLike<number> | undefined,
-    dat: ArrayLike<number> | undefined,
     zkey: ArrayLike<number>,
+    dat: ArrayLike<number> | undefined,
   ) => Promise<{ proof: Proof }>;
 };
 
@@ -92,8 +92,8 @@ export class Prover {
     const { proof } = await this.groth16.fullProve(
       formattedInputs,
       artifacts.wasm,
-      artifacts.dat,
       artifacts.zkey,
+      artifacts.dat,
     );
 
     // Throw if proof is invalid
