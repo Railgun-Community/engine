@@ -55,7 +55,20 @@ export type PrivateInputs = {
 };
 
 export type FormattedCircuitInputs = {
-  [key: string]: bigint | bigint[];
+  merkleRoot: bigint;
+  boundParamsHash: bigint;
+  nullifiers: bigint[];
+  commitmentsOut: bigint[];
+  token: bigint;
+  publicKey: bigint[];
+  signature: bigint[];
+  randomIn: bigint[];
+  valueIn: bigint[];
+  pathElements: bigint[];
+  leavesIndices: bigint[];
+  nullifyingKey: bigint;
+  npkOut: bigint[];
+  valueOut: bigint[];
 };
 
 // eslint-disable-next-line no-unused-vars
