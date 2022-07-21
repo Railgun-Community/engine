@@ -57,6 +57,8 @@ class MerkleTree {
 
   private treeUpdateLock = false;
 
+  public isScanning = false;
+
   /**
    * Create MerkleTree controller from database
    * @param db - database object to use

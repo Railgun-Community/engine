@@ -160,6 +160,12 @@ class Lepton extends EventEmitter {
    * @param chainID - chainID to scan
    */
   async scanHistory(chainID: number) {
+    if (this.merkletree[chainID].erc20.isScanning) {
+      // Do not allow multiple simultaneous scans.
+      return;
+    }
+    this.merkletree[chainID].erc20.isScanning = true;
+
     this.emit(LeptonEvent.MerkletreeHistoryScanStarted, {
       chainID,
     } as MerkletreeHistoryScanEventData);
@@ -217,6 +223,7 @@ class Lepton extends EventEmitter {
       this.emit(LeptonEvent.MerkletreeHistoryScanComplete, {
         chainID,
       } as MerkletreeHistoryScanEventData);
+      this.merkletree[chainID].erc20.isScanning = false;
     } catch (err: any) {
       LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
       LeptonDebug.error(err);
@@ -224,6 +231,7 @@ class Lepton extends EventEmitter {
       this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, {
         chainID,
       } as MerkletreeHistoryScanEventData);
+      this.merkletree[chainID].erc20.isScanning = false;
     }
   }
 
