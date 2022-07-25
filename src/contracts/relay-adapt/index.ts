@@ -1,4 +1,4 @@
-import { Provider, TransactionReceipt } from '@ethersproject/abstract-provider';
+import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import {
@@ -6,6 +6,7 @@ import {
   SerializedTransaction,
   TokenData,
   TokenType,
+  TransactionReceiptLog,
 } from '../../models/formatted-types';
 import { random as bytesRandom } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
@@ -211,7 +212,7 @@ class RelayAdaptContract {
     return populatedTransaction;
   }
 
-  static getCallResultError(receipt: TransactionReceipt): string | undefined {
+  static getCallResultError(receiptLogs: TransactionReceiptLog[]): string | undefined {
     const iface = new ethers.utils.Interface(ABIRelayAdapt);
     const topic = iface.getEventTopic(RelayAdaptEvent.CallResult);
     let results: {
@@ -220,7 +221,7 @@ class RelayAdaptContract {
     }[] = [];
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const log of receipt.logs) {
+    for (const log of receiptLogs) {
       if (log.topics[0] === topic) {
         const parsed = iface.parseLog(log);
         results = parsed.args.callResults.map((callResult: CallResult) => {

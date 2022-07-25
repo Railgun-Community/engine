@@ -38,6 +38,11 @@ export enum TokenType {
   ERC1155 = '0x0000000000000000000000000000000000000002',
 }
 
+export type TransactionReceiptLog = {
+  topics: string[];
+  data: string;
+};
+
 export type TokenData = {
   tokenType: TokenType;
   tokenAddress: string;

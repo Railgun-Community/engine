@@ -247,7 +247,7 @@ describe('Relay Adapt/Index', function test() {
       BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
     // TODO: Fix this assertion. How much gas is used?
@@ -422,7 +422,7 @@ describe('Relay Adapt/Index', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
     const expectedPrivateWethBalance = BigInt(
@@ -555,7 +555,7 @@ describe('Relay Adapt/Index', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     const expectedPrivateWethBalance = BigInt(
@@ -693,7 +693,7 @@ describe('Relay Adapt/Index', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt);
+    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     // TODO: These are the incorrect assertions, if the tx is fully reverted.
