@@ -160,8 +160,13 @@ class Lepton extends EventEmitter {
    * @param chainID - chainID to scan
    */
   async scanHistory(chainID: number) {
+    if (!this.merkletree[chainID]) {
+      LeptonDebug.log(`Cannot scan history. Merkletree not yet loaded for chain ${chainID}.`);
+      return;
+    }
     if (this.merkletree[chainID].erc20.isScanning) {
       // Do not allow multiple simultaneous scans.
+      LeptonDebug.log('Already scanning. Killing additional re-scan.');
       return;
     }
     this.merkletree[chainID].erc20.isScanning = true;
