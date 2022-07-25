@@ -469,18 +469,20 @@ class Wallet extends EventEmitter {
             amount: received,
             direction: TransferDirection.Incoming,
           });
-        } else if (received === 0n) {
-          // spend only
-          history[token].push({
-            txid,
-            amount: spent,
-            direction: TransferDirection.Outgoing,
-          });
-        } else {
-          // spend and receive
+        } else if (spent > received) {
+          // spend and (maybe) receive
           history[token].push({
             txid,
             amount: spent - received,
+            direction: TransferDirection.Outgoing,
+          });
+        } else if (received > spent) {
+          // receive and spend
+          // This can occur if someone performs a private swap of WETH to DAI, and pays a nominal relayer fee in DAI.
+          // Received DAI will be > spend.
+          history[token].push({
+            txid,
+            amount: received - spent,
             direction: TransferDirection.Outgoing,
           });
         }
