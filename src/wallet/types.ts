@@ -28,14 +28,14 @@ export type WalletData = { mnemonic: string; index: number };
 
 export enum TransferDirection {
   Incoming = 'Incoming',
-  Outgoing = 'Outgoing'
+  Outgoing = 'Outgoing',
 }
 export type TransactionLogEntry = {
   txid: string;
   amount: bigint;
-  direction: TransferDirection
-}
+  direction: TransferDirection;
+};
 
-export type TransactionsLog = {
+export type TransactionLogPerToken = {
   [key: string]: TransactionLogEntry[];
-}
+};

@@ -192,7 +192,7 @@ describe('Lepton', function () {
     expect(newBalance2).to.equal(BigInt(1));
 
     // check the transactions log
-    const log = (await wallet.transactionsLog(chainID))[tokenAddress];
+    const log = (await wallet.getTransactionHistory(chainID))[tokenAddress];
     expect(log[0].direction).eq(TransferDirection.Incoming);
     expect(log[0].amount).eq(BigInt('109725000000000000000000'));
     expect(log[1].direction).eq(TransferDirection.Outgoing);
