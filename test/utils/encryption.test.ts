@@ -65,8 +65,8 @@ describe('Utils/Encryption', () => {
   });
 
   it('Should test the correctness of encrypt/decrypt with AES-256-CTR', () => {
-    const plaintext: BytesData[] = [];
-    for (let i = 0; i < 8; i++) plaintext.push(random(32));
+    const plaintext: string[] = [];
+    for (let i = 0; i < 16; i++) plaintext.push(random(32));
     const key = random(32);
     const ciphertext = encryption.aes.ctr.encrypt(plaintext, key);
 
@@ -83,17 +83,17 @@ describe('Utils/Encryption', () => {
   });
 
   it('Should encrypt and decrypt CTR data', () => {
-    const randomValue = bytes.random();
+    const plaintext = random(32);
     const viewingPrivateKey =
       71304128950017749550555748140089622855554443655032326837948344032235540545721n;
     const ciphertext = encryption.aes.ctr.encrypt(
-      [randomValue],
+      [plaintext],
       nToHex(viewingPrivateKey, ByteLength.UINT_256),
     );
     const decrypted = encryption.aes.ctr.decrypt(
       ciphertext,
       nToHex(viewingPrivateKey, ByteLength.UINT_256),
     );
-    expect(randomValue).to.equal(decrypted[0]);
+    expect(plaintext).to.equal(decrypted[0]);
   });
 });

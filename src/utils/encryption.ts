@@ -78,10 +78,11 @@ const aes = {
      * @param key - key to encrypt with
      * @returns ciphertext bundle
      */
-    encrypt(plaintext: BytesData[], key: BytesData): CTRCiphertext {
+    encrypt(plaintext: string[], key: BytesData): CTRCiphertext {
       // If types are strings, convert to bytes array
       const plaintextFormatted = plaintext.map((block) => new Uint8Array(arrayify(block)));
       const keyFormatted = new Uint8Array(arrayify(key));
+
       if (keyFormatted.byteLength !== 32) throw new Error('Invalid key length');
 
       const iv = random(16);
@@ -110,7 +111,7 @@ const aes = {
      * @param key - key to decrypt with
      * @returns - plaintext
      */
-    decrypt(ciphertext: CTRCiphertext, key: BytesData): BytesData[] {
+    decrypt(ciphertext: CTRCiphertext, key: BytesData): string[] {
       // If types are strings, convert to bytes array
       const ciphertextFormatted = ciphertext.data.map((block) => new Uint8Array(arrayify(block)));
       const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));

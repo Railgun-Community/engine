@@ -1,7 +1,9 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { OutputType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
+import { Memo } from '../../src/note/memo';
 import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
@@ -17,6 +19,7 @@ const vectors = [
         '0x5c4a783fd15546fbad149c673b7139790a9cf62ec849a5a8e6a167815ee2d08d',
         '0x260693ec8dd38f5be7758b6786bc579e',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: '9902564685f24f396263c64f582aa9a87499704509c60862930b1f9f7d258e8e',
     random: '85b08a7cd73ee433072f1d410aeb4801',
@@ -32,6 +35,7 @@ const vectors = [
         '0xf401e001c520b9f40d37736c0ef2309fa9b2dc97bf1634ac1443fc2fe5359f69',
         '0x093481f1f6ab744d9f937e6ec796e300',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
     random: 'f7c477afb5a3eb31dbb96295cdbcf165',
@@ -47,6 +51,7 @@ const vectors = [
         '0x4b0b63e8f573bf29cabc8e840c5db89892c0acc3f30bbdf6ad9d39ac9485fa49',
         '0xcbfb4c84c0669aaf184a621c9d21e9ae',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
     random: '6d8a7e26de6b0638cd092c2a2b524705',
@@ -62,6 +67,7 @@ const vectors = [
         '0xe9abf13a310d1910d3010a1cf8b5c03a50c228f1fe81de21734479398973ec77',
         '0x00b0994bd02746fc55c1ff8c75aeb285',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: 'bd0f57ea13604d47c9080859ee96d010496cccbfed2ca2062ee3e2d0fcd24e9e',
     random: 'f13666966cffa395e3d412ea4e20480f',
@@ -77,6 +83,7 @@ const vectors = [
         '0x7462849ef8b7bdbb9deeae7983f84334d934d129bd7a7e926bd87b6cf0053e0d',
         '0xda7cd10423b3d1e48bb7dd47062ac632',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: 'd7091b2e84b3fcbe1a688b9e08bf45850a1e8ff0f7e2de19971a6d871ae8a186',
     random: '0bf6750e00739619a1a00f9b8f1bc2be',
@@ -92,6 +99,7 @@ const vectors = [
         '0xe501c3195c8a4cc2134ed19d69ba1208a4c7f4ef6f33c2c5e51655f919d4855e',
         '0xe533c677c5fa66c511a70125edfcd2ac',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: 'fd13f6d7000238c3de83582583f3654a1f14de55143191b89415e35ae2abdf90',
     random: 'd8c0caf1b041611d408b5f01e7eae957',
@@ -107,6 +115,7 @@ const vectors = [
         '0x1bef951429c37eaa69190cb635591d122ffe959d690366876e9f1704aa37bb18',
         '0x8ae56f06a6fe0c39b47f8b28c178f3e0',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: '13e865e8f6160ce58efaf5b2f53facb4b5f16249b0411951e8f7e12a3d95d694',
     random: '44a514b4db4659e8520d570f3252c0cf',
@@ -122,6 +131,7 @@ const vectors = [
         '0x789ee74fc10fd3b8daac3846b307d7d20db76ca9d5b6894c78f58b2ebc0303e4',
         '0x35a7d7e3b7c178dbf3ff6c985bceeee6',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: 'bda28a024a0b77ba51e89b17e7b8d221b2e7c1a818c8e53c78cdc3a8479807a4',
     random: '77c31ed0577a986750c8dce8804af5b9',
@@ -137,6 +147,7 @@ const vectors = [
         '0x82df79ed67267bd528f0302a95129bbb56d04fab22f95af35b03d2c07ac75737',
         '0x273588a6fab60d09b7f4155e2bf4aded',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: '6a26fe361ff14ef4c931c82acc8c772d5a349a4d1af75bff27dde944ec713b27',
     random: '6478eea9c496942f0f25967c11fc4bbd',
@@ -152,6 +163,7 @@ const vectors = [
         '0x4732f678e893c09c6393be8f8fcc5eee1d9a1078a16151dcae2d65f2d78edc4b',
         '0xc675ab6de72d03033cf0bafaa0391b2e',
       ] as [string, string],
+      memoField: ['00', '01', '02'],
     },
     pubkey: 'c103873aa9d88c4c4cbc4cac97f7b57d01ab3587500c1d1c90fe3991b1dab882',
     random: '2e16e1cdda5f94ddb9981d3811924b05',
@@ -230,11 +242,16 @@ describe('Note/ERC20', () => {
         masterPublicKey: hexToBigInt(vector.note.pubkey),
         viewingPublicKey,
       };
+      const memoField = Memo.createMemoField(
+        { outputType: OutputType.RelayerFee },
+        viewingPublicKey, // Should be private key, but shouldn't matter here.
+      );
       const note = new Note(
         address,
         vector.note.random,
         hexToBigInt(vector.note.amount),
         vector.note.token,
+        memoField,
       );
 
       const sharedKeyBytes = hexStringToBytes(vector.sharedKey);
@@ -243,14 +260,14 @@ describe('Note/ERC20', () => {
       const encrypted = note.encrypt(sharedKeyBytes);
 
       // Check if encrypted values are successfully decrypted
-      const decrypted = Note.decrypt(encrypted, sharedKeyBytes);
+      const decrypted = Note.decrypt(encrypted, sharedKeyBytes, memoField);
       expect(decrypted.token).to.equal(note.token);
       expect(decrypted.value).to.equal(note.value);
       expect(decrypted.random).to.equal(note.random);
       expect(decrypted.hash).to.equal(note.hash);
 
       // Check if vector encrypted values are successfully decrypted
-      const decryptedFromCiphertext = Note.decrypt(vector.ciphertext, sharedKeyBytes);
+      const decryptedFromCiphertext = Note.decrypt(vector.ciphertext, sharedKeyBytes, memoField);
       expect(decryptedFromCiphertext.token).to.equal(note.token);
       expect(decryptedFromCiphertext.value).to.equal(note.value);
       expect(decryptedFromCiphertext.valueHex).to.equal(nToHex(note.value, ByteLength.UINT_128));
@@ -268,6 +285,7 @@ describe('Note/ERC20', () => {
         viewingPublicKey: hexStringToBytes(vector.pubkey),
       };
       const vectorBytes = hexStringToBytes(vector.vpk);
+
       const note = Note.deserialize(vector.note, vectorBytes, address);
       expect(hexlify(note.random)).to.equal(vector.random);
 
@@ -280,11 +298,21 @@ describe('Note/ERC20', () => {
       expect(reserialized.npk).to.equal(vector.note.npk);
       expect(reserialized.value).to.equal(vector.note.value);
       expect(reserialized.token).to.equal(vector.note.token);
+      expect(reserialized.memoField).to.deep.equal([
+        '0000000000000000000000000000000000000000000000000000000000000000',
+        '0000000000000000000000000000000000000000000000000000000000000001',
+        '0000000000000000000000000000000000000000000000000000000000000002',
+      ]);
 
       const serializedContract = note.serialize(vectorBytes, true);
       expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
       expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
       expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
+      expect(serializedContract.memoField).to.deep.equal([
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+        '0x0000000000000000000000000000000000000000000000000000000000000002',
+      ]);
     });
   });
 

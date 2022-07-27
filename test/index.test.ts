@@ -15,9 +15,10 @@ import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
 import { RailgunProxyContract } from '../src/contracts/railgun-proxy';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
-import { GeneratedCommitment, TokenType } from '../src/models/formatted-types';
+import { GeneratedCommitment, OutputType, TokenType } from '../src/models/formatted-types';
 import { TransactionBatch } from '../src/transaction/transaction-batch';
 import { TransferDirection } from '../src/wallet/types';
+import { Memo } from '../src/note/memo';
 
 chai.use(chaiAsPromised);
 
@@ -170,7 +171,15 @@ describe('Lepton', function () {
     );
 
     // Add output for mock Relayer (artifacts require 2 outputs, including withdraw)
-    transactionBatch.addOutput(new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress));
+    const memoField = Memo.createMemoField(
+      {
+        outputType: OutputType.RelayerFee,
+      },
+      wallet2.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress, memoField),
+    );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
       lepton.prover,

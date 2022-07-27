@@ -30,6 +30,8 @@ export class Note {
 
   readonly hash: bigint;
 
+  readonly memoField: string[];
+
   /**
    * Create Note object from values
    * @param {BigInt} addressData - recipient wallet address data
@@ -37,7 +39,13 @@ export class Note {
    * @param {string} token - note token ID
    * @param {BigInt} value - note value
    */
-  constructor(addressData: AddressData, random: string, value: BigIntish, token: string) {
+  constructor(
+    addressData: AddressData,
+    random: string,
+    value: BigIntish,
+    token: string,
+    memoField: string[],
+  ) {
     Note.assertValidRandom(random);
 
     this.addressData = addressData;
@@ -48,6 +56,7 @@ export class Note {
     this.value = BigInt(value);
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();
+    this.memoField = memoField;
   }
 
   get valueHex(): string {
@@ -93,7 +102,7 @@ export class Note {
    * @param encryptedNote - encrypted note data
    * @param sharedKey - key to decrypt with
    */
-  static decrypt(encryptedNote: Ciphertext, sharedKey: Uint8Array): Note {
+  static decrypt(encryptedNote: Ciphertext, sharedKey: Uint8Array, memoField: string[]): Note {
     // Decrypt values
     const decryptedValues = encryption.aes.gcm
       .decrypt(encryptedNote, sharedKey)
@@ -108,7 +117,7 @@ export class Note {
     const value = hexToBigInt(decryptedValues[2].substring(32, 64));
     const tokenAddress = decryptedValues[1];
 
-    return new Note(addressData, random, value, tokenAddress);
+    return new Note(addressData, random, value, tokenAddress, memoField);
   }
 
   private format(prefix: boolean = false) {
@@ -118,6 +127,7 @@ export class Note {
       token: formatToByteLength(this.token, ByteLength.UINT_256, prefix),
       value: formatToByteLength(this.valueHex, ByteLength.UINT_128, prefix),
       random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
+      memoField: this.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256, prefix)),
     };
   }
 
@@ -128,7 +138,7 @@ export class Note {
    * @returns serialized note
    */
   serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
-    const { npk, token, value, random } = this.format(prefix);
+    const { npk, token, value, random, memoField } = this.format(prefix);
     const ciphertext = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
     const [ivTag, data] = ciphertextToEncryptedRandomData(ciphertext);
 
@@ -137,6 +147,7 @@ export class Note {
       token,
       value,
       encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)) as [string, string],
+      memoField,
     };
   }
 
@@ -161,6 +172,7 @@ export class Note {
       hexlify(ivTag),
       hexToBigInt(noteData.value),
       hexlify(noteData.token),
+      noteData.memoField.map((el) => hexlify(el)),
     );
   }
 
@@ -211,7 +223,7 @@ export class Note {
     }
   }
 
-  newNoteWithValue(value: bigint): Note {
-    return new Note(this.addressData, bytes.random(16), value, this.token);
+  newProcessingNoteWithValue(value: bigint): Note {
+    return new Note(this.addressData, bytes.random(16), value, this.token, []);
   }
 }

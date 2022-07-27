@@ -10,6 +10,7 @@ import {
   BoundParams,
   CommitmentPreimage,
   OutputCommitmentCiphertext,
+  OutputType,
   SerializedTransaction,
   TokenType,
 } from '../models/formatted-types';
@@ -17,6 +18,7 @@ import { DEFAULT_TOKEN_SUB_ID, WithdrawFlag } from './constants';
 import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 import { TXO } from '../models/txo-types';
+import { Memo } from '../note/memo';
 
 const abiCoder = defaultAbiCoder;
 
@@ -47,7 +49,7 @@ class Transaction {
 
   private tokenType: TokenType;
 
-  private tokenSubID: BigInt = DEFAULT_TOKEN_SUB_ID;
+  private tokenSubID: bigint = DEFAULT_TOKEN_SUB_ID;
 
   private spendingTree: number;
 
@@ -156,7 +158,15 @@ class Transaction {
     const allOutputs: (Note | ERC20WithdrawNote)[] = [...this.outputs];
 
     // Create change output
-    allOutputs.push(new Note(wallet.addressKeys, bytes.random(16), change, this.tokenAddress));
+    const changeMemo: string[] = Memo.createMemoField(
+      {
+        outputType: OutputType.Change,
+      },
+      viewingKey.privateKey,
+    );
+    allOutputs.push(
+      new Note(wallet.addressKeys, bytes.random(16), change, this.tokenAddress, changeMemo),
+    );
 
     // Push withdraw output if withdraw is requested
     if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW && this.withdrawNote) {
@@ -191,7 +201,7 @@ class Transaction {
             hexToBigInt(el as string),
           ),
           ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))),
-          memo: [],
+          memo: note.memoField.map((el) => hexToBigInt(el)),
         };
       },
     );
@@ -216,7 +226,7 @@ class Transaction {
 
     // Format inputs
     const inputs: PrivateInputs = {
-      token: hexToBigInt(this.tokenAddress),
+      tokenAddress: hexToBigInt(this.tokenAddress),
       randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
       pathElements,

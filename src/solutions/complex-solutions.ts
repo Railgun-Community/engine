@@ -76,7 +76,7 @@ export const createSpendingSolutionGroupsForOutput = (
     solutionValue: bigint,
     utxos: TXO[],
   ): SpendingSolutionGroup => {
-    const solutionOutput = output.newNoteWithValue(solutionValue);
+    const solutionOutput = output.newProcessingNoteWithValue(solutionValue);
 
     return {
       spendingTree: tree,
@@ -92,7 +92,7 @@ export const createSpendingSolutionGroupsForOutput = (
 
     if (amountLeft > 0) {
       // Add another remaining output note for any Amount Left.
-      remainingOutputs.unshift(output.newNoteWithValue(amountLeft));
+      remainingOutputs.unshift(output.newProcessingNoteWithValue(amountLeft));
     }
   };
 

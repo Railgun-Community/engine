@@ -42,7 +42,7 @@ export type PublicInputs = {
 };
 
 export type PrivateInputs = {
-  token: bigint;
+  tokenAddress: bigint;
   publicKey: [bigint, bigint];
   signature: [bigint, bigint, bigint];
   randomIn: bigint[];

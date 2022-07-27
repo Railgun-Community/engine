@@ -24,7 +24,7 @@ export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>
 export type CommitmentCiphertextArgs = {
   ciphertext: [BigNumber, BigNumber, BigNumber, BigNumber];
   ephemeralKeys: [BigNumber, BigNumber];
-  memo: string;
+  memo: BigNumber[];
 };
 
 export type CommitmentTokenData = {
@@ -154,7 +154,9 @@ export function formatCommitmentBatchCommitments(
         ephemeralKeys: ephemeralKeys.map(
           (key) => formatToByteLength(key.toHexString(), ByteLength.UINT_256), // 32 bytes each.
         ),
-        memo,
+        memo: memo.map(
+          (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256), // 32 bytes each.
+        ),
       },
     };
   });

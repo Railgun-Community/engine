@@ -19,8 +19,8 @@ export type Ciphertext = {
 };
 
 export type CTRCiphertext = {
-  iv: BytesData;
-  data: BytesData[];
+  iv: string;
+  data: string[];
 };
 
 export type OutputCommitmentCiphertext = {
@@ -56,6 +56,16 @@ export type TokenData = {
 
 export type EncryptedData = [string, string];
 
+export enum OutputType {
+  Transfer = 0,
+  RelayerFee = 1,
+  Change = 2,
+}
+
+export type NoteExtraData = {
+  outputType: OutputType;
+};
+
 export type CommitmentPreimage = {
   npk: string;
   token: TokenData;
@@ -77,6 +87,7 @@ export type NoteSerialized = {
   value: string;
   token: string;
   encryptedRandom: [string, string];
+  memoField: string[];
 };
 
 export type MerkleProof = {
@@ -110,7 +121,7 @@ export type GeneratedCommitment = {
 export type CommitmentCiphertext = {
   ciphertext: Ciphertext; // iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
   ephemeralKeys: string[]; // sender first, recipient second (packed points 32 bytes each)
-  memo: string; // bytes32[]
+  memo: string[]; // bytes32[]
 };
 
 /**

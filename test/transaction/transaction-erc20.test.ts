@@ -9,8 +9,9 @@ import { groth16 } from 'snarkjs';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
-import { TokenType } from '../../src/models/formatted-types';
+import { NoteExtraData, OutputType, TokenType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
+import { Memo } from '../../src/note/memo';
 import { Prover } from '../../src/prover';
 import { hashBoundParams } from '../../src/transaction/transaction';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
@@ -93,7 +94,7 @@ const depositLeaf = {
 };
 
 // eslint-disable-next-line func-names
-describe('Transaction/Transaction ERC20', function () {
+describe('Transaction/ERC20', function () {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
@@ -105,19 +106,17 @@ describe('Transaction/Transaction ERC20', function () {
     prover.setGroth16(groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
-    // testData = getTestData();
-    makeNote = (value: bigint = 65n * DECIMALS_18): Note => new Note(address, random, value, token);
+    const vpk = wallet.getViewingKeyPair().privateKey;
+    makeNote = (
+      value: bigint = 65n * DECIMALS_18,
+      outputType: OutputType = OutputType.Transfer,
+    ): Note => new Note(address, random, value, token, Memo.createMemoField({ outputType }, vpk));
     merkletree.validateRoot = () => true;
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     await wallet.scanBalances(chainID);
-    // await merkletree.queueLeaves(1, 0, testData.leaves2);
-    // await merkletree.queueLeaves(2, 0, testData.leaves3);
-    // await merkletree.queueLeaves(3, 0, testData.leaves4);
-    // await wallet.scanBalances(1, chainID);
   });
 
   beforeEach(async () => {
-    // deposit = new ERC20Deposit(masterPublicKey, random, DECIMALS_18, token);
     transactionBatch = new TransactionBatch(token, TokenType.ERC20, 1);
   });
 
@@ -141,10 +140,19 @@ describe('Transaction/Transaction ERC20', function () {
 
   it('Should generate ciphertext decryptable by sender and recipient', async () => {
     const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
-    const note = new Note(wallet2.addressKeys, random, 100n, token);
 
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
+
+    const noteExtraData: NoteExtraData = { outputType: OutputType.RelayerFee };
+
+    const note = new Note(
+      wallet2.addressKeys,
+      random,
+      100n,
+      token,
+      Memo.createMemoField(noteExtraData, sender.privateKey),
+    );
 
     assert.isTrue(note.viewingPublicKey === receiver.pubkey);
     const ephemeralKeys = await getEphemeralKeys(sender.pubkey, note.viewingPublicKey, note.random);
@@ -154,9 +162,13 @@ describe('Transaction/Transaction ERC20', function () {
 
     const encryptedNote = note.encrypt(senderShared);
 
-    const senderDecrypted = Note.decrypt(encryptedNote, senderShared);
+    const senderDecrypted = Note.decrypt(encryptedNote, senderShared, note.memoField);
     expect(senderDecrypted.hash).to.equal(note.hash);
-    const receiverDecrypted = Note.decrypt(encryptedNote, receiverShared);
+    expect(Memo.decryptNoteExtraData(senderDecrypted.memoField, sender.privateKey)).to.deep.equal(
+      noteExtraData,
+    );
+
+    const receiverDecrypted = Note.decrypt(encryptedNote, receiverShared, note.memoField);
     expect(receiverDecrypted.hash).to.equal(note.hash);
   });
 
@@ -203,8 +215,18 @@ describe('Transaction/Transaction ERC20', function () {
     ).to.eventually.be.rejectedWith('Too many transaction outputs');
 
     transactionBatch.resetOutputs();
+    const memoField = Memo.createMemoField(
+      { outputType: OutputType.RelayerFee },
+      wallet.getViewingKeyPair().privateKey,
+    );
     transactionBatch.addOutput(
-      new Note(address, random, 6500000000000n, '000925cdf66ddf5b88016df1fe915e68eff8f192'),
+      new Note(
+        address,
+        random,
+        6500000000000n,
+        '000925cdf66ddf5b88016df1fe915e68eff8f192',
+        memoField,
+      ),
     );
 
     await expect(

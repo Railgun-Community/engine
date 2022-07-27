@@ -133,7 +133,7 @@ export class Prover {
       boundParamsHash: publicInputs.boundParamsHash,
       nullifiers: publicInputs.nullifiers,
       commitmentsOut: publicInputs.commitmentsOut,
-      token: privateInputs.token,
+      token: privateInputs.tokenAddress,
       publicKey: privateInputs.publicKey,
       signature: privateInputs.signature,
       randomIn: privateInputs.randomIn,

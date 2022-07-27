@@ -17,9 +17,10 @@ import { ERC20Deposit } from '../../../src/note/erc20-deposit';
 import { CommitmentEvent } from '../../../src/contracts/railgun-proxy/events';
 import { bytes } from '../../../src/utils';
 import { ERC20WithdrawNote } from '../../../src/note/erc20-withdraw';
-import { Nullifier, TokenType } from '../../../src/models/formatted-types';
+import { Nullifier, OutputType, TokenType } from '../../../src/models/formatted-types';
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import { LeptonEvent } from '../../../src/models/event-types';
+import { Memo } from '../../../src/note/memo';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -119,7 +120,16 @@ describe('Railgun Proxy/Index', function () {
     await testDeposit();
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transactionBatch.addOutput(new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+
+    const memoField = Memo.createMemoField(
+      {
+        outputType: OutputType.Transfer,
+      },
+      wallet2.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+    );
     const tx = await proxyContract.transact(
       await transactionBatch.generateDummySerializedTransactions(
         lepton.prover,
@@ -224,7 +234,16 @@ describe('Railgun Proxy/Index', function () {
     startingBlock = await provider.getBlockNumber();
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transactionBatch.addOutput(new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+
+    const memoField = Memo.createMemoField(
+      {
+        outputType: OutputType.RelayerFee,
+      },
+      wallet2.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+    );
     transactionBatch.setWithdraw(etherswallet.address, 100n);
     const serializedTxs = await transactionBatch.generateSerializedTransactions(
       lepton.prover,
@@ -370,7 +389,16 @@ describe('Railgun Proxy/Index', function () {
     );
     // Create transaction
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    transactionBatch.addOutput(new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS));
+
+    const memoField = Memo.createMemoField(
+      {
+        outputType: OutputType.RelayerFee,
+      },
+      wallet.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+    );
     transactionBatch.setWithdraw(etherswallet.address, 100n);
 
     // Create transact
@@ -399,6 +427,28 @@ describe('Railgun Proxy/Index', function () {
     expect(result.startPosition).to.equal(1);
     // @ts-ignore
     expect(result.commitments.length).to.equal(2);
+    // @ts-ignore
+    expect(result.commitments[0].ciphertext.memo.length).to.equal(1);
+    // @ts-ignore
+    expect(result.commitments[1].ciphertext.memo.length).to.equal(1);
+    expect(
+      Memo.decryptNoteExtraData(
+        // @ts-ignore
+        result.commitments[0].ciphertext.memo,
+        wallet.getViewingKeyPair().privateKey,
+      ),
+    ).to.deep.equal({
+      outputType: OutputType.RelayerFee,
+    });
+    expect(
+      Memo.decryptNoteExtraData(
+        // @ts-ignore
+        result.commitments[1].ciphertext.memo,
+        wallet.getViewingKeyPair().privateKey,
+      ),
+    ).to.deep.equal({
+      outputType: OutputType.Change,
+    });
   }).timeout(120000);
 
   afterEach(async () => {

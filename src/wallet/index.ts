@@ -299,7 +299,7 @@ class Wallet extends EventEmitter {
         // Try to decrypt.
         if (sharedKey) {
           try {
-            note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey);
+            note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey, leaf.ciphertext.memo);
           } catch (e: any) {
             // Expect error if leaf not addressed to us.
           }
@@ -312,6 +312,7 @@ class Wallet extends EventEmitter {
           encryptedRandom: leaf.encryptedRandom,
           token: leaf.preImage.token.tokenAddress,
           value: leaf.preImage.value,
+          memoField: [], // Empty for non-private txs.
         };
         try {
           note = Note.deserialize(serialized, vpk, this.addressKeys);
