@@ -12,11 +12,16 @@ export type AdaptID = {
   parameters: string;
 };
 
-export interface Ciphertext {
+export type Ciphertext = {
   iv: BytesData;
   tag: BytesData;
   data: BytesData[];
-}
+};
+
+export type CTRCiphertext = {
+  iv: BytesData;
+  data: BytesData[];
+};
 
 export type OutputCommitmentCiphertext = {
   ciphertext: bigint[]; // uint256[4]

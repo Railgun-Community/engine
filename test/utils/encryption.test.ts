@@ -49,7 +49,7 @@ describe('Utils/Encryption', () => {
     ).to.throw('Unsupported state or unable to authenticate data');
   });
 
-  it('Should encrypt and decrypt data', () => {
+  it('Should encrypt and decrypt GCM data', () => {
     const randomValue = bytes.random();
     const viewingPrivateKey =
       71304128950017749550555748140089622855554443655032326837948344032235540545721n;
@@ -58,6 +58,39 @@ describe('Utils/Encryption', () => {
       nToHex(viewingPrivateKey, ByteLength.UINT_256),
     );
     const decrypted = encryption.aes.gcm.decrypt(
+      ciphertext,
+      nToHex(viewingPrivateKey, ByteLength.UINT_256),
+    );
+    expect(randomValue).to.equal(decrypted[0]);
+  });
+
+  it('Should test the correctness of encrypt/decrypt with AES-256-CTR', () => {
+    const plaintext: BytesData[] = [];
+    for (let i = 0; i < 8; i++) plaintext.push(random(32));
+    const key = random(32);
+    const ciphertext = encryption.aes.ctr.encrypt(plaintext, key);
+
+    // Test decryption returns correct plaintext array
+    expect(
+      encryption.aes.ctr.decrypt(
+        {
+          iv: ciphertext.iv,
+          data: ciphertext.data,
+        },
+        key,
+      ),
+    ).to.deep.equal(plaintext);
+  });
+
+  it('Should encrypt and decrypt CTR data', () => {
+    const randomValue = bytes.random();
+    const viewingPrivateKey =
+      71304128950017749550555748140089622855554443655032326837948344032235540545721n;
+    const ciphertext = encryption.aes.ctr.encrypt(
+      [randomValue],
+      nToHex(viewingPrivateKey, ByteLength.UINT_256),
+    );
+    const decrypted = encryption.aes.ctr.decrypt(
       ciphertext,
       nToHex(viewingPrivateKey, ByteLength.UINT_256),
     );
