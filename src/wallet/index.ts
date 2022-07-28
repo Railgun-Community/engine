@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import { HDNode } from '@ethersproject/hdnode';
 import type { AbstractBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
@@ -10,9 +11,18 @@ import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { MerkleTree } from '../merkletree';
 import { LeptonEvent, ScannedEventData } from '../models/event-types';
-import { BytesData, Commitment, NoteSerialized } from '../models/formatted-types';
-import { TXO } from '../models/txo-types';
+import {
+  BytesData,
+  Commitment,
+  EncryptedCommitment,
+  NoteSerialized,
+  OutputType,
+  StoredReceiveCommitment,
+  StoredSpendCommitment,
+} from '../models/formatted-types';
+import { SpentCommitment, TXO } from '../models/txo-types';
 import { Note } from '../note';
+import { Memo } from '../note/memo';
 import { hash } from '../utils';
 import {
   arrayify,
@@ -32,9 +42,11 @@ import {
   AddressKeys,
   Balances,
   BalancesByTree,
-  TransactionLogEntry,
-  TransactionLogPerToken,
-  TransferDirection,
+  TransactionHistoryEntry,
+  TransactionHistoryEntryPreprocessSpent,
+  TransactionHistoryEntryReceived,
+  TransactionHistoryEntrySpent,
+  TransactionHistoryTokenAmount,
   TreeBalance,
   WalletData,
   WalletDetails,
@@ -109,25 +121,6 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Groups a list of transaction logs by txid
-   * @param list - list of transaction logs
-   * @returns map of transaction logs by txid
-   */
-  private static groupBy(list: TransactionLogEntry[]): Map<string, TransactionLogEntry[]> {
-    const map = new Map();
-    list.forEach((item) => {
-      const key = item.txid;
-      const collection = map.get(key);
-      if (!collection) {
-        map.set(key, [item]);
-      } else {
-        collection.push(item);
-      }
-    });
-    return map;
-  }
-
-  /**
    * Loads merkle tree into wallet
    * @param merkletree - merkletree to load
    */
@@ -144,7 +137,7 @@ class Wallet extends EventEmitter {
   }
 
   /**
-   * Construct DB path from chainID
+   * Construct DB TXO path from chainID
    * Prefix consists of ['wallet', id, chainID]
    * May be appended with tree and position
    * @param chainID - chainID
@@ -156,6 +149,26 @@ class Wallet extends EventEmitter {
     const path = [fromUTF8String('wallet'), hexlify(this.id), hexlify(new BN(chainID))].map(
       (element) => element.padStart(64, '0'),
     );
+    if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
+    if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
+    return path;
+  }
+
+  /**
+   * Construct DB spent commitment path from chainID
+   * Prefix consists of ['wallet', id + "-spent", chainID]
+   * May be appended with tree and position
+   * @param chainID - chainID
+   * @optional tree - without this param, all trees
+   * @optional position - without this param, all positions
+   * @returns wallet DB prefix
+   */
+  getWalletSpentCommitmentDBPrefix(chainID: number, tree?: number, position?: number): string[] {
+    const path = [
+      fromUTF8String('wallet'),
+      `${hexlify(this.id)}-spent`,
+      hexlify(new BN(chainID)),
+    ].map((element) => element.padStart(64, '0'));
     if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
     if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
     return path;
@@ -256,6 +269,15 @@ class Wallet extends EventEmitter {
     return walletDetails;
   }
 
+  private static decryptLeaf(leaf: EncryptedCommitment, sharedKey: Uint8Array) {
+    try {
+      return Note.decrypt(leaf.ciphertext.ciphertext, sharedKey, leaf.ciphertext.memo);
+    } catch (e: any) {
+      // Expect error if leaf not addressed to us.
+      return undefined;
+    }
+  }
+
   /**
    * Scans wallet at index for new balances
    * Commitment index in array should be same as commitment index in tree
@@ -285,24 +307,32 @@ class Wallet extends EventEmitter {
           leaves.length - 1
         }`,
       );
-      let note: Note | undefined;
+      let noteReceive: Note | undefined;
+      let noteSpend: Note | undefined;
       const leaf = leaves[position];
       if (leaf == null) {
         continue;
       }
 
       if ('ciphertext' in leaf) {
-        // Derive shared secret
-        const ephemeralKey = leaf.ciphertext.ephemeralKeys[0];
-        // eslint-disable-next-line no-await-in-loop
-        const sharedKey = await getSharedSymmetricKey(vpk, hexStringToBytes(ephemeralKey));
-        // Try to decrypt.
-        if (sharedKey) {
-          try {
-            note = Note.decrypt(leaf.ciphertext.ciphertext, sharedKey, leaf.ciphertext.memo);
-          } catch (e: any) {
-            // Expect error if leaf not addressed to us.
-          }
+        // Try to decrypt note as receiver.
+        const ephemeralKeySender = leaf.ciphertext.ephemeralKeys[0];
+        const sharedKeyReceiver = await getSharedSymmetricKey(
+          vpk,
+          hexStringToBytes(ephemeralKeySender),
+        );
+        if (sharedKeyReceiver) {
+          noteReceive = Wallet.decryptLeaf(leaf, sharedKeyReceiver);
+        }
+
+        // Try to decrypt note as sender.
+        const ephemeralKeyReceiver = leaf.ciphertext.ephemeralKeys[1];
+        const sharedKeySpender = await getSharedSymmetricKey(
+          vpk,
+          hexStringToBytes(ephemeralKeyReceiver),
+        );
+        if (sharedKeySpender) {
+          noteSpend = Wallet.decryptLeaf(leaf, sharedKeySpender);
         }
       } else {
         // preImage
@@ -315,26 +345,38 @@ class Wallet extends EventEmitter {
           memoField: [], // Empty for non-private txs.
         };
         try {
-          note = Note.deserialize(serialized, vpk, this.addressKeys);
+          noteReceive = Note.deserialize(serialized, vpk, this.addressKeys);
         } catch (e: any) {
           // Expect error if leaf not addressed to us.
         }
       }
 
-      // If this note is addressed to us, add to write queue
-      if (note !== undefined) {
+      if (noteReceive) {
         const nullifier = Note.getNullifier(this.nullifyingKey, position);
-        const storedCommitment = {
+        const storedCommitment: StoredReceiveCommitment = {
           spendtxid: false,
           txid: hexlify(leaf.txid),
           nullifier: nToHex(nullifier, ByteLength.UINT_256),
-          decrypted: note.serialize(vpk),
+          decrypted: noteReceive.serialize(vpk),
         };
         writeBatch.push({
           type: 'put',
           key: this.getWalletDBPrefix(chainID, tree, position).join(':'),
           value: msgpack.encode(storedCommitment),
-        } as AbstractBatch);
+        });
+      }
+
+      if (noteSpend) {
+        const storedCommitment: StoredSpendCommitment = {
+          txid: hexlify(leaf.txid),
+          decrypted: noteSpend.serialize(vpk),
+          noteExtraData: Memo.decryptNoteExtraData(noteSpend.memoField, vpk),
+        };
+        writeBatch.push({
+          type: 'put',
+          key: this.getWalletSpentCommitmentDBPrefix(chainID, tree, position).join(':'),
+          value: msgpack.encode(storedCommitment),
+        });
       }
     }
 
@@ -345,20 +387,8 @@ class Wallet extends EventEmitter {
     return writeBatch.length > 0;
   }
 
-  /**
-   * Get TXOs list of a chain
-   * @param chainID - chainID to get UTXOs for
-   * @returns UTXOs list
-   */
-  async TXOs(chainID: number): Promise<TXO[]> {
-    const address = this.addressKeys;
-    const vpk = this.getViewingKeyPair().privateKey;
-
-    // Get chain namespace
-    const namespace = this.getWalletDBPrefix(chainID);
-
-    // Stream list of keys out
-    const keys: string[] = await new Promise((resolve) => {
+  private async streamKeys(namespace: string[]): Promise<string[]> {
+    return new Promise((resolve) => {
       const keyList: string[] = [];
 
       // Stream list of keys and resolve on end
@@ -371,40 +401,51 @@ class Wallet extends EventEmitter {
           resolve(keyList);
         });
     });
+  }
 
+  /**
+   * Get TXOs list of a chain
+   * @param chainID - chainID to get UTXOs for
+   * @returns UTXOs list
+   */
+  async TXOs(chainID: number): Promise<TXO[]> {
+    const address = this.addressKeys;
+    const vpk = this.getViewingKeyPair().privateKey;
+
+    const namespace = this.getWalletDBPrefix(chainID);
+    const keys: string[] = await this.streamKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
     // Calculate UTXOs
     return Promise.all(
       keySplits.map(async (keySplit) => {
         // Decode UTXO
-        // @todo clarify stored commitment / UTXO type
-        const UTXO = msgpack.decode(arrayify(await this.db.get(keySplit)));
+        const txo: StoredReceiveCommitment = msgpack.decode(arrayify(await this.db.get(keySplit)));
 
         // If this UTXO hasn't already been marked as spent, check if it has
-        if (!UTXO.spendtxid) {
+        if (!txo.spendtxid) {
           // Get nullifier
-          const storedNullifier = await this.merkletree[chainID].getStoredNullifier(UTXO.nullifier);
+          const storedNullifier = await this.merkletree[chainID].getStoredNullifier(txo.nullifier);
 
           // If it's nullified write spend txid to wallet storage
           if (storedNullifier) {
-            UTXO.spendtxid = storedNullifier;
+            txo.spendtxid = storedNullifier;
 
             // Write nullifier spend txid to db
-            await this.db.put(keySplit, msgpack.encode(UTXO));
+            await this.db.put(keySplit, msgpack.encode(txo));
           }
         }
 
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
 
-        const note = Note.deserialize(UTXO.decrypted, vpk, address);
+        const note = Note.deserialize(txo.decrypted, vpk, address);
 
         return {
           tree,
           position,
-          txid: UTXO.txid,
-          spendtxid: UTXO.spendtxid,
+          txid: txo.txid,
+          spendtxid: txo.spendtxid,
           note,
         };
       }),
@@ -412,83 +453,173 @@ class Wallet extends EventEmitter {
   }
 
   /**
+   * Get spent commitments of a chain
+   * @param chainID - chainID to get spent commitments for
+   * @returns SpentCommitment list
+   */
+  async getSpentCommitments(chainID: number): Promise<SpentCommitment[]> {
+    const address = this.addressKeys;
+    const vpk = this.getViewingKeyPair().privateKey;
+
+    const namespace = this.getWalletSpentCommitmentDBPrefix(chainID);
+    const keys: string[] = await this.streamKeys(namespace);
+    const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
+
+    // Calculate spent commitments
+    return Promise.all(
+      keySplits.map(async (keySplit) => {
+        const spentCommitment: StoredSpendCommitment = msgpack.decode(
+          arrayify(await this.db.get(keySplit)),
+        );
+
+        const tree = numberify(keySplit[3]).toNumber();
+        const position = numberify(keySplit[4]).toNumber();
+
+        const note = Note.deserialize(spentCommitment.decrypted, vpk, address);
+
+        return {
+          tree,
+          position,
+          txid: spentCommitment.txid,
+          note,
+          noteExtraData: spentCommitment.noteExtraData,
+        };
+      }),
+    );
+  }
+
+  /**
    * Gets transactions history
+   * @param chainID - chainID to get transaction history for
+   * @returns history
+   */
+  async getTransactionHistory(chainID: number): Promise<TransactionHistoryEntry[]> {
+    const receiveHistory = await this.getTransactionReceiveHistory(chainID);
+    const sendHistory = await this.getTransactionSpendHistory(chainID);
+
+    const history: TransactionHistoryEntry[] = sendHistory.map((sendItem) => ({
+      ...sendItem,
+      receiveTokenAmounts: [],
+    }));
+
+    // Merge "sent" history with "receive" history items.
+    // We have to remove all "receive" items that are change outputs.
+    receiveHistory.forEach((receiveItem) => {
+      let alreadyExistsInHistory = false;
+
+      history.forEach((existingHistoryItem) => {
+        if (receiveItem.txid === existingHistoryItem.txid) {
+          alreadyExistsInHistory = true;
+          const { changeTokenAmounts } = existingHistoryItem;
+          receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
+            const matchingChangeOutput = changeTokenAmounts.find(
+              (ta) =>
+                ta.token === receiveTokenAmount.token && ta.amount === receiveTokenAmount.amount,
+            );
+            if (!matchingChangeOutput) {
+              // Receive token amount is not a "change" output.
+              // Add it to the history item.
+              existingHistoryItem.receiveTokenAmounts.push(receiveTokenAmount);
+            }
+          });
+        }
+      });
+      if (!alreadyExistsInHistory) {
+        history.unshift({
+          ...receiveItem,
+          transferTokenAmounts: [],
+          changeTokenAmounts: [],
+        });
+      }
+    });
+
+    return history;
+  }
+
+  /**
+   * Gets transactions history for "received" transactions
    * @param chainID - chainID to get balances for
    * @returns history
    */
-  async getTransactionHistory(chainID: number): Promise<TransactionLogPerToken> {
+  async getTransactionReceiveHistory(chainID: number): Promise<TransactionHistoryEntryReceived[]> {
     const TXOs = await this.TXOs(chainID);
-    const tmpHistory: TransactionLogPerToken = {};
+    const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
-    // loop through each TXO and add it to the history
-    TXOs.forEach((txOutput) => {
-      const token = formatToByteLength(txOutput.note.token, 32, false);
-      // If we don't have an entry for this token yet, create one
-      if (!tmpHistory[token]) {
-        tmpHistory[token] = [];
+    TXOs.forEach(({ txid, note }) => {
+      if (!txidTransactionMap[txid]) {
+        txidTransactionMap[txid] = {
+          txid,
+          receiveTokenAmounts: [],
+        };
       }
-      // first add entry for the token when it was received
-      tmpHistory[token].push({
-        txid: txOutput.txid,
-        amount: txOutput.note.value,
-        direction: TransferDirection.Incoming,
+      const token = formatToByteLength(note.token, 32, false);
+      txidTransactionMap[txid].receiveTokenAmounts.push({
+        token,
+        amount: note.value,
       });
-      // then add another entry if it was spent
-      if (txOutput.spendtxid) {
-        tmpHistory[token].push({
-          txid: txOutput.spendtxid,
-          amount: txOutput.note.value,
-          direction: TransferDirection.Outgoing,
-        });
-      }
     });
 
-    // process history by handling joinsplit of TXOs within transactions
-    const history: TransactionLogPerToken = {};
-    const tokens = Object.keys(tmpHistory);
-    tokens.forEach((token) => {
-      if (!history[token]) {
-        history[token] = [];
+    const history: TransactionHistoryEntryReceived[] = Object.values(txidTransactionMap);
+    return history;
+  }
+
+  async getTransactionSpendHistory(chainID: number): Promise<TransactionHistoryEntrySpent[]> {
+    const spentCommitments = await this.getSpentCommitments(chainID);
+    const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
+
+    spentCommitments.forEach(({ txid, note, noteExtraData }) => {
+      if (!txidTransactionMap[txid]) {
+        txidTransactionMap[txid] = {
+          txid,
+          tokenAmounts: [],
+        };
       }
-      // group entries by txid
-      const entries = tmpHistory[token];
-      const transactions = Wallet.groupBy(entries);
-      // eslint-disable-next-line no-restricted-syntax
-      for (const [key, value] of transactions) {
-        let spent = 0n;
-        let received = 0n;
-        const txid = key;
-        // sum amounts according to the direction
-        value.forEach((logEntry) => {
-          if (logEntry.direction === TransferDirection.Outgoing) spent += logEntry.amount;
-          else received += logEntry.amount;
-        });
-        if (spent === 0n) {
-          // receive only
-          history[token].push({
-            txid,
-            amount: received,
-            direction: TransferDirection.Incoming,
-          });
-        } else if (spent > received) {
-          // spend and (maybe) receive
-          history[token].push({
-            txid,
-            amount: spent - received,
-            direction: TransferDirection.Outgoing,
-          });
-        } else if (received > spent) {
-          // receive and spend
-          // This can occur if someone performs a private swap of WETH to DAI, and pays a nominal relayer fee in DAI.
-          // Received DAI will be > spend.
-          history[token].push({
-            txid,
-            amount: received - spent,
-            direction: TransferDirection.Outgoing,
-          });
-        }
-      }
+      const token = formatToByteLength(note.token, 32, false);
+      txidTransactionMap[txid].tokenAmounts.push({
+        token,
+        amount: note.value,
+        noteExtraData,
+      });
     });
+
+    const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =
+      Object.values(txidTransactionMap);
+
+    const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
+      ({ txid, tokenAmounts }) => {
+        const transferTokenAmounts: TransactionHistoryTokenAmount[] = [];
+        let relayerFeeTokenAmount: TransactionHistoryTokenAmount | undefined;
+        const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
+
+        tokenAmounts.forEach((tokenAmount) => {
+          if (!tokenAmount.noteExtraData) {
+            // Legacy notes without extra data, consider as a simple "transfer".
+            transferTokenAmounts.push(tokenAmount);
+            return;
+          }
+          switch (tokenAmount.noteExtraData?.outputType) {
+            case OutputType.Transfer:
+              transferTokenAmounts.push(tokenAmount);
+              break;
+            case OutputType.RelayerFee:
+              relayerFeeTokenAmount = tokenAmount;
+              break;
+            case OutputType.Change:
+              changeTokenAmounts.push(tokenAmount);
+              break;
+          }
+        });
+
+        const historyEntry: TransactionHistoryEntrySpent = {
+          txid,
+          transferTokenAmounts,
+          relayerFeeTokenAmount,
+          changeTokenAmounts,
+        };
+        return historyEntry;
+      },
+    );
+
     return history;
   }
 
@@ -590,7 +721,6 @@ class Wallet extends EventEmitter {
         const scannedHeight = walletDetails.treeScannedHeights[tree];
 
         // Create sparse array of tree
-        // eslint-disable-next-line no-await-in-loop
         const treeHeight = await this.merkletree[chainID].getTreeLength(tree);
         const fetcher: Promise<Commitment | undefined>[] = new Array(treeHeight);
 
@@ -600,11 +730,9 @@ class Wallet extends EventEmitter {
         }
 
         // Wait until all leaves are fetched
-        // eslint-disable-next-line no-await-in-loop
         const leaves = await Promise.all(fetcher);
 
         // Start scanning primary and change
-        // eslint-disable-next-line no-await-in-loop
         await this.scanLeaves(leaves, tree, chainID, scannedHeight, treeHeight);
 
         // Commit new scanned height

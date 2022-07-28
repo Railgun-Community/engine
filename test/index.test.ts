@@ -17,7 +17,6 @@ import { ZERO_ADDRESS } from '../src/utils/constants';
 import { bytes } from '../src/utils';
 import { GeneratedCommitment, OutputType, TokenType } from '../src/models/formatted-types';
 import { TransactionBatch } from '../src/transaction/transaction-batch';
-import { TransferDirection } from '../src/wallet/types';
 import { Memo } from '../src/note/memo';
 
 chai.use(chaiAsPromised);
@@ -130,7 +129,7 @@ describe('Lepton', function () {
       ],
     };
     // Override root validator
-    merkleTree.validateRoot = () => true;
+    merkleTree.validateRoot = () => Promise.resolve(true);
     await merkleTree.queueLeaves(0, 0, [commitment]);
 
     await wallet.scanBalances(chainID);
@@ -147,7 +146,7 @@ describe('Lepton', function () {
     expect(balanceClear).to.equal(undefined);
   });
 
-  it('[HH] Should deposit, transact and update balance', async function run() {
+  it('[HH] Should deposit, transact and update balance, and pull formatted spend/receive transaction history', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -175,7 +174,7 @@ describe('Lepton', function () {
       {
         outputType: OutputType.RelayerFee,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     transactionBatch.addOutput(
       new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress, memoField),
@@ -183,7 +182,7 @@ describe('Lepton', function () {
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
       lepton.prover,
-      lepton.wallets[walletID],
+      wallet,
       testEncryptionKey,
     );
     const transact = await proxyContract.transact(serializedTransactions);
@@ -201,11 +200,45 @@ describe('Lepton', function () {
     expect(newBalance2).to.equal(BigInt(1));
 
     // check the transactions log
-    const log = (await wallet.getTransactionHistory(chainID))[tokenAddress];
-    expect(log[0].direction).eq(TransferDirection.Incoming);
-    expect(log[0].amount).eq(BigInt('109725000000000000000000'));
-    expect(log[1].direction).eq(TransferDirection.Outgoing);
-    expect(log[1].amount).eq(BigInt('300000000000000000001'));
+    const history = await wallet.getTransactionHistory(chainID);
+    expect(history.length).to.equal(2);
+
+    const tokenFormatted = formatToByteLength(tokenAddress, 32, false);
+
+    // Check first output: Shield (receive only).
+    expect(history[0].receiveTokenAmounts).deep.eq([
+      {
+        token: tokenFormatted,
+        amount: BigInt('109725000000000000000000'),
+      },
+    ]);
+    expect(history[0].transferTokenAmounts).deep.eq([]);
+    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].changeTokenAmounts).deep.eq([]);
+
+    // Check second output: Withdraw (relayer fee + change).
+    // NOTE: No receive token amounts should be logged by history.
+    expect(history[1].receiveTokenAmounts).deep.eq(
+      [],
+      "Receive amount should be filtered out - it's the same as change output.",
+    );
+    expect(history[1].transferTokenAmounts).deep.eq([]);
+    expect(history[1].relayerFeeTokenAmount).deep.eq({
+      token: tokenFormatted,
+      amount: BigInt(1),
+      noteExtraData: {
+        outputType: OutputType.RelayerFee,
+      },
+    });
+    expect(history[1].changeTokenAmounts).deep.eq([
+      {
+        token: tokenFormatted,
+        amount: BigInt('109424999999999999999999'),
+        noteExtraData: {
+          outputType: OutputType.Change,
+        },
+      },
+    ]);
   }).timeout(90000);
 
   it('Should set/get last synced block', async () => {

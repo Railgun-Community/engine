@@ -1,3 +1,4 @@
+import { NoteExtraData } from '../models/formatted-types';
 import { TXO } from '../models/txo-types';
 
 export type WalletDetails = {
@@ -26,16 +27,34 @@ export type AddressKeys = {
 
 export type WalletData = { mnemonic: string; index: number };
 
-export enum TransferDirection {
-  Incoming = 'Incoming',
-  Outgoing = 'Outgoing',
-}
-export type TransactionLogEntry = {
-  txid: string;
+export type TransactionHistoryTokenAmount = {
+  token: string;
   amount: bigint;
-  direction: TransferDirection;
+  noteExtraData?: NoteExtraData;
+};
+export type TransactionHistoryEntry = {
+  txid: string;
+  receiveTokenAmounts: TransactionHistoryTokenAmount[];
+  transferTokenAmounts: TransactionHistoryTokenAmount[];
+  changeTokenAmounts: TransactionHistoryTokenAmount[];
+  relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+};
+export type TransactionHistoryEntryReceived = {
+  txid: string;
+  receiveTokenAmounts: TransactionHistoryTokenAmount[];
+};
+export type TransactionHistoryEntrySpent = {
+  txid: string;
+  transferTokenAmounts: TransactionHistoryTokenAmount[];
+  changeTokenAmounts: TransactionHistoryTokenAmount[];
+  relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+};
+export type TransactionHistoryEntryPreprocessSpent = {
+  txid: string;
+  tokenAmounts: TransactionHistoryTokenAmount[];
 };
 
-export type TransactionLogPerToken = {
-  [key: string]: TransactionLogEntry[];
-};
+export enum NoteType {
+  Receiver = 'Receiver',
+  Spender = 'Spender',
+}

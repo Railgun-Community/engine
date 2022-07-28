@@ -198,7 +198,7 @@ describe('Relay Adapt/Index', function test() {
       {
         outputType: OutputType.RelayerFee,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     const relayerFee = new Note(
       wallet2.addressKeys,
@@ -343,7 +343,7 @@ describe('Relay Adapt/Index', function test() {
       {
         outputType: OutputType.RelayerFee,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     const relayerFee = new Note(
       wallet2.addressKeys,
@@ -493,7 +493,7 @@ describe('Relay Adapt/Index', function test() {
       {
         outputType: OutputType.RelayerFee,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     const relayerFee = new Note(
       wallet2.addressKeys,
@@ -640,7 +640,7 @@ describe('Relay Adapt/Index', function test() {
       {
         outputType: OutputType.RelayerFee,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     const relayerFee = new Note(
       wallet2.addressKeys,

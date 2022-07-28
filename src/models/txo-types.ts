@@ -1,4 +1,5 @@
 import { Note } from '../note/note';
+import { NoteExtraData } from './formatted-types';
 
 export type TXO = {
   tree: number;
@@ -6,6 +7,14 @@ export type TXO = {
   txid: string;
   spendtxid: string | false;
   note: Note;
+};
+
+export type SpentCommitment = {
+  tree: number;
+  position: number;
+  txid: string;
+  note: Note;
+  noteExtraData?: NoteExtraData;
 };
 
 export type SpendingSolutionGroup = {

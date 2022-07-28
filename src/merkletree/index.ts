@@ -51,7 +51,7 @@ class MerkleTree {
   private writeQueue: Commitment[][][] = [];
 
   // Check function to test if merkle root is valid
-  public validateRoot: Function;
+  public validateRoot: RootValidator;
 
   public trees: bigint[][];
 

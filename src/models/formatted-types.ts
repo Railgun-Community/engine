@@ -143,3 +143,16 @@ export type Nullifier = {
   treeNumber: number;
   txid: string;
 };
+
+export type StoredReceiveCommitment = {
+  spendtxid: string | false;
+  txid: string;
+  nullifier: string;
+  decrypted: NoteSerialized;
+};
+
+export type StoredSpendCommitment = {
+  txid: string;
+  decrypted: NoteSerialized;
+  noteExtraData?: NoteExtraData;
+};

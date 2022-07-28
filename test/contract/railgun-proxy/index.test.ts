@@ -125,7 +125,7 @@ describe('Railgun Proxy/Index', function () {
       {
         outputType: OutputType.Transfer,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     transactionBatch.addOutput(
       new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
@@ -239,7 +239,7 @@ describe('Railgun Proxy/Index', function () {
       {
         outputType: OutputType.RelayerFee,
       },
-      wallet2.getViewingKeyPair().privateKey,
+      wallet.getViewingKeyPair().privateKey,
     );
     transactionBatch.addOutput(
       new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
