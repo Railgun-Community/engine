@@ -510,13 +510,20 @@ class Wallet extends EventEmitter {
       history.forEach((existingHistoryItem) => {
         if (receiveItem.txid === existingHistoryItem.txid) {
           alreadyExistsInHistory = true;
-          const { changeTokenAmounts } = existingHistoryItem;
+          const { changeTokenAmounts, transferTokenAmounts } = existingHistoryItem;
           receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
             const matchingChangeOutput = changeTokenAmounts.find(
               (ta) =>
                 ta.token === receiveTokenAmount.token && ta.amount === receiveTokenAmount.amount,
             );
-            if (!matchingChangeOutput) {
+            // Legacy change outputs are categorized as "transfers", without a noteExtraData field.
+            const matchingChangeOutputLegacy = transferTokenAmounts.find(
+              (ta) =>
+                !ta.noteExtraData && // Legacy note without extraData.
+                ta.token === receiveTokenAmount.token &&
+                ta.amount === receiveTokenAmount.amount,
+            );
+            if (!matchingChangeOutput && !matchingChangeOutputLegacy) {
               // Receive token amount is not a "change" output.
               // Add it to the history item.
               existingHistoryItem.receiveTokenAmounts.push(receiveTokenAmount);
