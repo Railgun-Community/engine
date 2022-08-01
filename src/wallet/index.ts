@@ -46,6 +46,7 @@ import {
   TransactionHistoryEntryPreprocessSpent,
   TransactionHistoryEntryReceived,
   TransactionHistoryEntrySpent,
+  TransactionHistoryItemVersion,
   TransactionHistoryTokenAmount,
   TreeBalance,
   WalletData,
@@ -510,20 +511,13 @@ class Wallet extends EventEmitter {
       history.forEach((existingHistoryItem) => {
         if (receiveItem.txid === existingHistoryItem.txid) {
           alreadyExistsInHistory = true;
-          const { changeTokenAmounts, transferTokenAmounts } = existingHistoryItem;
+          const { changeTokenAmounts } = existingHistoryItem;
           receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
             const matchingChangeOutput = changeTokenAmounts.find(
               (ta) =>
                 ta.token === receiveTokenAmount.token && ta.amount === receiveTokenAmount.amount,
             );
-            // Legacy change outputs are categorized as "transfers", without a noteExtraData field.
-            const matchingChangeOutputLegacy = transferTokenAmounts.find(
-              (ta) =>
-                !ta.noteExtraData && // Legacy note without extraData.
-                ta.token === receiveTokenAmount.token &&
-                ta.amount === receiveTokenAmount.amount,
-            );
-            if (!matchingChangeOutput && !matchingChangeOutputLegacy) {
+            if (!matchingChangeOutput) {
               // Receive token amount is not a "change" output.
               // Add it to the history item.
               existingHistoryItem.receiveTokenAmounts.push(receiveTokenAmount);
@@ -536,6 +530,7 @@ class Wallet extends EventEmitter {
           ...receiveItem,
           transferTokenAmounts: [],
           changeTokenAmounts: [],
+          version: TransactionHistoryItemVersion.UpdatedAug2022,
         });
       }
     });
@@ -585,6 +580,10 @@ class Wallet extends EventEmitter {
         txidTransactionMap[txid] = {
           txid,
           tokenAmounts: [],
+          version:
+            noteExtraData == null
+              ? TransactionHistoryItemVersion.Legacy
+              : TransactionHistoryItemVersion.UpdatedAug2022,
         };
       }
       const token = formatToByteLength(note.token, 32, false);
@@ -599,7 +598,7 @@ class Wallet extends EventEmitter {
       Object.values(txidTransactionMap);
 
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
-      ({ txid, tokenAmounts }) => {
+      ({ txid, tokenAmounts, version }) => {
         const transferTokenAmounts: TransactionHistoryTokenAmount[] = [];
         let relayerFeeTokenAmount: TransactionHistoryTokenAmount | undefined;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
@@ -628,6 +627,7 @@ class Wallet extends EventEmitter {
           transferTokenAmounts,
           relayerFeeTokenAmount,
           changeTokenAmounts,
+          version,
         };
         return historyEntry;
       },

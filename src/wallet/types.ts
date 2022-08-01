@@ -38,6 +38,7 @@ export type TransactionHistoryEntry = {
   transferTokenAmounts: TransactionHistoryTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+  version: number;
 };
 export type TransactionHistoryEntryReceived = {
   txid: string;
@@ -48,11 +49,17 @@ export type TransactionHistoryEntrySpent = {
   transferTokenAmounts: TransactionHistoryTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+  version: number;
 };
 export type TransactionHistoryEntryPreprocessSpent = {
   txid: string;
   tokenAmounts: TransactionHistoryTokenAmount[];
+  version: number;
 };
+export enum TransactionHistoryItemVersion {
+  Legacy = 1, // No noteExtraData on spent notes
+  UpdatedAug2022 = 2, // Adds noteExtraData for spent notes (outputType)
+}
 
 export enum NoteType {
   Receiver = 'Receiver',
