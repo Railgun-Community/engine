@@ -172,7 +172,7 @@ export class Note {
       hexlify(ivTag),
       hexToBigInt(noteData.value),
       hexlify(noteData.token),
-      noteData.memoField.map((el) => hexlify(el)),
+      noteData.memoField ? noteData.memoField.map((el) => hexlify(el)) : [],
     );
   }
 
