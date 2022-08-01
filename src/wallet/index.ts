@@ -553,6 +553,9 @@ class Wallet extends EventEmitter {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
     TXOs.forEach(({ txid, note }) => {
+      if (note.value === 0n) {
+        return;
+      }
       if (!txidTransactionMap[txid]) {
         txidTransactionMap[txid] = {
           txid,
@@ -575,6 +578,9 @@ class Wallet extends EventEmitter {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
     spentCommitments.forEach(({ txid, note, noteExtraData }) => {
+      if (note.value === 0n) {
+        return;
+      }
       if (!txidTransactionMap[txid]) {
         txidTransactionMap[txid] = {
           txid,
