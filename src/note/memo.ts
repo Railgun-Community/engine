@@ -7,7 +7,7 @@ export class Memo {
     memoField: string[],
     viewingPrivateKey: Uint8Array,
   ): NoteExtraData | undefined {
-    if (!memoField.length) {
+    if (!memoField || !memoField.length) {
       return undefined;
     }
 

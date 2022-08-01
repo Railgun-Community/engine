@@ -271,7 +271,7 @@ class Wallet extends EventEmitter {
 
   private static decryptLeaf(leaf: EncryptedCommitment, sharedKey: Uint8Array) {
     try {
-      return Note.decrypt(leaf.ciphertext.ciphertext, sharedKey, leaf.ciphertext.memo);
+      return Note.decrypt(leaf.ciphertext.ciphertext, sharedKey, leaf.ciphertext.memo || []);
     } catch (e: any) {
       // Expect error if leaf not addressed to us.
       return undefined;
