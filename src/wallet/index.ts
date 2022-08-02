@@ -609,7 +609,7 @@ class Wallet extends EventEmitter {
             transferTokenAmounts.push(tokenAmount);
             return;
           }
-          switch (tokenAmount.noteExtraData?.outputType) {
+          switch (tokenAmount.noteExtraData.outputType) {
             case OutputType.Transfer:
               transferTokenAmounts.push(tokenAmount);
               break;
