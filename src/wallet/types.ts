@@ -57,6 +57,7 @@ export type TransactionHistoryEntryPreprocessSpent = {
   version: number;
 };
 export enum TransactionHistoryItemVersion {
+  Unknown = 0, // Receive note only: noteExtraData metadata not possible
   Legacy = 1, // No noteExtraData on spent notes
   UpdatedAug2022 = 2, // Adds noteExtraData for spent notes (outputType)
 }

@@ -530,7 +530,7 @@ class Wallet extends EventEmitter {
           ...receiveItem,
           transferTokenAmounts: [],
           changeTokenAmounts: [],
-          version: TransactionHistoryItemVersion.UpdatedAug2022,
+          version: TransactionHistoryItemVersion.Unknown,
         });
       }
     });
