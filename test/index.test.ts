@@ -241,121 +241,114 @@ describe('Lepton', function () {
     ]);
   }).timeout(90000);
 
-  it.only(
-    '[HH] Should deposit, transfer and update balance, and pull formatted spend/receive transaction history',
-    async function run() {
-      if (!process.env.RUN_HARDHAT_TESTS) {
-        this.skip();
-        return;
-      }
+  it('[HH] Should deposit, transfer and update balance, and pull formatted spend/receive transaction history', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
 
-      const initialBalance = await wallet.getBalance(chainID, tokenAddress);
-      expect(initialBalance).to.equal(undefined);
+    const initialBalance = await wallet.getBalance(chainID, tokenAddress);
+    expect(initialBalance).to.equal(undefined);
 
-      const address = wallet.getAddress(chainID);
-      await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
+    const address = wallet.getAddress(chainID);
+    await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
 
-      const balance = await wallet.getBalance(chainID, tokenAddress);
-      expect(balance).to.equal(BigInt('109725000000000000000000'));
+    const balance = await wallet.getBalance(chainID, tokenAddress);
+    expect(balance).to.equal(BigInt('109725000000000000000000'));
 
-      // Create transaction
-      const transactionBatch = new TransactionBatch(
-        config.contracts.rail,
-        TokenType.ERC20,
-        chainID,
-      );
+    // Create transaction
+    const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chainID);
 
-      // Add output for Transfer
-      const memoFieldTransfer = Memo.createMemoField(
-        {
+    // Add output for Transfer
+    const memoFieldTransfer = Memo.createMemoField(
+      {
+        outputType: OutputType.Transfer,
+      },
+      wallet.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet2.addressKeys, bytes.random(16), 10n, tokenAddress, memoFieldTransfer),
+    );
+
+    // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
+    const memoFieldRelayerFee = Memo.createMemoField(
+      {
+        outputType: OutputType.RelayerFee,
+      },
+      wallet.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress, memoFieldRelayerFee),
+    );
+
+    const serializedTransactions = await transactionBatch.generateSerializedTransactions(
+      lepton.prover,
+      wallet,
+      testEncryptionKey,
+    );
+    const transact = await proxyContract.transact(serializedTransactions);
+
+    const transactTx = await etherswallet.sendTransaction(transact);
+    await transactTx.wait();
+    await awaitScan(wallet, chainID);
+    await awaitScan(wallet2, chainID);
+
+    // BALANCE = deposited amount - 300(decimals) - 1
+    const newBalance = await wallet.getBalance(chainID, tokenAddress);
+    expect(newBalance).to.equal(109724999999999999999989n, 'Failed to receive expected balance');
+
+    const newBalance2 = await wallet2.getBalance(chainID, tokenAddress);
+    expect(newBalance2).to.equal(BigInt(11));
+
+    // check the transactions log
+    const history = await wallet.getTransactionHistory(chainID);
+    expect(history.length).to.equal(2);
+
+    const tokenFormatted = formatToByteLength(tokenAddress, 32, false);
+
+    // Check first output: Shield (receive only).
+    expect(history[0].receiveTokenAmounts).deep.eq([
+      {
+        token: tokenFormatted,
+        amount: BigInt('109725000000000000000000'),
+      },
+    ]);
+    expect(history[0].transferTokenAmounts).deep.eq([]);
+    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].changeTokenAmounts).deep.eq([]);
+
+    // Check second output: Withdraw (relayer fee + change).
+    // NOTE: No receive token amounts should be logged by history.
+    expect(history[1].receiveTokenAmounts).deep.eq(
+      [],
+      "Receive amount should be filtered out - it's the same as change output.",
+    );
+    expect(history[1].transferTokenAmounts).deep.eq([
+      {
+        token: tokenFormatted,
+        amount: BigInt(10),
+        noteExtraData: {
           outputType: OutputType.Transfer,
         },
-        wallet.getViewingKeyPair().privateKey,
-      );
-      transactionBatch.addOutput(
-        new Note(wallet2.addressKeys, bytes.random(16), 10n, tokenAddress, memoFieldTransfer),
-      );
-
-      // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
-      const memoFieldRelayerFee = Memo.createMemoField(
-        {
-          outputType: OutputType.RelayerFee,
-        },
-        wallet.getViewingKeyPair().privateKey,
-      );
-      transactionBatch.addOutput(
-        new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress, memoFieldRelayerFee),
-      );
-
-      const serializedTransactions = await transactionBatch.generateSerializedTransactions(
-        lepton.prover,
-        wallet,
-        testEncryptionKey,
-      );
-      const transact = await proxyContract.transact(serializedTransactions);
-
-      const transactTx = await etherswallet.sendTransaction(transact);
-      await transactTx.wait();
-      await awaitScan(wallet, chainID);
-      await awaitScan(wallet2, chainID);
-
-      // BALANCE = deposited amount - 300(decimals) - 1
-      const newBalance = await wallet.getBalance(chainID, tokenAddress);
-      expect(newBalance).to.equal(109724999999999999999989n, 'Failed to receive expected balance');
-
-      const newBalance2 = await wallet2.getBalance(chainID, tokenAddress);
-      expect(newBalance2).to.equal(BigInt(11));
-
-      // check the transactions log
-      const history = await wallet.getTransactionHistory(chainID);
-      expect(history.length).to.equal(2);
-
-      const tokenFormatted = formatToByteLength(tokenAddress, 32, false);
-
-      // Check first output: Shield (receive only).
-      expect(history[0].receiveTokenAmounts).deep.eq([
-        {
-          token: tokenFormatted,
-          amount: BigInt('109725000000000000000000'),
-        },
-      ]);
-      expect(history[0].transferTokenAmounts).deep.eq([]);
-      expect(history[0].relayerFeeTokenAmount).eq(undefined);
-      expect(history[0].changeTokenAmounts).deep.eq([]);
-
-      // Check second output: Withdraw (relayer fee + change).
-      // NOTE: No receive token amounts should be logged by history.
-      expect(history[1].receiveTokenAmounts).deep.eq(
-        [],
-        "Receive amount should be filtered out - it's the same as change output.",
-      );
-      expect(history[1].transferTokenAmounts).deep.eq([
-        {
-          token: tokenFormatted,
-          amount: BigInt(10),
-          noteExtraData: {
-            outputType: OutputType.Transfer,
-          },
-        },
-      ]);
-      expect(history[1].relayerFeeTokenAmount).deep.eq({
+      },
+    ]);
+    expect(history[1].relayerFeeTokenAmount).deep.eq({
+      token: tokenFormatted,
+      amount: BigInt(1),
+      noteExtraData: {
+        outputType: OutputType.RelayerFee,
+      },
+    });
+    expect(history[1].changeTokenAmounts).deep.eq([
+      {
         token: tokenFormatted,
-        amount: BigInt(1),
+        amount: BigInt('109724999999999999999989'),
         noteExtraData: {
-          outputType: OutputType.RelayerFee,
+          outputType: OutputType.Change,
         },
-      });
-      expect(history[1].changeTokenAmounts).deep.eq([
-        {
-          token: tokenFormatted,
-          amount: BigInt('109724999999999999999989'),
-          noteExtraData: {
-            outputType: OutputType.Change,
-          },
-        },
-      ]);
-    },
-  ).timeout(90000);
+      },
+    ]);
+  }).timeout(90000);
 
   it('Should set/get last synced block', async () => {
     const chainIDForSyncedBlock = 10010;
