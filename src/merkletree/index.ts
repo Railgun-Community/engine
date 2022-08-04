@@ -40,8 +40,12 @@ export const MERKLE_ZERO_VALUE: string = formatToByteLength(
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
 
 // Optimization: process leaves for a many commitment groups before checking merkleroot against contract.
-// If merkleroot is invalid, scan leaves individually as a backup.
-const MAX_COMMITMENT_GROUPS_TO_PROCESS = 100;
+// If merkleroot is invalid, scan leaves as medium batches, and individually as a final backup.
+enum CommitmentProcessingGroupSize {
+  Large = 8000,
+  Medium = 100,
+  Small = 1,
+}
 
 class MerkleTree {
   private db: Database;
@@ -435,7 +439,7 @@ class MerkleTree {
   }
 
   private async processWriteQueueForTree(treeIndex: number): Promise<void> {
-    let processAsGroup = true;
+    let processingGroupSize = CommitmentProcessingGroupSize.Large;
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
     const treeWriteQueue = this.writeQueue[treeIndex];
@@ -458,7 +462,7 @@ class MerkleTree {
         const processedAny = await this.processWriteQueue(
           treeIndex,
           currentTreeLength,
-          processAsGroup ? MAX_COMMITMENT_GROUPS_TO_PROCESS : 1,
+          processingGroupSize,
         );
         if (!processedAny) {
           break;
@@ -466,16 +470,24 @@ class MerkleTree {
       } catch (err: any) {
         LeptonDebug.error(err);
         if (err.message === INVALID_MERKLE_ROOT_ERROR_MESSAGE) {
-          if (!processAsGroup) {
-            // Invalid merkleroot (single scan).
-            // Break out from scan.
-            break;
+          switch (processingGroupSize) {
+            case CommitmentProcessingGroupSize.Large:
+              // Invalid merkleroot (large group scan).
+              // Process with smaller group.
+              processingGroupSize = CommitmentProcessingGroupSize.Medium;
+              break;
+            case CommitmentProcessingGroupSize.Medium:
+              // Invalid merkleroot (medium group scan).
+              // Process by individual items.
+              processingGroupSize = CommitmentProcessingGroupSize.Small;
+              break;
+            case CommitmentProcessingGroupSize.Small:
+              // Invalid merkleroot (single scan).
+              // Break out from scan.
+              return;
           }
-
-          // Invalid merkleroot (group scan).
-          // Process individually from now on.
-          processAsGroup = false;
         } else {
+          // Unkonwn error.
           break;
         }
       }
