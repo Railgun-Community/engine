@@ -373,12 +373,6 @@ class MerkleTree {
 
     LeptonDebug.log(`insertLeaves: startIndex ${startIndex}, length ${leaves.length}`);
 
-    // LeptonDebug.log(
-    //   `leaves ${JSON.stringify(
-    //     leaves,
-    //   )}`,
-    // );
-
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
       // Set writecache value
