@@ -371,16 +371,16 @@ class MerkleTree {
 
     nodeWriteGroup[level] = [];
 
-    LeptonDebug.log(
-      `insertLeaves: startIndex ${startIndex}, length ${leaves.length}, leaves ${JSON.stringify(
-        leaves,
-      )}`,
-    );
+    LeptonDebug.log(`insertLeaves: startIndex ${startIndex}, length ${leaves.length}`);
+
+    // LeptonDebug.log(
+    //   `leaves ${JSON.stringify(
+    //     leaves,
+    //   )}`,
+    // );
 
     // Push values to leaves of write index
-    leaves.forEach((leaf, leafIndex) => {
-      LeptonDebug.log(`index ${leafIndex}: leaf ${JSON.stringify(leaf)}`);
-
+    leaves.forEach((leaf) => {
       // Set writecache value
       nodeWriteGroup[level][index] = hexlify(leaf.hash);
 

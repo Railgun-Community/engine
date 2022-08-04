@@ -101,8 +101,8 @@ class RailgunProxyContract extends EventEmitter {
     try {
       // Return result of root history lookup
       return this.contract.rootHistory(tree, hexlify(root, true));
-    } catch (err: any) {
-      LeptonDebug.error(err);
+    } catch (err) {
+      LeptonDebug.error(err as Error);
       throw err;
     }
   }
