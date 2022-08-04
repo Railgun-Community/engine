@@ -174,125 +174,119 @@ describe('Railgun Proxy/Index', function () {
     expect(fees.nft).to.be.a('string');
   });
 
-  it.only(
-    '[HH] Should find deposit and transact as historical events and nullifiers',
-    async function run() {
-      if (!process.env.RUN_HARDHAT_TESTS) {
-        this.skip();
-        return;
-      }
+  it('[HH] Should find deposit and transact as historical events and nullifiers', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
 
-      let resultEvent: CommitmentEvent;
-      const eventsListener = async (commitmentEvent: CommitmentEvent) => {
-        resultEvent = commitmentEvent;
-      };
-      let resultNullifiers: Nullifier[] = [];
-      const nullifiersListener = async (nullifiers: Nullifier[]) => {
-        resultNullifiers.push(...nullifiers);
-      };
+    let resultEvent: CommitmentEvent;
+    const eventsListener = async (commitmentEvent: CommitmentEvent) => {
+      resultEvent = commitmentEvent;
+    };
+    let resultNullifiers: Nullifier[] = [];
+    const nullifiersListener = async (nullifiers: Nullifier[]) => {
+      resultNullifiers.push(...nullifiers);
+    };
 
-      let startingBlock = await provider.getBlockNumber();
+    let startingBlock = await provider.getBlockNumber();
 
-      // Add a secondary listener.
-      proxyContract.treeUpdates(eventsListener, nullifiersListener);
+    // Add a secondary listener.
+    proxyContract.treeUpdates(eventsListener, nullifiersListener);
 
-      // Subscribe to Nullified event
-      const resultNullifiers2: Nullifier[] = [];
-      const nullifiersListener2 = (nullifiers: Nullifier[]) => {
-        resultNullifiers2.push(...nullifiers);
-      };
-      proxyContract.on(LeptonEvent.ContractNullifierReceived, nullifiersListener2);
+    // Subscribe to Nullified event
+    const resultNullifiers2: Nullifier[] = [];
+    const nullifiersListener2 = (nullifiers: Nullifier[]) => {
+      resultNullifiers2.push(...nullifiers);
+    };
+    proxyContract.on(LeptonEvent.ContractNullifierReceived, nullifiersListener2);
 
-      const [txResponse] = await testDeposit();
+    const [txResponse] = await testDeposit();
 
-      // Listeners should have been updated automatically by contract events.
+    // Listeners should have been updated automatically by contract events.
 
-      // @ts-ignore
-      expect(resultEvent).to.be.an('object', 'No event in history for deposit');
-      // @ts-ignore
-      expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
-      // @ts-ignore
-      expect(resultNullifiers.length).to.equal(0);
+    // @ts-ignore
+    expect(resultEvent).to.be.an('object', 'No event in history for deposit');
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers.length).to.equal(0);
 
-      resultEvent = undefined;
-      resultNullifiers = [];
+    resultEvent = undefined;
+    resultNullifiers = [];
 
-      let latestBlock = (await provider.getBlock('latest')).number;
+    let latestBlock = (await provider.getBlock('latest')).number;
 
-      await proxyContract.getHistoricalEvents(
-        startingBlock,
-        latestBlock,
-        eventsListener,
-        nullifiersListener,
-        async () => {},
-      );
+    await proxyContract.getHistoricalEvents(
+      startingBlock,
+      latestBlock,
+      eventsListener,
+      nullifiersListener,
+      async () => {},
+    );
 
-      // Listeners should have been updated by historical event scan.
+    // Listeners should have been updated by historical event scan.
 
-      // @ts-ignore
-      expect(resultEvent).to.be.an('object', 'No event in history for deposit');
-      // @ts-ignore
-      expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
-      // @ts-ignore
-      expect(resultNullifiers.length).to.equal(0);
+    // @ts-ignore
+    expect(resultEvent).to.be.an('object', 'No event in history for deposit');
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers.length).to.equal(0);
 
-      startingBlock = await provider.getBlockNumber();
+    startingBlock = await provider.getBlockNumber();
 
-      const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
-      const memoField = Memo.createMemoField(
-        {
-          outputType: OutputType.RelayerFee,
-        },
-        wallet.getViewingKeyPair().privateKey,
-      );
-      transactionBatch.addOutput(
-        new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
-      );
-      transactionBatch.setWithdraw(etherswallet.address, 100n);
-      const serializedTxs = await transactionBatch.generateSerializedTransactions(
-        lepton.prover,
-        wallet,
-        testEncryptionKey,
-      );
-      const transact = await proxyContract.transact(serializedTxs);
+    const memoField = Memo.createMemoField(
+      {
+        outputType: OutputType.RelayerFee,
+      },
+      wallet.getViewingKeyPair().privateKey,
+    );
+    transactionBatch.addOutput(
+      new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+    );
+    transactionBatch.setWithdraw(etherswallet.address, 100n);
+    const serializedTxs = await transactionBatch.generateSerializedTransactions(
+      lepton.prover,
+      wallet,
+      testEncryptionKey,
+    );
+    const transact = await proxyContract.transact(serializedTxs);
 
-      // Send transact on chain
-      const txTransact = await etherswallet.sendTransaction(transact);
-      const [txResponseTransact] = await Promise.all([
-        txTransact.wait(),
-        awaitScan(wallet, chainID),
-      ]);
+    // Send transact on chain
+    const txTransact = await etherswallet.sendTransaction(transact);
+    const [txResponseTransact] = await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
 
-      // Event should have been scanned by automatic contract events:
+    // Event should have been scanned by automatic contract events:
 
-      // @ts-ignore
-      expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
-      // @ts-ignore
-      expect(resultNullifiers[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
-      expect(resultNullifiers2[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    expect(resultNullifiers2[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
 
-      resultEvent = undefined;
-      resultNullifiers = [];
+    resultEvent = undefined;
+    resultNullifiers = [];
 
-      latestBlock = (await provider.getBlock('latest')).number;
+    latestBlock = (await provider.getBlock('latest')).number;
 
-      await proxyContract.getHistoricalEvents(
-        startingBlock,
-        latestBlock,
-        eventsListener,
-        nullifiersListener,
-        async () => {},
-      );
+    await proxyContract.getHistoricalEvents(
+      startingBlock,
+      latestBlock,
+      eventsListener,
+      nullifiersListener,
+      async () => {},
+    );
 
-      // Event should have been scanned by historical event scan.
+    // Event should have been scanned by historical event scan.
 
-      // @ts-ignore
-      expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
-      // @ts-ignore
-      expect(resultNullifiers.length).to.equal(1);
-    },
-  ).timeout(120000);
+    // @ts-ignore
+    expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    // @ts-ignore
+    expect(resultNullifiers.length).to.equal(1);
+  }).timeout(120000);
 
   it('[HH] Should scan and rescan history for events', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {

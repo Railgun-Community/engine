@@ -19,7 +19,7 @@ let db: Database;
 let merkletree: MerkleTree;
 let merkletreeNFT: MerkleTree;
 
-describe('MerkleTree/Index', () => {
+describe.only('MerkleTree/Index', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
@@ -170,14 +170,14 @@ describe('MerkleTree/Index', () => {
     );
   });
 
-  it('Should update merkle tree correctly', async () => {
+  it.only('Should update merkle tree correctly', async () => {
     expect(await merkletree.getRoot(0)).to.equal(
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     );
 
     const ciphertext = {
       ciphertext: { iv: '', tag: '', data: [] },
-      memo: '',
+      memo: [''],
       ephemeralKeys: ['', ''],
     };
     await merkletree.queueLeaves(0, 5, [
@@ -289,7 +289,7 @@ describe('MerkleTree/Index', () => {
     expect(await merkletree.getRoot(0)).to.equal(
       '1955726bb6619868e0435b3342b33644c8ecc9579bcbc31b41e0175d766a1e5c',
     );
-  });
+  }).timeout(100000);
 
   it('Should insert and retrieve commitment objects', async () => {
     // Insert leaves
@@ -304,7 +304,7 @@ describe('MerkleTree/Index', () => {
             tag: '05',
           },
           ephemeralKeys: ['00', '00'],
-          memo: '',
+          memo: [''],
         },
       },
       {
@@ -328,7 +328,7 @@ describe('MerkleTree/Index', () => {
       txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       ciphertext: {
         ciphertext: { iv: '02', tag: '05', data: ['03', '04'] },
-        memo: '',
+        memo: [''],
         ephemeralKeys: ['00', '00'],
       },
     });
@@ -343,12 +343,12 @@ describe('MerkleTree/Index', () => {
       },
       encryptedRandom: ['01', '01'],
     });
-  });
+  }).timeout(1000);
 
   it('Should generate and validate merkle proofs', async () => {
     const ciphertext = {
       ciphertext: { iv: '', tag: '', data: [] },
-      memo: '',
+      memo: [''],
       ephemeralKeys: ['', ''],
     };
     // Insert leaves
@@ -426,7 +426,7 @@ describe('MerkleTree/Index', () => {
         ciphertext: {
           ciphertext: { iv: '', tag: '', data: [] },
           ephemeralKeys: ['', ''],
-          memo: '',
+          memo: [''],
         },
       })),
     );
@@ -466,7 +466,7 @@ describe('MerkleTree/Index', () => {
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
     expect(MerkleTree.verifyProof(proof2)).to.equal(false);
-  }).timeout(12000);
+  }).timeout(1000);
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false
@@ -479,7 +479,7 @@ describe('MerkleTree/Index', () => {
 
     const ciphertext = {
       ciphertext: { iv: '', tag: '', data: [] },
-      memo: '',
+      memo: [''],
       ephemeralKeys: ['', ''],
     };
     const leaves = [
@@ -521,13 +521,13 @@ describe('MerkleTree/Index', () => {
     expect(await merkletreeTest.getRoot(0)).to.equal(
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     );
-  });
+  }).timeout(1000);
 
   it('Should store nullifiers', async () => {
     expect(await merkletree.getStoredNullifier('00')).to.equal(undefined);
     await merkletree.nullify([{ nullifier: '00', treeNumber: 0, txid: '01' }]);
     expect(await merkletree.getStoredNullifier('00')).to.equal('01');
-  });
+  }).timeout(1000);
 
   it('Should return latest tree', async () => {
     expect(await merkletree.latestTree()).to.equal(0);
@@ -539,7 +539,7 @@ describe('MerkleTree/Index', () => {
         ciphertext: {
           ciphertext: { iv: '', tag: '', data: [] },
           ephemeralKeys: ['', ''],
-          memo: '',
+          memo: [''],
         },
       },
     ]);
@@ -553,13 +553,13 @@ describe('MerkleTree/Index', () => {
         ciphertext: {
           ciphertext: { iv: '', tag: '', data: [] },
           ephemeralKeys: ['', ''],
-          memo: '',
+          memo: [''],
         },
       },
     ]);
 
     expect(await merkletree.latestTree()).to.equal(1);
-  });
+  }).timeout(1000);
 
   afterEach(() => {
     // Clean up database
