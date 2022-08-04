@@ -750,6 +750,11 @@ class Wallet extends EventEmitter {
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] = leaves.length;
+
+        if (leaves.length % 100 === 0) {
+          // Save treeScannedHeight every 100 leaves scanned.
+          await this.db.put(this.getWalletDetailsPath(chainID), msgpack.encode(walletDetails));
+        }
       }
 
       // Write wallet details to db

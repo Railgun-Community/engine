@@ -238,7 +238,7 @@ class RailgunProxyContract extends EventEmitter {
       ]);
 
       // eslint-disable-next-line no-await-in-loop
-      await setLastSyncedBlock(currentStartBlock);
+      await setLastSyncedBlock(endBlock);
 
       currentStartBlock += SCAN_CHUNKS + 1;
     }

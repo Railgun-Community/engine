@@ -103,7 +103,7 @@ class Lepton extends EventEmitter {
     // Get latest synced event
     const treeLength = await merkletree.getTreeLength(latestTree);
 
-    LeptonDebug.log(`scanHistory: treeLength ${treeLength}`);
+    LeptonDebug.log(`scanHistory: latestTree ${latestTree}, treeLength ${treeLength}`);
 
     let startScanningBlock: number | undefined;
 
@@ -254,6 +254,14 @@ class Lepton extends EventEmitter {
    * @param chainID - chainID to rescan
    */
   async fullRescanMerkletreesAndWallets(chainID: number) {
+    if (!this.merkletree[chainID]) {
+      LeptonDebug.log(`Cannot re-scan history. Merkletree not yet loaded for chain ${chainID}.`);
+      return;
+    }
+    if (this.merkletree[chainID].erc20.isScanning) {
+      LeptonDebug.log('Already scanning. Killing full re-scan.');
+      return;
+    }
     await this.clearSyncedMerkletreeLeaves(chainID);
     await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chainID)));
     await this.scanHistory(chainID);
