@@ -19,7 +19,7 @@ let db: Database;
 let merkletree: MerkleTree;
 let merkletreeNFT: MerkleTree;
 
-describe.only('MerkleTree/Index', () => {
+describe('MerkleTree/Index', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
@@ -170,7 +170,7 @@ describe.only('MerkleTree/Index', () => {
     );
   });
 
-  it.only('Should update merkle tree correctly', async () => {
+  it('Should update merkle tree correctly', async () => {
     expect(await merkletree.getRoot(0)).to.equal(
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     );

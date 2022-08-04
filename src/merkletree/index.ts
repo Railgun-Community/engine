@@ -455,11 +455,14 @@ class MerkleTree {
       currentTreeLength = await this.getTreeLength(treeIndex);
 
       try {
-        await this.processWriteQueue(
+        const processedAny = await this.processWriteQueue(
           treeIndex,
           currentTreeLength,
           processAsGroup ? MAX_COMMITMENT_GROUPS_TO_PROCESS : 1,
         );
+        if (!processedAny) {
+          break;
+        }
       } catch (err: any) {
         LeptonDebug.error(err);
         if (err.message === INVALID_MERKLE_ROOT_ERROR_MESSAGE) {
@@ -472,6 +475,8 @@ class MerkleTree {
           // Invalid merkleroot (group scan).
           // Process individually from now on.
           processAsGroup = false;
+        } else {
+          break;
         }
       }
 
@@ -486,11 +491,11 @@ class MerkleTree {
     treeIndex: number,
     currentTreeLength: number,
     maxCommitmentGroupsToProcess: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
     if (!nextCommitmentGroup) {
-      return;
+      return false;
     }
 
     const commitmentGroupIndices = [currentTreeLength];
@@ -514,6 +519,8 @@ class MerkleTree {
     commitmentGroupIndices.forEach((commitmentGroupIndex) => {
       delete this.writeQueue[treeIndex][commitmentGroupIndex];
     });
+
+    return true;
   }
 
   async updateTrees(): Promise<void> {
@@ -526,7 +533,7 @@ class MerkleTree {
       .map((_tree, treeIndex) => treeIndex)
       .filter((index) => !Number.isNaN(index));
 
-    treeIndices.forEach(async (treeIndex) => await this.processWriteQueueForTree(treeIndex));
+    await Promise.all(treeIndices.map((treeIndex) => this.processWriteQueueForTree(treeIndex)));
 
     this.treeUpdateLock = false;
   }
