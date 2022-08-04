@@ -203,25 +203,25 @@ class RailgunProxyContract extends EventEmitter {
    */
   async getHistoricalEvents(
     startBlock: number,
+    latestBlock: number,
     eventsListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     let currentStartBlock = startBlock;
-    const latest = (await this.contract.provider.getBlock('latest')).number;
 
     const eventFilterNullifier = this.contract.filters.Nullifiers();
     const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
     const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
 
-    LeptonDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latest}`);
+    LeptonDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latestBlock}`);
 
-    while (currentStartBlock < latest) {
+    while (currentStartBlock < latestBlock) {
       // Process chunks of blocks at a time
       if ((currentStartBlock - startBlock) % 10000 === 0) {
         LeptonDebug.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
-      const endBlock = Math.min(latest, currentStartBlock + SCAN_CHUNKS);
+      const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
       const [eventsNullifier, eventsGeneratedCommitment, eventsEncryptedCommitment] =
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([

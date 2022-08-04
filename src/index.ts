@@ -16,7 +16,11 @@ import { Wallet } from './wallet';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/types';
 import { BytesData, Commitment, Nullifier } from './models/formatted-types';
-import { LeptonEvent, MerkletreeHistoryScanEventData } from './models/event-types';
+import {
+  LeptonEvent,
+  MerkletreeHistoryScanEventData,
+  MerkletreeHistoryScanUpdateData,
+} from './models/event-types';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
@@ -155,6 +159,41 @@ class Lepton extends EventEmitter {
     return startScanningBlock;
   }
 
+  private async performQuickScan(chainID: number) {
+    if (!this.quickSync) {
+      return;
+    }
+    try {
+      LeptonDebug.log(`quickSync: chainID ${chainID}`);
+      const merkletree = this.merkletree[chainID].erc20;
+
+      const startScanningBlockQuickSync = await this.getStartScanningBlock(chainID);
+
+      // Fetch events
+      const { commitmentEvents, nullifierEvents } = await this.quickSync(
+        chainID,
+        startScanningBlockQuickSync,
+      );
+
+      // Pass nullifier events to listener
+      await this.nullifierListener(chainID, nullifierEvents);
+
+      // Pass events to commitments listener and wait for resolution
+      commitmentEvents.forEach(async (commitmentEvent) => {
+        const { treeNumber, startPosition, commitments } = commitmentEvent;
+        await this.listener(chainID, treeNumber, startPosition, commitments);
+      });
+
+      // Scan after all leaves added.
+      if (commitmentEvents.length) {
+        await merkletree.waitForTreesToFullyUpdate();
+        await this.scanAllWallets(chainID);
+      }
+    } catch (err: any) {
+      LeptonDebug.error(err);
+    }
+  }
+
   /**
    * Scan contract history and sync
    * @param chainID - chainID to scan
@@ -172,72 +211,68 @@ class Lepton extends EventEmitter {
     }
     merkletree.isScanning = true;
 
-    this.emit(LeptonEvent.MerkletreeHistoryScanStarted, {
+    const scanStartData: MerkletreeHistoryScanEventData = { chainID };
+    this.emit(LeptonEvent.MerkletreeHistoryScanStarted, scanStartData);
+
+    const PRE_QUICK_SYNC_PROGRESS = 0.1;
+    const preQuickSyncUpdateData: MerkletreeHistoryScanUpdateData = {
       chainID,
-    } as MerkletreeHistoryScanEventData);
+      progress: PRE_QUICK_SYNC_PROGRESS,
+    };
+    this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, preQuickSyncUpdateData);
 
-    const startScanningBlockQuickSync = await this.getStartScanningBlock(chainID);
+    await this.performQuickScan(chainID);
 
-    // Call quicksync
-    if (this.quickSync) {
-      try {
-        LeptonDebug.log(`quickSync: chainID ${chainID}`);
-
-        // Fetch events
-        const { commitmentEvents, nullifierEvents } = await this.quickSync(
-          chainID,
-          startScanningBlockQuickSync,
-        );
-
-        // Pass nullifier events to listener
-        await this.nullifierListener(chainID, nullifierEvents);
-
-        // Pass events to commitments listener and wait for resolution
-        commitmentEvents.forEach(async (commitmentEvent) => {
-          const { treeNumber, startPosition, commitments } = commitmentEvent;
-          await this.listener(chainID, treeNumber, startPosition, commitments);
-        });
-
-        // Scan after all leaves added.
-        if (commitmentEvents.length) {
-          await merkletree.waitForTreesToFullyUpdate();
-          await this.scanAllWallets(chainID);
-        }
-      } catch (err: any) {
-        LeptonDebug.error(err);
-      }
-    }
+    const POST_QUICK_SYNC_PROGRESS = 0.25;
+    const postQuickSyncUpdateData: MerkletreeHistoryScanUpdateData = {
+      chainID,
+      progress: POST_QUICK_SYNC_PROGRESS,
+    };
+    this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, postQuickSyncUpdateData);
 
     // Get updated start-scanning block from new valid merkletree.
     const startScanningBlockSlowScan = await this.getStartScanningBlock(chainID);
     LeptonDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
+    const latestBlock = (await this.proxyContracts[chainID].contract.provider.getBlock('latest'))
+      .number;
+    const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
+
     try {
       // Run slow scan
       await this.proxyContracts[chainID].getHistoricalEvents(
         startScanningBlockSlowScan,
+        latestBlock,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.listener(chainID, treeNumber, startPosition, commitments);
         },
         async (nullifiers: Nullifier[]) => {
           await this.nullifierListener(chainID, nullifiers);
         },
-        (block: number) => this.setLastSyncedBlock(block, chainID),
+        async (syncedBlock: number) => {
+          const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
+          const scanUpdateData: MerkletreeHistoryScanUpdateData = {
+            chainID,
+            progress:
+              POST_QUICK_SYNC_PROGRESS +
+              ((1 - POST_QUICK_SYNC_PROGRESS) * scannedBlocks) / totalBlocksToScan, // From POST_QUICK_SYNC_PROGRESS -> 1.0
+          };
+          this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
+          await this.setLastSyncedBlock(syncedBlock, chainID);
+        },
       );
 
       // Final scan after all leaves added.
       await this.scanAllWallets(chainID);
-      this.emit(LeptonEvent.MerkletreeHistoryScanComplete, {
-        chainID,
-      } as MerkletreeHistoryScanEventData);
+      const scanCompleteData: MerkletreeHistoryScanEventData = { chainID };
+      this.emit(LeptonEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       merkletree.isScanning = false;
     } catch (err: any) {
       LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
       LeptonDebug.error(err);
       await this.scanAllWallets(chainID);
-      this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, {
-        chainID,
-      } as MerkletreeHistoryScanEventData);
+      const scanIncompleteData: MerkletreeHistoryScanEventData = { chainID };
+      this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, scanIncompleteData);
       merkletree.isScanning = false;
     }
   }
