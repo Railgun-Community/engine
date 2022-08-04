@@ -180,10 +180,12 @@ class Lepton extends EventEmitter {
       await this.nullifierListener(chainID, nullifierEvents);
 
       // Pass events to commitments listener and wait for resolution
-      commitmentEvents.forEach(async (commitmentEvent) => {
-        const { treeNumber, startPosition, commitments } = commitmentEvent;
-        await this.listener(chainID, treeNumber, startPosition, commitments);
-      });
+      await Promise.all(
+        commitmentEvents.map(async (commitmentEvent) => {
+          const { treeNumber, startPosition, commitments } = commitmentEvent;
+          await this.listener(chainID, treeNumber, startPosition, commitments);
+        }),
+      );
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
