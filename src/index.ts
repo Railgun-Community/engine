@@ -159,7 +159,7 @@ class Lepton extends EventEmitter {
     return startScanningBlock;
   }
 
-  private async performQuickScan(chainID: number) {
+  private async performQuickScan(chainID: number, endProgress: number) {
     if (!this.quickSync) {
       return;
     }
@@ -175,6 +175,7 @@ class Lepton extends EventEmitter {
         startScanningBlockQuickSync,
       );
 
+      this.emitScanUpdateEvent(chainID, endProgress * 0.1); // 5%
       // Pass nullifier events to listener
       await this.nullifierListener(chainID, nullifierEvents);
 
@@ -186,12 +187,22 @@ class Lepton extends EventEmitter {
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
+        this.emitScanUpdateEvent(chainID, endProgress * 0.3); // 15%
         await merkletree.waitForTreesToFullyUpdate();
+        this.emitScanUpdateEvent(chainID, endProgress * 0.8); // 40%
         await this.scanAllWallets(chainID);
       }
     } catch (err: any) {
       LeptonDebug.error(err);
     }
+  }
+
+  private emitScanUpdateEvent(chainID: number, progress: number) {
+    const updateData: MerkletreeHistoryScanUpdateData = {
+      chainID,
+      progress,
+    };
+    this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, updateData);
   }
 
   /**
@@ -211,24 +222,12 @@ class Lepton extends EventEmitter {
     }
     merkletree.isScanning = true;
 
-    const scanStartData: MerkletreeHistoryScanEventData = { chainID };
-    this.emit(LeptonEvent.MerkletreeHistoryScanStarted, scanStartData);
+    this.emitScanUpdateEvent(chainID, 0.0); // 0%
 
-    const PRE_QUICK_SYNC_PROGRESS = 0.1;
-    const preQuickSyncUpdateData: MerkletreeHistoryScanUpdateData = {
-      chainID,
-      progress: PRE_QUICK_SYNC_PROGRESS,
-    };
-    this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, preQuickSyncUpdateData);
+    const postQuickSyncProgress = 0.5;
+    await this.performQuickScan(chainID, postQuickSyncProgress);
 
-    await this.performQuickScan(chainID);
-
-    const POST_QUICK_SYNC_PROGRESS = 0.25;
-    const postQuickSyncUpdateData: MerkletreeHistoryScanUpdateData = {
-      chainID,
-      progress: POST_QUICK_SYNC_PROGRESS,
-    };
-    this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, postQuickSyncUpdateData);
+    this.emitScanUpdateEvent(chainID, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid merkletree.
     const startScanningBlockSlowScan = await this.getStartScanningBlock(chainID);
@@ -254,8 +253,8 @@ class Lepton extends EventEmitter {
           const scanUpdateData: MerkletreeHistoryScanUpdateData = {
             chainID,
             progress:
-              POST_QUICK_SYNC_PROGRESS +
-              ((1 - POST_QUICK_SYNC_PROGRESS) * scannedBlocks) / totalBlocksToScan, // From POST_QUICK_SYNC_PROGRESS -> 1.0
+              postQuickSyncProgress +
+              ((1 - postQuickSyncProgress) * scannedBlocks) / totalBlocksToScan, // From 50% -> 100%
           };
           this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
           await this.setLastSyncedBlock(syncedBlock, chainID);
