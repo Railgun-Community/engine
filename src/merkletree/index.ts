@@ -430,13 +430,13 @@ class MerkleTree {
       level += 1;
     }
 
-    // If new root is valid, write to DB.
-    if (await this.validateRoot(tree, nodeWriteGroup[this.depth][0])) {
-      await this.writeTreeToDB(tree, nodeWriteGroup, commitmentWriteGroup);
+    if (!(await this.validateRoot(tree, nodeWriteGroup[this.depth][0]))) {
+      LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'), true);
       return;
     }
 
-    LeptonDebug.error(new Error('Cannot insert leaves. Invalid merkle root.'), true);
+    // If new root is valid, write to DB.
+    await this.writeTreeToDB(tree, nodeWriteGroup, commitmentWriteGroup);
   }
 
   private async processWriteQueueForTree(treeIndex: number): Promise<boolean> {
