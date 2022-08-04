@@ -14,6 +14,7 @@ import {
 } from '../utils/bytes';
 import LeptonDebug from '../debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
+import { waitForPassCondition } from '../utils/promises';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
@@ -508,6 +509,17 @@ class MerkleTree {
     this.treeUpdateLock = false;
   }
 
+  async waitForTreesToFullyUpdate(): Promise<void> {
+    await this.updateTrees();
+    if (!this.treeUpdateLock) {
+      return;
+    }
+
+    const delayInMS = 100;
+    const allowedAttempts = 10 * 60 * 10; // Wait for 10 minutes.
+    await waitForPassCondition(() => this.treeUpdateLock === false, delayInMS, allowedAttempts);
+  }
+
   /**
    * Adds leaves to queue to be added to tree
    * @param tree - tree number to add to
@@ -521,16 +533,17 @@ class MerkleTree {
     LeptonDebug.log(`queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`);
 
     // Ensure write queue for tree exists
-    this.writeQueue[tree] = this.writeQueue[tree] || [];
+    if (!this.writeQueue[tree]) {
+      this.writeQueue[tree] = [];
+    }
 
     if (treeLength <= startingIndex) {
       // If starting index is greater or equal to tree length, insert to queue
       this.writeQueue[tree][startingIndex] = leaves;
+
+      // Process tree updates
+      await this.updateTrees();
     }
-
-    // Process tree updates
-
-    await this.updateTrees();
   }
 
   /**

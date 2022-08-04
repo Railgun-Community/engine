@@ -164,12 +164,13 @@ class Lepton extends EventEmitter {
       LeptonDebug.log(`Cannot scan history. Merkletree not yet loaded for chain ${chainID}.`);
       return;
     }
-    if (this.merkletree[chainID].erc20.isScanning) {
+    const merkletree = this.merkletree[chainID].erc20;
+    if (merkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
       LeptonDebug.log('Already scanning. Killing additional re-scan.');
       return;
     }
-    this.merkletree[chainID].erc20.isScanning = true;
+    merkletree.isScanning = true;
 
     this.emit(LeptonEvent.MerkletreeHistoryScanStarted, {
       chainID,
@@ -199,6 +200,7 @@ class Lepton extends EventEmitter {
 
         // Scan after all leaves added.
         if (commitmentEvents.length) {
+          await merkletree.waitForTreesToFullyUpdate();
           await this.scanAllWallets(chainID);
         }
       } catch (err: any) {
@@ -228,7 +230,7 @@ class Lepton extends EventEmitter {
       this.emit(LeptonEvent.MerkletreeHistoryScanComplete, {
         chainID,
       } as MerkletreeHistoryScanEventData);
-      this.merkletree[chainID].erc20.isScanning = false;
+      merkletree.isScanning = false;
     } catch (err: any) {
       LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
       LeptonDebug.error(err);
@@ -236,7 +238,7 @@ class Lepton extends EventEmitter {
       this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, {
         chainID,
       } as MerkletreeHistoryScanEventData);
-      this.merkletree[chainID].erc20.isScanning = false;
+      merkletree.isScanning = false;
     }
   }
 

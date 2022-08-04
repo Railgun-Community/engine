@@ -1,3 +1,8 @@
+/* eslint-disable no-await-in-loop */
+export const delay = (delayInMS: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, delayInMS));
+};
+
 export function promiseTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   // Create a promise that rejects in <ms> milliseconds
   const timeout = new Promise((_resolve, reject) => {
@@ -13,4 +18,19 @@ export function promiseTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     .catch((err) => {
       throw err;
     });
+}
+
+export async function waitForPassCondition(
+  passCondition: () => boolean,
+  delayInMS: number,
+  allowedAttempts: number,
+): Promise<void> {
+  let attempts = 1;
+  while (attempts <= allowedAttempts) {
+    if (passCondition()) {
+      return;
+    }
+    await delay(delayInMS);
+    attempts += 1;
+  }
 }
