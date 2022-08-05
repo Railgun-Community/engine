@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { HDNode } from '@ethersproject/hdnode';
-import type { AbstractBatch } from 'abstract-leveldown';
+import type { AbstractBatch, PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
@@ -54,6 +54,8 @@ import {
 } from './types';
 
 type WalletNodes = { spending: Node; viewing: Node };
+
+type ScannedDBCommitment = PutBatch<string, Buffer>;
 
 /**
  * constant defining the derivation path prefixes for spending and viewing keys
@@ -279,6 +281,91 @@ class Wallet extends EventEmitter {
     }
   }
 
+  private async createScannedDBCommitments(
+    leaf: Commitment,
+    viewingPrivateKey: Uint8Array,
+    tree: number,
+    chainID: number,
+    position: number,
+    totalLeaves: number,
+  ): Promise<ScannedDBCommitment[]> {
+    let noteReceive: Note | undefined;
+    let noteSpend: Note | undefined;
+
+    LeptonDebug.log(`Trying to decrypt commitment. Current position ${position}/${totalLeaves}.`);
+
+    if ('ciphertext' in leaf) {
+      // Try to decrypt note as receiver.
+      const ephemeralKeySender = leaf.ciphertext.ephemeralKeys[0];
+      const sharedKeyReceiver = await getSharedSymmetricKey(
+        viewingPrivateKey,
+        hexStringToBytes(ephemeralKeySender),
+      );
+      if (sharedKeyReceiver) {
+        noteReceive = Wallet.decryptLeaf(leaf, sharedKeyReceiver);
+      }
+
+      // Try to decrypt note as sender.
+      const ephemeralKeyReceiver = leaf.ciphertext.ephemeralKeys[1];
+      const sharedKeySpender = await getSharedSymmetricKey(
+        viewingPrivateKey,
+        hexStringToBytes(ephemeralKeyReceiver),
+      );
+      if (sharedKeySpender) {
+        noteSpend = Wallet.decryptLeaf(leaf, sharedKeySpender);
+      }
+    } else {
+      // preImage
+      // Deserialize
+      const serialized: NoteSerialized = {
+        npk: leaf.preImage.npk,
+        encryptedRandom: leaf.encryptedRandom,
+        token: leaf.preImage.token.tokenAddress,
+        value: leaf.preImage.value,
+        memoField: [], // Empty for non-private txs.
+      };
+      try {
+        noteReceive = Note.deserialize(serialized, viewingPrivateKey, this.addressKeys);
+      } catch (e: any) {
+        // Expect error if leaf not addressed to us.
+      }
+    }
+
+    const scannedCommitments: ScannedDBCommitment[] = [];
+
+    if (noteReceive) {
+      const nullifier = Note.getNullifier(this.nullifyingKey, position);
+      const storedCommitment: StoredReceiveCommitment = {
+        spendtxid: false,
+        txid: hexlify(leaf.txid),
+        nullifier: nToHex(nullifier, ByteLength.UINT_256),
+        decrypted: noteReceive.serialize(viewingPrivateKey),
+      };
+      LeptonDebug.log(`Adding RECEIVE commitment at ${position}.`);
+      scannedCommitments.push({
+        type: 'put',
+        key: this.getWalletDBPrefix(chainID, tree, position).join(':'),
+        value: msgpack.encode(storedCommitment),
+      });
+    }
+
+    if (noteSpend) {
+      const storedCommitment: StoredSpendCommitment = {
+        txid: hexlify(leaf.txid),
+        decrypted: noteSpend.serialize(viewingPrivateKey),
+        noteExtraData: Memo.decryptNoteExtraData(noteSpend.memoField, viewingPrivateKey),
+      };
+      LeptonDebug.log(`Adding SPEND commitment at ${position}.`);
+      scannedCommitments.push({
+        type: 'put',
+        key: this.getWalletSpentCommitmentDBPrefix(chainID, tree, position).join(':'),
+        value: msgpack.encode(storedCommitment),
+      });
+    }
+
+    return scannedCommitments;
+  }
+
   /**
    * Scans wallet at index for new balances
    * Commitment index in array should be same as commitment index in tree
@@ -293,99 +380,28 @@ class Wallet extends EventEmitter {
     chainID: number,
     scannedHeight: number,
     treeHeight: number,
-  ): Promise<boolean> {
+  ): Promise<void> {
     LeptonDebug.log(
       `wallet:scanLeaves tree:${tree} chain:${chainID} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
     );
     const vpk = this.getViewingKeyPair().privateKey;
 
-    const writeBatch: AbstractBatch[] = [];
+    const leafSyncPromises: Promise<ScannedDBCommitment[]>[] = [];
 
-    // Loop through passed commitments
     for (let position = scannedHeight; position < treeHeight; position += 1) {
-      LeptonDebug.log(
-        `Inserting ${leaves.length - scannedHeight} leaves. Current position ${position}/${
-          leaves.length - 1
-        }`,
-      );
-      let noteReceive: Note | undefined;
-      let noteSpend: Note | undefined;
       const leaf = leaves[position];
       if (leaf == null) {
         continue;
       }
-
-      if ('ciphertext' in leaf) {
-        // Try to decrypt note as receiver.
-        const ephemeralKeySender = leaf.ciphertext.ephemeralKeys[0];
-        const sharedKeyReceiver = await getSharedSymmetricKey(
-          vpk,
-          hexStringToBytes(ephemeralKeySender),
-        );
-        if (sharedKeyReceiver) {
-          noteReceive = Wallet.decryptLeaf(leaf, sharedKeyReceiver);
-        }
-
-        // Try to decrypt note as sender.
-        const ephemeralKeyReceiver = leaf.ciphertext.ephemeralKeys[1];
-        const sharedKeySpender = await getSharedSymmetricKey(
-          vpk,
-          hexStringToBytes(ephemeralKeyReceiver),
-        );
-        if (sharedKeySpender) {
-          noteSpend = Wallet.decryptLeaf(leaf, sharedKeySpender);
-        }
-      } else {
-        // preImage
-        // Deserialize
-        const serialized: NoteSerialized = {
-          npk: leaf.preImage.npk,
-          encryptedRandom: leaf.encryptedRandom,
-          token: leaf.preImage.token.tokenAddress,
-          value: leaf.preImage.value,
-          memoField: [], // Empty for non-private txs.
-        };
-        try {
-          noteReceive = Note.deserialize(serialized, vpk, this.addressKeys);
-        } catch (e: any) {
-          // Expect error if leaf not addressed to us.
-        }
-      }
-
-      if (noteReceive) {
-        const nullifier = Note.getNullifier(this.nullifyingKey, position);
-        const storedCommitment: StoredReceiveCommitment = {
-          spendtxid: false,
-          txid: hexlify(leaf.txid),
-          nullifier: nToHex(nullifier, ByteLength.UINT_256),
-          decrypted: noteReceive.serialize(vpk),
-        };
-        writeBatch.push({
-          type: 'put',
-          key: this.getWalletDBPrefix(chainID, tree, position).join(':'),
-          value: msgpack.encode(storedCommitment),
-        });
-      }
-
-      if (noteSpend) {
-        const storedCommitment: StoredSpendCommitment = {
-          txid: hexlify(leaf.txid),
-          decrypted: noteSpend.serialize(vpk),
-          noteExtraData: Memo.decryptNoteExtraData(noteSpend.memoField, vpk),
-        };
-        writeBatch.push({
-          type: 'put',
-          key: this.getWalletSpentCommitmentDBPrefix(chainID, tree, position).join(':'),
-          value: msgpack.encode(storedCommitment),
-        });
-      }
+      leafSyncPromises.push(
+        this.createScannedDBCommitments(leaf, vpk, tree, chainID, position, leaves.length),
+      );
     }
+
+    const writeBatch: ScannedDBCommitment[] = (await Promise.all(leafSyncPromises)).flat();
 
     // Write to DB
     await this.db.batch(writeBatch);
-
-    // Return if we found any leaves we could decrypt
-    return writeBatch.length > 0;
   }
 
   private async streamKeys(namespace: string[]): Promise<string[]> {
