@@ -175,7 +175,7 @@ class Lepton extends EventEmitter {
         startScanningBlockQuickSync,
       );
 
-      this.emitScanUpdateEvent(chainID, endProgress * 0.2); // 2%
+      this.emitScanUpdateEvent(chainID, endProgress * 0.3); // 3%
       // Pass nullifier events to listener
       await this.nullifierListener(chainID, nullifierEvents);
 
@@ -189,9 +189,9 @@ class Lepton extends EventEmitter {
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
-        this.emitScanUpdateEvent(chainID, endProgress * 0.5); // 5%
+        this.emitScanUpdateEvent(chainID, endProgress * 0.5); // 6%
         await merkletree.waitForTreesToFullyUpdate();
-        this.emitScanUpdateEvent(chainID, endProgress * 0.8); // 8%
+        this.emitScanUpdateEvent(chainID, endProgress * 0.8); // 9%
         await this.scanAllWallets(chainID);
       }
     } catch (err: any) {
@@ -224,7 +224,7 @@ class Lepton extends EventEmitter {
     }
     merkletree.isScanning = true;
 
-    this.emitScanUpdateEvent(chainID, 0.0); // 0%
+    this.emitScanUpdateEvent(chainID, 0.01); // 1%
 
     const postQuickSyncProgress = 0.1;
     await this.performQuickScan(chainID, postQuickSyncProgress);
