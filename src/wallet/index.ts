@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { HDNode } from '@ethersproject/hdnode';
-import type { AbstractBatch, PutBatch } from 'abstract-leveldown';
+import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
