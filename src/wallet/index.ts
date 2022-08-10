@@ -621,7 +621,7 @@ class Wallet extends EventEmitter {
         noteExtraData,
       };
       if (noteExtraData && noteExtraData.outputType === OutputType.Transfer) {
-        tokenAmount.receiverAddress = encode(note.addressData);
+        tokenAmount.recipientAddress = encode(note.addressData);
       }
       txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
     });

@@ -31,7 +31,7 @@ export type TransactionHistoryTokenAmount = {
   token: string;
   amount: bigint;
   noteExtraData?: NoteExtraData;
-  receiverAddress?: string;
+  recipientAddress?: string;
 };
 export type TransactionHistoryEntry = {
   txid: string;
