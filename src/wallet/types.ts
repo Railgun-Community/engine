@@ -31,15 +31,9 @@ export type TransactionHistoryTokenAmount = {
   token: string;
   amount: bigint;
   noteExtraData?: NoteExtraData;
-  recipientAddress?: string;
 };
-export type TransactionHistoryEntry = {
-  txid: string;
-  receiveTokenAmounts: TransactionHistoryTokenAmount[];
-  transferTokenAmounts: TransactionHistoryTokenAmount[];
-  changeTokenAmounts: TransactionHistoryTokenAmount[];
-  relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
-  version: number;
+export type TransactionHistoryTransferTokenAmount = TransactionHistoryTokenAmount & {
+  recipientAddress: string;
 };
 export type TransactionHistoryEntryReceived = {
   txid: string;
@@ -47,11 +41,13 @@ export type TransactionHistoryEntryReceived = {
 };
 export type TransactionHistoryEntrySpent = {
   txid: string;
-  transferTokenAmounts: TransactionHistoryTokenAmount[];
+  transferTokenAmounts: TransactionHistoryTransferTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
   version: number;
 };
+export type TransactionHistoryEntry = TransactionHistoryEntrySpent &
+  TransactionHistoryEntryReceived;
 export type TransactionHistoryEntryPreprocessSpent = {
   txid: string;
   tokenAmounts: TransactionHistoryTokenAmount[];

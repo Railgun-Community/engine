@@ -49,6 +49,7 @@ import {
   TransactionHistoryEntrySpent,
   TransactionHistoryItemVersion,
   TransactionHistoryTokenAmount,
+  TransactionHistoryTransferTokenAmount,
   TreeBalance,
   WalletData,
   WalletDetails,
@@ -615,13 +616,16 @@ class Wallet extends EventEmitter {
         };
       }
       const token = formatToByteLength(note.token, 32, false);
-      const tokenAmount: TransactionHistoryTokenAmount = {
+      const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
         token,
         amount: note.value,
         noteExtraData,
       };
-      if (noteExtraData && noteExtraData.outputType === OutputType.Transfer) {
-        tokenAmount.recipientAddress = encode(note.addressData);
+      const isTransfer = !noteExtraData || noteExtraData.outputType === OutputType.Transfer;
+      if (isTransfer) {
+        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encode(
+          note.addressData,
+        );
       }
       txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
     });
@@ -631,19 +635,19 @@ class Wallet extends EventEmitter {
 
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
       ({ txid, tokenAmounts, version }) => {
-        const transferTokenAmounts: TransactionHistoryTokenAmount[] = [];
+        const transferTokenAmounts: TransactionHistoryTransferTokenAmount[] = [];
         let relayerFeeTokenAmount: TransactionHistoryTokenAmount | undefined;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
         tokenAmounts.forEach((tokenAmount) => {
           if (!tokenAmount.noteExtraData) {
             // Legacy notes without extra data, consider as a simple "transfer".
-            transferTokenAmounts.push(tokenAmount);
+            transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
             return;
           }
           switch (tokenAmount.noteExtraData.outputType) {
             case OutputType.Transfer:
-              transferTokenAmounts.push(tokenAmount);
+              transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
               break;
             case OutputType.RelayerFee:
               relayerFeeTokenAmount = tokenAmount;
