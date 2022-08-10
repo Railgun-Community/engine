@@ -70,7 +70,7 @@ describe('Transaction/Transaction Batch', function run() {
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     makeNote = (value: bigint = 65n * DECIMALS_18): Note => new Note(address, random, value, token);
-    merkletree.validateRoot = () => true;
+    merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf('a')]);
     await merkletree.queueLeaves(1, 0, [
       depositLeaf('b'),

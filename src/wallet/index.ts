@@ -7,6 +7,7 @@ import msgpack from 'msgpack-lite';
 import { Database } from '../database';
 import LeptonDebug from '../debugger';
 import { bech32, Node } from '../keyderivation';
+import { encode } from '../keyderivation/bech32-encode';
 import { SpendingKeyPair, ViewingKeyPair } from '../keyderivation/bip32';
 import { mnemonicToSeed } from '../keyderivation/bip39';
 import { MerkleTree } from '../merkletree';
@@ -272,10 +273,19 @@ class Wallet extends EventEmitter {
     return walletDetails;
   }
 
-  private static decryptLeaf(leaf: EncryptedCommitment, sharedKey: Uint8Array) {
+  private static decryptLeaf(
+    leaf: EncryptedCommitment,
+    sharedKey: Uint8Array,
+    ephemeralKeyReceiver?: Uint8Array,
+  ) {
     try {
-      return Note.decrypt(leaf.ciphertext.ciphertext, sharedKey, leaf.ciphertext.memo || []);
-    } catch (e: any) {
+      return Note.decrypt(
+        leaf.ciphertext.ciphertext,
+        sharedKey,
+        leaf.ciphertext.memo || [],
+        ephemeralKeyReceiver,
+      );
+    } catch (err) {
       // Expect error if leaf not addressed to us.
       return undefined;
     }
@@ -294,25 +304,20 @@ class Wallet extends EventEmitter {
 
     LeptonDebug.log(`Trying to decrypt commitment. Current position ${position}/${totalLeaves}.`);
 
+    const walletAddress = this.getAddress(0);
+
     if ('ciphertext' in leaf) {
-      // Try to decrypt note as receiver.
-      const ephemeralKeySender = leaf.ciphertext.ephemeralKeys[0];
-      const sharedKeyReceiver = await getSharedSymmetricKey(
-        viewingPrivateKey,
-        hexStringToBytes(ephemeralKeySender),
-      );
+      const ephemeralKeySender = hexStringToBytes(leaf.ciphertext.ephemeralKeys[0]);
+      const ephemeralKeyReceiver = hexStringToBytes(leaf.ciphertext.ephemeralKeys[1]);
+      const [sharedKeyReceiver, sharedKeySpender] = await Promise.all([
+        getSharedSymmetricKey(viewingPrivateKey, ephemeralKeySender),
+        getSharedSymmetricKey(viewingPrivateKey, ephemeralKeyReceiver),
+      ]);
       if (sharedKeyReceiver) {
         noteReceive = Wallet.decryptLeaf(leaf, sharedKeyReceiver);
       }
-
-      // Try to decrypt note as sender.
-      const ephemeralKeyReceiver = leaf.ciphertext.ephemeralKeys[1];
-      const sharedKeySpender = await getSharedSymmetricKey(
-        viewingPrivateKey,
-        hexStringToBytes(ephemeralKeyReceiver),
-      );
       if (sharedKeySpender) {
-        noteSpend = Wallet.decryptLeaf(leaf, sharedKeySpender);
+        noteSpend = Wallet.decryptLeaf(leaf, sharedKeySpender, ephemeralKeyReceiver);
       }
     } else {
       // preImage
@@ -323,9 +328,10 @@ class Wallet extends EventEmitter {
         token: leaf.preImage.token.tokenAddress,
         value: leaf.preImage.value,
         memoField: [], // Empty for non-private txs.
+        recipientAddress: walletAddress,
       };
       try {
-        noteReceive = Note.deserialize(serialized, viewingPrivateKey, this.addressKeys);
+        noteReceive = Note.deserialize(serialized, viewingPrivateKey);
       } catch (e: any) {
         // Expect error if leaf not addressed to us.
       }
@@ -354,6 +360,7 @@ class Wallet extends EventEmitter {
         txid: hexlify(leaf.txid),
         decrypted: noteSpend.serialize(viewingPrivateKey),
         noteExtraData: Memo.decryptNoteExtraData(noteSpend.memoField, viewingPrivateKey),
+        recipientAddress: encode(noteSpend.addressData),
       };
       LeptonDebug.log(`Adding SPEND commitment at ${position}.`);
       scannedCommitments.push({
@@ -426,7 +433,7 @@ class Wallet extends EventEmitter {
    * @returns UTXOs list
    */
   async TXOs(chainID: number): Promise<TXO[]> {
-    const address = this.addressKeys;
+    const recipientAddress = encode(this.addressKeys);
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletDBPrefix(chainID);
@@ -456,7 +463,13 @@ class Wallet extends EventEmitter {
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
 
-        const note = Note.deserialize(txo.decrypted, vpk, address);
+        const note = Note.deserialize(
+          {
+            ...txo.decrypted,
+            recipientAddress,
+          },
+          vpk,
+        );
 
         return {
           tree,
@@ -475,7 +488,6 @@ class Wallet extends EventEmitter {
    * @returns SpentCommitment list
    */
   async getSpentCommitments(chainID: number): Promise<SpentCommitment[]> {
-    const address = this.addressKeys;
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletSpentCommitmentDBPrefix(chainID);
@@ -492,7 +504,7 @@ class Wallet extends EventEmitter {
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
 
-        const note = Note.deserialize(spentCommitment.decrypted, vpk, address);
+        const note = Note.deserialize(spentCommitment.decrypted, vpk);
 
         return {
           tree,
@@ -603,11 +615,15 @@ class Wallet extends EventEmitter {
         };
       }
       const token = formatToByteLength(note.token, 32, false);
-      txidTransactionMap[txid].tokenAmounts.push({
+      const tokenAmount: TransactionHistoryTokenAmount = {
         token,
         amount: note.value,
         noteExtraData,
-      });
+      };
+      if (noteExtraData && noteExtraData.outputType === OutputType.Transfer) {
+        tokenAmount.receiverAddress = encode(note.addressData);
+      }
+      txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
     });
 
     const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =

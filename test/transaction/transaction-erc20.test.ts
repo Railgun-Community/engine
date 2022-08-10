@@ -111,7 +111,7 @@ describe('Transaction/ERC20', function () {
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
     ): Note => new Note(address, random, value, token, Memo.createMemoField({ outputType }, vpk));
-    merkletree.validateRoot = () => true;
+    merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     await wallet.scanBalances(chainID);
   });

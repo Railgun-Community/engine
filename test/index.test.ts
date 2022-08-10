@@ -330,6 +330,7 @@ describe('Lepton', function () {
         noteExtraData: {
           outputType: OutputType.Transfer,
         },
+        receiverAddress: wallet2.getAddress(0),
       },
     ]);
     expect(history[1].relayerFeeTokenAmount).deep.eq({

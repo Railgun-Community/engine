@@ -1,7 +1,8 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { OutputType } from '../../src/models/formatted-types';
+import { AddressData, encode } from '../../src/keyderivation/bech32-encode';
+import { Ciphertext, NoteSerialized, OutputType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Memo } from '../../src/note/memo';
 import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../../src/utils/bytes';
@@ -9,7 +10,13 @@ import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../.
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-const vectors = [
+const vectors: {
+  note: NoteSerialized;
+  pubkey: string;
+  random: string;
+  vpk: string;
+  hash: string;
+}[] = [
   {
     note: {
       npk: '23da85e72baa8d77f476a893de0964ce1ec2957d056b591a19d05bb4b9a549ed',
@@ -20,6 +27,8 @@ const vectors = [
         '0x260693ec8dd38f5be7758b6786bc579e',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: '9902564685f24f396263c64f582aa9a87499704509c60862930b1f9f7d258e8e',
     random: '85b08a7cd73ee433072f1d410aeb4801',
@@ -36,6 +45,8 @@ const vectors = [
         '0x093481f1f6ab744d9f937e6ec796e300',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
     random: 'f7c477afb5a3eb31dbb96295cdbcf165',
@@ -52,6 +63,8 @@ const vectors = [
         '0xcbfb4c84c0669aaf184a621c9d21e9ae',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
     random: '6d8a7e26de6b0638cd092c2a2b524705',
@@ -68,6 +81,8 @@ const vectors = [
         '0x00b0994bd02746fc55c1ff8c75aeb285',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: 'bd0f57ea13604d47c9080859ee96d010496cccbfed2ca2062ee3e2d0fcd24e9e',
     random: 'f13666966cffa395e3d412ea4e20480f',
@@ -84,6 +99,8 @@ const vectors = [
         '0xda7cd10423b3d1e48bb7dd47062ac632',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: 'd7091b2e84b3fcbe1a688b9e08bf45850a1e8ff0f7e2de19971a6d871ae8a186',
     random: '0bf6750e00739619a1a00f9b8f1bc2be',
@@ -100,6 +117,8 @@ const vectors = [
         '0xe533c677c5fa66c511a70125edfcd2ac',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: 'fd13f6d7000238c3de83582583f3654a1f14de55143191b89415e35ae2abdf90',
     random: 'd8c0caf1b041611d408b5f01e7eae957',
@@ -116,6 +135,8 @@ const vectors = [
         '0x8ae56f06a6fe0c39b47f8b28c178f3e0',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: '13e865e8f6160ce58efaf5b2f53facb4b5f16249b0411951e8f7e12a3d95d694',
     random: '44a514b4db4659e8520d570f3252c0cf',
@@ -132,6 +153,8 @@ const vectors = [
         '0x35a7d7e3b7c178dbf3ff6c985bceeee6',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: 'bda28a024a0b77ba51e89b17e7b8d221b2e7c1a818c8e53c78cdc3a8479807a4',
     random: '77c31ed0577a986750c8dce8804af5b9',
@@ -148,6 +171,8 @@ const vectors = [
         '0x273588a6fab60d09b7f4155e2bf4aded',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: '6a26fe361ff14ef4c931c82acc8c772d5a349a4d1af75bff27dde944ec713b27',
     random: '6478eea9c496942f0f25967c11fc4bbd',
@@ -164,6 +189,8 @@ const vectors = [
         '0xc675ab6de72d03033cf0bafaa0391b2e',
       ] as [string, string],
       memoField: ['00', '01', '02'],
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     pubkey: 'c103873aa9d88c4c4cbc4cac97f7b57d01ab3587500c1d1c90fe3991b1dab882',
     random: '2e16e1cdda5f94ddb9981d3811924b05',
@@ -172,7 +199,7 @@ const vectors = [
   },
 ];
 
-const ciphertextVectors = [
+const ciphertextVectors: { note: any; sharedKey: string; ciphertext: Ciphertext }[] = [
   {
     note: {
       pubkey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',
@@ -180,6 +207,8 @@ const ciphertextVectors = [
       amount: '000000000000000000000000000000000000000000000000086aa1ade61ccb53',
       token:
         '0000000000000000000000000000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      recipientAddress:
+        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
     },
     sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
     ciphertext: {
@@ -280,13 +309,14 @@ describe('Note/ERC20', () => {
 
   it('Should serialize and deserialize notes', () => {
     vectors.forEach((vector) => {
-      const address = {
+      const address: AddressData = {
         masterPublicKey: hexToBigInt(vector.pubkey),
         viewingPublicKey: hexStringToBytes(vector.pubkey),
       };
+
       const vectorBytes = hexStringToBytes(vector.vpk);
 
-      const note = Note.deserialize(vector.note, vectorBytes, address);
+      const note = Note.deserialize(vector.note, vectorBytes);
       expect(hexlify(note.random)).to.equal(vector.random);
 
       const hexHash = nToHex(note.hash, ByteLength.UINT_256);
@@ -303,6 +333,7 @@ describe('Note/ERC20', () => {
         '0000000000000000000000000000000000000000000000000000000000000001',
         '0000000000000000000000000000000000000000000000000000000000000002',
       ]);
+      expect(reserialized.recipientAddress).to.deep.equal(vector.note.recipientAddress);
 
       const serializedContract = note.serialize(vectorBytes, true);
       expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
@@ -313,6 +344,7 @@ describe('Note/ERC20', () => {
         '0x0000000000000000000000000000000000000000000000000000000000000001',
         '0x0000000000000000000000000000000000000000000000000000000000000002',
       ]);
+      expect(serializedContract.recipientAddress).to.deep.equal(vector.note.recipientAddress);
     });
   });
 

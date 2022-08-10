@@ -60,6 +60,10 @@ function encode(data: AddressData): string {
 
 function decode(address: string): AddressData {
   try {
+    if (!address) {
+      throw new Error('No address to decode');
+    }
+
     const decoded = bech32m.decode(address, ADDRESS_LENGTH_LIMIT);
 
     if (decoded.prefix !== PREFIX) {

@@ -1,11 +1,12 @@
 import { Signature } from 'circomlibjs';
-import { AddressData } from '../keyderivation/bech32-encode';
+import { AddressData, decode, encode } from '../keyderivation/bech32-encode';
 import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/formatted-types';
 import { PublicInputs } from '../prover/types';
 import { bytes, encryption, keysUtils } from '../utils';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { poseidon } from '../utils/hash';
+import { unblindedEphemeralKey } from '../utils/keys-utils';
 
 export class Note {
   // address data of recipient
@@ -102,18 +103,26 @@ export class Note {
    * @param encryptedNote - encrypted note data
    * @param sharedKey - key to decrypt with
    */
-  static decrypt(encryptedNote: Ciphertext, sharedKey: Uint8Array, memoField: string[]): Note {
+  static decrypt(
+    encryptedNote: Ciphertext,
+    sharedKey: Uint8Array,
+    memoField: string[],
+    ephemeralKeyReceiver?: Uint8Array,
+  ): Note {
     // Decrypt values
     const decryptedValues = encryption.aes.gcm
       .decrypt(encryptedNote, sharedKey)
       .map((value) => hexlify(value));
 
+    const random = decryptedValues[2].substring(0, 32);
+
     const addressData = {
       masterPublicKey: hexToBigInt(decryptedValues[0]),
-      viewingPublicKey: new Uint8Array([]), // dummy
+      viewingPublicKey: ephemeralKeyReceiver
+        ? unblindedEphemeralKey(ephemeralKeyReceiver, random)
+        : new Uint8Array(), // dummy
     };
 
-    const random = decryptedValues[2].substring(0, 32);
     const value = hexToBigInt(decryptedValues[2].substring(32, 64));
     const tokenAddress = decryptedValues[1];
 
@@ -134,7 +143,6 @@ export class Note {
   /**
    * Gets JSON serialized version of note
    * @param viewingPrivateKey - viewing private key for decryption
-   * @param forContract - if we should 0x prefix the hex strings to make them ethers compatible
    * @returns serialized note
    */
   serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
@@ -148,6 +156,7 @@ export class Note {
       value,
       encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)) as [string, string],
       memoField,
+      recipientAddress: encode(this.addressData),
     };
   }
 
@@ -155,20 +164,15 @@ export class Note {
    * Creates note from serialized note JSON
    * @param noteData - serialized note data
    * @param viewingPrivateKey - viewing private key for decryption
-   * @param recipient - addressData of the recipient
    * @returns Note
    */
-  static deserialize(
-    noteData: NoteSerialized,
-    viewingPrivateKey: Uint8Array,
-    recipient: AddressData,
-  ): Note {
+  static deserialize(noteData: NoteSerialized, viewingPrivateKey: Uint8Array): Note {
     const ciphertext = encryptedDataToCiphertext(noteData.encryptedRandom);
     const decryptedRandom = encryption.aes.gcm.decrypt(ciphertext, viewingPrivateKey);
     const ivTag = decryptedRandom[0];
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(
-      recipient,
+      decode(noteData.recipientAddress),
       hexlify(ivTag),
       hexToBigInt(noteData.value),
       hexlify(noteData.token),

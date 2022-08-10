@@ -88,6 +88,7 @@ export type NoteSerialized = {
   token: string;
   encryptedRandom: [string, string];
   memoField: string[];
+  recipientAddress: string;
 };
 
 export type MerkleProof = {
@@ -155,4 +156,5 @@ export type StoredSpendCommitment = {
   txid: string;
   decrypted: NoteSerialized;
   noteExtraData?: NoteExtraData;
+  recipientAddress: string;
 };

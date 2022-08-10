@@ -4,7 +4,7 @@ import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
 import { ByteLength, nToHex } from '../../src/utils/bytes';
-import { poseidon } from "../../src/utils/hash";
+import { poseidon } from '../../src/utils/hash';
 import {
   getEphemeralKeys,
   getPublicSpendingKey,
@@ -15,9 +15,8 @@ import {
   signEDDSA,
   unblindedEphemeralKey,
   verifyED25519,
-  verifyEDDSA
+  verifyEDDSA,
 } from '../../src/utils/keys-utils';
-
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -71,14 +70,13 @@ describe('Test keys-utils', () => {
     const B = await getPublicViewingKey(b);
 
     const r = bytesToHex(randomBytes(16));
-    const [rA, rB]= await getEphemeralKeys(A, B, r);
+    const [rA, rB] = await getEphemeralKeys(A, B, r);
 
     const k1 = await getSharedSymmetricKey(a, rB);
     const k2 = await getSharedSymmetricKey(b, rA);
 
     expect(k1).to.eql(k2);
-    
-  })
+  });
   it('Should unblind ephemeral keys', async () => {
     const a = randomBytes(32);
     const A = await getPublicViewingKey(a);
@@ -87,13 +85,12 @@ describe('Test keys-utils', () => {
     const B = await getPublicViewingKey(b);
 
     const r = bytesToHex(randomBytes(16));
-    const [rA, rB]= await getEphemeralKeys(A, B, r);
+    const [rA, rB] = await getEphemeralKeys(A, B, r);
 
     const A1 = unblindedEphemeralKey(rA, r);
     const B1 = unblindedEphemeralKey(rB, r);
 
     expect(A).to.eql(A1);
     expect(B).to.eql(B1);
-    
-  })
+  });
 });
