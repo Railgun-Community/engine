@@ -1,7 +1,6 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { AddressData, encode } from '../../src/keyderivation/bech32-encode';
 import { Ciphertext, NoteSerialized, OutputType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Memo } from '../../src/note/memo';
@@ -28,7 +27,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: '9902564685f24f396263c64f582aa9a87499704509c60862930b1f9f7d258e8e',
     random: '85b08a7cd73ee433072f1d410aeb4801',
@@ -46,7 +45,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: 'ab017ebda8fae25c92ecfc38f219c0ed1f73538bc9dc8e5db8ae46f3b00d5a2f',
     random: 'f7c477afb5a3eb31dbb96295cdbcf165',
@@ -64,7 +63,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: '4704ae101848ca47a6734d0e9210a5ecc204b97541fa1b808e5551319b49ec24',
     random: '6d8a7e26de6b0638cd092c2a2b524705',
@@ -82,7 +81,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: 'bd0f57ea13604d47c9080859ee96d010496cccbfed2ca2062ee3e2d0fcd24e9e',
     random: 'f13666966cffa395e3d412ea4e20480f',
@@ -100,7 +99,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: 'd7091b2e84b3fcbe1a688b9e08bf45850a1e8ff0f7e2de19971a6d871ae8a186',
     random: '0bf6750e00739619a1a00f9b8f1bc2be',
@@ -118,7 +117,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: 'fd13f6d7000238c3de83582583f3654a1f14de55143191b89415e35ae2abdf90',
     random: 'd8c0caf1b041611d408b5f01e7eae957',
@@ -136,7 +135,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: '13e865e8f6160ce58efaf5b2f53facb4b5f16249b0411951e8f7e12a3d95d694',
     random: '44a514b4db4659e8520d570f3252c0cf',
@@ -154,7 +153,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: 'bda28a024a0b77ba51e89b17e7b8d221b2e7c1a818c8e53c78cdc3a8479807a4',
     random: '77c31ed0577a986750c8dce8804af5b9',
@@ -172,7 +171,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: '6a26fe361ff14ef4c931c82acc8c772d5a349a4d1af75bff27dde944ec713b27',
     random: '6478eea9c496942f0f25967c11fc4bbd',
@@ -190,7 +189,7 @@ const vectors: {
       ] as [string, string],
       memoField: ['00', '01', '02'],
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     pubkey: 'c103873aa9d88c4c4cbc4cac97f7b57d01ab3587500c1d1c90fe3991b1dab882',
     random: '2e16e1cdda5f94ddb9981d3811924b05',
@@ -208,7 +207,7 @@ const ciphertextVectors: { note: any; sharedKey: string; ciphertext: Ciphertext 
       token:
         '0000000000000000000000000000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
       recipientAddress:
-        '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
+        '0zk1qxvsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8garv7j6fe3z53l7vsy4jxshey7wtzv0ry7kp24x58fxtsg5yuvzrzjv93l8mayk8guau6ef8',
     },
     sharedKey: 'b8b0ee90e05cec44880f1af4d20506265f44684eb3b6a4327bcf811244dc0a7f',
     ciphertext: {
@@ -309,11 +308,6 @@ describe('Note/ERC20', () => {
 
   it('Should serialize and deserialize notes', () => {
     vectors.forEach((vector) => {
-      const address: AddressData = {
-        masterPublicKey: hexToBigInt(vector.pubkey),
-        viewingPublicKey: hexStringToBytes(vector.pubkey),
-      };
-
       const vectorBytes = hexStringToBytes(vector.vpk);
 
       const note = Note.deserialize(vector.note, vectorBytes);
@@ -323,7 +317,6 @@ describe('Note/ERC20', () => {
       expect(hexHash).to.equal(vector.hash);
 
       const reserialized = note.serialize(vectorBytes);
-
       expect(reserialized.encryptedRandom).not.to.equal(vector.note.encryptedRandom);
       expect(reserialized.npk).to.equal(vector.note.npk);
       expect(reserialized.value).to.equal(vector.note.value);
@@ -335,16 +328,16 @@ describe('Note/ERC20', () => {
       ]);
       expect(reserialized.recipientAddress).to.deep.equal(vector.note.recipientAddress);
 
-      const serializedContract = note.serialize(vectorBytes, true);
-      expect(serializedContract.npk).to.equal(`0x${vector.note.npk}`);
-      expect(serializedContract.value).to.equal(`0x${vector.note.value}`);
-      expect(serializedContract.token).to.equal(`0x${vector.note.token}`);
-      expect(serializedContract.memoField).to.deep.equal([
+      const reserializedContract = note.serialize(vectorBytes, true);
+      expect(reserializedContract.npk).to.equal(`0x${vector.note.npk}`);
+      expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
+      expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
+      expect(reserializedContract.memoField).to.deep.equal([
         '0x0000000000000000000000000000000000000000000000000000000000000000',
         '0x0000000000000000000000000000000000000000000000000000000000000001',
         '0x0000000000000000000000000000000000000000000000000000000000000002',
       ]);
-      expect(serializedContract.recipientAddress).to.deep.equal(vector.note.recipientAddress);
+      expect(reserializedContract.recipientAddress).to.deep.equal(vector.note.recipientAddress);
     });
   });
 
