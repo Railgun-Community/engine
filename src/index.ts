@@ -15,12 +15,14 @@ import { hexlify, padToLength } from './utils/bytes';
 import { Wallet } from './wallet/wallet';
 import LeptonDebug from './debugger';
 import { LeptonDebugger } from './models/lepton-types';
-import { BytesData, Commitment, Nullifier } from './models/formatted-types';
+import { Commitment, Nullifier } from './models/formatted-types';
 import {
   LeptonEvent,
   MerkletreeHistoryScanEventData,
   MerkletreeHistoryScanUpdateData,
 } from './models/event-types';
+import { ViewOnlyWallet } from './wallet/view-only-wallet';
+import { AbstractWallet } from './wallet/abstract-wallet';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
@@ -40,7 +42,7 @@ class Lepton extends EventEmitter {
 
   readonly prover: Prover;
 
-  readonly wallets: { [key: string]: Wallet } = {};
+  readonly wallets: { [key: string]: AbstractWallet } = {};
 
   readonly deploymentBlocks: number[] = [];
 
@@ -415,7 +417,7 @@ class Lepton extends EventEmitter {
     await Promise.all(this.allWallets().map((wallet) => wallet.scanBalances(chainID)));
   }
 
-  private allWallets(): Wallet[] {
+  private allWallets(): AbstractWallet[] {
     return Object.values(this.wallets);
   }
 
@@ -452,7 +454,7 @@ class Lepton extends EventEmitter {
     return this.proxyContracts.map((element, index) => index);
   }
 
-  private initializeWallet(wallet: Wallet): string {
+  private loadWallet(wallet: AbstractWallet): void {
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
 
@@ -460,20 +462,30 @@ class Lepton extends EventEmitter {
     this.merkletree.forEach((tree) => {
       wallet.loadTree(tree.erc20);
     });
-
-    // Return wallet ID
-    return wallet.id;
   }
 
   /**
    * Load existing wallet
-   * @param {BytesData} encryptionKey - encryption key of wallet
+   * @param {string} encryptionKey - encryption key of wallet
    * @param {string} id - wallet ID
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: BytesData, id: string): Promise<string> {
+  async loadExistingWallet(encryptionKey: string, id: string): Promise<Wallet> {
     const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
-    return this.initializeWallet(wallet);
+    this.loadWallet(wallet);
+    return wallet;
+  }
+
+  /**
+   * Load existing wallet
+   * @param {string} encryptionKey - encryption key of wallet
+   * @param {string} id - wallet ID
+   * @returns id
+   */
+  async loadExistingViewOnlyWallet(encryptionKey: string, id: string): Promise<ViewOnlyWallet> {
+    const wallet = await ViewOnlyWallet.loadExisting(this.db, encryptionKey, id);
+    this.loadWallet(wallet);
+    return wallet;
   }
 
   /**
@@ -484,12 +496,26 @@ class Lepton extends EventEmitter {
    * @returns id
    */
   async createWalletFromMnemonic(
-    encryptionKey: BytesData,
+    encryptionKey: string,
     mnemonic: string,
     index: number = 0,
-  ): Promise<string> {
+  ): Promise<Wallet> {
     const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
-    return this.initializeWallet(wallet);
+    this.loadWallet(wallet);
+    return wallet;
+  }
+
+  async createViewOnlyWalletFromShareableViewingKey(
+    encryptionKey: string,
+    shareableViewingKey: string,
+  ): Promise<ViewOnlyWallet> {
+    const wallet = await ViewOnlyWallet.fromShareableViewingKey(
+      this.db,
+      encryptionKey,
+      shareableViewingKey,
+    );
+    this.loadWallet(wallet);
+    return wallet;
   }
 
   /**

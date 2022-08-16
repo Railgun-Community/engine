@@ -3,7 +3,7 @@ import { ViewingKeyPair } from '../keyderivation/wallet-node';
 import { BytesData } from '../models/formatted-types';
 import { ViewOnlyWalletData } from '../models/wallet-types';
 import { hash, keysUtils } from '../utils';
-import { combine, hexStringToBytes } from '../utils/bytes';
+import { hexStringToBytes } from '../utils/bytes';
 import { AbstractWallet } from './abstract-wallet';
 
 class ViewOnlyWallet extends AbstractWallet {
@@ -11,8 +11,8 @@ class ViewOnlyWallet extends AbstractWallet {
    * Calculate Wallet ID from mnemonic and derivation path index
    * @returns {string} hash of mnemonic and index
    */
-  private static generateID(vpk: string, index: number): string {
-    return hash.sha256(combine([vpk, index.toString(16)]));
+  private static generateID(shareableViewingKey: string): string {
+    return hash.sha256(shareableViewingKey);
   }
 
   private static async getViewingKeyPair(viewingPrivateKey: string): Promise<ViewingKeyPair> {
@@ -36,17 +36,15 @@ class ViewOnlyWallet extends AbstractWallet {
    * Create a wallet from mnemonic
    * @param {Database} db - database
    * @param {BytesData} encryptionKey - encryption key to use with database
-   * @param {string} viewingPrivateKey - vpk to load wallet from
-   * @param {number} index - index of derivation path to derive if not 0
+   * @param {string} shareableViewingKey - encoded keys to load wallet from
    * @returns {Wallet} Wallet
    */
   static async fromShareableViewingKey(
     db: Database,
     encryptionKey: BytesData,
     shareableViewingKey: string,
-    index: number = 0,
   ): Promise<AbstractWallet> {
-    const id = ViewOnlyWallet.generateID(shareableViewingKey, index);
+    const id = ViewOnlyWallet.generateID(shareableViewingKey);
 
     // Write encrypted shareableViewingKey to DB
     await AbstractWallet.write(db, id, encryptionKey, { shareableViewingKey });

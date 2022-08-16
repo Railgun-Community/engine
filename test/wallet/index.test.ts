@@ -4,7 +4,6 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { utf8ToBytes } from 'ethereum-cryptography/utils';
 import { mnemonicToSeed } from 'ethers/lib/utils';
-
 import memdown from 'memdown';
 import { Database } from '../../src/database';
 import { bech32 } from '../../src/keyderivation';
@@ -12,6 +11,7 @@ import { MerkleTree } from '../../src/merkletree';
 import { bytes, hash } from '../../src/utils';
 import { verifyED25519 } from '../../src/utils/keys-utils';
 import { Wallet } from '../../src/wallet/wallet';
+import { ViewOnlyWallet } from '../../src/wallet/view-only-wallet';
 import { config } from '../config.test';
 
 chai.use(chaiAsPromised);
@@ -20,67 +20,38 @@ const { expect } = chai;
 let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
+let viewOnlyWallet: ViewOnlyWallet;
 const chainID: number = 1;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-// const TEST_MNEMONICS = [
-// ];
-
-// let testWallets: Wallet[];
-// let leaves: Commitment[];
-// let leaves2: Commitment[];
-
-// const setupTestWallets = async () => {
-//   testWallets = await Promise.all(
-//     TEST_MNEMONICS.map((mnemonic) => Wallet.fromMnemonic(db, mnemonic, testEncryptionKey)),
-//   );
-
-// const notesPrep = [0, 1, 2, 3, 2, 0];
-// leaves = notesPrep.map((keyIndex) => {
-//   const note = new Note(
-//     Lepton.decodeAddress(testWallets[0].getAddress(1)),
-//     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-//     'ffff',
-//     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
-//   );
-//   return {
-//     hash: nToHex(note.hash, ByteLength.UINT_256),
-//     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-//     ciphertext: note.encrypt(sharedKey),
-//   };
-// });
-
-// const notesPrep2 = [0, 1, 2, 3, 2, 0];
-// leaves2 = notesPrep2.map((keyIndex) => {
-//   const note = new Note(
-//     Lepton.decodeAddress(testWallets[0].getAddress(1)),
-//     '1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-//     'ffff',
-//     '7f4925cdf66ddf5b88016df1fe915e68eff8f192',
-//   );
-//   return {
-//     hash: note.hash,
-//     txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-//     ciphertext: note.encrypt(sharedKey),
-//   };
-// });
-// };
-
 describe('Wallet/Index', () => {
   beforeEach(async () => {
     // Create database and wallet
     db = new Database(memdown());
-    // await setupTestWallets();
     merkletree = new MerkleTree(db, 1, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     wallet.loadTree(merkletree);
+    viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
+      db,
+      testEncryptionKey,
+      await wallet.generateShareableViewingKey(),
+    );
   });
 
   it('Should load existing wallet', async () => {
     const wallet2 = await Wallet.loadExisting(db, testEncryptionKey, wallet.id);
     expect(wallet2.id).to.equal(wallet.id);
+  });
+
+  it('Should load existing view-only wallet', async () => {
+    const viewOnlyWallet2 = await ViewOnlyWallet.loadExisting(
+      db,
+      testEncryptionKey,
+      viewOnlyWallet.id,
+    );
+    expect(viewOnlyWallet2.id).to.equal(viewOnlyWallet.id);
   });
 
   it('Should get wallet prefix path', async () => {
@@ -122,6 +93,13 @@ describe('Wallet/Index', () => {
     expect(await verifyED25519(data, signed, pubkey)).to.equal(true);
   });
 
+  it('Should sign and verify with viewing keypair (view-only wallet)', async () => {
+    const data = utf8ToBytes('20388293809abc');
+    const signed = await viewOnlyWallet.signWithViewingKey(data);
+    const { pubkey } = viewOnlyWallet.getViewingKeyPair();
+    expect(await verifyED25519(data, signed, pubkey)).to.equal(true);
+  });
+
   it('Should get spending keypair', async () => {
     expect(await wallet.getSpendingKeyPair(testEncryptionKey)).to.deep.equal({
       privateKey: new Uint8Array([
@@ -144,10 +122,21 @@ describe('Wallet/Index', () => {
         41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
       ]),
     });
+    expect(viewOnlyWallet.addressKeys).to.deep.equal({
+      masterPublicKey:
+        20060431504059690749153982049210720252589378133547582826474262520121417617087n,
+      viewingPublicKey: new Uint8Array([
+        119, 215, 170, 124, 91, 151, 128, 96, 190, 43, 167, 140, 188, 14, 249, 42, 79, 58, 163, 252,
+        41, 128, 62, 175, 71, 132, 124, 245, 16, 185, 134, 234,
+      ]),
+    });
   });
 
   it('Should get addresses', async () => {
     expect(wallet.getAddress(0)).to.equal(
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990',
+    );
+    expect(viewOnlyWallet.getAddress(0)).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990',
     );
     expect(wallet.getAddress(1)).to.equal(
@@ -173,6 +162,9 @@ describe('Wallet/Index', () => {
 
   it('Should get empty wallet details', async () => {
     expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
+      treeScannedHeights: [],
+    });
+    expect(await viewOnlyWallet.getWalletDetails(chainID)).to.deep.equal({
       treeScannedHeights: [],
     });
   });

@@ -31,9 +31,7 @@ let etherswallet: ethers.Wallet;
 let snapshot: number;
 let relayAdaptContract: RelayAdaptContract;
 let proxyContract: RailgunProxyContract;
-let walletID: string;
 let wallet: Wallet;
-let walletID2: string;
 let wallet2: Wallet;
 
 const testMnemonic = config.mnemonic;
@@ -54,10 +52,8 @@ describe('Relay Adapt/Index', function test() {
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
     lepton.prover.setGroth16(groth16);
 
-    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
-    wallet = lepton.wallets[walletID];
-    walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    wallet2 = lepton.wallets[walletID2];
+    wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
+    wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;

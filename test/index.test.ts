@@ -27,9 +27,7 @@ let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ethers.Contract;
-let walletID: string;
 let wallet: Wallet;
-let walletID2: string;
 let wallet2: Wallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
@@ -79,10 +77,8 @@ describe('Lepton', function () {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(config.contracts.proxy, balance);
 
-    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
-    wallet = lepton.wallets[walletID];
-    walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    wallet2 = lepton.wallets[walletID2];
+    wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
+    wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
     await lepton.loadNetwork(
       chainID,
       config.contracts.proxy,
@@ -100,9 +96,9 @@ describe('Lepton', function () {
       return;
     }
 
-    lepton.unloadWallet(walletID);
-    await lepton.loadExistingWallet(testEncryptionKey, walletID);
-    expect(lepton.wallets[walletID].id).to.equal(walletID);
+    lepton.unloadWallet(wallet.id);
+    await lepton.loadExistingWallet(testEncryptionKey, wallet.id);
+    expect(lepton.wallets[wallet.id].id).to.equal(wallet.id);
   });
 
   it('[HH] Should show balance after deposit and rescan', async function run() {

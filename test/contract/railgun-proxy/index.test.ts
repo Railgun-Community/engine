@@ -21,6 +21,7 @@ import { Nullifier, OutputType, TokenType } from '../../../src/models/formatted-
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import { LeptonEvent } from '../../../src/models/event-types';
 import { Memo } from '../../../src/note/memo';
+import { ViewOnlyWallet } from '../../../src/wallet/view-only-wallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -32,10 +33,9 @@ let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ethers.Contract;
 let proxyContract: RailgunProxyContract;
-let walletID: string;
-let walletID2: string;
 let wallet: Wallet;
 let wallet2: Wallet;
+let viewOnlyWallet: ViewOnlyWallet;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -79,10 +79,12 @@ describe('Railgun Proxy/Index', function () {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(proxyContract.address, balance);
 
-    walletID = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
-    walletID2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    wallet = lepton.wallets[walletID];
-    wallet2 = lepton.wallets[walletID2];
+    wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
+    wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
+    viewOnlyWallet = await lepton.createViewOnlyWalletFromShareableViewingKey(
+      testEncryptionKey,
+      await wallet.generateShareableViewingKey(),
+    );
 
     // fn to create deposit tx for tests
     // tx should be complete and balances updated after await
@@ -257,7 +259,16 @@ describe('Railgun Proxy/Index', function () {
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
-    const [txResponseTransact] = await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
+    const [txResponseTransact] = await Promise.all([
+      txTransact.wait(),
+      awaitScan(wallet, chainID),
+      awaitScan(viewOnlyWallet, chainID),
+    ]);
+
+    expect(await wallet.getBalance(chainID, TOKEN_ADDRESS)).equal(109724999999999999999600n);
+    expect(await viewOnlyWallet.getBalance(chainID, TOKEN_ADDRESS)).equal(
+      109724999999999999999600n,
+    );
 
     // Event should have been scanned by automatic contract events:
 
