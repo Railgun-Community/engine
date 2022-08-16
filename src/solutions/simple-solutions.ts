@@ -1,4 +1,4 @@
-import { TreeBalance, TXO } from '../wallet';
+import { TreeBalance, TXO } from '../wallet/abstract-wallet';
 import { isValidNullifierCount, MAX_NULLIFIERS } from './nullifiers';
 import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
 

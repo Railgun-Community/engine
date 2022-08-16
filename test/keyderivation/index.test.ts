@@ -1,8 +1,7 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Node } from '../../src/keyderivation/bip32';
-
+import { WalletNode } from '../../src/keyderivation';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -29,7 +28,7 @@ const VECTORS = [
       ]),
       pubkey: new Uint8Array([
         13, 235, 247, 125, 142, 148, 54, 252, 7, 160, 220, 63, 232, 189, 144, 194, 245, 146, 160,
-        140, 171, 141, 190, 95, 151, 42, 71, 131, 70, 92, 214, 212
+        140, 171, 141, 190, 95, 151, 42, 71, 131, 70, 92, 214, 212,
       ]),
     },
     nullifyingKey: 12835268173099116305231859677177501123414588269721547120001227054861606950622n,
@@ -54,7 +53,8 @@ const VECTORS = [
         181, 141, 191, 77, 14, 149, 60, 72, 77, 102, 203, 94,
       ]),
       pubkey: new Uint8Array([
-        188,10,133,20,54,28,82,39,129,118,54,192,105,143,30,183,217,77,82,240,122,203,88,224,107,241,219,145,159,230,69,20,
+        188, 10, 133, 20, 54, 28, 82, 39, 129, 118, 54, 192, 105, 143, 30, 183, 217, 77, 82, 240,
+        122, 203, 88, 224, 107, 241, 219, 145, 159, 230, 69, 20,
       ]),
     },
     nullifyingKey: 12433581129726328896745774227574786958991377531034322249715552469191536529193n,
@@ -79,7 +79,8 @@ const VECTORS = [
         167, 168, 25, 67, 167, 236, 115, 134, 66, 111, 157, 93,
       ]),
       pubkey: new Uint8Array([
-        28,112,24,121,34,161,22,10,20,98,221,72,216,131,91,146,55,237,168,255,121,6,217,124,152,150,232,196,138,161,179,243,
+        28, 112, 24, 121, 34, 161, 22, 10, 20, 98, 221, 72, 216, 131, 91, 146, 55, 237, 168, 255,
+        121, 6, 217, 124, 152, 150, 232, 196, 138, 161, 179, 243,
       ]),
     },
     nullifyingKey: 16602386444438786679333393766394518037774007889700655746209679443354561523707n,
@@ -92,7 +93,7 @@ describe('Key Derivation/Index', () => {
 
     await Promise.all(
       VECTORS.map(async (vector) => {
-        const node = Node.fromMnemonic(vector.mnemonic);
+        const node = WalletNode.fromMnemonic(vector.mnemonic);
         expect(node.derive(vector.path).getSpendingKeyPair()).to.deep.equal(vector.spendingKeyPair);
       }),
     );
@@ -103,7 +104,7 @@ describe('Key Derivation/Index', () => {
 
     await Promise.all(
       VECTORS.map(async (vector) => {
-        const node = Node.fromMnemonic(vector.mnemonic);
+        const node = WalletNode.fromMnemonic(vector.mnemonic);
         expect(await node.derive(vector.path).getViewingKeyPair()).to.deep.equal(
           vector.viewingKeyPair,
         );
@@ -116,7 +117,7 @@ describe('Key Derivation/Index', () => {
 
     await Promise.all(
       VECTORS.map(async (vector) => {
-        const node = Node.fromMnemonic(vector.mnemonic);
+        const node = WalletNode.fromMnemonic(vector.mnemonic);
         const nullifyingKey = await node.derive(vector.path).getNullifyingKey();
         expect(nullifyingKey).to.equal(vector.nullifyingKey);
       }),

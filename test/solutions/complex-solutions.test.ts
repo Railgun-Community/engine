@@ -11,7 +11,7 @@ import {
 } from '../../src/solutions/complex-solutions';
 import { sortUTXOsBySize } from '../../src/solutions/utxos';
 import { bytes } from '../../src/utils';
-import { TreeBalance, TXO } from '../../src/wallet';
+import { TreeBalance, TXO } from '../../src/wallet/abstract-wallet';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { TokenType } from '../../src/models/formatted-types';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
@@ -31,7 +31,7 @@ const TOKEN_ADDRESS = 'abc';
 const CHAIN_ID = 1;
 
 const createMockNote = (addressData: AddressData, value: bigint) => {
-  return new Note(addressData, bytes.random(16), value, TOKEN_ADDRESS);
+  return new Note(addressData, bytes.random(16), value, TOKEN_ADDRESS, []);
 };
 
 const createMockTXO = (txid: string, value: bigint): TXO => {

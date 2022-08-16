@@ -1,9 +1,11 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
-import { getMasterKeyFromSeed } from '../../src/keyderivation/bip32';
-import { childKeyDerivationHardened, getPathSegments } from '../../src/utils/bip32';
+import {
+  childKeyDerivationHardened,
+  getMasterKeyFromSeed,
+  getPathSegments,
+} from '../../src/keyderivation/bip32';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

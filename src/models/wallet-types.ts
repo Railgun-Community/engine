@@ -1,5 +1,5 @@
-import { NoteExtraData } from '../models/formatted-types';
-import { TXO } from '../models/txo-types';
+import { NoteExtraData } from './formatted-types';
+import { TXO } from './txo-types';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -26,6 +26,13 @@ export type AddressKeys = {
 };
 
 export type WalletData = { mnemonic: string; index: number };
+
+export type ViewOnlyWalletData = { shareableViewingKey: string };
+
+export type ShareableViewingKeyData = {
+  viewingPrivateKey: string;
+  spendingPublicKeyString: string;
+};
 
 export type TransactionHistoryTokenAmount = {
   token: string;

@@ -6,7 +6,7 @@ import memdown from 'memdown';
 import { Database } from '../../src/database';
 import { NoteExtraData, OutputType } from '../../src/models/formatted-types';
 import { Memo } from '../../src/note/memo';
-import { Wallet } from '../../src/wallet';
+import { Wallet } from '../../src/wallet/wallet';
 import { config } from '../config.test';
 
 chai.use(chaiAsPromised);

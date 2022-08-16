@@ -13,7 +13,7 @@ import { Note } from '../../src/note';
 import { Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { bytes } from '../../src/utils';
-import { Wallet } from '../../src/wallet';
+import { Wallet } from '../../src/wallet/wallet';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
 
@@ -69,7 +69,8 @@ describe('Transaction/Transaction Batch', function run() {
     prover.setGroth16(groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
-    makeNote = (value: bigint = 65n * DECIMALS_18): Note => new Note(address, random, value, token);
+    makeNote = (value: bigint = 65n * DECIMALS_18): Note =>
+      new Note(address, random, value, token, []);
     merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf('a')]);
     await merkletree.queueLeaves(1, 0, [

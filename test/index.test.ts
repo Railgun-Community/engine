@@ -7,7 +7,7 @@ import { groth16 } from 'snarkjs';
 import { Lepton, Note } from '../src';
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
-import { Wallet } from '../src/wallet';
+import { Wallet } from '../src/wallet/wallet';
 import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync } from './helper';
 import { ERC20Deposit } from '../src/note/erc20-deposit';
 import { MerkleTree } from '../src/merkletree';

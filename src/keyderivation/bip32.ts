@@ -1,26 +1,57 @@
-import { Signature } from 'circomlibjs';
-import { bytesToHex } from 'ethereum-cryptography/utils';
-import { BytesData } from '../models/formatted-types';
-import { KeyNode } from '../models/types';
-import { hash, keysUtils } from '../utils';
-import { childKeyDerivationHardened, getPathSegments } from '../utils/bip32';
-import { fromUTF8String, hexStringToBytes, hexToBigInt } from '../utils/bytes';
-import { mnemonicToSeed } from './bip39';
+import BN from 'bn.js';
+import { bytes, hash } from '../utils';
+import { KeyNode } from '../models/lepton-types';
+import { fromUTF8String } from '../utils/bytes';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
-const HARDENED_OFFSET = 0x80000000;
-
-export type SpendingKeyPair = { privateKey: Uint8Array; pubkey: [bigint, bigint] };
-export type ViewingKeyPair = { privateKey: Uint8Array; pubkey: Uint8Array };
 
 /**
- * Creates KeyNode from seed
- * @param seed - bip32 seed
- * @returns BjjNode - babyjubjub BIP32Node
+ * Tests derivation path to see if it's valid
+ * @param path - bath to test
+ * @returns valid
  */
-export function getMasterKeyFromSeed(seed: BytesData): KeyNode {
-  // HMAC with seed to get I
-  const I = hash.sha512HMAC(CURVE_SEED, seed);
+export function isValidPath(path: string): boolean {
+  return /^m(\/[0-9]+')+$/g.test(path);
+}
+
+/**
+ * Converts path string into segments
+ * @param path - path string to parse
+ * @returns array of indexes
+ */
+export function getPathSegments(path: string): number[] {
+  // Throw if path is invalid
+  if (!isValidPath(path)) throw new Error('Invalid derivation path');
+
+  // Split along '/' to get each component
+  // Remove the first segment as it is the 'm'
+  // Remove the ' from each segment
+  // Parse each segment into an integer
+  return path
+    .split('/')
+    .slice(1)
+    .map((val) => val.replace("'", ''))
+    .map((el) => parseInt(el, 10));
+}
+
+/**
+ * Derive child KeyNode from KeyNode via hardened derivation
+ * @param node - KeyNode to derive from
+ * @param index - index of child
+ */
+export function childKeyDerivationHardened(
+  node: KeyNode,
+  index: number,
+  offset: number = 0x80000000,
+): KeyNode {
+  // Convert index to bytes as 32bit big endian
+  const indexFormatted = bytes.padToLength(new BN(index + offset), 4);
+
+  // Calculate HMAC preImage
+  const preImage = `00${node.chainKey}${indexFormatted}`;
+
+  // Calculate I
+  const I = hash.sha512HMAC(node.chainCode, preImage);
 
   // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
   const chainKey = I.slice(0, 64);
@@ -33,80 +64,22 @@ export function getMasterKeyFromSeed(seed: BytesData): KeyNode {
   };
 }
 
-export class Node {
-  static CURVE_SEED = CURVE_SEED;
+/**
+ * Creates KeyNode from seed
+ * @param seed - bip32 seed
+ * @returns BjjNode - babyjubjub BIP32Node
+ */
+export function getMasterKeyFromSeed(seed: string): KeyNode {
+  // HMAC with seed to get I
+  const I = hash.sha512HMAC(CURVE_SEED, seed);
 
-  static HARDENED_OFFSET = HARDENED_OFFSET;
+  // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
+  const chainKey = I.slice(0, 64);
+  const chainCode = I.slice(64);
 
-  #chainKey: string;
-
-  #chainCode: string;
-
-  constructor(keyNode: KeyNode) {
-    this.#chainKey = keyNode.chainKey;
-    this.#chainCode = keyNode.chainCode;
-  }
-
-  /**
-   * Create BIP32 node from mnemonic
-   * @returns {Node}
-   */
-  static fromMnemonic(mnemonic: string): Node {
-    const seed = mnemonicToSeed(mnemonic);
-    return new Node(getMasterKeyFromSeed(seed));
-  }
-
-  /**
-   * Derives new BIP32Node along path
-   * @param {string} path - path to derive along
-   * @returns {BIP32Node} - new BIP32 implementation Node
-   */
-  derive(path: string): Node {
-    // Get path segments
-    const segments = getPathSegments(path);
-
-    // Calculate new key node
-    const keyNode = segments.reduce(
-      (parentKeys: KeyNode, segment: number) =>
-        childKeyDerivationHardened(parentKeys, segment, Node.HARDENED_OFFSET),
-      {
-        chainKey: this.#chainKey,
-        chainCode: this.#chainCode,
-      },
-    );
-    return new Node(keyNode);
-  }
-
-  /**
-   * Get spending key-pair
-   * @returns keypair
-   */
-  getSpendingKeyPair(): SpendingKeyPair {
-    const privateKey = hexStringToBytes(this.#chainKey);
-    const pubkey = keysUtils.getPublicSpendingKey(privateKey);
-    return {
-      privateKey,
-      pubkey,
-    };
-  }
-
-  static getMasterPublicKey(spendingPublicKey: [bigint, bigint], nullifyingKey: bigint): bigint {
-    return hash.poseidon([...spendingPublicKey, nullifyingKey]);
-  }
-
-  async getViewingKeyPair(): Promise<ViewingKeyPair> {
-    // TODO: THIS should be a separate node chainkey
-    const privateKey = hexStringToBytes(this.#chainKey);
-    const pubkey = await keysUtils.getPublicViewingKey(privateKey);
-    return { privateKey, pubkey };
-  }
-
-  async getNullifyingKey(): Promise<bigint> {
-    const { privateKey } = await this.getViewingKeyPair();
-    return hash.poseidon([hexToBigInt(bytesToHex(privateKey))]);
-  }
-
-  signBySpendingKey(message: bigint): Signature {
-    return keysUtils.signEDDSA(this.getSpendingKeyPair().privateKey, message);
-  }
+  // Return node
+  return {
+    chainKey,
+    chainCode,
+  };
 }

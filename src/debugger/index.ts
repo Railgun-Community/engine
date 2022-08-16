@@ -1,4 +1,4 @@
-import { LeptonDebugger } from '../models/types';
+import { LeptonDebugger } from '../models/lepton-types';
 
 export default class LeptonDebug {
   private static leptonDebugger: LeptonDebugger | undefined;

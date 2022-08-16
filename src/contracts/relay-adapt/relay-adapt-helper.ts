@@ -2,7 +2,7 @@ import { ethers, PopulatedTransaction, BigNumber } from 'ethers';
 import { DepositInput, SerializedTransaction } from '../../models/formatted-types';
 import { ERC20Deposit } from '../../note';
 import { formatToByteLength, ByteLength } from '../../utils/bytes';
-import { Wallet } from '../../wallet';
+import { Wallet } from '../../wallet/wallet';
 
 class RelayAdaptHelper {
   static generateRelayDepositInputs(wallet: Wallet, random: string, depositTokens: string[]) {

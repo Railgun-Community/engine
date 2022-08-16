@@ -1,7 +1,7 @@
 import { SpendingSolutionGroup, TXO } from '../models/txo-types';
 import { Note } from '../note';
 import { minBigInt } from '../utils/bigint';
-import { TreeBalance } from '../wallet/types';
+import { TreeBalance } from '../models/wallet-types';
 import { VALID_NULLIFIER_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
 

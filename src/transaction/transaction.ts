@@ -1,7 +1,7 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note } from '../note';
 import { bytes, hash } from '../utils';
-import { Wallet } from '../wallet';
+import { Wallet } from '../wallet/wallet';
 import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt } from '../utils/bytes';

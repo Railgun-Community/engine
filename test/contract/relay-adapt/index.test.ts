@@ -10,7 +10,7 @@ import { RelayAdaptHelper } from '../../../src/contracts/relay-adapt/relay-adapt
 import { Lepton } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
 import { config } from '../../config.test';
-import { Wallet } from '../../../src/wallet';
+import { Wallet } from '../../../src/wallet/wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../helper';
 import { ERC20Deposit } from '../../../src/note/erc20-deposit';
 import { bytes } from '../../../src/utils';

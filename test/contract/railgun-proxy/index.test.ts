@@ -10,7 +10,7 @@ import { Note } from '../../../src/note';
 import { Lepton } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
 import { config } from '../../config.test';
-import { Wallet } from '../../../src/wallet';
+import { Wallet } from '../../../src/wallet/wallet';
 import { hexlify } from '../../../src/utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../helper';
 import { ERC20Deposit } from '../../../src/note/erc20-deposit';

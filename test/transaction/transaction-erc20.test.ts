@@ -24,7 +24,7 @@ import {
   signEDDSA,
   verifyEDDSA,
 } from '../../src/utils/keys-utils';
-import { Wallet } from '../../src/wallet';
+import { Wallet } from '../../src/wallet/wallet';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
 

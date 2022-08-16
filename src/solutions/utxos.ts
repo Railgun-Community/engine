@@ -1,4 +1,4 @@
-import { TXO } from '../wallet';
+import { TXO } from '../wallet/abstract-wallet';
 
 export const calculateTotalSpend = (utxos: TXO[]) =>
   utxos.reduce((left, right) => left + right.note.value, BigInt(0));

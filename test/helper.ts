@@ -4,7 +4,7 @@ import artifacts from 'railgun-artifacts-node';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { PublicInputs } from '../src/prover';
-import { ScannedEventData, Wallet } from '../src/wallet';
+import { ScannedEventData, Wallet } from '../src/wallet/wallet';
 import { AccumulatedEvents, QuickSync } from '../src';
 import { CommitmentEvent } from '../src/contracts/railgun-proxy/events';
 import { Nullifier } from '../src/models/formatted-types';

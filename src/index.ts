@@ -12,9 +12,9 @@ import { Transaction } from './transaction';
 import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { hexlify, padToLength } from './utils/bytes';
-import { Wallet } from './wallet';
+import { Wallet } from './wallet/wallet';
 import LeptonDebug from './debugger';
-import { LeptonDebugger } from './models/types';
+import { LeptonDebugger } from './models/lepton-types';
 import { BytesData, Commitment, Nullifier } from './models/formatted-types';
 import {
   LeptonEvent,
@@ -468,14 +468,11 @@ class Lepton extends EventEmitter {
   /**
    * Load existing wallet
    * @param {BytesData} encryptionKey - encryption key of wallet
-   * @param {string} _id - wallet ID
+   * @param {string} id - wallet ID
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: BytesData, _id: string): Promise<string> {
-    const id = hexlify(_id);
-    // Instantiate wallet
+  async loadExistingWallet(encryptionKey: BytesData, id: string): Promise<string> {
     const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
-
     return this.initializeWallet(wallet);
   }
 
@@ -491,9 +488,7 @@ class Lepton extends EventEmitter {
     mnemonic: string,
     index: number = 0,
   ): Promise<string> {
-    // Instantiate wallet
     const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
-
     return this.initializeWallet(wallet);
   }
 

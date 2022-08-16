@@ -1,6 +1,7 @@
 import { Note } from '../note';
 import { bytes } from '../utils';
-import { Wallet, TXO, TreeBalance } from '../wallet';
+import { TXO, TreeBalance } from '../wallet/abstract-wallet';
+import { Wallet } from '../wallet/wallet';
 import { Prover } from '../prover';
 import { ByteLength, formatToByteLength, HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';

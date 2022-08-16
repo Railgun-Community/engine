@@ -11,7 +11,7 @@ import { bech32 } from '../../src/keyderivation';
 import { MerkleTree } from '../../src/merkletree';
 import { bytes, hash } from '../../src/utils';
 import { verifyED25519 } from '../../src/utils/keys-utils';
-import { Wallet } from '../../src/wallet';
+import { Wallet } from '../../src/wallet/wallet';
 import { config } from '../config.test';
 
 chai.use(chaiAsPromised);
