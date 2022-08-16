@@ -30,8 +30,8 @@ export type WalletData = { mnemonic: string; index: number };
 export type ViewOnlyWalletData = { shareableViewingKey: string };
 
 export type ShareableViewingKeyData = {
-  viewingPrivateKey: string;
-  spendingPublicKeyString: string;
+  vpriv: string; // viewingPrivateKey
+  spub: string; // spendingPublicKey
 };
 
 export type TransactionHistoryTokenAmount = {

@@ -826,9 +826,8 @@ abstract class AbstractWallet extends EventEmitter {
     viewingPrivateKey: string;
     spendingPublicKey: SpendingPublicKey;
   } {
-    const { viewingPrivateKey, spendingPublicKeyString }: ShareableViewingKeyData = msgpack.decode(
-      Buffer.from(shareableViewingKey, 'hex'),
-    );
+    const { vpriv: viewingPrivateKey, spub: spendingPublicKeyString }: ShareableViewingKeyData =
+      msgpack.decode(Buffer.from(shareableViewingKey, 'hex'));
 
     const spendingPublicKey = unpackPoint(Buffer.from(spendingPublicKeyString, 'hex'));
     return { viewingPrivateKey, spendingPublicKey };
@@ -837,8 +836,8 @@ abstract class AbstractWallet extends EventEmitter {
   async generateShareableViewingKey(): Promise<string> {
     const spendingPublicKeyString = packPoint(this.spendingPublicKey).toString('hex');
     const data: ShareableViewingKeyData = {
-      viewingPrivateKey: formatToByteLength(this.viewingKeyPair.privateKey, ByteLength.UINT_256),
-      spendingPublicKeyString,
+      vpriv: formatToByteLength(this.viewingKeyPair.privateKey, ByteLength.UINT_256),
+      spub: spendingPublicKeyString,
     };
     return msgpack.encode(data).toString('hex');
   }
