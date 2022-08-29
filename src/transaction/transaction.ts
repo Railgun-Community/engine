@@ -2,7 +2,7 @@ import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note } from '../note';
 import { bytes, hash } from '../utils';
 import { Wallet } from '../wallet/wallet';
-import { PrivateInputs, PublicInputs, Prover, Proof } from '../prover';
+import { PrivateInputs, PublicInputs, Prover, Proof, ProverProgressCallback } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt } from '../utils/bytes';
 import {
@@ -256,12 +256,13 @@ class Transaction {
     prover: Prover,
     wallet: Wallet,
     encryptionKey: string,
+    progressCallback: ProverProgressCallback,
   ): Promise<SerializedTransaction> {
     // Get inputs
     const { inputs, publicInputs, boundParams } = await this.generateInputs(wallet, encryptionKey);
 
     // Calculate proof
-    const { proof } = await prover.prove(publicInputs, inputs);
+    const { proof } = await prover.prove(publicInputs, inputs, progressCallback);
 
     const overrideWithdrawAddress = ZERO_ADDRESS;
 

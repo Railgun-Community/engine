@@ -238,6 +238,7 @@ describe('Relay Adapt/Index', function test() {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     transactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
@@ -303,6 +304,7 @@ describe('Relay Adapt/Index', function test() {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     const transact = await proxyContract.transact(serializedTxs);
 
@@ -411,6 +413,7 @@ describe('Relay Adapt/Index', function test() {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     transactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
@@ -562,6 +565,7 @@ describe('Relay Adapt/Index', function test() {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     transactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
@@ -709,6 +713,7 @@ describe('Relay Adapt/Index', function test() {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     transactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);

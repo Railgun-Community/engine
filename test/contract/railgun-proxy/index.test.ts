@@ -182,7 +182,7 @@ describe('Railgun Proxy/Index', function () {
       return;
     }
 
-    let resultEvent: CommitmentEvent;
+    let resultEvent: CommitmentEvent | undefined;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
       resultEvent = commitmentEvent;
     };
@@ -254,6 +254,7 @@ describe('Railgun Proxy/Index', function () {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     const transact = await proxyContract.transact(serializedTxs);
 
@@ -424,6 +425,7 @@ describe('Railgun Proxy/Index', function () {
         lepton.prover,
         wallet,
         testEncryptionKey,
+        () => {},
       ),
     );
 

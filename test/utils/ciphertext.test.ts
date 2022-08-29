@@ -1,6 +1,7 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { BytesData } from '../../src/models/formatted-types';
 import { encryption } from '../../src/utils';
 import { random } from '../../src/utils/bytes';
 import {

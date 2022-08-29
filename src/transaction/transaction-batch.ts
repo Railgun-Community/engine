@@ -2,7 +2,7 @@ import { Note } from '../note';
 import { bytes } from '../utils';
 import { TXO, TreeBalance } from '../wallet/abstract-wallet';
 import { Wallet } from '../wallet/wallet';
-import { Prover } from '../prover';
+import { Prover, ProverProgressCallback } from '../prover';
 import { ByteLength, formatToByteLength, HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
@@ -21,6 +21,7 @@ import {
   serializeExtractedSpendingSolutionGroupsData,
 } from '../solutions/spending-group-extractor';
 import { stringifySafe } from '../utils/stringify';
+import { averageNumber } from '../utils/average';
 
 class TransactionBatch {
   private adaptID: AdaptID = {
@@ -249,9 +250,8 @@ class TransactionBatch {
     prover: Prover,
     wallet: Wallet,
     encryptionKey: string,
+    progressCallback: ProverProgressCallback,
   ): Promise<SerializedTransaction[]> {
-    const proofPromises: Promise<SerializedTransaction>[] = [];
-
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
     LeptonDebug.log('Actual spending solution groups:');
     LeptonDebug.log(
@@ -262,11 +262,22 @@ class TransactionBatch {
       ),
     );
 
-    spendingSolutionGroups.forEach((spendingSolutionGroup) => {
-      const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-      proofPromises.push(transaction.prove(prover, wallet, encryptionKey));
-    });
+    const individualProgressAmounts: number[] = new Array(spendingSolutionGroups.length).fill(0);
+    const updateProgressCallback = () => {
+      const averageProgress = averageNumber(individualProgressAmounts);
+      progressCallback(averageProgress);
+    };
 
+    const proofPromises: Promise<SerializedTransaction>[] = spendingSolutionGroups.map(
+      (spendingSolutionGroup, index) => {
+        const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
+        const individualProgressCallback = (progress: number) => {
+          individualProgressAmounts[index] = progress;
+          updateProgressCallback();
+        };
+        return transaction.prove(prover, wallet, encryptionKey, individualProgressCallback);
+      },
+    );
     return Promise.all(proofPromises);
   }
 
@@ -281,8 +292,6 @@ class TransactionBatch {
     wallet: Wallet,
     encryptionKey: string,
   ): Promise<SerializedTransaction[]> {
-    const proofPromises: Promise<SerializedTransaction>[] = [];
-
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
     LeptonDebug.log(`Dummy spending solution groups: token ${this.tokenAddress}`);
     LeptonDebug.log(
@@ -293,11 +302,12 @@ class TransactionBatch {
       ),
     );
 
-    spendingSolutionGroups.forEach((spendingSolutionGroup) => {
-      const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-      proofPromises.push(transaction.dummyProve(prover, wallet, encryptionKey));
-    });
-
+    const proofPromises: Promise<SerializedTransaction>[] = spendingSolutionGroups.map(
+      (spendingSolutionGroup) => {
+        const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
+        return transaction.dummyProve(prover, wallet, encryptionKey);
+      },
+    );
     return Promise.all(proofPromises);
   }
 

@@ -93,6 +93,7 @@ describe('Transaction/Transaction Batch', function run() {
       prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     expect(txs.length).to.equal(4);
     expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
@@ -102,7 +103,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(makeNote(depositValue * 6n));
     transactionBatch.addOutput(makeNote(1n));
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     transactionBatch.resetOutputs();
@@ -116,6 +117,7 @@ describe('Transaction/Transaction Batch', function run() {
       prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
@@ -127,7 +129,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(makeNote(depositValue + 1n));
     transactionBatch.addOutput(makeNote(depositValue + 1n));
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
@@ -139,6 +141,7 @@ describe('Transaction/Transaction Batch', function run() {
       prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     expect(txs.length).to.equal(4);
     expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
@@ -155,7 +158,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(makeNote(depositValue * 6n));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue * 1n);
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     transactionBatch.resetOutputs();
@@ -170,6 +173,7 @@ describe('Transaction/Transaction Batch', function run() {
       prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
@@ -192,7 +196,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(makeNote(depositValue + 1n));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue + 1n);
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
@@ -206,7 +210,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(makeNote(0n));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue * 5n);
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );

@@ -180,6 +180,7 @@ describe('Lepton', function () {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     const transact = await proxyContract.transact(serializedTransactions);
 
@@ -281,6 +282,7 @@ describe('Lepton', function () {
       lepton.prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     const transact = await proxyContract.transact(serializedTransactions);
 

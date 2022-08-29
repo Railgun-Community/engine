@@ -15,8 +15,11 @@ export type Groth16 = {
     wasm: ArrayLike<number> | undefined,
     zkey: ArrayLike<number>,
     dat: ArrayLike<number> | undefined,
+    progressCallback: ProverProgressCallback,
   ) => Promise<{ proof: Proof }>;
 };
+
+export type ProverProgressCallback = (progress: number) => void;
 
 export { ArtifactsGetter, FormattedCircuitInputs, PrivateInputs, Proof, PublicInputs, SnarkProof };
 
@@ -73,6 +76,7 @@ export class Prover {
   async prove(
     publicInputs: PublicInputs,
     privateInputs: PrivateInputs,
+    progressCallback: ProverProgressCallback,
   ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
     if (!this.groth16) {
       throw new Error('Requires groth16 full prover implementation');
@@ -80,6 +84,7 @@ export class Prover {
 
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
+    progressCallback(5);
     const artifacts = await this.artifactsGetter(publicInputs);
     if (!artifacts.wasm && !artifacts.dat) {
       throw new Error('Requires WASM or DAT prover artifact');
@@ -88,17 +93,27 @@ export class Prover {
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
-    // Generate proof
+    // Generate proof: Progress from 20 - 90%
+    const initialProgressProof = 20;
+    const finalProgressProof = 90;
+    progressCallback(initialProgressProof);
     const { proof } = await this.groth16.fullProve(
       formattedInputs,
       artifacts.wasm,
       artifacts.zkey,
       artifacts.dat,
+      (progress: number) => {
+        progressCallback(
+          (progress * (finalProgressProof - initialProgressProof)) / 100 + initialProgressProof,
+        );
+      },
     );
+    progressCallback(finalProgressProof);
 
     // Throw if proof is invalid
     const verified = await this.verify(publicInputs, proof);
     if (verified !== true) throw new Error('Proof generation failed');
+    progressCallback(100);
 
     // Return proof with inputs
     return {

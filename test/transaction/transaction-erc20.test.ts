@@ -159,6 +159,9 @@ describe('Transaction/ERC20', function () {
 
     const senderShared = await getSharedSymmetricKey(sender.privateKey, ephemeralKeys[1]);
     const receiverShared = await getSharedSymmetricKey(receiver.privateKey, ephemeralKeys[0]);
+    if (!senderShared || !receiverShared) {
+      throw new Error('Expected shared symmetric keys.');
+    }
 
     const encryptedNote = note.encrypt(senderShared);
 
@@ -211,7 +214,7 @@ describe('Transaction/ERC20', function () {
     transactionBatch.addOutput(makeNote());
     transactionBatch.addOutput(makeNote());
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Too many transaction outputs');
 
     transactionBatch.resetOutputs();
@@ -279,6 +282,7 @@ describe('Transaction/ERC20', function () {
       prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     expect(txs.length).to.equal(1);
     expect(txs[0].nullifiers.length).to.equal(1);
@@ -291,9 +295,24 @@ describe('Transaction/ERC20', function () {
       prover,
       wallet,
       testEncryptionKey,
+      () => {},
     );
     expect(txs2.length).to.equal(1);
     expect(txs2[0].nullifiers.length).to.equal(1);
+  });
+
+  it('Should test transaction proof progress callback final value', async () => {
+    transactionBatch.addOutput(makeNote(1n));
+    let loadProgress = 0;
+    await transactionBatch.generateSerializedTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+      (progress) => {
+        loadProgress = progress;
+      },
+    );
+    expect(loadProgress).to.equal(100);
   });
 
   it('Should create dummy transaction proofs', async () => {
