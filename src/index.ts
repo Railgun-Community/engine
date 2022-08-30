@@ -2,7 +2,7 @@ import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import BN from 'bn.js';
 import EventEmitter from 'events';
-import { RailgunProxyContract, CommitmentEvent } from './contracts/railgun-proxy';
+import { RailgunProxyContract } from './contracts/railgun-proxy';
 import { RelayAdaptContract } from './contracts/relay-adapt';
 import { Database, DatabaseNamespace } from './database';
 import { bip39 } from './keyderivation';
@@ -23,6 +23,7 @@ import {
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
+import { CommitmentEvent } from './contracts/railgun-proxy/events';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];

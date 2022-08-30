@@ -2,12 +2,7 @@ import type { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, Contract, Event, EventFilter, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
 import LeptonDebug from '../../debugger';
-import {
-  BytesData,
-  Commitment,
-  DepositInput,
-  SerializedTransaction,
-} from '../../models/formatted-types';
+import { DepositInput, SerializedTransaction } from '../../models/formatted-types';
 import { LeptonEvent } from '../../models/event-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
@@ -28,13 +23,6 @@ import {
   processGeneratedCommitmentEvents,
   processNullifierEvents,
 } from './events';
-
-export type CommitmentEvent = {
-  txid: BytesData;
-  treeNumber: number;
-  startPosition: number;
-  commitments: Commitment[];
-};
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;
