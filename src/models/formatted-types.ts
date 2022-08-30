@@ -143,6 +143,7 @@ export type Nullifier = {
   nullifier: string;
   treeNumber: number;
   txid: string;
+  blockNumber: number;
 };
 
 export type StoredReceiveCommitment = {

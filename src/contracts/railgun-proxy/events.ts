@@ -16,6 +16,7 @@ export type CommitmentEvent = {
   treeNumber: number;
   startPosition: number;
   commitments: Commitment[];
+  blockNumber: number;
 };
 
 export type EventsListener = (event: CommitmentEvent) => Promise<void>;
@@ -104,6 +105,7 @@ export function formatGeneratedCommitmentBatchCommitments(
 export function formatGeneratedCommitmentBatchEvent(
   commitmentBatchArgs: GeneratedCommitmentBatchEventArgs,
   transactionHash: string,
+  blockNumber: number,
 ): CommitmentEvent {
   const { treeNumber, startPosition, commitments, encryptedRandom } = commitmentBatchArgs;
   if (
@@ -127,6 +129,7 @@ export function formatGeneratedCommitmentBatchEvent(
     treeNumber: treeNumber.toNumber(),
     startPosition: startPosition.toNumber(),
     commitments: formattedCommitments,
+    blockNumber,
   };
 }
 
@@ -165,7 +168,8 @@ export function formatCommitmentBatchCommitments(
 export function formatCommitmentBatchEvent(
   commitmentBatchArgs: CommitmentBatchEventArgs,
   transactionHash: string,
-) {
+  blockNumber: number,
+): CommitmentEvent {
   const { treeNumber, startPosition, hash, ciphertext } = commitmentBatchArgs;
   if (treeNumber == null || startPosition == null || hash == null || ciphertext == null) {
     const err = new Error('Invalid CommitmentBatchEventArgs');
@@ -179,6 +183,7 @@ export function formatCommitmentBatchEvent(
     treeNumber: treeNumber.toNumber(),
     startPosition: startPosition.toNumber(),
     commitments: formattedCommitments,
+    blockNumber,
   };
 }
 
@@ -189,11 +194,12 @@ export async function processGeneratedCommitmentEvents(
   const filtered = events.filter((event) => event.args);
   await Promise.all(
     filtered.map(async (event) => {
-      const { args, transactionHash } = event;
+      const { args, transactionHash, blockNumber } = event;
       return eventsListener(
         formatGeneratedCommitmentBatchEvent(
           args as unknown as GeneratedCommitmentBatchEventArgs,
           transactionHash,
+          blockNumber,
         ),
       );
     }),
@@ -203,13 +209,17 @@ export async function processGeneratedCommitmentEvents(
 export async function processCommitmentBatchEvents(
   eventsListener: EventsListener,
   events: Event[],
-) {
+): Promise<void> {
   const filtered = events.filter((event) => event.args);
   await Promise.all(
     filtered.map(async (event) => {
-      const { args, transactionHash } = event;
+      const { args, transactionHash, blockNumber } = event;
       return eventsListener(
-        formatCommitmentBatchEvent(args as unknown as CommitmentBatchEventArgs, transactionHash),
+        formatCommitmentBatchEvent(
+          args as unknown as CommitmentBatchEventArgs,
+          transactionHash,
+          blockNumber,
+        ),
       );
     }),
   );
@@ -218,6 +228,7 @@ export async function processCommitmentBatchEvents(
 export function formatNullifierEvents(
   nullifierEventArgs: NullifierEventArgs,
   transactionHash: string,
+  blockNumber: number,
 ): Nullifier[] {
   const nullifiers: Nullifier[] = [];
 
@@ -226,6 +237,7 @@ export function formatNullifierEvents(
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       nullifier: formatToByteLength(nullifier.toHexString(), ByteLength.UINT_256),
       treeNumber: nullifierEventArgs.treeNumber.toNumber(),
+      blockNumber,
     });
   });
 
@@ -240,9 +252,9 @@ export async function processNullifierEvents(
 
   const filtered = events.filter((event) => event.args);
   filtered.forEach((event) => {
-    const { args, transactionHash } = event;
+    const { args, transactionHash, blockNumber } = event;
     nullifiers.push(
-      ...formatNullifierEvents(args as unknown as NullifierEventArgs, transactionHash),
+      ...formatNullifierEvents(args as unknown as NullifierEventArgs, transactionHash, blockNumber),
     );
   });
 

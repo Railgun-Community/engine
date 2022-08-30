@@ -121,7 +121,11 @@ class RailgunProxyContract extends EventEmitter {
           treeNumber,
           nullifier,
         };
-        const formattedEventArgs = formatNullifierEvents(args, event.transactionHash);
+        const formattedEventArgs = formatNullifierEvents(
+          args,
+          event.transactionHash,
+          event.blockNumber,
+        );
         await eventsNullifierListener(formattedEventArgs);
         // @todo why is it emitted twice for a transaction of 1 input?
         this.emit(LeptonEvent.ContractNullifierReceived, formattedEventArgs);
@@ -143,7 +147,9 @@ class RailgunProxyContract extends EventEmitter {
           commitments,
           encryptedRandom,
         };
-        await eventsListener(formatGeneratedCommitmentBatchEvent(args, event.transactionHash));
+        await eventsListener(
+          formatGeneratedCommitmentBatchEvent(args, event.transactionHash, event.blockNumber),
+        );
       },
     );
 
@@ -162,7 +168,9 @@ class RailgunProxyContract extends EventEmitter {
           hash,
           ciphertext,
         };
-        await eventsListener(formatCommitmentBatchEvent(args, event.transactionHash));
+        await eventsListener(
+          formatCommitmentBatchEvent(args, event.transactionHash, event.blockNumber),
+        );
       },
     );
   }
