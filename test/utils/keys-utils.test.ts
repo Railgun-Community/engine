@@ -41,11 +41,14 @@ describe('Test keys-utils', () => {
   });
 
   it('Should create and verify EDDSA signatures', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     const message: bigint = poseidon([1n, 2n]);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const signature = signEDDSA(privateSpendingKey, message);
     assert.isTrue(verifyEDDSA(message, signature, publicSpendingKey));
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     const fakeMessage: bigint = poseidon([2n, 3n]);
     assert.isFalse(verifyEDDSA(fakeMessage, signature, publicSpendingKey));
     assert.isFalse(verifyEDDSA(message, signature, [0n, 1n]));

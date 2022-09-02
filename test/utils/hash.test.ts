@@ -124,6 +124,7 @@ describe('Utils/Hash', () => {
     ];
 
     vectors.forEach((vector) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       expect(poseidon(vector.preImage)).to.equal(vector.result);
     });
   });
