@@ -14,12 +14,14 @@ import { Wallet } from '../../../src/wallet/wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../helper';
 import { ERC20Deposit } from '../../../src/note/erc20-deposit';
 import { bytes } from '../../../src/utils';
-import { EventName, RailgunProxyContract } from '../../../src/contracts/railgun-proxy';
+import { RailgunProxyContract } from '../../../src/contracts/railgun-proxy';
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import { OutputType, TokenType } from '../../../src/models/formatted-types';
 import { ERC20WithdrawNote, Note } from '../../../src/note';
 import { ByteLength, nToHex } from '../../../src/utils/bytes';
 import { Memo } from '../../../src/note/memo';
+import { ERC20 } from '../../../src/typechain-types';
+import { Groth16 } from '../../../src/prover';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -50,7 +52,7 @@ describe('Relay Adapt/Index', function test() {
 
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
-    lepton.prover.setGroth16(groth16);
+    lepton.prover.setGroth16(groth16 as Groth16);
 
     wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
@@ -75,7 +77,7 @@ describe('Relay Adapt/Index', function test() {
       ethers.utils.defaultPath,
     );
     etherswallet = new ethers.Wallet(privateKey, provider);
-    snapshot = await provider.send('evm_snapshot', []);
+    snapshot = (await provider.send('evm_snapshot', [])) as number;
 
     testDepositBaseToken = async (
       value: bigint = 10000n,
@@ -114,7 +116,10 @@ describe('Relay Adapt/Index', function test() {
     const txResponse = await etherswallet.sendTransaction(depositTx);
 
     const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(EventName.GeneratedCommitmentBatch, resolve),
+      proxyContract.contract.once(
+        proxyContract.contract.filters.GeneratedCommitmentBatch(),
+        resolve,
+      ),
     );
 
     await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
@@ -258,7 +263,7 @@ describe('Relay Adapt/Index', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(EventName.CommitmentBatch, resolve),
+      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
     );
 
     const awaiterScan = awaitScan(wallet, chainID);
@@ -312,7 +317,11 @@ describe('Relay Adapt/Index', function test() {
     const txTransact = await etherswallet.sendTransaction(transact);
     await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
 
-    const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
+    const wethTokenContract = new ethers.Contract(
+      WETH_TOKEN_ADDRESS,
+      erc20abi,
+      etherswallet,
+    ) as ERC20;
 
     let relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
       relayAdaptContract.address,
@@ -367,7 +376,11 @@ describe('Relay Adapt/Index', function test() {
 
     // 3. Create the cross contract call.
     // Cross contract call: send 990n WETH tokens to Dead address.
-    const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
+    const wethTokenContract = new ethers.Contract(
+      WETH_TOKEN_ADDRESS,
+      erc20abi,
+      etherswallet,
+    ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 990n;
     const crossContractCalls: PopulatedTransaction[] = [
@@ -441,7 +454,7 @@ describe('Relay Adapt/Index', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(EventName.CommitmentBatch, resolve),
+      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
     );
 
     // 2 scans: Withdraw and Deposit
@@ -518,7 +531,11 @@ describe('Relay Adapt/Index', function test() {
 
     // 3. Create the cross contract call.
     // Cross contract call: send 1 WETH token to Dead address.
-    const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
+    const wethTokenContract = new ethers.Contract(
+      WETH_TOKEN_ADDRESS,
+      erc20abi,
+      etherswallet,
+    ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 20000n; // More than is available (after 0.25% withdraw fee).
     const crossContractCalls: PopulatedTransaction[] = [
@@ -587,7 +604,7 @@ describe('Relay Adapt/Index', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(EventName.CommitmentBatch, resolve),
+      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
     );
 
     // 2 scans: Withdraw and Deposit
@@ -666,7 +683,11 @@ describe('Relay Adapt/Index', function test() {
 
     // 3. Create the cross contract call.
     // Cross contract call: send 1 WETH token to Dead address.
-    const wethTokenContract = new ethers.Contract(WETH_TOKEN_ADDRESS, erc20abi, etherswallet);
+    const wethTokenContract = new ethers.Contract(
+      WETH_TOKEN_ADDRESS,
+      erc20abi,
+      etherswallet,
+    ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 20000n; // More than is available (after 0.25% withdraw fee).
     const crossContractCalls: PopulatedTransaction[] = [
@@ -738,7 +759,7 @@ describe('Relay Adapt/Index', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(EventName.CommitmentBatch, resolve),
+      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
     );
 
     // 2 scans: Withdraw and Deposit

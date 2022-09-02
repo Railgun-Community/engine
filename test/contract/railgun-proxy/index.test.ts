@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
-import { RailgunProxyContract, EventName } from '../../../src/contracts/railgun-proxy';
+import { RailgunProxyContract } from '../../../src/contracts/railgun-proxy';
 import { Note } from '../../../src/note';
 import { Lepton } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
@@ -373,7 +373,10 @@ describe('Railgun Proxy/Index', function () {
 
     // Wait for events to fire
     await new Promise((resolve) =>
-      proxyContract.contract.once(EventName.GeneratedCommitmentBatch, resolve),
+      proxyContract.contract.once(
+        proxyContract.contract.filters.GeneratedCommitmentBatch(),
+        resolve,
+      ),
     );
 
     await expect(awaiterDeposit).to.be.fulfilled;
@@ -433,7 +436,9 @@ describe('Railgun Proxy/Index', function () {
     await (await etherswallet.sendTransaction(transact)).wait();
 
     // Wait for events to fire
-    await new Promise((resolve) => proxyContract.contract.once(EventName.CommitmentBatch, resolve));
+    await new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
+    );
 
     // Check merkle root changed
     const merkleRootAfterTransact = await proxyContract.merkleRoot();
