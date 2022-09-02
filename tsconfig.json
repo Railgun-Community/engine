@@ -12,13 +12,15 @@
     "rootDir": "./src",
     "strict": true,
     "resolveJsonModule": true,
-    "sourceMap": true
+    "useUnknownInCatchVariables": false,
+    "sourceMap": true,
+    "typeRoots": ["src/types"]
   },
   "typeAcquisition": {
     "exclude": ["mocha"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
   ],
   "exclude": [
     "dist",

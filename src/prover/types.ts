@@ -1,3 +1,5 @@
+import { BigNumberish } from 'ethers';
+
 export type Artifacts = {
   zkey: ArrayLike<number>;
   wasm: ArrayLike<number> | undefined;
@@ -14,12 +16,12 @@ export const enum Circuits {
 }
 
 export type G1Point = {
-  x: bigint;
-  y: bigint;
+  x: BigNumberish;
+  y: BigNumberish;
 };
 export type G2Point = {
-  x: bigint[];
-  y: bigint[];
+  x: [BigNumberish, BigNumberish];
+  y: [BigNumberish, BigNumberish];
 };
 
 export type SnarkProof = {

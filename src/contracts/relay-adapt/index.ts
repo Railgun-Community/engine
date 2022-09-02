@@ -8,6 +8,7 @@ import {
   TokenType,
   TransactionReceiptLog,
 } from '../../models/formatted-types';
+import { RelayAdapt } from '../../typechain-types/contracts/adapt/relay/Relay.sol/RelayAdapt';
 import { random as bytesRandom } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
@@ -28,7 +29,7 @@ export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigNumber.from
 const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigNumber.from(2_420_000);
 
 class RelayAdaptContract {
-  private readonly contract: Contract;
+  private readonly contract: RelayAdapt;
 
   readonly address: string;
 
@@ -39,7 +40,7 @@ class RelayAdaptContract {
    */
   constructor(relayAdaptContractAddress: string, provider: Provider) {
     this.address = relayAdaptContractAddress;
-    this.contract = new Contract(relayAdaptContractAddress, ABIRelayAdapt, provider);
+    this.contract = new Contract(relayAdaptContractAddress, ABIRelayAdapt, provider) as RelayAdapt;
   }
 
   async populateDepositBaseToken(depositInput: DepositInput): Promise<PopulatedTransaction> {

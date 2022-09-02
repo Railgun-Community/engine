@@ -2,7 +2,11 @@ import type { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, Contract, Event, EventFilter, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
 import LeptonDebug from '../../debugger';
-import { DepositInput, SerializedTransaction } from '../../models/formatted-types';
+import {
+  CommitmentPreimage,
+  DepositInput,
+  SerializedTransaction,
+} from '../../models/formatted-types';
 import { LeptonEvent } from '../../models/event-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
@@ -23,6 +27,7 @@ import {
   processGeneratedCommitmentEvents,
   processNullifierEvents,
 } from './events';
+import { RailgunLogic } from '../../typechain-types';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;
@@ -35,7 +40,7 @@ export enum EventName {
 }
 
 class RailgunProxyContract extends EventEmitter {
-  readonly contract: Contract;
+  readonly contract: RailgunLogic;
 
   readonly address: string;
 
@@ -47,7 +52,7 @@ class RailgunProxyContract extends EventEmitter {
   constructor(proxyContractAddress: string, provider: Provider) {
     super();
     this.address = proxyContractAddress;
-    this.contract = new Contract(proxyContractAddress, ABIRailgunLogic, provider);
+    this.contract = new Contract(proxyContractAddress, ABIRailgunLogic, provider) as RailgunLogic;
   }
 
   /**
@@ -177,7 +182,7 @@ class RailgunProxyContract extends EventEmitter {
         throw err;
       });
       return events;
-    } catch (err: any) {
+    } catch (err) {
       if (retryCount < MAX_SCAN_RETRIES) {
         const retry = retryCount + 1;
         LeptonDebug.log(
@@ -262,7 +267,7 @@ class RailgunProxyContract extends EventEmitter {
     return this.contract.populateTransaction.transact(transactions);
   }
 
-  async hashCommitment(commitment: any): Promise<string> {
+  async hashCommitment(commitment: CommitmentPreimage): Promise<string> {
     const hash: BigNumber = await this.contract.hashCommitment(commitment);
     return hash.toHexString();
   }

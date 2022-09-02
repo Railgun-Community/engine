@@ -198,7 +198,17 @@ const vectors: {
   },
 ];
 
-const ciphertextVectors: { note: any; sharedKey: string; ciphertext: Ciphertext }[] = [
+const ciphertextVectors: {
+  note: {
+    pubkey: string;
+    random: string;
+    amount: string;
+    token: string;
+    recipientAddress?: string;
+  };
+  sharedKey: string;
+  ciphertext: Ciphertext;
+}[] = [
   {
     note: {
       pubkey: '6595f9a971c7471695948a445aedcbb9d624a325dbe68c228dea25eccf61919d',

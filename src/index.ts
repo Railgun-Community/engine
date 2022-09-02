@@ -197,7 +197,7 @@ class Lepton extends EventEmitter {
         this.emitScanUpdateEvent(chainID, endProgress * 0.8); // 9%
         await this.scanAllWallets(chainID);
       }
-    } catch (err: any) {
+    } catch (err) {
       LeptonDebug.error(err);
     }
   }
@@ -271,7 +271,7 @@ class Lepton extends EventEmitter {
       const scanCompleteData: MerkletreeHistoryScanEventData = { chainID };
       this.emit(LeptonEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       merkletree.isScanning = false;
-    } catch (err: any) {
+    } catch (err) {
       LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
       LeptonDebug.error(err);
       await this.scanAllWallets(chainID);

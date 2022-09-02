@@ -8,6 +8,7 @@ import { ByteLength, formatToByteLength, hexlify, hexToBigInt } from '../utils/b
 import {
   AdaptID,
   BoundParams,
+  Ciphertext,
   CommitmentPreimage,
   OutputCommitmentCiphertext,
   OutputType,
@@ -195,12 +196,15 @@ class Transaction {
           throw new Error('Shared symmetric key is not defined.');
         }
 
-        const ciphertext = note.encrypt(sharedKey);
+        const ciphertext: Ciphertext = note.encrypt(sharedKey);
         return {
           ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
             hexToBigInt(el as string),
-          ),
-          ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))),
+          ) as [bigint, bigint, bigint, bigint],
+          ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))) as [
+            bigint,
+            bigint,
+          ],
           memo: note.memoField.map((el) => hexToBigInt(el)),
         };
       },

@@ -1,8 +1,8 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
 import { hash } from '../../src/utils';
+import { poseidon } from '../../src/utils/hash';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -124,7 +124,7 @@ describe('Utils/Hash', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(hash.poseidon(vector.preImage)).to.equal(vector.result);
+      expect(poseidon(vector.preImage)).to.equal(vector.result);
     });
   });
 });

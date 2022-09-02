@@ -41,12 +41,12 @@ describe('Test keys-utils', () => {
   });
 
   it('Should create and verify EDDSA signatures', () => {
-    const message = poseidon([1n, 2n]);
+    const message: bigint = poseidon([1n, 2n]);
 
     const signature = signEDDSA(privateSpendingKey, message);
     assert.isTrue(verifyEDDSA(message, signature, publicSpendingKey));
 
-    const fakeMessage = poseidon([2n, 3n]);
+    const fakeMessage: bigint = poseidon([2n, 3n]);
     assert.isFalse(verifyEDDSA(fakeMessage, signature, publicSpendingKey));
     assert.isFalse(verifyEDDSA(message, signature, [0n, 1n]));
   });

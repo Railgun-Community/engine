@@ -12,8 +12,8 @@ describe('Solutions/Simple Solutions', () => {
     VALID_NULLIFIER_COUNTS.forEach((nullifierCount) => {
       // Test that nullifier X 2 artifacts.
       const publicInputs: PublicInputs = {
-        nullifiers: new Array(nullifierCount),
-        commitmentsOut: new Array(2),
+        nullifiers: new Array<bigint>(nullifierCount),
+        commitmentsOut: new Array<bigint>(2n),
         merkleRoot: 0n,
         boundParamsHash: 0n,
       };

@@ -226,7 +226,7 @@ class MerkleTree {
     const latestTree = await this.latestTree();
     for (let tree = 0; tree < latestTree + 1; tree += 1) {
       try {
-        txid = await this.db.get(this.getNullifierDBPath(tree, nullifier));
+        txid = (await this.db.get(this.getNullifierDBPath(tree, nullifier))) as string;
         break;
       } catch {
         txid = undefined;
@@ -270,7 +270,7 @@ class MerkleTree {
    */
   async getNode(tree: number, level: number, index: number): Promise<string> {
     try {
-      const node = await this.db.get(this.getNodeDBPath(tree, level, index));
+      const node = (await this.db.get(this.getNodeDBPath(tree, level, index))) as string;
       return node;
     } catch {
       return this.zeros[level];
@@ -467,7 +467,10 @@ class MerkleTree {
         if (!processedAny) {
           break;
         }
-      } catch (err: any) {
+      } catch (err) {
+        if (!(err instanceof Error)) {
+          return;
+        }
         LeptonDebug.error(err);
         if (err.message === INVALID_MERKLE_ROOT_ERROR_MESSAGE) {
           switch (processingGroupSize) {

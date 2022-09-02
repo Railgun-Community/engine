@@ -47,10 +47,14 @@
     "es/no-optional-chaining": "error",
     "@typescript-eslint/switch-exhaustiveness-check": "error",
     "@typescript-eslint/no-inferrable-types": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/ban-ts-comment": "warn",
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-empty-function": "off",
-    "default-case": "off"
+    "default-case": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off"
   },
   "ignorePatterns": [
     "dist/*"

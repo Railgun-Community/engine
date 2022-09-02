@@ -49,7 +49,7 @@ async function getEphemeralKeys(
   senderVPK: Uint8Array,
   recipientVPK: Uint8Array,
   random: string,
-): Promise<Uint8Array[]> {
+): Promise<[Uint8Array, Uint8Array]> {
   const r = adjustRandom(random);
   const S = curve25519.Point.fromHex(bytesToHex(senderVPK));
   const R = curve25519.Point.fromHex(bytesToHex(recipientVPK));
@@ -73,7 +73,7 @@ async function getSharedSymmetricKey(
     const pk = curve25519.Point.fromHex(bytesToHex(publicKey));
     const { scalar } = await curve25519.utils.getExtendedPublicKey(privateKey);
     return pk.multiply(scalar).toRawBytes();
-  } catch (err: any) {
+  } catch (err) {
     return undefined;
   }
 }

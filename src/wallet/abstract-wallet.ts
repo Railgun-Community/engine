@@ -221,9 +221,10 @@ abstract class AbstractWallet extends EventEmitter {
 
     try {
       // Try fetching from database
-      walletDetails = msgpack.decode(
-        arrayify(await this.db.get(this.getWalletDetailsPath(chainID))),
-      );
+      const walletDetailsEncoded = (await this.db.get(
+        this.getWalletDetailsPath(chainID),
+      )) as BytesData;
+      walletDetails = msgpack.decode(arrayify(walletDetailsEncoded)) as WalletDetails;
     } catch {
       // If details don't exist yet, return defaults
       walletDetails = {
@@ -293,7 +294,7 @@ abstract class AbstractWallet extends EventEmitter {
       };
       try {
         noteReceive = Note.deserialize(serialized, viewingPrivateKey);
-      } catch (e: any) {
+      } catch (err) {
         // Expect error if leaf not addressed to us.
       }
     }
@@ -379,7 +380,7 @@ abstract class AbstractWallet extends EventEmitter {
       // Stream list of keys and resolve on end
       this.db
         .streamNamespace(namespace)
-        .on('data', (key) => {
+        .on('data', (key: string) => {
           keyList.push(key);
         })
         .on('end', () => {
@@ -405,7 +406,10 @@ abstract class AbstractWallet extends EventEmitter {
     return Promise.all(
       keySplits.map(async (keySplit) => {
         // Decode UTXO
-        const txo: StoredReceiveCommitment = msgpack.decode(arrayify(await this.db.get(keySplit)));
+        const data = (await this.db.get(keySplit)) as BytesData;
+        const txo: StoredReceiveCommitment = msgpack.decode(
+          arrayify(data),
+        ) as StoredReceiveCommitment;
 
         // If this UTXO hasn't already been marked as spent, check if it has
         if (!txo.spendtxid) {
@@ -458,9 +462,8 @@ abstract class AbstractWallet extends EventEmitter {
     // Calculate spent commitments
     return Promise.all(
       keySplits.map(async (keySplit) => {
-        const spentCommitment: StoredSpendCommitment = msgpack.decode(
-          arrayify(await this.db.get(keySplit)),
-        );
+        const data = (await this.db.get(keySplit)) as BytesData;
+        const spentCommitment = msgpack.decode(arrayify(data)) as StoredSpendCommitment;
 
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
@@ -731,7 +734,7 @@ abstract class AbstractWallet extends EventEmitter {
 
         // Create sparse array of tree
         const treeHeight = await this.merkletree[chainID].getTreeLength(tree);
-        const fetcher: Promise<Commitment | undefined>[] = new Array(treeHeight);
+        const fetcher = new Array<Promise<Commitment | undefined>>(treeHeight);
 
         // Fetch each leaf we need to scan
         for (let index = scannedHeight; index < treeHeight; index += 1) {
@@ -759,9 +762,11 @@ abstract class AbstractWallet extends EventEmitter {
       // Emit scanned event for this chain
       LeptonDebug.log(`wallet: scanned ${chainID}`);
       this.emit(LeptonEvent.WalletScanComplete, { chainID } as ScannedEventData);
-    } catch (err: any) {
-      LeptonDebug.log(`wallet.scan error: ${err.message}`);
-      LeptonDebug.error(err);
+    } catch (err) {
+      if (err instanceof Error) {
+        LeptonDebug.log(`wallet.scan error: ${err.message}`);
+        LeptonDebug.error(err);
+      }
     }
   }
 
@@ -828,7 +833,7 @@ abstract class AbstractWallet extends EventEmitter {
   } {
     try {
       const { vpriv: viewingPrivateKey, spub: spendingPublicKeyString }: ShareableViewingKeyData =
-        msgpack.decode(Buffer.from(shareableViewingKey, 'hex'));
+        msgpack.decode(Buffer.from(shareableViewingKey, 'hex')) as ShareableViewingKeyData;
 
       const spendingPublicKey = unpackPoint(Buffer.from(spendingPublicKeyString, 'hex'));
       return { viewingPrivateKey, spendingPublicKey };

@@ -110,7 +110,7 @@ class Database {
    */
   async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData> {
     // Read from database
-    const encrypted: Ciphertext = await this.get(path, 'json');
+    const encrypted: Ciphertext = (await this.get(path, 'json')) as Ciphertext;
 
     // Decrypt and return
     return bytes.combine(encryption.aes.gcm.decrypt(encrypted, encryptionKey));

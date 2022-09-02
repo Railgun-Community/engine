@@ -262,7 +262,9 @@ class TransactionBatch {
       ),
     );
 
-    const individualProgressAmounts: number[] = new Array(spendingSolutionGroups.length).fill(0);
+    const individualProgressAmounts: number[] = new Array<number>(
+      spendingSolutionGroups.length,
+    ).fill(0);
     const updateProgressCallback = () => {
       const averageProgress = averageNumber(individualProgressAmounts);
       progressCallback(averageProgress);

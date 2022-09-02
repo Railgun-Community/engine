@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* globals describe it beforeEach */
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai, { assert } from 'chai';
@@ -9,10 +8,15 @@ import { groth16 } from 'snarkjs';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
-import { NoteExtraData, OutputType, TokenType } from '../../src/models/formatted-types';
+import {
+  BoundParams,
+  NoteExtraData,
+  OutputType,
+  TokenType,
+} from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Memo } from '../../src/note/memo';
-import { Prover } from '../../src/prover';
+import { Groth16, Prover } from '../../src/prover';
 import { hashBoundParams } from '../../src/transaction/transaction';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { bytes } from '../../src/utils';
@@ -103,7 +107,7 @@ describe('Transaction/ERC20', function () {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
-    prover.setGroth16(groth16);
+    prover.setGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     const vpk = wallet.getViewingKeyPair().privateKey;
@@ -121,7 +125,7 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should hash bound parameters', async () => {
-    const params = {
+    const params: BoundParams = {
       treeNumber: BigInt(0),
       withdraw: BigInt(0),
       adaptContract: formatToByteLength('00', 20, true),
@@ -188,7 +192,7 @@ describe('Transaction/ERC20', function () {
     const { inputs, publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
     const { signature } = inputs;
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
-    const msg = poseidon(Object.values(publicInputs).flatMap((x) => x));
+    const msg: bigint = poseidon(Object.values(publicInputs).flatMap((x) => x));
     const sig: Signature = { R8: [signature[0], signature[1]], S: signature[2] };
 
     assert.isTrue(verifyEDDSA(msg, sig, pubkey));

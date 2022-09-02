@@ -1,4 +1,5 @@
 import BN from 'bn.js';
+import { BigNumberish } from 'ethers';
 import { SnarkProof } from '../prover/types';
 
 export type BytesData = ArrayLike<number> | string | BN;
@@ -24,14 +25,14 @@ export type CTRCiphertext = {
 };
 
 export type OutputCommitmentCiphertext = {
-  ciphertext: bigint[]; // uint256[4]
-  ephemeralKeys: bigint[]; // uint256[2]
-  memo: bigint[]; // bytes32[]
+  ciphertext: [BigNumberish, BigNumberish, BigNumberish, BigNumberish]; // uint256[4]
+  ephemeralKeys: [BigNumberish, BigNumberish]; // uint256[2]
+  memo: BigNumberish[]; // bytes32[]
 };
 
 export type BoundParams = {
-  treeNumber: bigint;
-  withdraw: bigint;
+  treeNumber: BigNumberish;
+  withdraw: BigNumberish;
   adaptContract: string;
   adaptParams: string;
   commitmentCiphertext: OutputCommitmentCiphertext[];
@@ -69,14 +70,14 @@ export type NoteExtraData = {
 export type CommitmentPreimage = {
   npk: string;
   token: TokenData;
-  value: bigint;
+  value: BigNumberish;
 };
 
 export type SerializedTransaction = {
   proof: SnarkProof;
-  merkleRoot: bigint;
-  nullifiers: bigint[];
-  commitments: bigint[];
+  merkleRoot: BigNumberish;
+  nullifiers: BigNumberish[];
+  commitments: BigNumberish[];
   boundParams: BoundParams;
   withdrawPreimage: CommitmentPreimage;
   overrideOutput: string;

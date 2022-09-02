@@ -17,11 +17,18 @@ import { ERC20Deposit } from '../../../src/note/erc20-deposit';
 import { CommitmentEvent } from '../../../src/contracts/railgun-proxy/events';
 import { bytes } from '../../../src/utils';
 import { ERC20WithdrawNote } from '../../../src/note/erc20-withdraw';
-import { Nullifier, OutputType, TokenType } from '../../../src/models/formatted-types';
+import {
+  EncryptedCommitment,
+  Nullifier,
+  OutputType,
+  TokenType,
+} from '../../../src/models/formatted-types';
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
-import { LeptonEvent } from '../../../src/models/event-types';
+import { LeptonEvent, MerkletreeHistoryScanEventData } from '../../../src/models/event-types';
 import { Memo } from '../../../src/note/memo';
 import { ViewOnlyWallet } from '../../../src/wallet/view-only-wallet';
+import { Groth16 } from '../../../src/prover';
+import { ERC20 } from '../../../src/typechain-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -31,7 +38,7 @@ let chainID: number;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
-let token: ethers.Contract;
+let token: ERC20;
 let proxyContract: RailgunProxyContract;
 let wallet: Wallet;
 let wallet2: Wallet;
@@ -52,7 +59,7 @@ describe('Railgun Proxy/Index', function () {
 
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter, undefined);
-    lepton.prover.setGroth16(groth16);
+    lepton.prover.setGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
@@ -73,9 +80,9 @@ describe('Railgun Proxy/Index', function () {
       ethers.utils.defaultPath,
     );
     etherswallet = new ethers.Wallet(privateKey, provider);
-    snapshot = await provider.send('evm_snapshot', []);
+    snapshot = (await provider.send('evm_snapshot', [])) as number;
 
-    token = new ethers.Contract(TOKEN_ADDRESS, erc20abi, etherswallet);
+    token = new ethers.Contract(TOKEN_ADDRESS, erc20abi, etherswallet) as ERC20;
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(proxyContract.address, balance);
 
@@ -182,7 +189,7 @@ describe('Railgun Proxy/Index', function () {
       return;
     }
 
-    let resultEvent: CommitmentEvent | undefined;
+    let resultEvent!: CommitmentEvent | undefined;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
       resultEvent = commitmentEvent;
     };
@@ -207,11 +214,8 @@ describe('Railgun Proxy/Index', function () {
 
     // Listeners should have been updated automatically by contract events.
 
-    // @ts-ignore
     expect(resultEvent).to.be.an('object', 'No event in history for deposit');
-    // @ts-ignore
-    expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
-    // @ts-ignore
+    expect((resultEvent as CommitmentEvent).txid).to.equal(hexlify(txResponse.transactionHash));
     expect(resultNullifiers.length).to.equal(0);
 
     resultEvent = undefined;
@@ -229,11 +233,10 @@ describe('Railgun Proxy/Index', function () {
 
     // Listeners should have been updated by historical event scan.
 
-    // @ts-ignore
     expect(resultEvent).to.be.an('object', 'No event in history for deposit');
-    // @ts-ignore
-    expect(resultEvent.txid).to.equal(hexlify(txResponse.transactionHash));
-    // @ts-ignore
+    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
+      hexlify(txResponse.transactionHash),
+    );
     expect(resultNullifiers.length).to.equal(0);
 
     startingBlock = await provider.getBlockNumber();
@@ -273,9 +276,9 @@ describe('Railgun Proxy/Index', function () {
 
     // Event should have been scanned by automatic contract events:
 
-    // @ts-ignore
-    expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
-    // @ts-ignore
+    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
+      hexlify(txResponseTransact.transactionHash),
+    );
     expect(resultNullifiers[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
     expect(resultNullifiers2[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
 
@@ -294,9 +297,9 @@ describe('Railgun Proxy/Index', function () {
 
     // Event should have been scanned by historical event scan.
 
-    // @ts-ignore
-    expect(resultEvent.txid).to.equal(hexlify(txResponseTransact.transactionHash));
-    // @ts-ignore
+    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
+      hexlify(txResponseTransact.transactionHash),
+    );
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
@@ -312,7 +315,7 @@ describe('Railgun Proxy/Index', function () {
 
     expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChainID;
-    const historyScanListener = (data) => {
+    const historyScanListener = (data: MerkletreeHistoryScanEventData) => {
       historyScanCompletedForChainID = data.chainID;
     };
     lepton.on(LeptonEvent.MerkletreeHistoryScanComplete, historyScanListener);
@@ -345,7 +348,7 @@ describe('Railgun Proxy/Index', function () {
       return;
     }
 
-    let result: CommitmentEvent;
+    let result!: CommitmentEvent;
     proxyContract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
@@ -376,11 +379,8 @@ describe('Railgun Proxy/Index', function () {
     await expect(awaiterDeposit).to.be.fulfilled;
 
     // Check result
-    // @ts-ignore
     expect(result.treeNumber).to.equal(0);
-    // @ts-ignore
     expect(result.startPosition).to.equal(0);
-    // @ts-ignore
     expect(result.commitments.length).to.equal(1);
 
     const merkleRootAfterDeposit = await proxyContract.merkleRoot();
@@ -398,7 +398,7 @@ describe('Railgun Proxy/Index', function () {
     await testDeposit(1000n);
     const merkleRootAfterDeposit = await proxyContract.merkleRoot();
 
-    let result: CommitmentEvent;
+    let result!: CommitmentEvent;
     proxyContract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
@@ -440,20 +440,14 @@ describe('Railgun Proxy/Index', function () {
     expect(merkleRootAfterTransact).to.not.equal(merkleRootAfterDeposit);
 
     // Check result
-    // @ts-ignore
     expect(result.treeNumber).to.equal(0);
-    // @ts-ignore
     expect(result.startPosition).to.equal(1);
-    // @ts-ignore
     expect(result.commitments.length).to.equal(2);
-    // @ts-ignore
-    expect(result.commitments[0].ciphertext.memo.length).to.equal(1);
-    // @ts-ignore
-    expect(result.commitments[1].ciphertext.memo.length).to.equal(1);
+    expect((result.commitments as EncryptedCommitment[])[0].ciphertext.memo.length).to.equal(1);
+    expect((result.commitments as EncryptedCommitment[])[1].ciphertext.memo.length).to.equal(1);
     expect(
       Memo.decryptNoteExtraData(
-        // @ts-ignore
-        result.commitments[0].ciphertext.memo,
+        (result.commitments as EncryptedCommitment[])[0].ciphertext.memo,
         wallet.getViewingKeyPair().privateKey,
       ),
     ).to.deep.equal({
@@ -461,8 +455,7 @@ describe('Railgun Proxy/Index', function () {
     });
     expect(
       Memo.decryptNoteExtraData(
-        // @ts-ignore
-        result.commitments[1].ciphertext.memo,
+        (result.commitments as EncryptedCommitment[])[1].ciphertext.memo,
         wallet.getViewingKeyPair().privateKey,
       ),
     ).to.deep.equal({

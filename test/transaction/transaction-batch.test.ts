@@ -10,7 +10,7 @@ import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
 import { Commitment, TokenType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
-import { Prover } from '../../src/prover';
+import { Groth16, Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { bytes } from '../../src/utils';
 import { Wallet } from '../../src/wallet/wallet';
@@ -66,7 +66,7 @@ describe('Transaction/Transaction Batch', function run() {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
-    prover.setGroth16(groth16);
+    prover.setGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     makeNote = (value: bigint = 65n * DECIMALS_18): Note =>

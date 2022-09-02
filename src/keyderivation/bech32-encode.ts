@@ -93,8 +93,8 @@ function decode(address: string): AddressData {
     };
 
     return result;
-  } catch (err: any) {
-    if (err.message && err.message.includes('Invalid checksum')) {
+  } catch (err) {
+    if (err instanceof Error && err.message && err.message.includes('Invalid checksum')) {
       throw new Error('Invalid checksum');
     }
     throw err;

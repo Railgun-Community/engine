@@ -1,4 +1,3 @@
-// @ts-ignore
 import { poseidon } from 'circomlibjs';
 import { utils as ethersutils } from 'ethers';
 import { BytesData } from '../models/formatted-types';

@@ -3,6 +3,7 @@ import { DepositInput, SerializedTransaction } from '../../models/formatted-type
 import { ERC20Deposit } from '../../note';
 import { formatToByteLength, ByteLength } from '../../utils/bytes';
 import { Wallet } from '../../wallet/wallet';
+import { RelayAdapt } from '../../typechain-types/contracts/adapt/relay/Relay.sol/RelayAdapt';
 
 class RelayAdaptHelper {
   static generateRelayDepositInputs(wallet: Wallet, random: string, depositTokens: string[]) {
@@ -99,11 +100,10 @@ class RelayAdaptHelper {
    * @param {object[]} calls - calls list
    * @returns {object[]} formatted calls
    */
-  static formatCalls(calls: PopulatedTransaction[]): PopulatedTransaction[] {
+  static formatCalls(calls: PopulatedTransaction[]): RelayAdapt.CallStruct[] {
     return calls.map((call) => ({
-      from: call.from,
-      to: call.to,
-      data: call.data,
+      to: call.to || '',
+      data: call.data || '',
       value: call.value || BigNumber.from(0),
     }));
   }

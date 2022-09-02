@@ -6,9 +6,9 @@ import { ERC20Deposit } from '../../src/note';
 import { formatToByteLength, hexlify, hexToBigInt, random } from '../../src/utils/bytes';
 import { ZERO_ADDRESS } from '../../src/utils/constants';
 import { getRandomScalar } from '../../src/utils/keys-utils';
-import { poseidon } from '../../src/utils/hash';
 import { config } from '../config.test';
 import { TokenType } from '../../src/models/formatted-types';
+import { poseidon } from '../../src/utils/hash';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -28,7 +28,7 @@ describe('Note/ERC20/Deposit', () => {
     expect(tokenAddress).to.equal(TOKEN);
     expect(tokenType).to.equal(TokenType.ERC20);
     expect(tokenSubID).to.equal(ZERO_ADDRESS);
-    const npk = poseidon([mpk, hexToBigInt(rand)]);
+    const npk: bigint = poseidon([mpk, hexToBigInt(rand)]);
     expect(deposit.notePublicKey).to.equal(npk);
     expect(deposit.valueHex).length(32);
   });
