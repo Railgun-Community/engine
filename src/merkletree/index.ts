@@ -490,7 +490,7 @@ class MerkleTree {
               return;
           }
         } else {
-          // Unkonwn error.
+          // Unknown error.
           break;
         }
       }

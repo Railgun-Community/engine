@@ -1,5 +1,5 @@
 import type { Provider } from '@ethersproject/abstract-provider';
-import { BigNumber, Contract, Event, EventFilter, PopulatedTransaction } from 'ethers';
+import { BigNumber, Contract, Event, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
 import LeptonDebug from '../../debugger';
 import {
@@ -28,16 +28,11 @@ import {
   processNullifierEvents,
 } from './events';
 import { RailgunLogic } from '../../typechain-types';
+import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;
 const EVENTS_SCAN_TIMEOUT = 2500;
-
-export enum EventName {
-  GeneratedCommitmentBatch = 'GeneratedCommitmentBatch',
-  CommitmentBatch = 'CommitmentBatch',
-  Nullifiers = 'Nullifiers',
-}
 
 class RailgunProxyContract extends EventEmitter {
   readonly contract: RailgunLogic;
@@ -108,7 +103,7 @@ class RailgunProxyContract extends EventEmitter {
   treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
     // listen for nullifiers first so balances aren't "double" before they process
     this.contract.on(
-      EventName.Nullifiers,
+      this.contract.filters['Nullifiers(uint256,uint256[])'](),
       async (treeNumber: BigNumber, nullifier: BigNumber[], event: Event) => {
         const args: NullifierEventArgs = {
           treeNumber,
@@ -126,7 +121,7 @@ class RailgunProxyContract extends EventEmitter {
     );
 
     this.contract.on(
-      EventName.GeneratedCommitmentBatch,
+      this.contract.filters.GeneratedCommitmentBatch(),
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
@@ -147,7 +142,7 @@ class RailgunProxyContract extends EventEmitter {
     );
 
     this.contract.on(
-      EventName.CommitmentBatch,
+      this.contract.filters.CommitmentBatch(),
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
@@ -168,12 +163,12 @@ class RailgunProxyContract extends EventEmitter {
     );
   }
 
-  private async scanEvents(
-    eventFilter: EventFilter,
+  private async scanEvents<EventType extends TypedEvent>(
+    eventFilter: TypedEventFilter<EventType>,
     startBlock: number,
     endBlock: number,
     retryCount = 0,
-  ): Promise<Event[]> {
+  ): Promise<EventType[]> {
     try {
       const events = await promiseTimeout(
         this.contract.queryFilter(eventFilter, startBlock, endBlock),
@@ -183,6 +178,9 @@ class RailgunProxyContract extends EventEmitter {
       });
       return events;
     } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
       if (retryCount < MAX_SCAN_RETRIES) {
         const retry = retryCount + 1;
         LeptonDebug.log(

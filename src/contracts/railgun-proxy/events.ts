@@ -1,15 +1,19 @@
-import type { BigNumber, Event } from 'ethers';
+import type { BigNumber, BigNumberish } from 'ethers';
 import {
   BytesData,
   Commitment,
   EncryptedCommitment,
-  EncryptedData,
   GeneratedCommitment,
   Nullifier,
 } from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 import LeptonDebug from '../../debugger';
+import {
+  CommitmentBatchEvent,
+  GeneratedCommitmentBatchEvent,
+  NullifiersEvent,
+} from '../../typechain-types/contracts/logic/RailgunLogic';
 
 export type CommitmentEvent = {
   txid: BytesData;
@@ -29,9 +33,9 @@ export type CommitmentCiphertextArgs = {
 };
 
 export type CommitmentTokenData = {
-  tokenType: BigNumber;
+  tokenType: BigNumberish;
   tokenAddress: string;
-  tokenSubID: BigNumber;
+  tokenSubID: BigNumberish;
 };
 
 export type EncryptedDataArgs = [BigNumber, BigNumber];
@@ -82,7 +86,7 @@ export function formatGeneratedCommitmentBatchCommitments(
       [
         formatToByteLength(encryptedRandom[0].toHexString(), ByteLength.UINT_256),
         formatToByteLength(encryptedRandom[1].toHexString(), ByteLength.UINT_128),
-      ] as EncryptedData,
+      ] as [string, string],
   );
   const generatedCommitments = preImages.map((item, index) => {
     // TODO: This event is formatted exactly like a withdraw note, but
@@ -189,18 +193,14 @@ export function formatCommitmentBatchEvent(
 
 export async function processGeneratedCommitmentEvents(
   eventsListener: EventsListener,
-  events: Event[],
+  events: GeneratedCommitmentBatchEvent[],
 ) {
   const filtered = events.filter((event) => event.args);
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
       return eventsListener(
-        formatGeneratedCommitmentBatchEvent(
-          args as unknown as GeneratedCommitmentBatchEventArgs,
-          transactionHash,
-          blockNumber,
-        ),
+        formatGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
       );
     }),
   );
@@ -208,19 +208,13 @@ export async function processGeneratedCommitmentEvents(
 
 export async function processCommitmentBatchEvents(
   eventsListener: EventsListener,
-  events: Event[],
+  events: CommitmentBatchEvent[],
 ): Promise<void> {
   const filtered = events.filter((event) => event.args);
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
-      return eventsListener(
-        formatCommitmentBatchEvent(
-          args as unknown as CommitmentBatchEventArgs,
-          transactionHash,
-          blockNumber,
-        ),
-      );
+      return eventsListener(formatCommitmentBatchEvent(args, transactionHash, blockNumber));
     }),
   );
 }
@@ -246,16 +240,14 @@ export function formatNullifierEvents(
 
 export async function processNullifierEvents(
   eventsNullifierListener: EventsNullifierListener,
-  events: Event[],
+  events: NullifiersEvent[],
 ) {
   const nullifiers: Nullifier[] = [];
 
   const filtered = events.filter((event) => event.args);
   filtered.forEach((event) => {
     const { args, transactionHash, blockNumber } = event;
-    nullifiers.push(
-      ...formatNullifierEvents(args as unknown as NullifierEventArgs, transactionHash, blockNumber),
-    );
+    nullifiers.push(...formatNullifierEvents(args, transactionHash, blockNumber));
   });
 
   await eventsNullifierListener(nullifiers);
