@@ -225,6 +225,8 @@ class RelayAdaptContract {
     for (const log of receiptLogs) {
       if (log.topics[0] === topic) {
         const parsed = iface.parseLog(log);
+        // TODO: Add these types, potentially with workaround here:
+        // https://github.com/dethcrypto/TypeChain/issues/736
         results = parsed.args.callResults.map((callResult: CallResult) => {
           if (!callResult.success) {
             return {
