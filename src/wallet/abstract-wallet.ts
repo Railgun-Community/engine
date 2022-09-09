@@ -264,7 +264,7 @@ abstract class AbstractWallet extends EventEmitter {
     let noteReceive: Note | undefined;
     let noteSpend: Note | undefined;
 
-    LeptonDebug.log(`Trying to decrypt commitment. Current position ${position}/${totalLeaves}.`);
+    LeptonDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
 
     const walletAddress = this.getAddress(0);
 
@@ -750,14 +750,9 @@ abstract class AbstractWallet extends EventEmitter {
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] = leaves.length;
 
-        if (leaves.length % 100 === 0) {
-          // Save treeScannedHeight every 100 leaves scanned.
-          await this.db.put(this.getWalletDetailsPath(chainID), msgpack.encode(walletDetails));
-        }
+        // Write new wallet details to db
+        await this.db.put(this.getWalletDetailsPath(chainID), msgpack.encode(walletDetails));
       }
-
-      // Write wallet details to db
-      await this.db.put(this.getWalletDetailsPath(chainID), msgpack.encode(walletDetails));
 
       // Emit scanned event for this chain
       LeptonDebug.log(`wallet: scanned ${chainID}`);

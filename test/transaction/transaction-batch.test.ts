@@ -57,7 +57,7 @@ const depositLeaf = (txid: string): Commitment => ({
 
 const depositValue = 9975062344139650872817n;
 
-describe('Transaction/Transaction Batch', function run() {
+describe.only('Transaction/Transaction Batch', function run() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
@@ -81,6 +81,7 @@ describe('Transaction/Transaction Batch', function run() {
       depositLeaf('f'),
     ]);
     await wallet.scanBalances(chainID);
+    expect((await wallet.getWalletDetails(chainID)).treeScannedHeights).to.deep.equal([1, 5]);
   });
 
   beforeEach(async () => {

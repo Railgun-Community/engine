@@ -101,7 +101,7 @@ describe('Lepton', function () {
     expect(lepton.wallets[wallet.id].id).to.equal(wallet.id);
   });
 
-  it('[HH] Should show balance after deposit and rescan', async function run() {
+  it.only('[HH] Should show balance after deposit and rescan', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
