@@ -2,11 +2,18 @@ import { Signature } from 'circomlibjs';
 import { AddressData, decode, encode } from '../keyderivation/bech32-encode';
 import { BigIntish, Ciphertext, NoteSerialized, TokenType } from '../models/formatted-types';
 import { PublicInputs } from '../prover/types';
-import { bytes, encryption, keysUtils } from '../utils';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { encryption, keysUtils } from '../utils';
+import {
+  ByteLength,
+  formatToByteLength,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+  randomHex,
+} from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { poseidon } from '../utils/hash';
-import { unblindedEphemeralKey } from '../utils/keys-utils';
+import { invertKeySenderBlinding, unblindedEphemeralKey } from '../utils/keys-utils';
 
 export class Note {
   // address data of recipient
@@ -98,6 +105,26 @@ export class Note {
     return encryption.aes.gcm.encrypt([masterPublicKey, token, `${random}${value}`], sharedKey);
   }
 
+  private static unblindReceiverViewingPublicKey(
+    random: string,
+    ephemeralKeySender: Uint8Array | undefined,
+    senderBlindingKey: string | undefined,
+  ): Uint8Array {
+    if (ephemeralKeySender) {
+      const unblinded = unblindedEphemeralKey(ephemeralKeySender, random);
+      const inverted = invertKeySenderBlinding(unblinded, senderBlindingKey);
+      if (inverted) {
+        // Has senderBlindingKey.
+        return inverted;
+      }
+      if (unblinded) {
+        // No senderBlindingKey.
+        return unblinded;
+      }
+    }
+    return new Uint8Array(); // dummy
+  }
+
   /**
    * AES-256-GCM decrypts note data
    * @param encryptedNote - encrypted note data
@@ -107,7 +134,8 @@ export class Note {
     encryptedNote: Ciphertext,
     sharedKey: Uint8Array,
     memoField: string[],
-    ephemeralKeyReceiver?: Uint8Array,
+    ephemeralKeySender: Uint8Array | undefined,
+    senderBlindingKey: string | undefined,
   ): Note {
     // Decrypt values
     const decryptedValues = encryption.aes.gcm
@@ -118,9 +146,11 @@ export class Note {
 
     const addressData = {
       masterPublicKey: hexToBigInt(decryptedValues[0]),
-      viewingPublicKey: ephemeralKeyReceiver
-        ? unblindedEphemeralKey(ephemeralKeyReceiver, random)
-        : new Uint8Array(), // dummy
+      viewingPublicKey: this.unblindReceiverViewingPublicKey(
+        random,
+        ephemeralKeySender,
+        senderBlindingKey,
+      ),
     };
 
     const value = hexToBigInt(decryptedValues[2].substring(32, 64));
@@ -228,6 +258,6 @@ export class Note {
   }
 
   newProcessingNoteWithValue(value: bigint): Note {
-    return new Note(this.addressData, bytes.random(16), value, this.token, []);
+    return new Note(this.addressData, randomHex(16), value, this.token, []);
   }
 }

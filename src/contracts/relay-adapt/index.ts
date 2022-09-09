@@ -9,7 +9,7 @@ import {
   TransactionReceiptLog,
 } from '../../models/formatted-types';
 import { RelayAdapt } from '../../typechain-types/contracts/adapt/relay/Relay.sol/RelayAdapt';
-import { random as bytesRandom } from '../../utils/bytes';
+import { randomHex as bytesRandom } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 

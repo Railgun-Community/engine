@@ -9,7 +9,7 @@ export type TXO = {
   note: Note;
 };
 
-export type SpentCommitment = {
+export type SentCommitment = {
   tree: number;
   position: number;
   txid: string;

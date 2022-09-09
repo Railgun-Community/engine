@@ -2,9 +2,22 @@
 import BN from 'bn.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
-import { bytes } from '../../src/utils';
-import { ByteLength } from '../../src/utils/bytes';
+import {
+  arrayify,
+  ByteLength,
+  checkBytes,
+  chunk,
+  combine,
+  formatToByteLength,
+  fromUTF8String,
+  hexlify,
+  numberify,
+  padToLength,
+  randomHex,
+  reverseBytes,
+  toUTF8String,
+  trim,
+} from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -112,98 +125,98 @@ const stringVectors = [
 describe('Utils/Bytes', () => {
   it('Should return random values', () => {
     // Check length of random values is what we expect
-    expect(bytes.random().length).to.equal(64);
-    expect(bytes.random(1).length).to.equal(2);
-    expect(bytes.random(128).length).to.equal(256);
+    expect(randomHex().length).to.equal(64);
+    expect(randomHex(1).length).to.equal(2);
+    expect(randomHex(128).length).to.equal(256);
   });
 
   it('Should hexlify', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
-      expect(bytes.hexlify(`0x${vector.hex}`)).to.equal(vector.hex);
+      expect(hexlify(`0x${vector.hex}`)).to.equal(vector.hex);
 
       // Test hex string to hex string
-      expect(bytes.hexlify(vector.hex)).to.equal(vector.hex);
+      expect(hexlify(vector.hex)).to.equal(vector.hex);
 
       // Test hex string to hex string prefixed
-      expect(bytes.hexlify(vector.hex, true)).to.equal(`0x${vector.hex}`);
+      expect(hexlify(vector.hex, true)).to.equal(`0x${vector.hex}`);
 
       // Test bytes array to hex string
-      expect(bytes.hexlify(vector.array)).to.equal(vector.hex);
+      expect(hexlify(vector.array)).to.equal(vector.hex);
 
       // Test bytes array to hex string prefixed
-      expect(bytes.hexlify(vector.array, true)).to.equal(`0x${vector.hex}`);
+      expect(hexlify(vector.array, true)).to.equal(`0x${vector.hex}`);
 
       // Test number to hex string
-      expect(bytes.hexlify(vector.number)).to.equal(vector.hex);
+      expect(hexlify(vector.number)).to.equal(vector.hex);
 
       // Test number to hex string prefixed
-      expect(bytes.hexlify(vector.number, true)).to.equal(`0x${vector.hex}`);
+      expect(hexlify(vector.number, true)).to.equal(`0x${vector.hex}`);
     });
   });
 
   it('Should arrayify', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
-      expect(bytes.arrayify(`0x${vector.hex}`)).to.deep.equal(vector.array);
+      expect(arrayify(`0x${vector.hex}`)).to.deep.equal(vector.array);
 
       // Test hex string to byte array
-      expect(bytes.arrayify(vector.hex)).to.deep.equal(vector.array);
+      expect(arrayify(vector.hex)).to.deep.equal(vector.array);
 
       // Test byte array to byte array
-      expect(bytes.arrayify(vector.array)).to.deep.equal(vector.array);
+      expect(arrayify(vector.array)).to.deep.equal(vector.array);
 
       // Test number to byte array
-      expect(bytes.arrayify(vector.number)).to.deep.equal(vector.array);
+      expect(arrayify(vector.number)).to.deep.equal(vector.array);
     });
   });
 
   it('Should not arrayify invalid BytesData', () => {
     const invalid = 'zzzzza';
-    expect(() => bytes.arrayify(invalid)).to.throw('Invalid BytesData');
+    expect(() => arrayify(invalid)).to.throw('Invalid BytesData');
   });
 
   it('Should not numberify bad input', () => {
-    const vectors = [bytes.hexlify(' '), bytes.hexlify('-'), bytes.hexlify('')];
+    const vectors = [hexlify(' '), hexlify('-'), hexlify('')];
     vectors.forEach((vector) => {
-      expect(() => bytes.numberify(vector)).to.throw(/Invalid BytesData/);
+      expect(() => numberify(vector)).to.throw(/Invalid BytesData/);
     });
   });
 
   it('Should numberify', () => {
     convertVectors.forEach((vector) => {
       // Test prefixed hex string to hex string
-      expect(bytes.numberify(`0x${vector.hex}`).eq(vector.number)).to.equal(true);
+      expect(numberify(`0x${vector.hex}`).eq(vector.number)).to.equal(true);
 
       // Test hex string to number
-      expect(bytes.numberify(vector.hex).eq(vector.number)).to.equal(true);
+      expect(numberify(vector.hex).eq(vector.number)).to.equal(true);
 
       // Test hex string to number little endian
-      expect(bytes.numberify(vector.hex, 'le').eq(vector.numberLe)).to.equal(true);
+      expect(numberify(vector.hex, 'le').eq(vector.numberLe)).to.equal(true);
 
       // Test byte array to number
-      expect(bytes.numberify(vector.array).eq(vector.number)).to.equal(true);
+      expect(numberify(vector.array).eq(vector.number)).to.equal(true);
 
       // Test byte array to number little endian
-      expect(bytes.numberify(vector.array, 'le').eq(vector.numberLe)).to.equal(true);
+      expect(numberify(vector.array, 'le').eq(vector.numberLe)).to.equal(true);
 
       // Test number to number
-      expect(bytes.numberify(vector.number).eq(vector.number)).to.equal(true);
+      expect(numberify(vector.number).eq(vector.number)).to.equal(true);
     });
   });
 
   it('Should pad to length', () => {
     padVectors.forEach((vector) => {
-      expect(bytes.padToLength(vector.original, 16)).to.deep.equal(vector.left16);
+      expect(padToLength(vector.original, 16)).to.deep.equal(vector.left16);
 
-      expect(bytes.padToLength(vector.original, 32)).to.deep.equal(vector.left32);
+      expect(padToLength(vector.original, 32)).to.deep.equal(vector.left32);
 
-      expect(bytes.padToLength(vector.original, 16, 'right')).to.deep.equal(vector.right16);
+      expect(padToLength(vector.original, 16, 'right')).to.deep.equal(vector.right16);
 
-      expect(bytes.padToLength(vector.original, 32, 'right')).to.deep.equal(vector.right32);
+      expect(padToLength(vector.original, 32, 'right')).to.deep.equal(vector.right32);
     });
 
-    expect(bytes.padToLength('0x00', 4)).to.equal('0x00000000');
+    expect(padToLength('0x00', 4)).to.equal('0x00000000');
   });
 
   it('Should reverse bytes', () => {
@@ -223,7 +236,7 @@ describe('Utils/Bytes', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(bytes.reverseBytes(vector.bytes)).to.deep.equal(vector.reversed);
+      expect(reverseBytes(vector.bytes)).to.deep.equal(vector.reversed);
     });
   });
 
@@ -231,10 +244,10 @@ describe('Utils/Bytes', () => {
     const validVectors = stringVectors.slice(0, 1);
     validVectors.forEach((vector) => {
       // Test bytes -> string
-      expect(bytes.toUTF8String(vector.hex)).to.equal(vector.utf8);
+      expect(toUTF8String(vector.hex)).to.equal(vector.utf8);
 
       // Test string -> bytes
-      expect(bytes.fromUTF8String(vector.utf8)).to.equal(vector.hex);
+      expect(fromUTF8String(vector.utf8)).to.equal(vector.hex);
     });
 
     // Brute force test all characters
@@ -254,28 +267,28 @@ describe('Utils/Bytes', () => {
       const bytesdata = Buffer.from(vector, 'utf8').toString('hex');
 
       // Test bytes -> string
-      expect(bytes.toUTF8String(bytesdata)).to.equal(vector);
+      expect(toUTF8String(bytesdata)).to.equal(vector);
 
       // Test string -> bytes
-      expect(bytes.fromUTF8String(vector)).to.equal(bytesdata);
+      expect(fromUTF8String(vector)).to.equal(bytesdata);
     });
 
     // Test full string
     const fullBytes = Buffer.from(testString, 'utf8').toString('hex');
 
     // Test bytes -> string
-    expect(bytes.toUTF8String(fullBytes)).to.equal(testString);
+    expect(toUTF8String(fullBytes)).to.equal(testString);
 
     // Test string -> bytes
-    expect(bytes.fromUTF8String(testString)).to.equal(fullBytes);
+    expect(fromUTF8String(testString)).to.equal(fullBytes);
   });
 
   it('Should throw if utf8 string contains invalid characters', () => {
     const invalidVectors = stringVectors.slice(2);
     invalidVectors.forEach((vector) => {
-      expect(() => bytes.toUTF8String(vector.hex)).to.throw(/Invalid/);
-      expect(() => bytes.checkBytes(vector.utf8)).to.throw(/Invalid/);
-      expect(() => bytes.fromUTF8String(vector.utf8)).to.throw(/Invalid/);
+      expect(() => toUTF8String(vector.hex)).to.throw(/Invalid/);
+      expect(() => checkBytes(vector.utf8)).to.throw(/Invalid/);
+      expect(() => fromUTF8String(vector.utf8)).to.throw(/Invalid/);
     });
   });
 
@@ -318,33 +331,33 @@ describe('Utils/Bytes', () => {
       },
     ];
 
-    expect(bytes.chunk('5d0afa')).to.deep.equal(['5d0afa']);
+    expect(chunk('5d0afa')).to.deep.equal(['5d0afa']);
 
     vectors.forEach((vector) => {
-      expect(bytes.chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
-      expect(bytes.combine(vector.chunked)).to.equal(vector.bytes);
+      expect(chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
+      expect(combine(vector.chunked)).to.equal(vector.bytes);
     });
   });
 
   it('Should trim bytes', () => {
     expect(() => {
-      bytes.trim(new BN(32), 1, 'right');
+      trim(new BN(32), 1, 'right');
     }).to.throw('Can\t trim BN from right');
-    expect(bytes.trim(new BN(861), 1).toString(10)).to.equal('93');
-    expect(bytes.trim('17b3c8d9', 2)).to.equal('c8d9');
-    expect(bytes.trim('17b3c8d9', 2, 'right')).to.equal('17b3');
-    expect(bytes.trim('0x17b3c8d9', 2)).to.equal('0xc8d9');
-    expect(bytes.trim('0x17b3c8d9', 2, 'right')).to.equal('0x17b3');
-    expect(bytes.trim([12, 4, 250], 2)).to.deep.equal([4, 250]);
-    expect(bytes.trim([12, 4, 250], 2, 'right')).to.deep.equal([12, 4]);
+    expect(trim(new BN(861), 1).toString(10)).to.equal('93');
+    expect(trim('17b3c8d9', 2)).to.equal('c8d9');
+    expect(trim('17b3c8d9', 2, 'right')).to.equal('17b3');
+    expect(trim('0x17b3c8d9', 2)).to.equal('0xc8d9');
+    expect(trim('0x17b3c8d9', 2, 'right')).to.equal('0x17b3');
+    expect(trim([12, 4, 250], 2)).to.deep.equal([4, 250]);
+    expect(trim([12, 4, 250], 2, 'right')).to.deep.equal([12, 4]);
   });
 
   it('Should format data to byte length', () => {
-    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.UINT_8, true)).to.equal('0xd9');
-    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.Address, true)).to.equal(
+    expect(formatToByteLength('17b3c8d9', ByteLength.UINT_8, true)).to.equal('0xd9');
+    expect(formatToByteLength('17b3c8d9', ByteLength.Address, true)).to.equal(
       '0x0000000000000000000000000000000017b3c8d9',
     );
-    expect(bytes.formatToByteLength('17b3c8d9', ByteLength.UINT_256)).to.equal(
+    expect(formatToByteLength('17b3c8d9', ByteLength.UINT_256)).to.equal(
       '0000000000000000000000000000000000000000000000000000000017b3c8d9',
     );
   });

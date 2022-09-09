@@ -351,14 +351,14 @@ export function hexStringToBytes(hex: string): Uint8Array {
  * @param length - number of bytes to generate
  * @returns random bytes hex string
  */
-function random(length: number = 32): string {
+function randomHex(length: number = 32): string {
   return crypto.randomBytes(length).toString('hex');
 }
 
 export const HashZero = formatToByteLength('00', 32, true);
 
 export {
-  random,
+  randomHex,
   hexlify,
   arrayify,
   numberify,

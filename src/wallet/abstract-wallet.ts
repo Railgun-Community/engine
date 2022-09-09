@@ -17,9 +17,9 @@ import {
   NoteSerialized,
   OutputType,
   StoredReceiveCommitment,
-  StoredSpendCommitment,
+  StoredSendCommitment,
 } from '../models/formatted-types';
-import { SpentCommitment, TXO } from '../models/txo-types';
+import { SentCommitment, TXO } from '../models/txo-types';
 import { Note } from '../note';
 import { Memo } from '../note/memo';
 import {
@@ -138,7 +138,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @optional position - without this param, all positions
    * @returns wallet DB prefix
    */
-  getWalletSpentCommitmentDBPrefix(chainID: number, tree?: number, position?: number): string[] {
+  getWalletSentCommitmentDBPrefix(chainID: number, tree?: number, position?: number): string[] {
     const path = [
       fromUTF8String('wallet'),
       `${hexlify(this.id)}-spent`,
@@ -238,14 +238,16 @@ abstract class AbstractWallet extends EventEmitter {
   private static decryptLeaf(
     leaf: EncryptedCommitment,
     sharedKey: Uint8Array,
-    ephemeralKeyReceiver?: Uint8Array,
+    ephemeralKeySender: Uint8Array | undefined,
+    senderBlindingKey: string | undefined,
   ) {
     try {
       return Note.decrypt(
         leaf.ciphertext.ciphertext,
         sharedKey,
         leaf.ciphertext.memo || [],
-        ephemeralKeyReceiver,
+        ephemeralKeySender,
+        senderBlindingKey,
       );
     } catch (err) {
       // Expect error if leaf not addressed to us.
@@ -262,24 +264,38 @@ abstract class AbstractWallet extends EventEmitter {
     totalLeaves: number,
   ): Promise<ScannedDBCommitment[]> {
     let noteReceive: Note | undefined;
-    let noteSpend: Note | undefined;
+    let noteSend: Note | undefined;
 
     LeptonDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
 
     const walletAddress = this.getAddress(0);
 
     if ('ciphertext' in leaf) {
-      const ephemeralKeySender = hexStringToBytes(leaf.ciphertext.ephemeralKeys[0]);
-      const ephemeralKeyReceiver = hexStringToBytes(leaf.ciphertext.ephemeralKeys[1]);
-      const [sharedKeyReceiver, sharedKeySpender] = await Promise.all([
+      const ephemeralKeyReceiverMaybeBlinded = hexStringToBytes(leaf.ciphertext.ephemeralKeys[0]);
+      const ephemeralKeySender = hexStringToBytes(leaf.ciphertext.ephemeralKeys[1]);
+      const [sharedKeyReceiverMaybeBlinded, sharedKeySender] = await Promise.all([
+        getSharedSymmetricKey(viewingPrivateKey, ephemeralKeyReceiverMaybeBlinded),
         getSharedSymmetricKey(viewingPrivateKey, ephemeralKeySender),
-        getSharedSymmetricKey(viewingPrivateKey, ephemeralKeyReceiver),
       ]);
-      if (sharedKeyReceiver) {
-        noteReceive = AbstractWallet.decryptLeaf(leaf, sharedKeyReceiver);
+      if (sharedKeyReceiverMaybeBlinded) {
+        noteReceive = AbstractWallet.decryptLeaf(
+          leaf,
+          sharedKeyReceiverMaybeBlinded,
+          undefined, // ephemeralKeySender - not used
+          undefined, // senderBlindingKey - not used
+        );
       }
-      if (sharedKeySpender) {
-        noteSpend = AbstractWallet.decryptLeaf(leaf, sharedKeySpender, ephemeralKeyReceiver);
+      if (sharedKeySender) {
+        const senderBlindingKey = Memo.decryptSenderBlindingKey(
+          leaf.ciphertext.memo,
+          viewingPrivateKey,
+        );
+        noteSend = AbstractWallet.decryptLeaf(
+          leaf,
+          sharedKeySender,
+          ephemeralKeySender,
+          senderBlindingKey,
+        );
       }
     } else {
       // preImage
@@ -317,17 +333,17 @@ abstract class AbstractWallet extends EventEmitter {
       });
     }
 
-    if (noteSpend) {
-      const storedCommitment: StoredSpendCommitment = {
+    if (noteSend) {
+      const storedCommitment: StoredSendCommitment = {
         txid: hexlify(leaf.txid),
-        decrypted: noteSpend.serialize(viewingPrivateKey),
-        noteExtraData: Memo.decryptNoteExtraData(noteSpend.memoField, viewingPrivateKey),
-        recipientAddress: encode(noteSpend.addressData),
+        decrypted: noteSend.serialize(viewingPrivateKey),
+        noteExtraData: Memo.decryptNoteExtraData(noteSend.memoField, viewingPrivateKey),
+        recipientAddress: encode(noteSend.addressData),
       };
       LeptonDebug.log(`Adding SPEND commitment at ${position}.`);
       scannedCommitments.push({
         type: 'put',
-        key: this.getWalletSpentCommitmentDBPrefix(chainID, tree, position).join(':'),
+        key: this.getWalletSentCommitmentDBPrefix(chainID, tree, position).join(':'),
         value: msgpack.encode(storedCommitment),
       });
     }
@@ -450,12 +466,12 @@ abstract class AbstractWallet extends EventEmitter {
   /**
    * Get spent commitments of a chain
    * @param chainID - chainID to get spent commitments for
-   * @returns SpentCommitment list
+   * @returns SentCommitment list
    */
-  async getSpentCommitments(chainID: number): Promise<SpentCommitment[]> {
+  async getSentCommitments(chainID: number): Promise<SentCommitment[]> {
     const vpk = this.getViewingKeyPair().privateKey;
 
-    const namespace = this.getWalletSpentCommitmentDBPrefix(chainID);
+    const namespace = this.getWalletSentCommitmentDBPrefix(chainID);
     const keys: string[] = await this.streamKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
@@ -463,19 +479,19 @@ abstract class AbstractWallet extends EventEmitter {
     return Promise.all(
       keySplits.map(async (keySplit) => {
         const data = (await this.db.get(keySplit)) as BytesData;
-        const spentCommitment = msgpack.decode(arrayify(data)) as StoredSpendCommitment;
+        const sentCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
 
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
 
-        const note = Note.deserialize(spentCommitment.decrypted, vpk);
+        const note = Note.deserialize(sentCommitment.decrypted, vpk);
 
         return {
           tree,
           position,
-          txid: spentCommitment.txid,
+          txid: sentCommitment.txid,
           note,
-          noteExtraData: spentCommitment.noteExtraData,
+          noteExtraData: sentCommitment.noteExtraData,
         };
       }),
     );
@@ -561,10 +577,10 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async getTransactionSpendHistory(chainID: number): Promise<TransactionHistoryEntrySpent[]> {
-    const spentCommitments = await this.getSpentCommitments(chainID);
+    const SentCommitments = await this.getSentCommitments(chainID);
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    spentCommitments.forEach(({ txid, note, noteExtraData }) => {
+    SentCommitments.forEach(({ txid, note, noteExtraData }) => {
       if (note.value === 0n) {
         return;
       }

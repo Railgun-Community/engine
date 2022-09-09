@@ -11,13 +11,16 @@ import { Wallet } from '../src/wallet/wallet';
 import { artifactsGetter, awaitScan, DECIMALS_18, getEthersWallet, mockQuickSync } from './helper';
 import { ERC20Deposit } from '../src/note/erc20-deposit';
 import { MerkleTree } from '../src/merkletree';
-import { formatToByteLength, hexToBigInt } from '../src/utils/bytes';
+import { formatToByteLength, hexToBigInt, randomHex } from '../src/utils/bytes';
 import { RailgunProxyContract } from '../src/contracts/railgun-proxy';
 import { ZERO_ADDRESS } from '../src/utils/constants';
-import { bytes } from '../src/utils';
 import { GeneratedCommitment, OutputType, TokenType } from '../src/models/formatted-types';
 import { TransactionBatch } from '../src/transaction/transaction-batch';
 import { Memo } from '../src/note/memo';
+import { Groth16 } from '../src/prover';
+import { ERC20 } from '../src/typechain-types';
+import { promiseTimeout } from '../src/utils/promises';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../src/transaction/constants';
 
 chai.use(chaiAsPromised);
 
@@ -26,7 +29,7 @@ let chainID: number;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
-let token: ethers.Contract;
+let token: ERC20;
 let wallet: Wallet;
 let wallet2: Wallet;
 let merkleTree: MerkleTree;
@@ -39,7 +42,7 @@ const testEncryptionKey = config.encryptionKey;
 const makeTestDeposit = async (address: string, value: bigint) => {
   const mpk = Lepton.decodeAddress(address).masterPublicKey;
   const vpk = wallet.getViewingKeyPair().privateKey;
-  const random = bytes.random(16);
+  const random = randomHex(16);
   const deposit = new ERC20Deposit(mpk, random, value, token.address);
 
   const depositInput = deposit.serialize(vpk);
@@ -58,7 +61,7 @@ describe('Lepton', function () {
 
   beforeEach(async () => {
     lepton = new Lepton(memdown(), artifactsGetter, mockQuickSync);
-    lepton.prover.setGroth16(groth16);
+    lepton.prover.setGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
@@ -70,8 +73,8 @@ describe('Lepton', function () {
 
     etherswallet = getEthersWallet(config.mnemonic, provider);
 
-    snapshot = await provider.send('evm_snapshot', []);
-    token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet);
+    snapshot = (await provider.send('evm_snapshot', [])) as number;
+    token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet) as ERC20;
     tokenAddress = formatToByteLength(token.address, 32, false);
 
     const balance = await token.balanceOf(etherswallet.address);
@@ -166,14 +169,16 @@ describe('Lepton', function () {
     );
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
+    const senderBlindingKey = randomHex(15);
     const memoFieldRelayerFee = Memo.createMemoField(
       {
         outputType: OutputType.RelayerFee,
+        senderBlindingKey,
       },
       wallet.getViewingKeyPair().privateKey,
     );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress, memoFieldRelayerFee),
+      new Note(wallet2.addressKeys, randomHex(16), 1n, tokenAddress, memoFieldRelayerFee),
     );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
@@ -186,8 +191,10 @@ describe('Lepton', function () {
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
-    await awaitScan(wallet, chainID);
-    await awaitScan(wallet2, chainID);
+    await Promise.all([
+      promiseTimeout(awaitScan(wallet, chainID), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(wallet2, chainID), 15000, 'Timed out wallet2 scan'),
+    ]);
 
     // BALANCE = deposited amount - 300(decimals) - 1
     const newBalance = await wallet.getBalance(chainID, tokenAddress);
@@ -225,6 +232,7 @@ describe('Lepton', function () {
       amount: BigInt(1),
       noteExtraData: {
         outputType: OutputType.RelayerFee,
+        senderBlindingKey,
       },
     });
     expect(history[1].changeTokenAmounts).deep.eq([
@@ -233,6 +241,7 @@ describe('Lepton', function () {
         amount: BigInt('109424999999999999999999'),
         noteExtraData: {
           outputType: OutputType.Change,
+          senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
         },
       },
     ]);
@@ -257,25 +266,29 @@ describe('Lepton', function () {
     const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chainID);
 
     // Add output for Transfer
+    const senderBlindingKey = randomHex(15);
     const memoFieldTransfer = Memo.createMemoField(
       {
         outputType: OutputType.Transfer,
+        senderBlindingKey,
       },
       wallet.getViewingKeyPair().privateKey,
     );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, bytes.random(16), 10n, tokenAddress, memoFieldTransfer),
+      new Note(wallet2.addressKeys, randomHex(16), 10n, tokenAddress, memoFieldTransfer),
     );
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
+    const senderBlindingKey2 = randomHex(15);
     const memoFieldRelayerFee = Memo.createMemoField(
       {
         outputType: OutputType.RelayerFee,
+        senderBlindingKey: senderBlindingKey2,
       },
       wallet.getViewingKeyPair().privateKey,
     );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, bytes.random(16), 1n, tokenAddress, memoFieldRelayerFee),
+      new Note(wallet2.addressKeys, randomHex(16), 1n, tokenAddress, memoFieldRelayerFee),
     );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
@@ -288,8 +301,10 @@ describe('Lepton', function () {
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
-    await awaitScan(wallet, chainID);
-    await awaitScan(wallet2, chainID);
+    await Promise.all([
+      promiseTimeout(awaitScan(wallet, chainID), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(wallet2, chainID), 15000, 'Timed out wallet2 scan'),
+    ]);
 
     // BALANCE = deposited amount - 300(decimals) - 1
     const newBalance = await wallet.getBalance(chainID, tokenAddress);
@@ -327,6 +342,7 @@ describe('Lepton', function () {
         amount: BigInt(10),
         noteExtraData: {
           outputType: OutputType.Transfer,
+          senderBlindingKey,
         },
         recipientAddress: wallet2.getAddress(0),
       },
@@ -336,6 +352,7 @@ describe('Lepton', function () {
       amount: BigInt(1),
       noteExtraData: {
         outputType: OutputType.RelayerFee,
+        senderBlindingKey: senderBlindingKey2,
       },
     });
     expect(history[1].changeTokenAmounts).deep.eq([
@@ -344,6 +361,7 @@ describe('Lepton', function () {
         amount: BigInt('109724999999999999999989'),
         noteExtraData: {
           outputType: OutputType.Change,
+          senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
         },
       },
     ]);

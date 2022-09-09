@@ -3,12 +3,16 @@ export const delay = (delayInMS: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, delayInMS));
 };
 
-export function promiseTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+export function promiseTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  customError?: string,
+): Promise<T> {
   // Create a promise that rejects in <ms> milliseconds
   const timeout = new Promise((_resolve, reject) => {
     const id = setTimeout(() => {
       clearTimeout(id);
-      reject(new Error(`Timed out in ${ms} ms.`));
+      reject(new Error(customError || `Timed out in ${ms} ms.`));
     }, ms);
   });
 

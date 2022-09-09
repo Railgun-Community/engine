@@ -3,7 +3,7 @@ import { bytesToHex, randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
-import { ByteLength, nToHex } from '../../src/utils/bytes';
+import { ByteLength, nToHex, randomHex } from '../../src/utils/bytes';
 import { poseidon } from '../../src/utils/hash';
 import {
   getEphemeralKeys,
@@ -11,6 +11,7 @@ import {
   getPublicViewingKey,
   getRandomScalar,
   getSharedSymmetricKey,
+  invertKeySenderBlinding,
   signED25519,
   signEDDSA,
   unblindedEphemeralKey,
@@ -66,34 +67,94 @@ describe('Test keys-utils', () => {
     expect(verifyED25519(message, signature, randomBytes(32))).to.eventually.be.rejected;
   });
   it('Should get shared key from two ephemeral keys', async () => {
-    const a = randomBytes(32);
-    const A = await getPublicViewingKey(a);
+    const sender = randomBytes(32);
+    const senderPublic = await getPublicViewingKey(sender);
 
-    const b = randomBytes(32);
-    const B = await getPublicViewingKey(b);
+    const receiver = randomBytes(32);
+    const receiverPublic = await getPublicViewingKey(receiver);
 
-    const r = bytesToHex(randomBytes(16));
-    const [rA, rB] = await getEphemeralKeys(A, B, r);
+    const random = bytesToHex(randomBytes(16));
+    const senderBlindingKey = undefined;
+    const [receiverEK, senderEK] = await getEphemeralKeys(
+      senderPublic,
+      receiverPublic,
+      random,
+      senderBlindingKey,
+    );
 
-    const k1 = await getSharedSymmetricKey(a, rB);
-    const k2 = await getSharedSymmetricKey(b, rA);
+    const k1 = await getSharedSymmetricKey(receiver, receiverEK);
+    const k2 = await getSharedSymmetricKey(sender, senderEK);
+
+    expect(k1).to.eql(k2);
+  });
+  it('Should get shared key from two ephemeral keys, with sender blinding key', async () => {
+    const sender = randomBytes(32);
+    const senderPublic = await getPublicViewingKey(sender);
+
+    const receiver = randomBytes(32);
+    const receiverPublic = await getPublicViewingKey(receiver);
+
+    const random = bytesToHex(randomBytes(16));
+    const senderBlindingKey = randomHex(15);
+    const [receiverEK, senderEK] = await getEphemeralKeys(
+      senderPublic,
+      receiverPublic,
+      random,
+      senderBlindingKey,
+    );
+
+    const k1 = await getSharedSymmetricKey(receiver, receiverEK);
+    const k2 = await getSharedSymmetricKey(sender, senderEK);
 
     expect(k1).to.eql(k2);
   });
   it('Should unblind ephemeral keys', async () => {
-    const a = randomBytes(32);
-    const A = await getPublicViewingKey(a);
+    const sender = randomBytes(32);
+    const senderPublic = await getPublicViewingKey(sender);
 
-    const b = randomBytes(32);
-    const B = await getPublicViewingKey(b);
+    const receiver = randomBytes(32);
+    const receiverPublic = await getPublicViewingKey(receiver);
 
-    const r = bytesToHex(randomBytes(16));
-    const [rA, rB] = await getEphemeralKeys(A, B, r);
+    const random = bytesToHex(randomBytes(16));
+    const senderBlindingKey = undefined;
+    const [receiverEK, senderEK] = await getEphemeralKeys(
+      senderPublic,
+      receiverPublic,
+      random,
+      senderBlindingKey,
+    );
 
-    const A1 = unblindedEphemeralKey(rA, r);
-    const B1 = unblindedEphemeralKey(rB, r);
+    const senderUnblinded = unblindedEphemeralKey(receiverEK, random);
+    const receiverUnblinded = unblindedEphemeralKey(senderEK, random);
 
-    expect(A).to.eql(A1);
-    expect(B).to.eql(B1);
+    expect(senderPublic).to.eql(senderUnblinded);
+    expect(receiverPublic).to.eql(receiverUnblinded);
+  });
+  it('Should unblind only receiver viewing key, with sender blinding key', async () => {
+    const sender = randomBytes(32);
+    const senderPublic = await getPublicViewingKey(sender);
+
+    const receiver = randomBytes(32);
+    const receiverPublic = await getPublicViewingKey(receiver);
+
+    const senderBlindingKey = randomHex(15);
+    const random = bytesToHex(randomBytes(16));
+    const [receiverEK, senderEK] = await getEphemeralKeys(
+      senderPublic,
+      receiverPublic,
+      random,
+      senderBlindingKey,
+    );
+
+    const senderUnblindedNoBlindingKey = unblindedEphemeralKey(receiverEK, random);
+    const receiverUnblindedNoBlindingKey = unblindedEphemeralKey(senderEK, random);
+    const receiverUnblindedWithBlindingKey = invertKeySenderBlinding(
+      receiverUnblindedNoBlindingKey,
+      senderBlindingKey,
+    );
+
+    expect(senderPublic).to.not.eql(senderUnblindedNoBlindingKey);
+    expect(receiverPublic).to.not.eql(receiverUnblindedNoBlindingKey);
+    expect(receiverPublic).to.eql(receiverUnblindedWithBlindingKey);
   });
 });

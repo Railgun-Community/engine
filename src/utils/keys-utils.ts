@@ -1,16 +1,17 @@
-import * as curve25519 from '@noble/ed25519';
+import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
 import { eddsa, Signature } from 'circomlibjs';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
 import { hexlify, hexToBytes } from './bytes';
 import { poseidon, sha256 } from './hash';
 
-const { bytesToHex, randomBytes } = curve25519.utils;
+const { bytesToHex, randomBytes } = utilsEd25519;
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
   return eddsa.prv2pub(Buffer.from(privateKey));
 }
 
 async function getPublicViewingKey(privateViewingKey: Uint8Array): Promise<Uint8Array> {
-  return await curve25519.getPublicKey(privateViewingKey);
+  return await getPublicKey(privateViewingKey);
 }
 
 function getRandomScalar(): bigint {
@@ -26,7 +27,7 @@ function verifyEDDSA(message: bigint, signature: Signature, pubkey: [bigint, big
 }
 
 async function signED25519(message: Uint8Array, privateKey: Uint8Array): Promise<Uint8Array> {
-  return curve25519.sign(message, privateKey);
+  return sign(message, privateKey);
 }
 
 function verifyED25519(
@@ -34,7 +35,7 @@ function verifyED25519(
   signature: Uint8Array,
   pubkey: Uint8Array,
 ): Promise<boolean> {
-  return curve25519.verify(signature, message, pubkey);
+  return verify(signature, message, pubkey);
 }
 
 function adjustRandom(random: string): bigint {
@@ -42,37 +43,83 @@ function adjustRandom(random: string): bigint {
   randomArray[0] &= 248;
   randomArray[31] &= 127;
   randomArray[31] |= 64;
-  return BigInt(`0x${bytesToHex(randomArray)}`) % curve25519.CURVE.n;
+  return BigInt(`0x${bytesToHex(randomArray)}`) % CURVE.n;
+}
+
+function maybeBlindViewingPublicKey(
+  senderViewingPublicKey: Uint8Array,
+  senderBlindingKey: string | undefined,
+): Point {
+  const senderViewingPublicKeyPoint = Point.fromHex(bytesToHex(senderViewingPublicKey));
+  if (!senderBlindingKey || senderBlindingKey === MEMO_SENDER_BLINDING_KEY_NULL) {
+    return senderViewingPublicKeyPoint;
+  }
+  const senderBlindingKeyAdjusted = adjustRandom(senderBlindingKey);
+  return senderViewingPublicKeyPoint.multiply(senderBlindingKeyAdjusted);
 }
 
 async function getEphemeralKeys(
-  senderVPK: Uint8Array,
-  recipientVPK: Uint8Array,
+  senderViewingPublicKey: Uint8Array,
+  receiverViewingPublicKey: Uint8Array,
   random: string,
+  senderBlindingKey: string | undefined,
 ): Promise<[Uint8Array, Uint8Array]> {
-  const r = adjustRandom(random);
-  const S = curve25519.Point.fromHex(bytesToHex(senderVPK));
-  const R = curve25519.Point.fromHex(bytesToHex(recipientVPK));
-  const rS = S.multiply(r).toRawBytes();
-  const rR = R.multiply(r).toRawBytes();
-  return [rS, rR];
+  const sharedSymmetricKey = adjustRandom(random);
+  const maybeBlindedSenderViewingPublicKeyPoint = maybeBlindViewingPublicKey(
+    senderViewingPublicKey,
+    senderBlindingKey,
+  );
+  const maybeBlindedReceiverViewingPublicKeyPoint = maybeBlindViewingPublicKey(
+    receiverViewingPublicKey,
+    senderBlindingKey,
+  );
+  const ephemeralKeyReceiverMaybeBlinded = maybeBlindedSenderViewingPublicKeyPoint
+    .multiply(sharedSymmetricKey)
+    .toRawBytes();
+  const ephemeralKeySender = maybeBlindedReceiverViewingPublicKeyPoint
+    .multiply(sharedSymmetricKey)
+    .toRawBytes();
+  return [ephemeralKeyReceiverMaybeBlinded, ephemeralKeySender];
 }
 
-function unblindedEphemeralKey(VPK: Uint8Array, random: string): Uint8Array {
-  const r = adjustRandom(random);
-  const rInverse = curve25519.utils.invert(r, curve25519.CURVE.n);
-  const point = curve25519.Point.fromHex(bytesToHex(VPK));
-  return point.multiply(rInverse).toRawBytes();
+function unblindedEphemeralKey(ephemeralKey: Uint8Array, random: string): Uint8Array | undefined {
+  try {
+    const randomAdjusted = adjustRandom(random);
+    const point = Point.fromHex(bytesToHex(ephemeralKey));
+    const randomInverse = utilsEd25519.invert(randomAdjusted, CURVE.n);
+    const unblinded = point.multiply(randomInverse);
+    return unblinded.toRawBytes();
+  } catch {
+    return undefined;
+  }
+}
+
+function invertKeySenderBlinding(
+  symmetricKey: Uint8Array | undefined,
+  senderBlindingKey: string | undefined,
+): Uint8Array | undefined {
+  if (!symmetricKey || !senderBlindingKey || senderBlindingKey === MEMO_SENDER_BLINDING_KEY_NULL) {
+    return undefined;
+  }
+  try {
+    const pk = Point.fromHex(bytesToHex(symmetricKey));
+    const senderBlindingKeyAdjusted = adjustRandom(senderBlindingKey);
+    const senderBlindingKeyInverse = utilsEd25519.invert(senderBlindingKeyAdjusted, CURVE.n);
+    return pk.multiply(senderBlindingKeyInverse).toRawBytes();
+  } catch {
+    return undefined;
+  }
 }
 
 async function getSharedSymmetricKey(
   privateKey: Uint8Array,
-  publicKey: Uint8Array,
+  ephemeralKey: Uint8Array,
 ): Promise<Uint8Array | undefined> {
   try {
-    const pk = curve25519.Point.fromHex(bytesToHex(publicKey));
-    const { scalar } = await curve25519.utils.getExtendedPublicKey(privateKey);
-    return pk.multiply(scalar).toRawBytes();
+    const pk = Point.fromHex(bytesToHex(ephemeralKey));
+    const { scalar } = await utilsEd25519.getExtendedPublicKey(privateKey);
+    const symmetricKey = pk.multiply(scalar);
+    return symmetricKey.toRawBytes();
   } catch (err) {
     return undefined;
   }
@@ -89,4 +136,5 @@ export {
   getEphemeralKeys,
   unblindedEphemeralKey,
   getSharedSymmetricKey,
+  invertKeySenderBlinding,
 };

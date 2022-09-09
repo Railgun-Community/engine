@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-expressions */
 /* globals describe it */
 
-import { expect } from 'chai';
+import { assert, expect } from 'chai';
 import { Lepton, Note } from '../../src';
 import {
   createSpendingSolutionGroupsForOutput,
@@ -10,12 +10,12 @@ import {
   shouldAddMoreUTXOsForSolutionBatch,
 } from '../../src/solutions/complex-solutions';
 import { sortUTXOsBySize } from '../../src/solutions/utxos';
-import { bytes } from '../../src/utils';
 import { TreeBalance, TXO } from '../../src/wallet/abstract-wallet';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
 import { TokenType } from '../../src/models/formatted-types';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { extractSpendingSolutionGroupsData } from '../../src/solutions/spending-group-extractor';
+import { randomHex } from '../../src/utils/bytes';
 
 const addressData1 = Lepton.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
@@ -31,7 +31,7 @@ const TOKEN_ADDRESS = 'abc';
 const CHAIN_ID = 1;
 
 const createMockNote = (addressData: AddressData, value: bigint) => {
-  return new Note(addressData, bytes.random(16), value, TOKEN_ADDRESS, []);
+  return new Note(addressData, randomHex(16), value, TOKEN_ADDRESS, []);
 };
 
 const createMockTXO = (txid: string, value: bigint): TXO => {
@@ -95,18 +95,22 @@ describe('Solutions/Complex Solutions', () => {
 
     // More than balance. No excluded txids.
     const solutionBatch1 = findNextSolutionBatch(treeBalance1, BigInt(180), []);
+    assert(solutionBatch1 != null);
     expect(solutionBatch1.map((utxo) => utxo.txid)).to.deep.equal(['c', 'b']);
 
     // More than balance. Exclude txids.
     const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(180), ['a', 'b']);
+    assert(solutionBatch2 != null);
     expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['c', 'e']);
 
     // Less than balance. Exclude txids.
     const solutionBatch3 = findNextSolutionBatch(treeBalance1, BigInt(10), ['a', 'b']);
+    assert(solutionBatch3 != null);
     expect(solutionBatch3.map((utxo) => utxo.txid)).to.deep.equal(['c']);
 
     // Less than balance. Exact match would be 4 UTXOs, which is not an allowed Nullifer count. Most optimal would be b + c.
     const solutionBatch4 = findNextSolutionBatch(treeBalance1, BigInt(120), []);
+    assert(solutionBatch4 != null);
     expect(solutionBatch4.map((utxo) => utxo.txid)).to.deep.equal(['c', 'b']);
 
     // No utxos available.
@@ -149,6 +153,7 @@ describe('Solutions/Complex Solutions', () => {
 
     // More than balance. No excluded txids.
     const solutionBatch1 = findNextSolutionBatch(treeBalance1, BigInt(500), []);
+    assert(solutionBatch1 != null);
     expect(solutionBatch1.map((utxo) => utxo.txid)).to.deep.equal([
       'i',
       'h',
@@ -163,6 +168,7 @@ describe('Solutions/Complex Solutions', () => {
 
     // Less than balance. Exclude biggest utxo.
     const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(48), ['i']);
+    assert(solutionBatch2 != null);
     expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['h']);
   });
 

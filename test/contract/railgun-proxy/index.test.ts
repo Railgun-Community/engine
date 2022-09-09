@@ -11,11 +11,10 @@ import { Lepton } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
 import { config } from '../../config.test';
 import { Wallet } from '../../../src/wallet/wallet';
-import { hexlify } from '../../../src/utils/bytes';
+import { hexlify, randomHex } from '../../../src/utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../helper';
 import { ERC20Deposit } from '../../../src/note/erc20-deposit';
 import { CommitmentEvent } from '../../../src/contracts/railgun-proxy/events';
-import { bytes } from '../../../src/utils';
 import { ERC20WithdrawNote } from '../../../src/note/erc20-withdraw';
 import {
   EncryptedCommitment,
@@ -29,6 +28,8 @@ import { Memo } from '../../../src/note/memo';
 import { ViewOnlyWallet } from '../../../src/wallet/view-only-wallet';
 import { Groth16 } from '../../../src/prover';
 import { ERC20 } from '../../../src/typechain-types';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../src/transaction/constants';
+import { promiseTimeout } from '../../../src/utils/promises';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -48,7 +49,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
-const RANDOM = bytes.random(16);
+const RANDOM = randomHex(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDeposit: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
@@ -130,9 +131,11 @@ describe('Railgun Proxy/Index', function () {
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
+    const senderBlindingKey = randomHex(15);
     const memoField = Memo.createMemoField(
       {
         outputType: OutputType.Transfer,
+        senderBlindingKey,
       },
       wallet.getViewingKeyPair().privateKey,
     );
@@ -243,9 +246,11 @@ describe('Railgun Proxy/Index', function () {
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
+    const senderBlindingKey = randomHex(15);
     const memoField = Memo.createMemoField(
       {
         outputType: OutputType.RelayerFee,
+        senderBlindingKey,
       },
       wallet.getViewingKeyPair().privateKey,
     );
@@ -265,8 +270,8 @@ describe('Railgun Proxy/Index', function () {
     const txTransact = await etherswallet.sendTransaction(transact);
     const [txResponseTransact] = await Promise.all([
       txTransact.wait(),
-      awaitScan(wallet, chainID),
-      awaitScan(viewOnlyWallet, chainID),
+      promiseTimeout(awaitScan(wallet, chainID), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(viewOnlyWallet, chainID), 15000, 'Timed out wallet1 scan'),
     ]);
 
     expect(await wallet.getBalance(chainID, TOKEN_ADDRESS)).equal(109724999999999999999600n);
@@ -411,9 +416,11 @@ describe('Railgun Proxy/Index', function () {
     // Create transaction
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
+    const senderBlindingKey = randomHex(15);
     const memoField = Memo.createMemoField(
       {
         outputType: OutputType.RelayerFee,
+        senderBlindingKey,
       },
       wallet.getViewingKeyPair().privateKey,
     );
@@ -457,6 +464,7 @@ describe('Railgun Proxy/Index', function () {
       ),
     ).to.deep.equal({
       outputType: OutputType.RelayerFee,
+      senderBlindingKey,
     });
     expect(
       Memo.decryptNoteExtraData(
@@ -465,6 +473,7 @@ describe('Railgun Proxy/Index', function () {
       ),
     ).to.deep.equal({
       outputType: OutputType.Change,
+      senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
     });
   }).timeout(120000);
 

@@ -28,7 +28,10 @@ describe('Memo', function () {
   it('Should encrypt and decrypt memo field', async () => {
     const sender = wallet.getViewingKeyPair();
 
-    const noteExtraData: NoteExtraData = { outputType: OutputType.RelayerFee };
+    const noteExtraData: NoteExtraData = {
+      outputType: OutputType.RelayerFee,
+      senderBlindingKey: '1234567890abcde1234567890abcde', // 15 bytes
+    };
     const memoField = Memo.createMemoField(noteExtraData, sender.privateKey);
 
     expect(Memo.decryptNoteExtraData(memoField, sender.privateKey)).to.deep.equal(noteExtraData);

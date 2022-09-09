@@ -3,7 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BytesData } from '../../src/models/formatted-types';
 import { encryption } from '../../src/utils';
-import { random } from '../../src/utils/bytes';
+import { randomHex } from '../../src/utils/bytes';
 import {
   ciphertextToEncryptedJSONData,
   ciphertextToEncryptedRandomData,
@@ -15,8 +15,8 @@ const { expect } = chai;
 
 describe('Ciphertext', () => {
   it('Should translate ciphertext to encrypted random and back', () => {
-    const plaintext: BytesData[] = [random(16)];
-    const key = random(32);
+    const plaintext: BytesData[] = [randomHex(16)];
+    const key = randomHex(32);
     const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
 
     const encryptedData = ciphertextToEncryptedRandomData(ciphertext);
@@ -28,8 +28,8 @@ describe('Ciphertext', () => {
   it('Should translate ciphertext to encrypted data and back', () => {
     const plaintext: BytesData[] = [];
     // eslint-disable-next-line no-plusplus
-    for (let i = 0; i < 40; i++) plaintext.push(random(32));
-    const key = random(32);
+    for (let i = 0; i < 40; i++) plaintext.push(randomHex(32));
+    const key = randomHex(32);
     const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
 
     const encryptedData = ciphertextToEncryptedJSONData(ciphertext);

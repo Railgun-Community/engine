@@ -12,7 +12,7 @@ import { Commitment, TokenType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Groth16, Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
-import { bytes } from '../../src/utils';
+import { randomHex } from '../../src/utils/bytes';
 import { Wallet } from '../../src/wallet/wallet';
 import { config } from '../config.test';
 import { artifactsGetter, DECIMALS_18 } from '../helper';
@@ -33,7 +33,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const random = bytes.random(16);
+const random = randomHex(16);
 type makeNoteFn = (value?: bigint) => Note;
 let makeNote: makeNoteFn;
 

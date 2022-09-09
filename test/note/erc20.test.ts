@@ -4,7 +4,14 @@ import chaiAsPromised from 'chai-as-promised';
 import { Ciphertext, NoteSerialized, OutputType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Memo } from '../../src/note/memo';
-import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../../src/utils/bytes';
+import {
+  ByteLength,
+  hexlify,
+  hexStringToBytes,
+  hexToBigInt,
+  nToHex,
+  randomHex,
+} from '../../src/utils/bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -280,8 +287,12 @@ describe('Note/ERC20', () => {
         masterPublicKey: hexToBigInt(vector.note.pubkey),
         viewingPublicKey,
       };
+      const senderBlindingKey = randomHex(15);
       const memoField = Memo.createMemoField(
-        { outputType: OutputType.RelayerFee },
+        {
+          outputType: OutputType.RelayerFee,
+          senderBlindingKey,
+        },
         viewingPublicKey, // Should be private key, but shouldn't matter here.
       );
       const note = new Note(

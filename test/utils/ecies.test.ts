@@ -1,13 +1,12 @@
 /* globals describe it */
 import * as curve25519 from '@noble/ed25519';
 import { randomBytes } from '@noble/hashes/utils';
-import chai from 'chai';
+import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { bytes } from '../../src/utils';
-import { hexlify } from '../../src/utils/bytes';
+import { hexlify, randomHex } from '../../src/utils/bytes';
 import {
   encryptJSONDataWithSharedKey,
-  tryDecryptJSONDataWithSharedKey
+  tryDecryptJSONDataWithSharedKey,
 } from '../../src/utils/ecies';
 import { getSharedSymmetricKey } from '../../src/utils/keys-utils';
 
@@ -24,14 +23,16 @@ describe('ecies', () => {
     const data: object = {
       text: '468abc',
       value: 2839094,
-      hex: hexlify(bytes.random(), true),
+      hex: hexlify(randomHex(), true),
     };
 
     const sharedKey = await getSharedSymmetricKey(privateKey2, publicKey1);
+    assert(sharedKey != null);
     const encryptedData = encryptJSONDataWithSharedKey(data, sharedKey);
 
     const sharedKeyAlternate = await getSharedSymmetricKey(privateKey1, publicKey2);
     expect(sharedKeyAlternate).to.deep.equal(sharedKey);
+    assert(sharedKeyAlternate != null);
 
     const decrypted = await tryDecryptJSONDataWithSharedKey(encryptedData, sharedKeyAlternate);
     expect(decrypted).to.deep.equal(data);

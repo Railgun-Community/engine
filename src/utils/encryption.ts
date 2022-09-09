@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { arrayify, ByteLength, formatToByteLength, padToLength, random, trim } from './bytes';
+import { arrayify, ByteLength, formatToByteLength, padToLength, randomHex, trim } from './bytes';
 import { BytesData, Ciphertext, CTRCiphertext } from '../models/formatted-types';
 
 const aes = {
@@ -16,7 +16,7 @@ const aes = {
       const keyFormatted = new Uint8Array(arrayify(key));
       if (keyFormatted.byteLength !== 32) throw new Error('Invalid key length');
 
-      const iv = random(16);
+      const iv = randomHex(16);
       const ivFormatted = new Uint8Array(arrayify(iv));
 
       // Initialize cipher
@@ -85,7 +85,7 @@ const aes = {
 
       if (keyFormatted.byteLength !== 32) throw new Error('Invalid key length');
 
-      const iv = random(16);
+      const iv = randomHex(16);
       const ivFormatted = new Uint8Array(arrayify(iv));
 
       // Initialize cipher

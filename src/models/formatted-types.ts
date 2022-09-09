@@ -64,7 +64,8 @@ export enum OutputType {
 }
 
 export type NoteExtraData = {
-  outputType: OutputType;
+  outputType: OutputType; // Byte 1 (1)
+  senderBlindingKey: string; // Bytes 2-16 (15)
 };
 
 export type CommitmentPreimage = {
@@ -122,7 +123,7 @@ export type GeneratedCommitment = {
 
 export type CommitmentCiphertext = {
   ciphertext: Ciphertext; // iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
-  ephemeralKeys: string[]; // sender first, recipient second (packed points 32 bytes each)
+  ephemeralKeys: string[]; // receiver first, sender second (packed points 32 bytes each)
   memo: string[]; // bytes32[]
 };
 
@@ -154,7 +155,7 @@ export type StoredReceiveCommitment = {
   decrypted: NoteSerialized;
 };
 
-export type StoredSpendCommitment = {
+export type StoredSendCommitment = {
   txid: string;
   decrypted: NoteSerialized;
   noteExtraData?: NoteExtraData;

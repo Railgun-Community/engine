@@ -1,4 +1,5 @@
-import { BytesData, CTRCiphertext, NoteExtraData } from '../models/formatted-types';
+import { CTRCiphertext, NoteExtraData } from '../models/formatted-types';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
 import { encryption } from '../utils';
 import { ByteLength, nToHex } from '../utils/bytes';
 
@@ -24,6 +25,7 @@ export class Memo {
 
       const noteExtraData: NoteExtraData = {
         outputType: parseInt(decryptedMetadata.substring(0, 2), 16),
+        senderBlindingKey: decryptedMetadata.substring(2, 32),
       };
       return noteExtraData;
     } catch (err) {
@@ -31,18 +33,25 @@ export class Memo {
     }
   }
 
+  static decryptSenderBlindingKey = (
+    memoField: string[],
+    viewingPrivateKey: Uint8Array,
+  ): string | undefined => {
+    const noteExtraData = Memo.decryptNoteExtraData(memoField, viewingPrivateKey);
+    return noteExtraData && noteExtraData.senderBlindingKey !== MEMO_SENDER_BLINDING_KEY_NULL
+      ? noteExtraData.senderBlindingKey
+      : undefined;
+  };
+
   private static encryptNoteExtraData(
     noteExtraData: NoteExtraData,
     viewingPrivateKey: Uint8Array,
   ): string {
-    const outputTypeFormatted: BytesData = nToHex(
-      BigInt(noteExtraData.outputType),
-      ByteLength.UINT_8,
-    );
-    let metadataField: string = outputTypeFormatted;
-    while (metadataField.length < 32) {
-      // Length must be 32 (16 bytes).
-      metadataField += '00';
+    const outputTypeFormatted = nToHex(BigInt(noteExtraData.outputType), ByteLength.UINT_8); // 1 byte
+    const senderBlindingKeyFormatted = noteExtraData.senderBlindingKey; // 15 bytes
+    const metadataField: string = `${outputTypeFormatted}${senderBlindingKeyFormatted}`;
+    if (metadataField.length !== 32) {
+      throw new Error('Metadata field must be 16 bytes.');
     }
 
     const metadataCiphertext: CTRCiphertext = encryption.aes.ctr.encrypt(

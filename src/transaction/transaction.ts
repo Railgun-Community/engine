@@ -1,10 +1,10 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
 import { Note } from '../note';
-import { bytes, hash } from '../utils';
+import { hash } from '../utils';
 import { Wallet } from '../wallet/wallet';
 import { PrivateInputs, PublicInputs, Prover, Proof, ProverProgressCallback } from '../prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../utils/bytes';
 import {
   AdaptID,
   BoundParams,
@@ -15,7 +15,7 @@ import {
   SerializedTransaction,
   TokenType,
 } from '../models/formatted-types';
-import { DEFAULT_TOKEN_SUB_ID, WithdrawFlag } from './constants';
+import { DEFAULT_TOKEN_SUB_ID, MEMO_SENDER_BLINDING_KEY_NULL, WithdrawFlag } from './constants';
 import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 import { TXO } from '../models/txo-types';
@@ -162,11 +162,12 @@ class Transaction {
     const changeMemo: string[] = Memo.createMemoField(
       {
         outputType: OutputType.Change,
+        senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL, // Not needed for change outputs.
       },
       viewingKey.privateKey,
     );
     allOutputs.push(
-      new Note(wallet.addressKeys, bytes.random(16), change, this.tokenAddress, changeMemo),
+      new Note(wallet.addressKeys, randomHex(16), change, this.tokenAddress, changeMemo),
     );
 
     // Push withdraw output if withdraw is requested
@@ -176,10 +177,18 @@ class Transaction {
 
     const onlyInternalOutputs = allOutputs.filter((note) => note instanceof Note) as Note[];
 
+    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
+
     const notesEphemeralKeys = await Promise.all(
-      onlyInternalOutputs.map((note) =>
-        getEphemeralKeys(viewingKey.pubkey, note.viewingPublicKey, note.random),
-      ),
+      onlyInternalOutputs.map((note) => {
+        const senderBlindingKey = Memo.decryptSenderBlindingKey(note.memoField, viewingPrivateKey);
+        return getEphemeralKeys(
+          viewingKey.pubkey,
+          note.viewingPublicKey,
+          note.random,
+          senderBlindingKey,
+        );
+      }),
     );
 
     // calculate symmetric key using sender privateKey and recipient ephemeral key
