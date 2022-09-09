@@ -57,7 +57,7 @@ const depositLeaf = (txid: string): Commitment => ({
 
 const depositValue = 9975062344139650872817n;
 
-describe.only('Transaction/Transaction Batch', function run() {
+describe('Transaction/Transaction Batch', function run() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
