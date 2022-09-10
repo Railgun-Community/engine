@@ -3,6 +3,7 @@ import { bytesToHex, randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../src/transaction/constants';
 import { ByteLength, nToHex, randomHex } from '../../src/utils/bytes';
 import { poseidon } from '../../src/utils/hash';
 import {
@@ -11,10 +12,9 @@ import {
   getPublicViewingKey,
   getRandomScalar,
   getSharedSymmetricKey,
-  invertKeySenderBlinding,
   signED25519,
   signEDDSA,
-  unblindedEphemeralKey,
+  unblindEphemeralKey,
   verifyED25519,
   verifyEDDSA,
 } from '../../src/utils/keys-utils';
@@ -71,7 +71,7 @@ describe('Test keys-utils', () => {
     const receiverPublic = await getPublicViewingKey(receiver);
 
     const random = bytesToHex(randomBytes(16));
-    const senderBlindingKey = undefined;
+    const senderBlindingKey = MEMO_SENDER_BLINDING_KEY_NULL;
     const [receiverEK, senderEK] = await getEphemeralKeys(
       senderPublic,
       receiverPublic,
@@ -113,7 +113,7 @@ describe('Test keys-utils', () => {
     const receiverPublic = await getPublicViewingKey(receiver);
 
     const random = bytesToHex(randomBytes(16));
-    const senderBlindingKey = undefined;
+    const senderBlindingKey = MEMO_SENDER_BLINDING_KEY_NULL;
     const [receiverEK, senderEK] = await getEphemeralKeys(
       senderPublic,
       receiverPublic,
@@ -121,8 +121,8 @@ describe('Test keys-utils', () => {
       senderBlindingKey,
     );
 
-    const senderUnblinded = unblindedEphemeralKey(receiverEK, random);
-    const receiverUnblinded = unblindedEphemeralKey(senderEK, random);
+    const senderUnblinded = unblindEphemeralKey(receiverEK, random, senderBlindingKey);
+    const receiverUnblinded = unblindEphemeralKey(senderEK, random, senderBlindingKey);
 
     expect(senderPublic).to.eql(senderUnblinded);
     expect(receiverPublic).to.eql(receiverUnblinded);
@@ -143,14 +143,29 @@ describe('Test keys-utils', () => {
       senderBlindingKey,
     );
 
-    const senderUnblindedNoBlindingKey = unblindedEphemeralKey(receiverEK, random);
-    const receiverUnblindedNoBlindingKey = unblindedEphemeralKey(senderEK, random);
-    const receiverUnblindedWithBlindingKey = invertKeySenderBlinding(
-      receiverUnblindedNoBlindingKey,
+    const senderUnblindedNoBlindingKey = unblindEphemeralKey(
+      receiverEK,
+      random,
+      MEMO_SENDER_BLINDING_KEY_NULL,
+    );
+    const senderUnblindedWithBlindingKey = unblindEphemeralKey(
+      receiverEK,
+      random,
+      senderBlindingKey,
+    );
+    const receiverUnblindedNoBlindingKey = unblindEphemeralKey(
+      senderEK,
+      random,
+      MEMO_SENDER_BLINDING_KEY_NULL,
+    );
+    const receiverUnblindedWithBlindingKey = unblindEphemeralKey(
+      senderEK,
+      random,
       senderBlindingKey,
     );
 
     expect(senderPublic).to.not.eql(senderUnblindedNoBlindingKey);
+    expect(senderPublic).to.eql(senderUnblindedWithBlindingKey);
     expect(receiverPublic).to.not.eql(receiverUnblindedNoBlindingKey);
     expect(receiverPublic).to.eql(receiverUnblindedWithBlindingKey);
   });

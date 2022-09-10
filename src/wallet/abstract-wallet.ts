@@ -271,16 +271,16 @@ abstract class AbstractWallet extends EventEmitter {
     const walletAddress = this.getAddress(0);
 
     if ('ciphertext' in leaf) {
-      const ephemeralKeyReceiverMaybeBlinded = hexStringToBytes(leaf.ciphertext.ephemeralKeys[0]);
+      const ephemeralKeyReceiver = hexStringToBytes(leaf.ciphertext.ephemeralKeys[0]);
       const ephemeralKeySender = hexStringToBytes(leaf.ciphertext.ephemeralKeys[1]);
-      const [sharedKeyReceiverMaybeBlinded, sharedKeySender] = await Promise.all([
-        getSharedSymmetricKey(viewingPrivateKey, ephemeralKeyReceiverMaybeBlinded),
+      const [sharedKeyReceiver, sharedKeySender] = await Promise.all([
+        getSharedSymmetricKey(viewingPrivateKey, ephemeralKeyReceiver),
         getSharedSymmetricKey(viewingPrivateKey, ephemeralKeySender),
       ]);
-      if (sharedKeyReceiverMaybeBlinded) {
+      if (sharedKeyReceiver) {
         noteReceive = AbstractWallet.decryptLeaf(
           leaf,
-          sharedKeyReceiverMaybeBlinded,
+          sharedKeyReceiver,
           undefined, // ephemeralKeySender - not used
           undefined, // senderBlindingKey - not used
         );

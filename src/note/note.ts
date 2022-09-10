@@ -13,7 +13,7 @@ import {
 } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { poseidon } from '../utils/hash';
-import { invertKeySenderBlinding, unblindedEphemeralKey } from '../utils/keys-utils';
+import { unblindEphemeralKey } from '../utils/keys-utils';
 
 export class Note {
   // address data of recipient
@@ -110,15 +110,9 @@ export class Note {
     ephemeralKeySender: Optional<Uint8Array>,
     senderBlindingKey: Optional<string>,
   ): Uint8Array {
-    if (ephemeralKeySender) {
-      const unblinded = unblindedEphemeralKey(ephemeralKeySender, random);
-      const inverted = invertKeySenderBlinding(unblinded, senderBlindingKey);
-      if (inverted) {
-        // Has senderBlindingKey.
-        return inverted;
-      }
+    if (ephemeralKeySender && senderBlindingKey) {
+      const unblinded = unblindEphemeralKey(ephemeralKeySender, random, senderBlindingKey);
       if (unblinded) {
-        // No senderBlindingKey.
         return unblinded;
       }
     }

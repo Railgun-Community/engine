@@ -107,7 +107,7 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it.only('Should perform poseidon hashes', () => {
+  it('Should perform poseidon hashes', () => {
     const vectors = [
       {
         preImage: [1n, 2n],

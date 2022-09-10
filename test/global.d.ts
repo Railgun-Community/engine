@@ -1,6 +1,3 @@
-// TODO: This file is synced with src/global.d.ts.
-// Merge these into the same file.
-
 declare type Optional<T> = T | undefined;
 
 declare module 'circomlibjs' {

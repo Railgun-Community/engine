@@ -36,11 +36,9 @@ export class Memo {
   static decryptSenderBlindingKey = (
     memoField: string[],
     viewingPrivateKey: Uint8Array,
-  ): Optional<string> => {
+  ): string => {
     const noteExtraData = Memo.decryptNoteExtraData(memoField, viewingPrivateKey);
-    return noteExtraData && noteExtraData.senderBlindingKey !== MEMO_SENDER_BLINDING_KEY_NULL
-      ? noteExtraData.senderBlindingKey
-      : undefined;
+    return noteExtraData ? noteExtraData.senderBlindingKey : MEMO_SENDER_BLINDING_KEY_NULL;
   };
 
   private static encryptNoteExtraData(
