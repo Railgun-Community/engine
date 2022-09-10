@@ -14,7 +14,7 @@
     "resolveJsonModule": true,
     "useUnknownInCatchVariables": false,
     "sourceMap": true,
-    "typeRoots": ["src/types"]
+    "typeRoots": ["src/global.d.ts", "./node_modules/@types"]
   },
   "typeAcquisition": {
     "exclude": ["mocha"]

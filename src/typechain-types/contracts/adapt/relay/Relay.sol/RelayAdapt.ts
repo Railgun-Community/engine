@@ -13,20 +13,16 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../../../common";
+} from '../../../../common';
 
 export type TokenDataStruct = {
   tokenType: PromiseOrValue<BigNumberish>;
@@ -55,10 +51,10 @@ export type G2PointStruct = {
   y: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>];
 };
 
-export type G2PointStructOutput = [
-  [BigNumber, BigNumber],
-  [BigNumber, BigNumber]
-] & { x: [BigNumber, BigNumber]; y: [BigNumber, BigNumber] };
+export type G2PointStructOutput = [[BigNumber, BigNumber], [BigNumber, BigNumber]] & {
+  x: [BigNumber, BigNumber];
+  y: [BigNumber, BigNumber];
+};
 
 export type SnarkProofStruct = {
   a: G1PointStruct;
@@ -69,7 +65,7 @@ export type SnarkProofStruct = {
 export type SnarkProofStructOutput = [
   G1PointStructOutput,
   G2PointStructOutput,
-  G1PointStructOutput
+  G1PointStructOutput,
 ] & { a: G1PointStructOutput; b: G2PointStructOutput; c: G1PointStructOutput };
 
 export type CommitmentCiphertextStruct = {
@@ -77,7 +73,7 @@ export type CommitmentCiphertextStruct = {
     PromiseOrValue<BigNumberish>,
     PromiseOrValue<BigNumberish>,
     PromiseOrValue<BigNumberish>,
-    PromiseOrValue<BigNumberish>
+    PromiseOrValue<BigNumberish>,
   ];
   ephemeralKeys: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>];
   memo: PromiseOrValue<BigNumberish>[];
@@ -86,7 +82,7 @@ export type CommitmentCiphertextStruct = {
 export type CommitmentCiphertextStructOutput = [
   [BigNumber, BigNumber, BigNumber, BigNumber],
   [BigNumber, BigNumber],
-  BigNumber[]
+  BigNumber[],
 ] & {
   ciphertext: [BigNumber, BigNumber, BigNumber, BigNumber];
   ephemeralKeys: [BigNumber, BigNumber];
@@ -106,7 +102,7 @@ export type BoundParamsStructOutput = [
   number,
   string,
   string,
-  CommitmentCiphertextStructOutput[]
+  CommitmentCiphertextStructOutput[],
 ] & {
   treeNumber: number;
   withdraw: number;
@@ -121,11 +117,11 @@ export type CommitmentPreimageStruct = {
   value: PromiseOrValue<BigNumberish>;
 };
 
-export type CommitmentPreimageStructOutput = [
-  BigNumber,
-  TokenDataStructOutput,
-  BigNumber
-] & { npk: BigNumber; token: TokenDataStructOutput; value: BigNumber };
+export type CommitmentPreimageStructOutput = [BigNumber, TokenDataStructOutput, BigNumber] & {
+  npk: BigNumber;
+  token: TokenDataStructOutput;
+  value: BigNumber;
+};
 
 export type TransactionStruct = {
   proof: SnarkProofStruct;
@@ -144,7 +140,7 @@ export type TransactionStructOutput = [
   BigNumber[],
   BoundParamsStructOutput,
   CommitmentPreimageStructOutput,
-  string
+  string,
 ] & {
   proof: SnarkProofStructOutput;
   merkleRoot: BigNumber;
@@ -181,133 +177,103 @@ export declare namespace RelayAdapt {
 
 export interface RelayAdaptInterface extends utils.Interface {
   functions: {
-    "VERIFICATION_BYPASS()": FunctionFragment;
-    "deposit((uint8,address,uint256)[],uint256[2],uint256)": FunctionFragment;
-    "getAdaptParams((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],bytes)": FunctionFragment;
-    "getRelayAdaptParams((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],uint256,bool,uint256,(address,bytes,uint256)[])": FunctionFragment;
-    "railgun()": FunctionFragment;
-    "railgunBatch((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],bytes)": FunctionFragment;
-    "relay((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],uint256,bool,uint256,(address,bytes,uint256)[])": FunctionFragment;
-    "send((uint8,address,uint256)[],address)": FunctionFragment;
-    "unwrapAllBase()": FunctionFragment;
-    "wbase()": FunctionFragment;
-    "wrapAllBase()": FunctionFragment;
+    'VERIFICATION_BYPASS()': FunctionFragment;
+    'deposit((uint8,address,uint256)[],uint256[2],uint256)': FunctionFragment;
+    'getAdaptParams((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],bytes)': FunctionFragment;
+    'getRelayAdaptParams((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],uint256,bool,uint256,(address,bytes,uint256)[])': FunctionFragment;
+    'railgun()': FunctionFragment;
+    'railgunBatch((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],bytes)': FunctionFragment;
+    'relay((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address)[],uint256,bool,uint256,(address,bytes,uint256)[])': FunctionFragment;
+    'send((uint8,address,uint256)[],address)': FunctionFragment;
+    'unwrapAllBase()': FunctionFragment;
+    'wbase()': FunctionFragment;
+    'wrapAllBase()': FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "VERIFICATION_BYPASS"
-      | "deposit"
-      | "getAdaptParams"
-      | "getRelayAdaptParams"
-      | "railgun"
-      | "railgunBatch"
-      | "relay"
-      | "send"
-      | "unwrapAllBase"
-      | "wbase"
-      | "wrapAllBase"
+      | 'VERIFICATION_BYPASS'
+      | 'deposit'
+      | 'getAdaptParams'
+      | 'getRelayAdaptParams'
+      | 'railgun'
+      | 'railgunBatch'
+      | 'relay'
+      | 'send'
+      | 'unwrapAllBase'
+      | 'wbase'
+      | 'wrapAllBase',
   ): FunctionFragment;
 
+  encodeFunctionData(functionFragment: 'VERIFICATION_BYPASS', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "VERIFICATION_BYPASS",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "deposit",
+    functionFragment: 'deposit',
     values: [
       TokenDataStruct[],
       [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
-      PromiseOrValue<BigNumberish>
-    ]
+      PromiseOrValue<BigNumberish>,
+    ],
   ): string;
   encodeFunctionData(
-    functionFragment: "getAdaptParams",
-    values: [TransactionStruct[], PromiseOrValue<BytesLike>]
+    functionFragment: 'getAdaptParams',
+    values: [TransactionStruct[], PromiseOrValue<BytesLike>],
   ): string;
   encodeFunctionData(
-    functionFragment: "getRelayAdaptParams",
+    functionFragment: 'getRelayAdaptParams',
     values: [
       TransactionStruct[],
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<boolean>,
       PromiseOrValue<BigNumberish>,
-      RelayAdapt.CallStruct[]
-    ]
+      RelayAdapt.CallStruct[],
+    ],
   ): string;
-  encodeFunctionData(functionFragment: "railgun", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'railgun', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "railgunBatch",
-    values: [TransactionStruct[], PromiseOrValue<BytesLike>]
+    functionFragment: 'railgunBatch',
+    values: [TransactionStruct[], PromiseOrValue<BytesLike>],
   ): string;
   encodeFunctionData(
-    functionFragment: "relay",
+    functionFragment: 'relay',
     values: [
       TransactionStruct[],
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<boolean>,
       PromiseOrValue<BigNumberish>,
-      RelayAdapt.CallStruct[]
-    ]
+      RelayAdapt.CallStruct[],
+    ],
   ): string;
   encodeFunctionData(
-    functionFragment: "send",
-    values: [TokenDataStruct[], PromiseOrValue<string>]
+    functionFragment: 'send',
+    values: [TokenDataStruct[], PromiseOrValue<string>],
   ): string;
-  encodeFunctionData(
-    functionFragment: "unwrapAllBase",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "wbase", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "wrapAllBase",
-    values?: undefined
-  ): string;
+  encodeFunctionData(functionFragment: 'unwrapAllBase', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'wbase', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'wrapAllBase', values?: undefined): string;
 
-  decodeFunctionResult(
-    functionFragment: "VERIFICATION_BYPASS",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "getAdaptParams",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getRelayAdaptParams",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "railgun", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "railgunBatch",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "relay", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "send", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "unwrapAllBase",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "wbase", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "wrapAllBase",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: 'VERIFICATION_BYPASS', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'getAdaptParams', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'getRelayAdaptParams', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'railgun', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'railgunBatch', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'relay', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'send', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'unwrapAllBase', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'wbase', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'wrapAllBase', data: BytesLike): Result;
 
   events: {
-    "CallResult(tuple[])": EventFragment;
+    'CallResult(tuple[])': EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "CallResult"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'CallResult'): EventFragment;
 }
 
 export interface CallResultEventObject {
   callResults: RelayAdapt.ResultStructOutput[];
 }
-export type CallResultEvent = TypedEvent<
-  [RelayAdapt.ResultStructOutput[]],
-  CallResultEventObject
->;
+export type CallResultEvent = TypedEvent<[RelayAdapt.ResultStructOutput[]], CallResultEventObject>;
 
 export type CallResultEventFilter = TypedEventFilter<CallResultEvent>;
 
@@ -320,17 +286,15 @@ export interface RelayAdapt extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -342,18 +306,15 @@ export interface RelayAdapt extends BaseContract {
 
     deposit(
       _deposits: TokenDataStruct[],
-      _encryptedRandom: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>
-      ],
+      _encryptedRandom: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
       _npk: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     getAdaptParams(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[string]>;
 
     getRelayAdaptParams(
@@ -362,7 +323,7 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[string]>;
 
     railgun(overrides?: CallOverrides): Promise<[string]>;
@@ -370,7 +331,7 @@ export interface RelayAdapt extends BaseContract {
     railgunBatch(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     relay(
@@ -379,23 +340,23 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     send(
       _tokens: TokenDataStruct[],
       _to: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     unwrapAllBase(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     wbase(overrides?: CallOverrides): Promise<[string]>;
 
     wrapAllBase(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
   };
 
@@ -403,18 +364,15 @@ export interface RelayAdapt extends BaseContract {
 
   deposit(
     _deposits: TokenDataStruct[],
-    _encryptedRandom: [
-      PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>
-    ],
+    _encryptedRandom: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
     _npk: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   getAdaptParams(
     _transactions: TransactionStruct[],
     _additionalData: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<string>;
 
   getRelayAdaptParams(
@@ -423,7 +381,7 @@ export interface RelayAdapt extends BaseContract {
     _requireSuccess: PromiseOrValue<boolean>,
     _minGas: PromiseOrValue<BigNumberish>,
     _calls: RelayAdapt.CallStruct[],
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<string>;
 
   railgun(overrides?: CallOverrides): Promise<string>;
@@ -431,7 +389,7 @@ export interface RelayAdapt extends BaseContract {
   railgunBatch(
     _transactions: TransactionStruct[],
     _additionalData: PromiseOrValue<BytesLike>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   relay(
@@ -440,23 +398,23 @@ export interface RelayAdapt extends BaseContract {
     _requireSuccess: PromiseOrValue<boolean>,
     _minGas: PromiseOrValue<BigNumberish>,
     _calls: RelayAdapt.CallStruct[],
-    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   send(
     _tokens: TokenDataStruct[],
     _to: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   unwrapAllBase(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   wbase(overrides?: CallOverrides): Promise<string>;
 
   wrapAllBase(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   callStatic: {
@@ -464,18 +422,15 @@ export interface RelayAdapt extends BaseContract {
 
     deposit(
       _deposits: TokenDataStruct[],
-      _encryptedRandom: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>
-      ],
+      _encryptedRandom: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
       _npk: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     getAdaptParams(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<string>;
 
     getRelayAdaptParams(
@@ -484,7 +439,7 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<string>;
 
     railgun(overrides?: CallOverrides): Promise<string>;
@@ -492,7 +447,7 @@ export interface RelayAdapt extends BaseContract {
     railgunBatch(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     relay(
@@ -501,13 +456,13 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     send(
       _tokens: TokenDataStruct[],
       _to: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     unwrapAllBase(overrides?: CallOverrides): Promise<void>;
@@ -518,7 +473,7 @@ export interface RelayAdapt extends BaseContract {
   };
 
   filters: {
-    "CallResult(tuple[])"(callResults?: null): CallResultEventFilter;
+    'CallResult(tuple[])'(callResults?: null): CallResultEventFilter;
     CallResult(callResults?: null): CallResultEventFilter;
   };
 
@@ -527,18 +482,15 @@ export interface RelayAdapt extends BaseContract {
 
     deposit(
       _deposits: TokenDataStruct[],
-      _encryptedRandom: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>
-      ],
+      _encryptedRandom: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
       _npk: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     getAdaptParams(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     getRelayAdaptParams(
@@ -547,7 +499,7 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     railgun(overrides?: CallOverrides): Promise<BigNumber>;
@@ -555,7 +507,7 @@ export interface RelayAdapt extends BaseContract {
     railgunBatch(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     relay(
@@ -564,45 +516,36 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     send(
       _tokens: TokenDataStruct[],
       _to: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
-    unwrapAllBase(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    unwrapAllBase(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<BigNumber>;
 
     wbase(overrides?: CallOverrides): Promise<BigNumber>;
 
-    wrapAllBase(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    wrapAllBase(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    VERIFICATION_BYPASS(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+    VERIFICATION_BYPASS(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     deposit(
       _deposits: TokenDataStruct[],
-      _encryptedRandom: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>
-      ],
+      _encryptedRandom: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
       _npk: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     getAdaptParams(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     getRelayAdaptParams(
@@ -611,7 +554,7 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     railgun(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -619,7 +562,7 @@ export interface RelayAdapt extends BaseContract {
     railgunBatch(
       _transactions: TransactionStruct[],
       _additionalData: PromiseOrValue<BytesLike>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     relay(
@@ -628,23 +571,23 @@ export interface RelayAdapt extends BaseContract {
       _requireSuccess: PromiseOrValue<boolean>,
       _minGas: PromiseOrValue<BigNumberish>,
       _calls: RelayAdapt.CallStruct[],
-      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     send(
       _tokens: TokenDataStruct[],
       _to: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     unwrapAllBase(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     wbase(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     wrapAllBase(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
   };
 }

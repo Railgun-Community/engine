@@ -11,105 +11,77 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../../common";
+} from '../../../common';
 
 export interface TokenBlacklistStubInterface extends utils.Interface {
   functions: {
-    "addToBlacklist(address[])": FunctionFragment;
-    "owner()": FunctionFragment;
-    "removeFromBlacklist(address[])": FunctionFragment;
-    "renounceOwnership()": FunctionFragment;
-    "tokenBlacklist(address)": FunctionFragment;
-    "transferOwnership(address)": FunctionFragment;
+    'addToBlacklist(address[])': FunctionFragment;
+    'owner()': FunctionFragment;
+    'removeFromBlacklist(address[])': FunctionFragment;
+    'renounceOwnership()': FunctionFragment;
+    'tokenBlacklist(address)': FunctionFragment;
+    'transferOwnership(address)': FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "addToBlacklist"
-      | "owner"
-      | "removeFromBlacklist"
-      | "renounceOwnership"
-      | "tokenBlacklist"
-      | "transferOwnership"
+      | 'addToBlacklist'
+      | 'owner'
+      | 'removeFromBlacklist'
+      | 'renounceOwnership'
+      | 'tokenBlacklist'
+      | 'transferOwnership',
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "addToBlacklist",
-    values: [PromiseOrValue<string>[]]
+    functionFragment: 'addToBlacklist',
+    values: [PromiseOrValue<string>[]],
   ): string;
-  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "removeFromBlacklist",
-    values: [PromiseOrValue<string>[]]
+    functionFragment: 'removeFromBlacklist',
+    values: [PromiseOrValue<string>[]],
   ): string;
+  encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'tokenBlacklist', values: [PromiseOrValue<string>]): string;
   encodeFunctionData(
-    functionFragment: "renounceOwnership",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "tokenBlacklist",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "transferOwnership",
-    values: [PromiseOrValue<string>]
+    functionFragment: 'transferOwnership',
+    values: [PromiseOrValue<string>],
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "addToBlacklist",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "removeFromBlacklist",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "renounceOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "tokenBlacklist",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "transferOwnership",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: 'addToBlacklist', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'removeFromBlacklist', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'tokenBlacklist', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
 
   events: {
-    "AddToBlacklist(address)": EventFragment;
-    "Initialized(uint8)": EventFragment;
-    "OwnershipTransferred(address,address)": EventFragment;
-    "RemoveFromBlacklist(address)": EventFragment;
+    'AddToBlacklist(address)': EventFragment;
+    'Initialized(uint8)': EventFragment;
+    'OwnershipTransferred(address,address)': EventFragment;
+    'RemoveFromBlacklist(address)': EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "AddToBlacklist"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "RemoveFromBlacklist"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'AddToBlacklist'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Initialized'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'RemoveFromBlacklist'): EventFragment;
 }
 
 export interface AddToBlacklistEventObject {
   token: string;
 }
-export type AddToBlacklistEvent = TypedEvent<
-  [string],
-  AddToBlacklistEventObject
->;
+export type AddToBlacklistEvent = TypedEvent<[string], AddToBlacklistEventObject>;
 
 export type AddToBlacklistEventFilter = TypedEventFilter<AddToBlacklistEvent>;
 
@@ -129,19 +101,14 @@ export type OwnershipTransferredEvent = TypedEvent<
   OwnershipTransferredEventObject
 >;
 
-export type OwnershipTransferredEventFilter =
-  TypedEventFilter<OwnershipTransferredEvent>;
+export type OwnershipTransferredEventFilter = TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface RemoveFromBlacklistEventObject {
   token: string;
 }
-export type RemoveFromBlacklistEvent = TypedEvent<
-  [string],
-  RemoveFromBlacklistEventObject
->;
+export type RemoveFromBlacklistEvent = TypedEvent<[string], RemoveFromBlacklistEventObject>;
 
-export type RemoveFromBlacklistEventFilter =
-  TypedEventFilter<RemoveFromBlacklistEvent>;
+export type RemoveFromBlacklistEventFilter = TypedEventFilter<RemoveFromBlacklistEvent>;
 
 export interface TokenBlacklistStub extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -152,17 +119,15 @@ export interface TokenBlacklistStub extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -172,164 +137,140 @@ export interface TokenBlacklistStub extends BaseContract {
   functions: {
     addToBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
     removeFromBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
-    tokenBlacklist(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    tokenBlacklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<[boolean]>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
   };
 
   addToBlacklist(
     _tokens: PromiseOrValue<string>[],
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
   removeFromBlacklist(
     _tokens: PromiseOrValue<string>[],
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   renounceOwnership(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
-  tokenBlacklist(
-    arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
+  tokenBlacklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<boolean>;
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    addToBlacklist(
-      _tokens: PromiseOrValue<string>[],
-      overrides?: CallOverrides
-    ): Promise<void>;
+    addToBlacklist(_tokens: PromiseOrValue<string>[], overrides?: CallOverrides): Promise<void>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
     removeFromBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
-    tokenBlacklist(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+    tokenBlacklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<boolean>;
 
-    transferOwnership(
-      newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    transferOwnership(newOwner: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
   };
 
   filters: {
-    "AddToBlacklist(address)"(
-      token?: PromiseOrValue<string> | null
-    ): AddToBlacklistEventFilter;
-    AddToBlacklist(
-      token?: PromiseOrValue<string> | null
-    ): AddToBlacklistEventFilter;
+    'AddToBlacklist(address)'(token?: PromiseOrValue<string> | null): AddToBlacklistEventFilter;
+    AddToBlacklist(token?: PromiseOrValue<string> | null): AddToBlacklistEventFilter;
 
-    "Initialized(uint8)"(version?: null): InitializedEventFilter;
+    'Initialized(uint8)'(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
 
-    "OwnershipTransferred(address,address)"(
+    'OwnershipTransferred(address,address)'(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null
+      newOwner?: PromiseOrValue<string> | null,
     ): OwnershipTransferredEventFilter;
     OwnershipTransferred(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null
+      newOwner?: PromiseOrValue<string> | null,
     ): OwnershipTransferredEventFilter;
 
-    "RemoveFromBlacklist(address)"(
-      token?: PromiseOrValue<string> | null
+    'RemoveFromBlacklist(address)'(
+      token?: PromiseOrValue<string> | null,
     ): RemoveFromBlacklistEventFilter;
-    RemoveFromBlacklist(
-      token?: PromiseOrValue<string> | null
-    ): RemoveFromBlacklistEventFilter;
+    RemoveFromBlacklist(token?: PromiseOrValue<string> | null): RemoveFromBlacklistEventFilter;
   };
 
   estimateGas: {
     addToBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
     removeFromBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
-    tokenBlacklist(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    tokenBlacklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
     addToBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     removeFromBlacklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     tokenBlacklist(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
   };
 }

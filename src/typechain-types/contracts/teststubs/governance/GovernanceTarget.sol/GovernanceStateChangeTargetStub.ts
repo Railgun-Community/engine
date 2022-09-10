@@ -11,45 +11,35 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type { FunctionFragment, Result } from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../../../common";
+} from '../../../../common';
 
-export interface GovernanceStateChangeTargetStubInterface
-  extends utils.Interface {
+export interface GovernanceStateChangeTargetStubInterface extends utils.Interface {
   functions: {
-    "changeGreeting(string)": FunctionFragment;
-    "greeting()": FunctionFragment;
-    "willRevert()": FunctionFragment;
+    'changeGreeting(string)': FunctionFragment;
+    'greeting()': FunctionFragment;
+    'willRevert()': FunctionFragment;
   };
 
   getFunction(
-    nameOrSignatureOrTopic: "changeGreeting" | "greeting" | "willRevert"
+    nameOrSignatureOrTopic: 'changeGreeting' | 'greeting' | 'willRevert',
   ): FunctionFragment;
 
-  encodeFunctionData(
-    functionFragment: "changeGreeting",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(functionFragment: "greeting", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "willRevert",
-    values?: undefined
-  ): string;
+  encodeFunctionData(functionFragment: 'changeGreeting', values: [PromiseOrValue<string>]): string;
+  encodeFunctionData(functionFragment: 'greeting', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'willRevert', values?: undefined): string;
 
-  decodeFunctionResult(
-    functionFragment: "changeGreeting",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "greeting", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "willRevert", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'changeGreeting', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'greeting', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'willRevert', data: BytesLike): Result;
 
   events: {};
 }
@@ -63,17 +53,15 @@ export interface GovernanceStateChangeTargetStub extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -83,19 +71,17 @@ export interface GovernanceStateChangeTargetStub extends BaseContract {
   functions: {
     changeGreeting(
       _newGreeting: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     greeting(overrides?: CallOverrides): Promise<[string]>;
 
-    willRevert(
-      overrides?: CallOverrides
-    ): Promise<[boolean] & { success: boolean }>;
+    willRevert(overrides?: CallOverrides): Promise<[boolean] & { success: boolean }>;
   };
 
   changeGreeting(
     _newGreeting: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   greeting(overrides?: CallOverrides): Promise<string>;
@@ -103,10 +89,7 @@ export interface GovernanceStateChangeTargetStub extends BaseContract {
   willRevert(overrides?: CallOverrides): Promise<boolean>;
 
   callStatic: {
-    changeGreeting(
-      _newGreeting: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    changeGreeting(_newGreeting: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
 
     greeting(overrides?: CallOverrides): Promise<string>;
 
@@ -118,7 +101,7 @@ export interface GovernanceStateChangeTargetStub extends BaseContract {
   estimateGas: {
     changeGreeting(
       _newGreeting: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     greeting(overrides?: CallOverrides): Promise<BigNumber>;
@@ -129,7 +112,7 @@ export interface GovernanceStateChangeTargetStub extends BaseContract {
   populateTransaction: {
     changeGreeting(
       _newGreeting: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     greeting(overrides?: CallOverrides): Promise<PopulatedTransaction>;

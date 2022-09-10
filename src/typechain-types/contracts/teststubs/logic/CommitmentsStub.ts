@@ -12,101 +12,76 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../../common";
+} from '../../../common';
 
 export interface CommitmentsStubInterface extends utils.Interface {
   functions: {
-    "ZERO_VALUE()": FunctionFragment;
-    "hashLeftRight(uint256,uint256)": FunctionFragment;
-    "insertLeavesStub(uint256[])": FunctionFragment;
-    "merkleRoot()": FunctionFragment;
-    "nullifiers(uint256,uint256)": FunctionFragment;
-    "rootHistory(uint256,uint256)": FunctionFragment;
-    "treeNumber()": FunctionFragment;
-    "zeros(uint256)": FunctionFragment;
+    'ZERO_VALUE()': FunctionFragment;
+    'hashLeftRight(uint256,uint256)': FunctionFragment;
+    'insertLeavesStub(uint256[])': FunctionFragment;
+    'merkleRoot()': FunctionFragment;
+    'nullifiers(uint256,uint256)': FunctionFragment;
+    'rootHistory(uint256,uint256)': FunctionFragment;
+    'treeNumber()': FunctionFragment;
+    'zeros(uint256)': FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "ZERO_VALUE"
-      | "hashLeftRight"
-      | "insertLeavesStub"
-      | "merkleRoot"
-      | "nullifiers"
-      | "rootHistory"
-      | "treeNumber"
-      | "zeros"
+      | 'ZERO_VALUE'
+      | 'hashLeftRight'
+      | 'insertLeavesStub'
+      | 'merkleRoot'
+      | 'nullifiers'
+      | 'rootHistory'
+      | 'treeNumber'
+      | 'zeros',
   ): FunctionFragment;
 
+  encodeFunctionData(functionFragment: 'ZERO_VALUE', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "ZERO_VALUE",
-    values?: undefined
+    functionFragment: 'hashLeftRight',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
   ): string;
   encodeFunctionData(
-    functionFragment: "hashLeftRight",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+    functionFragment: 'insertLeavesStub',
+    values: [PromiseOrValue<BigNumberish>[]],
+  ): string;
+  encodeFunctionData(functionFragment: 'merkleRoot', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'nullifiers',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
   ): string;
   encodeFunctionData(
-    functionFragment: "insertLeavesStub",
-    values: [PromiseOrValue<BigNumberish>[]]
+    functionFragment: 'rootHistory',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
   ): string;
-  encodeFunctionData(
-    functionFragment: "merkleRoot",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "nullifiers",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "rootHistory",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "treeNumber",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "zeros",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
+  encodeFunctionData(functionFragment: 'treeNumber', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'zeros', values: [PromiseOrValue<BigNumberish>]): string;
 
-  decodeFunctionResult(functionFragment: "ZERO_VALUE", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "hashLeftRight",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "insertLeavesStub",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "nullifiers", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "rootHistory",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "treeNumber", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "zeros", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'ZERO_VALUE', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'hashLeftRight', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'insertLeavesStub', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'merkleRoot', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'nullifiers', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'rootHistory', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'treeNumber', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'zeros', data: BytesLike): Result;
 
   events: {
-    "Initialized(uint8)": EventFragment;
+    'Initialized(uint8)': EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Initialized'): EventFragment;
 }
 
 export interface InitializedEventObject {
@@ -125,17 +100,15 @@ export interface CommitmentsStub extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -148,12 +121,12 @@ export interface CommitmentsStub extends BaseContract {
     hashLeftRight(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber]>;
 
     insertLeavesStub(
       _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     merkleRoot(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -161,21 +134,18 @@ export interface CommitmentsStub extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
     treeNumber(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    zeros(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<[BigNumber]>;
   };
 
   ZERO_VALUE(overrides?: CallOverrides): Promise<BigNumber>;
@@ -183,12 +153,12 @@ export interface CommitmentsStub extends BaseContract {
   hashLeftRight(
     _left: PromiseOrValue<BigNumberish>,
     _right: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<BigNumber>;
 
   insertLeavesStub(
     _leafHashes: PromiseOrValue<BigNumberish>[],
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
@@ -196,21 +166,18 @@ export interface CommitmentsStub extends BaseContract {
   nullifiers(
     arg0: PromiseOrValue<BigNumberish>,
     arg1: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
   rootHistory(
     arg0: PromiseOrValue<BigNumberish>,
     arg1: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
   treeNumber(overrides?: CallOverrides): Promise<BigNumber>;
 
-  zeros(
-    arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+  zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
 
   callStatic: {
     ZERO_VALUE(overrides?: CallOverrides): Promise<BigNumber>;
@@ -218,12 +185,12 @@ export interface CommitmentsStub extends BaseContract {
     hashLeftRight(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     insertLeavesStub(
       _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
@@ -231,25 +198,22 @@ export interface CommitmentsStub extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
     treeNumber(overrides?: CallOverrides): Promise<BigNumber>;
 
-    zeros(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   filters: {
-    "Initialized(uint8)"(version?: null): InitializedEventFilter;
+    'Initialized(uint8)'(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
   };
 
@@ -259,12 +223,12 @@ export interface CommitmentsStub extends BaseContract {
     hashLeftRight(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     insertLeavesStub(
       _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
@@ -272,21 +236,18 @@ export interface CommitmentsStub extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     treeNumber(overrides?: CallOverrides): Promise<BigNumber>;
 
-    zeros(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -295,12 +256,12 @@ export interface CommitmentsStub extends BaseContract {
     hashLeftRight(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     insertLeavesStub(
       _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     merkleRoot(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -308,20 +269,20 @@ export interface CommitmentsStub extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     treeNumber(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     zeros(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
   };
 }

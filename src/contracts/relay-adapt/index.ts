@@ -213,7 +213,7 @@ class RelayAdaptContract {
     return populatedTransaction;
   }
 
-  static getCallResultError(receiptLogs: TransactionReceiptLog[]): string | undefined {
+  static getCallResultError(receiptLogs: TransactionReceiptLog[]): Optional<string> {
     const iface = new ethers.utils.Interface(ABIRelayAdapt);
     const topic = iface.getEventTopic(RelayAdaptEvent.CallResult);
     let results: {

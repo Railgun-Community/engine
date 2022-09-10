@@ -232,7 +232,6 @@ describe('Transaction/ERC20', function () {
     const { inputs, publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
     const { signature } = inputs;
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const msg: bigint = poseidon(Object.values(publicInputs).flatMap((x) => x));
     const sig: Signature = { R8: [signature[0], signature[1]], S: signature[2] };
 

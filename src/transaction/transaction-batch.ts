@@ -37,11 +37,11 @@ class TransactionBatch {
 
   private tokenType: TokenType;
 
-  private withdrawAddress: string | undefined;
+  private withdrawAddress: Optional<string>;
 
   private withdrawTotal: bigint = BigInt(0);
 
-  private allowOverride: boolean | undefined;
+  private allowOverride: Optional<boolean>;
 
   /**
    * Create ERC20Transaction Object
@@ -134,7 +134,7 @@ class TransactionBatch {
   private createSimpleSpendingSolutionGroupsIfPossible(
     treeSortedBalances: TreeBalance[],
     totalRequired: bigint,
-  ): SpendingSolutionGroup | undefined {
+  ): Optional<SpendingSolutionGroup> {
     try {
       const { utxos, spendingTree, amount } = TransactionBatch.createSimpleSatisfyingUTXOGroup(
         treeSortedBalances,
@@ -168,8 +168,8 @@ class TransactionBatch {
     treeSortedBalances: TreeBalance[],
     amountRequired: bigint,
   ): { utxos: TXO[]; spendingTree: number; amount: bigint } {
-    let spendingTree: number | undefined;
-    let utxos: TXO[] | undefined;
+    let spendingTree: Optional<number>;
+    let utxos: Optional<TXO[]>;
 
     // Find first tree with spending solutions.
     treeSortedBalances.forEach((treeBalance, tree) => {

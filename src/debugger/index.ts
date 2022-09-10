@@ -1,7 +1,7 @@
 import { LeptonDebugger } from '../models/lepton-types';
 
 export default class LeptonDebug {
-  private static leptonDebugger: LeptonDebugger | undefined;
+  private static leptonDebugger: Optional<LeptonDebugger>;
 
   static init(leptonDebugger: LeptonDebugger) {
     this.leptonDebugger = leptonDebugger;

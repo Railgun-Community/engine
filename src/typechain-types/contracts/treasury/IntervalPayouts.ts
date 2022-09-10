@@ -11,90 +11,66 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type { FunctionFragment, Result } from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../common";
+} from '../../common';
 
 export interface IntervalPayoutsInterface extends utils.Interface {
   functions: {
-    "amount()": FunctionFragment;
-    "beneficiary()": FunctionFragment;
-    "intervalLength()": FunctionFragment;
-    "nextInterval()": FunctionFragment;
-    "payout()": FunctionFragment;
-    "ready()": FunctionFragment;
-    "startTime()": FunctionFragment;
-    "token()": FunctionFragment;
-    "totalPayouts()": FunctionFragment;
-    "treasury()": FunctionFragment;
+    'amount()': FunctionFragment;
+    'beneficiary()': FunctionFragment;
+    'intervalLength()': FunctionFragment;
+    'nextInterval()': FunctionFragment;
+    'payout()': FunctionFragment;
+    'ready()': FunctionFragment;
+    'startTime()': FunctionFragment;
+    'token()': FunctionFragment;
+    'totalPayouts()': FunctionFragment;
+    'treasury()': FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "amount"
-      | "beneficiary"
-      | "intervalLength"
-      | "nextInterval"
-      | "payout"
-      | "ready"
-      | "startTime"
-      | "token"
-      | "totalPayouts"
-      | "treasury"
+      | 'amount'
+      | 'beneficiary'
+      | 'intervalLength'
+      | 'nextInterval'
+      | 'payout'
+      | 'ready'
+      | 'startTime'
+      | 'token'
+      | 'totalPayouts'
+      | 'treasury',
   ): FunctionFragment;
 
-  encodeFunctionData(functionFragment: "amount", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "beneficiary",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "intervalLength",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "nextInterval",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "payout", values?: undefined): string;
-  encodeFunctionData(functionFragment: "ready", values?: undefined): string;
-  encodeFunctionData(functionFragment: "startTime", values?: undefined): string;
-  encodeFunctionData(functionFragment: "token", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "totalPayouts",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "treasury", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'amount', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'beneficiary', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'intervalLength', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'nextInterval', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'payout', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'ready', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'startTime', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'token', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'totalPayouts', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'treasury', values?: undefined): string;
 
-  decodeFunctionResult(functionFragment: "amount", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "beneficiary",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "intervalLength",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "nextInterval",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "payout", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "ready", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "startTime", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "token", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "totalPayouts",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "treasury", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'amount', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'beneficiary', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'intervalLength', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'nextInterval', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'payout', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'ready', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'startTime', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'token', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'totalPayouts', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
 
   events: {};
 }
@@ -108,17 +84,15 @@ export interface IntervalPayouts extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -134,9 +108,7 @@ export interface IntervalPayouts extends BaseContract {
 
     nextInterval(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    payout(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    payout(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<ContractTransaction>;
 
     ready(overrides?: CallOverrides): Promise<[boolean]>;
 
@@ -157,9 +129,7 @@ export interface IntervalPayouts extends BaseContract {
 
   nextInterval(overrides?: CallOverrides): Promise<BigNumber>;
 
-  payout(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  payout(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<ContractTransaction>;
 
   ready(overrides?: CallOverrides): Promise<boolean>;
 
@@ -204,9 +174,7 @@ export interface IntervalPayouts extends BaseContract {
 
     nextInterval(overrides?: CallOverrides): Promise<BigNumber>;
 
-    payout(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    payout(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<BigNumber>;
 
     ready(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -229,7 +197,7 @@ export interface IntervalPayouts extends BaseContract {
     nextInterval(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     payout(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     ready(overrides?: CallOverrides): Promise<PopulatedTransaction>;

@@ -107,14 +107,14 @@ describe('Utils/Hash', () => {
     });
   });
 
-  it('Should perform poseidon hashes', () => {
+  it.only('Should perform poseidon hashes', () => {
     const vectors = [
       {
-        preImage: [[0x1], [0x2]],
+        preImage: [1n, 2n],
         result: BigInt('0x115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a'),
       },
       {
-        preImage: [[0x1], [0x2], [0x3], [0x4]],
+        preImage: [1n, 2n, 3n, 4n],
         result: BigInt('0x299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465'),
       },
       {
@@ -124,7 +124,6 @@ describe('Utils/Hash', () => {
     ];
 
     vectors.forEach((vector) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       expect(poseidon(vector.preImage)).to.equal(vector.result);
     });
   });

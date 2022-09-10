@@ -2,8 +2,8 @@ import { BigNumberish } from 'ethers';
 
 export type Artifacts = {
   zkey: ArrayLike<number>;
-  wasm: ArrayLike<number> | undefined;
-  dat: ArrayLike<number> | undefined;
+  wasm: Optional<ArrayLike<number>>;
+  dat: Optional<ArrayLike<number>>;
   vkey: object;
 };
 

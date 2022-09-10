@@ -192,7 +192,7 @@ describe('Railgun Proxy/Index', function () {
       return;
     }
 
-    let resultEvent!: CommitmentEvent | undefined;
+    let resultEvent!: Optional<CommitmentEvent>;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
       resultEvent = commitmentEvent;
     };

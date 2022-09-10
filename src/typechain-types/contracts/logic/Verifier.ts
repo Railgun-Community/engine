@@ -12,20 +12,16 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../common";
+} from '../../common';
 
 export type G1PointStruct = {
   x: PromiseOrValue<BigNumberish>;
@@ -42,10 +38,10 @@ export type G2PointStruct = {
   y: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>];
 };
 
-export type G2PointStructOutput = [
-  [BigNumber, BigNumber],
-  [BigNumber, BigNumber]
-] & { x: [BigNumber, BigNumber]; y: [BigNumber, BigNumber] };
+export type G2PointStructOutput = [[BigNumber, BigNumber], [BigNumber, BigNumber]] & {
+  x: [BigNumber, BigNumber];
+  y: [BigNumber, BigNumber];
+};
 
 export type VerifyingKeyStruct = {
   artifactsIPFSHash: PromiseOrValue<string>;
@@ -62,7 +58,7 @@ export type VerifyingKeyStructOutput = [
   G2PointStructOutput,
   G2PointStructOutput,
   G2PointStructOutput,
-  G1PointStructOutput[]
+  G1PointStructOutput[],
 ] & {
   artifactsIPFSHash: string;
   alpha1: G1PointStructOutput;
@@ -77,7 +73,7 @@ export type CommitmentCiphertextStruct = {
     PromiseOrValue<BigNumberish>,
     PromiseOrValue<BigNumberish>,
     PromiseOrValue<BigNumberish>,
-    PromiseOrValue<BigNumberish>
+    PromiseOrValue<BigNumberish>,
   ];
   ephemeralKeys: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>];
   memo: PromiseOrValue<BigNumberish>[];
@@ -86,7 +82,7 @@ export type CommitmentCiphertextStruct = {
 export type CommitmentCiphertextStructOutput = [
   [BigNumber, BigNumber, BigNumber, BigNumber],
   [BigNumber, BigNumber],
-  BigNumber[]
+  BigNumber[],
 ] & {
   ciphertext: [BigNumber, BigNumber, BigNumber, BigNumber];
   ephemeralKeys: [BigNumber, BigNumber];
@@ -106,7 +102,7 @@ export type BoundParamsStructOutput = [
   number,
   string,
   string,
-  CommitmentCiphertextStructOutput[]
+  CommitmentCiphertextStructOutput[],
 ] & {
   treeNumber: number;
   withdraw: number;
@@ -124,7 +120,7 @@ export type SnarkProofStruct = {
 export type SnarkProofStructOutput = [
   G1PointStructOutput,
   G2PointStructOutput,
-  G1PointStructOutput
+  G1PointStructOutput,
 ] & { a: G1PointStructOutput; b: G2PointStructOutput; c: G1PointStructOutput };
 
 export type TokenDataStruct = {
@@ -145,11 +141,11 @@ export type CommitmentPreimageStruct = {
   value: PromiseOrValue<BigNumberish>;
 };
 
-export type CommitmentPreimageStructOutput = [
-  BigNumber,
-  TokenDataStructOutput,
-  BigNumber
-] & { npk: BigNumber; token: TokenDataStructOutput; value: BigNumber };
+export type CommitmentPreimageStructOutput = [BigNumber, TokenDataStructOutput, BigNumber] & {
+  npk: BigNumber;
+  token: TokenDataStructOutput;
+  value: BigNumber;
+};
 
 export type TransactionStruct = {
   proof: SnarkProofStruct;
@@ -168,7 +164,7 @@ export type TransactionStructOutput = [
   BigNumber[],
   BoundParamsStructOutput,
   CommitmentPreimageStructOutput,
-  string
+  string,
 ] & {
   proof: SnarkProofStructOutput;
   merkleRoot: BigNumber;
@@ -181,112 +177,71 @@ export type TransactionStructOutput = [
 
 export interface VerifierInterface extends utils.Interface {
   functions: {
-    "SNARK_BYPASS()": FunctionFragment;
-    "getVerificationKey(uint256,uint256)": FunctionFragment;
-    "hashBoundParams((uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]))": FunctionFragment;
-    "owner()": FunctionFragment;
-    "renounceOwnership()": FunctionFragment;
-    "setVerificationKey(uint256,uint256,(string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]))": FunctionFragment;
-    "transferOwnership(address)": FunctionFragment;
-    "verify((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address))": FunctionFragment;
-    "verifyProof((string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]),((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256[])": FunctionFragment;
+    'SNARK_BYPASS()': FunctionFragment;
+    'getVerificationKey(uint256,uint256)': FunctionFragment;
+    'hashBoundParams((uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]))': FunctionFragment;
+    'owner()': FunctionFragment;
+    'renounceOwnership()': FunctionFragment;
+    'setVerificationKey(uint256,uint256,(string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]))': FunctionFragment;
+    'transferOwnership(address)': FunctionFragment;
+    'verify((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256,uint256[],uint256[],(uint16,uint8,address,bytes32,(uint256[4],uint256[2],uint256[])[]),(uint256,(uint8,address,uint256),uint120),address))': FunctionFragment;
+    'verifyProof((string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]),((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256[])': FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "SNARK_BYPASS"
-      | "getVerificationKey"
-      | "hashBoundParams"
-      | "owner"
-      | "renounceOwnership"
-      | "setVerificationKey"
-      | "transferOwnership"
-      | "verify"
-      | "verifyProof"
+      | 'SNARK_BYPASS'
+      | 'getVerificationKey'
+      | 'hashBoundParams'
+      | 'owner'
+      | 'renounceOwnership'
+      | 'setVerificationKey'
+      | 'transferOwnership'
+      | 'verify'
+      | 'verifyProof',
   ): FunctionFragment;
 
+  encodeFunctionData(functionFragment: 'SNARK_BYPASS', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "SNARK_BYPASS",
-    values?: undefined
+    functionFragment: 'getVerificationKey',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
+  ): string;
+  encodeFunctionData(functionFragment: 'hashBoundParams', values: [BoundParamsStruct]): string;
+  encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'setVerificationKey',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>, VerifyingKeyStruct],
   ): string;
   encodeFunctionData(
-    functionFragment: "getVerificationKey",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+    functionFragment: 'transferOwnership',
+    values: [PromiseOrValue<string>],
   ): string;
+  encodeFunctionData(functionFragment: 'verify', values: [TransactionStruct]): string;
   encodeFunctionData(
-    functionFragment: "hashBoundParams",
-    values: [BoundParamsStruct]
-  ): string;
-  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "renounceOwnership",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setVerificationKey",
-    values: [
-      PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>,
-      VerifyingKeyStruct
-    ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "transferOwnership",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verify",
-    values: [TransactionStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verifyProof",
-    values: [
-      VerifyingKeyStruct,
-      SnarkProofStruct,
-      PromiseOrValue<BigNumberish>[]
-    ]
+    functionFragment: 'verifyProof',
+    values: [VerifyingKeyStruct, SnarkProofStruct, PromiseOrValue<BigNumberish>[]],
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "SNARK_BYPASS",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getVerificationKey",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashBoundParams",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "renounceOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setVerificationKey",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "transferOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "verifyProof",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: 'SNARK_BYPASS', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'getVerificationKey', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'hashBoundParams', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'setVerificationKey', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'verify', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'verifyProof', data: BytesLike): Result;
 
   events: {
-    "Initialized(uint8)": EventFragment;
-    "OwnershipTransferred(address,address)": EventFragment;
-    "VerifyingKeySet(uint256,uint256,tuple)": EventFragment;
+    'Initialized(uint8)': EventFragment;
+    'OwnershipTransferred(address,address)': EventFragment;
+    'VerifyingKeySet(uint256,uint256,tuple)': EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "VerifyingKeySet"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Initialized'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'VerifyingKeySet'): EventFragment;
 }
 
 export interface InitializedEventObject {
@@ -305,8 +260,7 @@ export type OwnershipTransferredEvent = TypedEvent<
   OwnershipTransferredEventObject
 >;
 
-export type OwnershipTransferredEventFilter =
-  TypedEventFilter<OwnershipTransferredEvent>;
+export type OwnershipTransferredEventFilter = TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface VerifyingKeySetEventObject {
   nullifiers: BigNumber;
@@ -329,17 +283,15 @@ export interface Verifier extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -352,42 +304,39 @@ export interface Verifier extends BaseContract {
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[VerifyingKeyStructOutput]>;
 
     hashBoundParams(
       _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber]>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
-    verify(
-      _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<[boolean]>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
   };
 
@@ -396,42 +345,36 @@ export interface Verifier extends BaseContract {
   getVerificationKey(
     _nullifiers: PromiseOrValue<BigNumberish>,
     _commitments: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<VerifyingKeyStructOutput>;
 
-  hashBoundParams(
-    _boundParams: BoundParamsStruct,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+  hashBoundParams(_boundParams: BoundParamsStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
   renounceOwnership(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   setVerificationKey(
     _nullifiers: PromiseOrValue<BigNumberish>,
     _commitments: PromiseOrValue<BigNumberish>,
     _verifyingKey: VerifyingKeyStruct,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
-  verify(
-    _transaction: TransactionStruct,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
+  verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<boolean>;
 
   verifyProof(
     _verifyingKey: VerifyingKeyStruct,
     _proof: SnarkProofStruct,
     _inputs: PromiseOrValue<BigNumberish>[],
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
   callStatic: {
@@ -440,13 +383,10 @@ export interface Verifier extends BaseContract {
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<VerifyingKeyStructOutput>;
 
-    hashBoundParams(
-      _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    hashBoundParams(_boundParams: BoundParamsStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
@@ -456,49 +396,43 @@ export interface Verifier extends BaseContract {
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
-    transferOwnership(
-      newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    transferOwnership(newOwner: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
 
-    verify(
-      _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+    verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<boolean>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
   };
 
   filters: {
-    "Initialized(uint8)"(version?: null): InitializedEventFilter;
+    'Initialized(uint8)'(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
 
-    "OwnershipTransferred(address,address)"(
+    'OwnershipTransferred(address,address)'(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null
+      newOwner?: PromiseOrValue<string> | null,
     ): OwnershipTransferredEventFilter;
     OwnershipTransferred(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null
+      newOwner?: PromiseOrValue<string> | null,
     ): OwnershipTransferredEventFilter;
 
-    "VerifyingKeySet(uint256,uint256,tuple)"(
+    'VerifyingKeySet(uint256,uint256,tuple)'(
       nullifiers?: null,
       commitments?: null,
-      verifyingKey?: null
+      verifyingKey?: null,
     ): VerifyingKeySetEventFilter;
     VerifyingKeySet(
       nullifiers?: null,
       commitments?: null,
-      verifyingKey?: null
+      verifyingKey?: null,
     ): VerifyingKeySetEventFilter;
   };
 
@@ -508,42 +442,36 @@ export interface Verifier extends BaseContract {
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    hashBoundParams(
-      _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    hashBoundParams(_boundParams: BoundParamsStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
-    verify(
-      _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
   };
 
@@ -553,42 +481,42 @@ export interface Verifier extends BaseContract {
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     hashBoundParams(
       _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     verify(
       _transaction: TransactionStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
   };
 }

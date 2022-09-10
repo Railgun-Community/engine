@@ -145,7 +145,7 @@ export const consolidateBalanceError = (): Error => {
 /**
  * Finds next valid nullifier count above the current nullifier count.
  */
-export const nextNullifierTarget = (utxoCount: number): number | undefined =>
+export const nextNullifierTarget = (utxoCount: number): Optional<number> =>
   VALID_NULLIFIER_COUNTS.find((n) => n > utxoCount);
 
 export const shouldAddMoreUTXOsForSolutionBatch = (
@@ -180,7 +180,7 @@ export function findNextSolutionBatch(
   treeBalance: TreeBalance,
   totalRequired: bigint,
   excludedUTXOIDs: string[],
-): TXO[] | undefined {
+): Optional<TXO[]> {
   const filteredUTXOs = treeBalance.utxos.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
   if (!filteredUTXOs.length) {
     // No more solutions in this tree.

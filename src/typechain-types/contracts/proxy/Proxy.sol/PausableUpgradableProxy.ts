@@ -11,67 +11,53 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../../common";
+} from '../../../common';
 
 export interface PausableUpgradableProxyInterface extends utils.Interface {
   functions: {
-    "pause()": FunctionFragment;
-    "transferOwnership(address)": FunctionFragment;
-    "unpause()": FunctionFragment;
-    "upgrade(address)": FunctionFragment;
+    'pause()': FunctionFragment;
+    'transferOwnership(address)': FunctionFragment;
+    'unpause()': FunctionFragment;
+    'upgrade(address)': FunctionFragment;
   };
 
   getFunction(
-    nameOrSignatureOrTopic:
-      | "pause"
-      | "transferOwnership"
-      | "unpause"
-      | "upgrade"
+    nameOrSignatureOrTopic: 'pause' | 'transferOwnership' | 'unpause' | 'upgrade',
   ): FunctionFragment;
 
-  encodeFunctionData(functionFragment: "pause", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'pause', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "transferOwnership",
-    values: [PromiseOrValue<string>]
+    functionFragment: 'transferOwnership',
+    values: [PromiseOrValue<string>],
   ): string;
-  encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "upgrade",
-    values: [PromiseOrValue<string>]
-  ): string;
+  encodeFunctionData(functionFragment: 'unpause', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'upgrade', values: [PromiseOrValue<string>]): string;
 
-  decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "transferOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "upgrade", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'upgrade', data: BytesLike): Result;
 
   events: {
-    "ProxyOwnershipTransfer(address,address)": EventFragment;
-    "ProxyPause()": EventFragment;
-    "ProxyUnpause()": EventFragment;
-    "ProxyUpgrade(address,address)": EventFragment;
+    'ProxyOwnershipTransfer(address,address)': EventFragment;
+    'ProxyPause()': EventFragment;
+    'ProxyUnpause()': EventFragment;
+    'ProxyUpgrade(address,address)': EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "ProxyOwnershipTransfer"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "ProxyPause"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "ProxyUnpause"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "ProxyUpgrade"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'ProxyOwnershipTransfer'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'ProxyPause'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'ProxyUnpause'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'ProxyUpgrade'): EventFragment;
 }
 
 export interface ProxyOwnershipTransferEventObject {
@@ -83,8 +69,7 @@ export type ProxyOwnershipTransferEvent = TypedEvent<
   ProxyOwnershipTransferEventObject
 >;
 
-export type ProxyOwnershipTransferEventFilter =
-  TypedEventFilter<ProxyOwnershipTransferEvent>;
+export type ProxyOwnershipTransferEventFilter = TypedEventFilter<ProxyOwnershipTransferEvent>;
 
 export interface ProxyPauseEventObject {}
 export type ProxyPauseEvent = TypedEvent<[], ProxyPauseEventObject>;
@@ -100,10 +85,7 @@ export interface ProxyUpgradeEventObject {
   previousImplementation: string;
   newImplementation: string;
 }
-export type ProxyUpgradeEvent = TypedEvent<
-  [string, string],
-  ProxyUpgradeEventObject
->;
+export type ProxyUpgradeEvent = TypedEvent<[string, string], ProxyUpgradeEventObject>;
 
 export type ProxyUpgradeEventFilter = TypedEventFilter<ProxyUpgradeEvent>;
 
@@ -116,17 +98,15 @@ export interface PausableUpgradableProxy extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -134,122 +114,101 @@ export interface PausableUpgradableProxy extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    pause(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    pause(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<ContractTransaction>;
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     unpause(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     upgrade(
       _newImplementation: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
   };
 
-  pause(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  pause(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<ContractTransaction>;
 
   transferOwnership(
     _newOwner: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
-  unpause(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  unpause(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<ContractTransaction>;
 
   upgrade(
     _newImplementation: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   callStatic: {
     pause(overrides?: CallOverrides): Promise<void>;
 
-    transferOwnership(
-      _newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    transferOwnership(_newOwner: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
 
     unpause(overrides?: CallOverrides): Promise<void>;
 
-    upgrade(
-      _newImplementation: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    upgrade(_newImplementation: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
   };
 
   filters: {
-    "ProxyOwnershipTransfer(address,address)"(
+    'ProxyOwnershipTransfer(address,address)'(
       previousOwner?: null,
-      newOwner?: null
+      newOwner?: null,
     ): ProxyOwnershipTransferEventFilter;
     ProxyOwnershipTransfer(
       previousOwner?: null,
-      newOwner?: null
+      newOwner?: null,
     ): ProxyOwnershipTransferEventFilter;
 
-    "ProxyPause()"(): ProxyPauseEventFilter;
+    'ProxyPause()'(): ProxyPauseEventFilter;
     ProxyPause(): ProxyPauseEventFilter;
 
-    "ProxyUnpause()"(): ProxyUnpauseEventFilter;
+    'ProxyUnpause()'(): ProxyUnpauseEventFilter;
     ProxyUnpause(): ProxyUnpauseEventFilter;
 
-    "ProxyUpgrade(address,address)"(
+    'ProxyUpgrade(address,address)'(
       previousImplementation?: null,
-      newImplementation?: null
+      newImplementation?: null,
     ): ProxyUpgradeEventFilter;
-    ProxyUpgrade(
-      previousImplementation?: null,
-      newImplementation?: null
-    ): ProxyUpgradeEventFilter;
+    ProxyUpgrade(previousImplementation?: null, newImplementation?: null): ProxyUpgradeEventFilter;
   };
 
   estimateGas: {
-    pause(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    pause(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<BigNumber>;
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
-    unpause(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    unpause(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<BigNumber>;
 
     upgrade(
       _newImplementation: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    pause(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    pause(overrides?: Overrides & { from?: PromiseOrValue<string> }): Promise<PopulatedTransaction>;
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     unpause(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     upgrade(
       _newImplementation: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
   };
 }

@@ -207,7 +207,7 @@ abstract class AbstractWallet extends EventEmitter {
    * Encode address from (MPK, VK) + chainID
    * @returns {string} bech32 encoded RAILGUN address
    */
-  getAddress(chainID: number | undefined): string {
+  getAddress(chainID: Optional<number>): string {
     return bech32.encode({ ...this.addressKeys, chainID });
   }
 
@@ -238,8 +238,8 @@ abstract class AbstractWallet extends EventEmitter {
   private static decryptLeaf(
     leaf: EncryptedCommitment,
     sharedKey: Uint8Array,
-    ephemeralKeySender: Uint8Array | undefined,
-    senderBlindingKey: string | undefined,
+    ephemeralKeySender: Optional<Uint8Array>,
+    senderBlindingKey: Optional<string>,
   ) {
     try {
       return Note.decrypt(
@@ -263,8 +263,8 @@ abstract class AbstractWallet extends EventEmitter {
     position: number,
     totalLeaves: number,
   ): Promise<ScannedDBCommitment[]> {
-    let noteReceive: Note | undefined;
-    let noteSend: Note | undefined;
+    let noteReceive: Optional<Note>;
+    let noteSend: Optional<Note>;
 
     LeptonDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
 
@@ -360,7 +360,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param {number} scannedHeight - starting position
    */
   async scanLeaves(
-    leaves: (Commitment | undefined)[],
+    leaves: Optional<Commitment>[],
     tree: number,
     chainID: number,
     scannedHeight: number,
@@ -615,7 +615,7 @@ abstract class AbstractWallet extends EventEmitter {
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
       ({ txid, tokenAmounts, version }) => {
         const transferTokenAmounts: TransactionHistoryTransferTokenAmount[] = [];
-        let relayerFeeTokenAmount: TransactionHistoryTokenAmount | undefined;
+        let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
         tokenAmounts.forEach((tokenAmount) => {
@@ -684,7 +684,7 @@ abstract class AbstractWallet extends EventEmitter {
     return balances;
   }
 
-  async getBalance(chainID: number, tokenAddress: string): Promise<bigint | undefined> {
+  async getBalance(chainID: number, tokenAddress: string): Promise<Optional<bigint>> {
     const balances = await this.balances(chainID);
     const balanceForToken = balances[formatToByteLength(tokenAddress, 32, false)];
     return balanceForToken ? balanceForToken.balance : undefined;
@@ -750,7 +750,7 @@ abstract class AbstractWallet extends EventEmitter {
 
         // Create sparse array of tree
         const treeHeight = await this.merkletree[chainID].getTreeLength(tree);
-        const fetcher = new Array<Promise<Commitment | undefined>>(treeHeight);
+        const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
         // Fetch each leaf we need to scan
         for (let index = scannedHeight; index < treeHeight; index += 1) {

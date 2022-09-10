@@ -7,7 +7,7 @@ export class Memo {
   static decryptNoteExtraData(
     memoField: string[],
     viewingPrivateKey: Uint8Array,
-  ): NoteExtraData | undefined {
+  ): Optional<NoteExtraData> {
     if (!memoField || !memoField.length) {
       return undefined;
     }
@@ -36,7 +36,7 @@ export class Memo {
   static decryptSenderBlindingKey = (
     memoField: string[],
     viewingPrivateKey: Uint8Array,
-  ): string | undefined => {
+  ): Optional<string> => {
     const noteExtraData = Memo.decryptNoteExtraData(memoField, viewingPrivateKey);
     return noteExtraData && noteExtraData.senderBlindingKey !== MEMO_SENDER_BLINDING_KEY_NULL
       ? noteExtraData.senderBlindingKey

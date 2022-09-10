@@ -48,7 +48,7 @@ function adjustRandom(random: string): bigint {
 
 function maybeBlindViewingPublicKey(
   senderViewingPublicKey: Uint8Array,
-  senderBlindingKey: string | undefined,
+  senderBlindingKey: Optional<string>,
 ): Point {
   const senderViewingPublicKeyPoint = Point.fromHex(bytesToHex(senderViewingPublicKey));
   if (!senderBlindingKey || senderBlindingKey === MEMO_SENDER_BLINDING_KEY_NULL) {
@@ -62,7 +62,7 @@ async function getEphemeralKeys(
   senderViewingPublicKey: Uint8Array,
   receiverViewingPublicKey: Uint8Array,
   random: string,
-  senderBlindingKey: string | undefined,
+  senderBlindingKey: Optional<string>,
 ): Promise<[Uint8Array, Uint8Array]> {
   const sharedSymmetricKey = adjustRandom(random);
   const maybeBlindedSenderViewingPublicKeyPoint = maybeBlindViewingPublicKey(
@@ -82,7 +82,7 @@ async function getEphemeralKeys(
   return [ephemeralKeyReceiverMaybeBlinded, ephemeralKeySender];
 }
 
-function unblindedEphemeralKey(ephemeralKey: Uint8Array, random: string): Uint8Array | undefined {
+function unblindedEphemeralKey(ephemeralKey: Uint8Array, random: string): Optional<Uint8Array> {
   try {
     const randomAdjusted = adjustRandom(random);
     const point = Point.fromHex(bytesToHex(ephemeralKey));
@@ -95,9 +95,9 @@ function unblindedEphemeralKey(ephemeralKey: Uint8Array, random: string): Uint8A
 }
 
 function invertKeySenderBlinding(
-  symmetricKey: Uint8Array | undefined,
-  senderBlindingKey: string | undefined,
-): Uint8Array | undefined {
+  symmetricKey: Optional<Uint8Array>,
+  senderBlindingKey: Optional<string>,
+): Optional<Uint8Array> {
   if (!symmetricKey || !senderBlindingKey || senderBlindingKey === MEMO_SENDER_BLINDING_KEY_NULL) {
     return undefined;
   }
@@ -114,7 +114,7 @@ function invertKeySenderBlinding(
 async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   ephemeralKey: Uint8Array,
-): Promise<Uint8Array | undefined> {
+): Promise<Optional<Uint8Array>> {
   try {
     const pk = Point.fromHex(bytesToHex(ephemeralKey));
     const { scalar } = await utilsEd25519.getExtendedPublicKey(privateKey);

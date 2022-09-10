@@ -9,55 +9,44 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type { FunctionFragment, Result } from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../../../common";
+} from '../../../../common';
 
 export interface ProxyTargetStubAInterface extends utils.Interface {
   functions: {
-    "identify()": FunctionFragment;
-    "pause()": FunctionFragment;
-    "transferOwnership(address)": FunctionFragment;
-    "unpause()": FunctionFragment;
-    "upgrade(address)": FunctionFragment;
+    'identify()': FunctionFragment;
+    'pause()': FunctionFragment;
+    'transferOwnership(address)': FunctionFragment;
+    'unpause()': FunctionFragment;
+    'upgrade(address)': FunctionFragment;
   };
 
   getFunction(
-    nameOrSignatureOrTopic:
-      | "identify"
-      | "pause"
-      | "transferOwnership"
-      | "unpause"
-      | "upgrade"
+    nameOrSignatureOrTopic: 'identify' | 'pause' | 'transferOwnership' | 'unpause' | 'upgrade',
   ): FunctionFragment;
 
-  encodeFunctionData(functionFragment: "identify", values?: undefined): string;
-  encodeFunctionData(functionFragment: "pause", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'identify', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'pause', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "transferOwnership",
-    values: [PromiseOrValue<string>]
+    functionFragment: 'transferOwnership',
+    values: [PromiseOrValue<string>],
   ): string;
-  encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "upgrade",
-    values: [PromiseOrValue<string>]
-  ): string;
+  encodeFunctionData(functionFragment: 'unpause', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'upgrade', values: [PromiseOrValue<string>]): string;
 
-  decodeFunctionResult(functionFragment: "identify", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "transferOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "upgrade", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'identify', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'upgrade', data: BytesLike): Result;
 
   events: {};
 }
@@ -71,17 +60,15 @@ export interface ProxyTargetStubA extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    fromBlockOrBlockhash?: string | Optional<number>,
+    toBlock?: string | Optional<number>,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -95,14 +82,14 @@ export interface ProxyTargetStubA extends BaseContract {
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[string]>;
 
     unpause(overrides?: CallOverrides): Promise<[string]>;
 
     upgrade(
       _newImplementation: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[string]>;
   };
 
@@ -110,17 +97,11 @@ export interface ProxyTargetStubA extends BaseContract {
 
   pause(overrides?: CallOverrides): Promise<string>;
 
-  transferOwnership(
-    _newOwner: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  transferOwnership(_newOwner: PromiseOrValue<string>, overrides?: CallOverrides): Promise<string>;
 
   unpause(overrides?: CallOverrides): Promise<string>;
 
-  upgrade(
-    _newImplementation: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  upgrade(_newImplementation: PromiseOrValue<string>, overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
     identify(overrides?: CallOverrides): Promise<string>;
@@ -129,15 +110,12 @@ export interface ProxyTargetStubA extends BaseContract {
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<string>;
 
     unpause(overrides?: CallOverrides): Promise<string>;
 
-    upgrade(
-      _newImplementation: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<string>;
+    upgrade(_newImplementation: PromiseOrValue<string>, overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {};
@@ -149,14 +127,14 @@ export interface ProxyTargetStubA extends BaseContract {
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     unpause(overrides?: CallOverrides): Promise<BigNumber>;
 
     upgrade(
       _newImplementation: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
   };
 
@@ -167,14 +145,14 @@ export interface ProxyTargetStubA extends BaseContract {
 
     transferOwnership(
       _newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     unpause(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     upgrade(
       _newImplementation: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
   };
 }

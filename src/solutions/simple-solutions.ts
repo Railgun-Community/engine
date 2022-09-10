@@ -12,7 +12,7 @@ const shouldAddMoreUTXOs = (utxos: TXO[], totalRequired: bigint) =>
 export function findExactSolutionsOverTargetValue(
   treeBalance: TreeBalance,
   totalRequired: bigint,
-): TXO[] | undefined {
+): Optional<TXO[]> {
   // If this tree doesn't have enough to cover this transaction, return false
   if (treeBalance.balance < totalRequired) return [];
 

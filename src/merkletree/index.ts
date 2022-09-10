@@ -220,9 +220,9 @@ class MerkleTree {
    * @param {string} nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else undefined
    */
-  async getStoredNullifier(nullifier: string): Promise<string | undefined> {
+  async getStoredNullifier(nullifier: string): Promise<Optional<string>> {
     // Return if nullifier is set
-    let txid: string | undefined;
+    let txid: Optional<string>;
     const latestTree = await this.latestTree();
     for (let tree = 0; tree < latestTree + 1; tree += 1) {
       try {
@@ -257,7 +257,7 @@ class MerkleTree {
    * @param index - index of commitment
    * @returns commitment
    */
-  getCommitment(tree: number, index: number): Promise<Commitment | undefined> {
+  getCommitment(tree: number, index: number): Promise<Optional<Commitment>> {
     return this.db.get(this.getCommitmentDBPath(tree, index), 'json');
   }
 

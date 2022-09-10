@@ -1,3 +1,5 @@
+declare type Optional<T> = T | undefined;
+
 declare module 'circomlibjs' {
   export type Signature = {
     R8: [bigint, bigint];

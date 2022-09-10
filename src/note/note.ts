@@ -107,8 +107,8 @@ export class Note {
 
   private static unblindReceiverViewingPublicKey(
     random: string,
-    ephemeralKeySender: Uint8Array | undefined,
-    senderBlindingKey: string | undefined,
+    ephemeralKeySender: Optional<Uint8Array>,
+    senderBlindingKey: Optional<string>,
   ): Uint8Array {
     if (ephemeralKeySender) {
       const unblinded = unblindedEphemeralKey(ephemeralKeySender, random);
@@ -134,8 +134,8 @@ export class Note {
     encryptedNote: Ciphertext,
     sharedKey: Uint8Array,
     memoField: string[],
-    ephemeralKeySender: Uint8Array | undefined,
-    senderBlindingKey: string | undefined,
+    ephemeralKeySender: Optional<Uint8Array>,
+    senderBlindingKey: Optional<string>,
   ): Note {
     // Decrypt values
     const decryptedValues = encryption.aes.gcm

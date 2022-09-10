@@ -12,9 +12,9 @@ export type Groth16 = {
   verify: (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>;
   fullProve: (
     formattedInputs: FormattedCircuitInputs,
-    wasm: ArrayLike<number> | undefined,
+    wasm: Optional<ArrayLike<number>>,
     zkey: ArrayLike<number>,
-    dat: ArrayLike<number> | undefined,
+    dat: Optional<ArrayLike<number>>,
     progressCallback: ProverProgressCallback,
   ) => Promise<{ proof: Proof }>;
 };
@@ -26,7 +26,7 @@ export { ArtifactsGetter, FormattedCircuitInputs, PrivateInputs, Proof, PublicIn
 export class Prover {
   private artifactsGetter: ArtifactsGetter;
 
-  private groth16: Groth16 | undefined;
+  private groth16: Optional<Groth16>;
 
   constructor(artifactsGetter: ArtifactsGetter) {
     this.artifactsGetter = artifactsGetter;

@@ -47,7 +47,7 @@ class Lepton extends EventEmitter {
 
   readonly deploymentBlocks: number[] = [];
 
-  readonly quickSync: QuickSync | undefined;
+  readonly quickSync: Optional<QuickSync>;
 
   /**
    * Create a lepton instance
@@ -101,7 +101,7 @@ class Lepton extends EventEmitter {
     }
   }
 
-  async getMostRecentValidCommitmentBlock(chainID: number): Promise<number | undefined> {
+  async getMostRecentValidCommitmentBlock(chainID: number): Promise<Optional<number>> {
     const merkletree = this.merkletree[chainID].erc20;
 
     // Get latest tree
@@ -112,7 +112,7 @@ class Lepton extends EventEmitter {
 
     LeptonDebug.log(`scanHistory: latestTree ${latestTree}, treeLength ${treeLength}`);
 
-    let startScanningBlock: number | undefined;
+    let startScanningBlock: Optional<number>;
 
     let latestEventIndex = treeLength - 1;
     while (latestEventIndex >= 0 && !startScanningBlock) {
@@ -198,6 +198,9 @@ class Lepton extends EventEmitter {
         await this.scanAllWallets(chainID);
       }
     } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
       LeptonDebug.error(err);
     }
   }
@@ -410,10 +413,10 @@ class Lepton extends EventEmitter {
    * @param chainID - chain to get value for
    * @returns lastSyncedBlock - last synced block
    */
-  getLastSyncedBlock(chainID: number): Promise<number | undefined> {
+  getLastSyncedBlock(chainID: number): Promise<Optional<number>> {
     return this.db
       .get(Lepton.getLastSyncedBlockDBPrefix(chainID), 'utf8')
-      .then((val) => parseInt(val, 10))
+      .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
 

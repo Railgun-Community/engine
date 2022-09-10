@@ -28,7 +28,6 @@ describe('Note/ERC20/Deposit', () => {
     expect(tokenAddress).to.equal(TOKEN);
     expect(tokenType).to.equal(TokenType.ERC20);
     expect(tokenSubID).to.equal(ZERO_ADDRESS);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     const npk: bigint = poseidon([mpk, hexToBigInt(rand)]);
     expect(deposit.notePublicKey).to.equal(npk);
     expect(deposit.valueHex).length(32);
