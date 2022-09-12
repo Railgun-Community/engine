@@ -132,15 +132,17 @@ describe('Railgun Proxy/Index', function () {
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.Transfer,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+      Note.create(
+        wallet2.addressKeys,
+        RANDOM,
+        300n,
+        TOKEN_ADDRESS,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.Transfer,
+        undefined, // memoText
+      ),
     );
     const tx = await proxyContract.transact(
       await transactionBatch.generateDummySerializedTransactions(
@@ -247,15 +249,17 @@ describe('Railgun Proxy/Index', function () {
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+      Note.create(
+        wallet2.addressKeys,
+        RANDOM,
+        300n,
+        TOKEN_ADDRESS,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.RelayerFee,
+        undefined, // memoText
+      ),
     );
     transactionBatch.setWithdraw(etherswallet.address, 100n);
     const serializedTxs = await transactionBatch.generateSerializedTransactions(
@@ -417,15 +421,17 @@ describe('Railgun Proxy/Index', function () {
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(wallet.addressKeys, RANDOM, 300n, TOKEN_ADDRESS, memoField),
+      Note.create(
+        wallet.addressKeys,
+        RANDOM,
+        300n,
+        TOKEN_ADDRESS,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.RelayerFee,
+        undefined, // memoText
+      ),
     );
     transactionBatch.setWithdraw(etherswallet.address, 100n);
 

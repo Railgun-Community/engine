@@ -30,7 +30,7 @@ describe('Note/ERC20/Deposit', () => {
     expect(tokenSubID).to.equal(ZERO_ADDRESS);
     const npk: bigint = poseidon([mpk, hexToBigInt(rand)]);
     expect(deposit.notePublicKey).to.equal(npk);
-    expect(deposit.valueHex).length(32);
+    expect(deposit.value).to.equal(1000n);
   });
 
   it('Should validate length of random parameter', () => {

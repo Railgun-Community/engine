@@ -1,7 +1,9 @@
-import { CTRCiphertext, NoteExtraData } from '../models/formatted-types';
+import { CTRCiphertext, EncryptedNoteExtraData, NoteExtraData } from '../models/formatted-types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
 import { encryption } from '../utils';
-import { ByteLength, nToHex } from '../utils/bytes';
+import { arrayify, ByteLength, chunk, combine, hexlify, nToHex, padToLength } from '../utils/bytes';
+
+export const MEMO_METADATA_BYTE_CHUNKS = 1;
 
 export class Memo {
   static decryptNoteExtraData(
@@ -41,7 +43,7 @@ export class Memo {
     return noteExtraData ? noteExtraData.senderBlindingKey : MEMO_SENDER_BLINDING_KEY_NULL;
   };
 
-  private static encryptNoteExtraData(
+  private static createEncryptedNoteExtraData(
     noteExtraData: NoteExtraData,
     viewingPrivateKey: Uint8Array,
   ): string {
@@ -60,8 +62,37 @@ export class Memo {
     return `${metadataCiphertext.iv}${metadataCiphertext.data.join('')}`;
   }
 
-  static createMemoField(noteExtraData: NoteExtraData, viewingPrivateKey: Uint8Array): string[] {
-    const metadataField: string = this.encryptNoteExtraData(noteExtraData, viewingPrivateKey);
+  static encryptNoteExtraData(
+    noteExtraData: NoteExtraData,
+    viewingPrivateKey: Uint8Array,
+  ): EncryptedNoteExtraData {
+    const metadataField: string = this.createEncryptedNoteExtraData(
+      noteExtraData,
+      viewingPrivateKey,
+    );
     return [metadataField];
+  }
+
+  static encodeSplitMemoText(memoText: Optional<string>): string[] {
+    if (!memoText) {
+      return [];
+    }
+    const encoded = hexlify(new TextEncoder().encode(memoText));
+    const chunked = chunk(encoded);
+
+    const lastChunk = chunked[chunked.length - 1];
+    const paddedLastChunk = padToLength(lastChunk, ByteLength.UINT_256) as string;
+
+    return [...chunked.slice(0, -1), paddedLastChunk];
+  }
+
+  static decodeMemoText(encoded: string[]): Optional<string> {
+    if (!encoded.length) {
+      return undefined;
+    }
+
+    const combined = combine(encoded);
+    // eslint-disable-next-line no-control-regex
+    return new TextDecoder().decode(Buffer.from(arrayify(combined))).replace(/\u0000/g, '');
   }
 }

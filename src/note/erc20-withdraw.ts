@@ -48,10 +48,6 @@ export class ERC20WithdrawNote {
     return BigInt(this.npk);
   }
 
-  get valueHex() {
-    return nToHex(this.value, ByteLength.UINT_128);
-  }
-
   /**
    * Get note hash
    *
@@ -69,11 +65,15 @@ export class ERC20WithdrawNote {
     return nToHex(this.hash, ByteLength.UINT_256);
   }
 
+  private static formatValue(value: bigint, prefix: boolean = false): string {
+    return nToHex(value, ByteLength.UINT_128, prefix);
+  }
+
   serialize(prefix: boolean = false) {
     return {
-      npk: formatToByteLength(this.withdrawAddress, 32, prefix),
+      npk: formatToByteLength(this.withdrawAddress, ByteLength.UINT_256, prefix),
       token: this.token,
-      value: this.valueHex,
+      value: ERC20WithdrawNote.formatValue(this.value, prefix),
     };
   }
 

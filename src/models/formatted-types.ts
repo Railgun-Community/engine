@@ -14,9 +14,9 @@ export type AdaptID = {
 };
 
 export type Ciphertext = {
-  iv: BytesData;
-  tag: BytesData;
-  data: BytesData[];
+  iv: string;
+  tag: string;
+  data: string[];
 };
 
 export type CTRCiphertext = {
@@ -68,6 +68,8 @@ export type NoteExtraData = {
   senderBlindingKey: string; // Bytes 2-16 (15)
 };
 
+export type EncryptedNoteExtraData = [string] | [];
+
 export type CommitmentPreimage = {
   npk: string;
   token: TokenData;
@@ -91,6 +93,7 @@ export type NoteSerialized = {
   encryptedRandom: [string, string];
   memoField: string[];
   recipientAddress: string;
+  memoText: Optional<string>;
 };
 
 export type MerkleProof = {

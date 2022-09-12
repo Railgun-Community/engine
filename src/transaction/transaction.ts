@@ -8,7 +8,6 @@ import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from 
 import {
   AdaptID,
   BoundParams,
-  Ciphertext,
   CommitmentPreimage,
   OutputCommitmentCiphertext,
   OutputType,
@@ -117,7 +116,7 @@ class Transaction {
     const merkleRoot = await merkleTree.getRoot(this.spendingTree); // TODO: Is this correct tree?
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();
-    const viewingKey = wallet.getViewingKeyPair();
+    const senderViewingKeys = wallet.getViewingKeyPair();
 
     // Check if there's too many outputs
     if (this.outputs.length > 2) throw new Error('Too many transaction outputs');
@@ -159,15 +158,18 @@ class Transaction {
     const allOutputs: (Note | ERC20WithdrawNote)[] = [...this.outputs];
 
     // Create change output
-    const changeMemo: string[] = Memo.createMemoField(
-      {
-        outputType: OutputType.Change,
-        senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL, // Not needed for change outputs.
-      },
-      viewingKey.privateKey,
-    );
+    const changeSenderBlindingKey = MEMO_SENDER_BLINDING_KEY_NULL; // Not need for change output.
     allOutputs.push(
-      new Note(wallet.addressKeys, randomHex(16), change, this.tokenAddress, changeMemo),
+      Note.create(
+        wallet.addressKeys,
+        randomHex(16),
+        change,
+        this.tokenAddress,
+        senderViewingKeys,
+        changeSenderBlindingKey,
+        OutputType.Change,
+        undefined, // memoText
+      ),
     );
 
     // Push withdraw output if withdraw is requested
@@ -183,7 +185,7 @@ class Transaction {
       onlyInternalOutputs.map((note) => {
         const senderBlindingKey = Memo.decryptSenderBlindingKey(note.memoField, viewingPrivateKey);
         return getEphemeralKeys(
-          viewingKey.pubkey,
+          senderViewingKeys.pubkey,
           note.viewingPublicKey,
           note.random,
           senderBlindingKey,
@@ -194,7 +196,7 @@ class Transaction {
     // calculate symmetric key using sender privateKey and recipient ephemeral key
     const sharedKeys = await Promise.all(
       notesEphemeralKeys.map((ephemeralKeys) =>
-        getSharedSymmetricKey(viewingKey.privateKey, ephemeralKeys[1]),
+        getSharedSymmetricKey(senderViewingKeys.privateKey, ephemeralKeys[1]),
       ),
     );
 
@@ -205,16 +207,16 @@ class Transaction {
           throw new Error('Shared symmetric key is not defined.');
         }
 
-        const ciphertext: Ciphertext = note.encrypt(sharedKey);
+        const { noteCiphertext, noteMemo } = note.encrypt(sharedKey);
         return {
-          ciphertext: [`${ciphertext.iv}${ciphertext.tag}`, ...ciphertext.data].map((el) =>
-            hexToBigInt(el as string),
+          ciphertext: [`${noteCiphertext.iv}${noteCiphertext.tag}`, ...noteCiphertext.data].map(
+            (el) => hexToBigInt(el as string),
           ) as [bigint, bigint, bigint, bigint],
           ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))) as [
             bigint,
             bigint,
           ],
-          memo: note.memoField.map((el) => hexToBigInt(el)),
+          memo: noteMemo.map((el) => hexToBigInt(el)),
         };
       },
     );

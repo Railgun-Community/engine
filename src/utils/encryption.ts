@@ -49,26 +49,33 @@ const aes = {
      * @returns - plaintext
      */
     decrypt(ciphertext: Ciphertext, key: BytesData): BytesData[] {
-      // If types are strings, convert to bytes array
-      const ciphertextFormatted = ciphertext.data.map((block) => new Uint8Array(arrayify(block)));
-      const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
-      const ivFormatted = new Uint8Array(arrayify(trim(ciphertext.iv, 16)));
-      const tagFormatted = new Uint8Array(arrayify(trim(ciphertext.tag, 16)));
+      try {
+        // If types are strings, convert to bytes array
+        const ciphertextFormatted = ciphertext.data.map((block) => new Uint8Array(arrayify(block)));
+        const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
+        const ivFormatted = new Uint8Array(arrayify(trim(ciphertext.iv, 16)));
+        const tagFormatted = new Uint8Array(arrayify(trim(ciphertext.tag, 16)));
 
-      // Initialize decipher
-      const decipher = crypto.createDecipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
-        authTagLength: 16,
-      });
+        // Initialize decipher
+        const decipher = crypto.createDecipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
+          authTagLength: 16,
+        });
 
-      // It will throw exception if the decryption fails due to invalid key, iv, tag
-      decipher.setAuthTag(tagFormatted);
+        // It will throw exception if the decryption fails due to invalid key, iv, tag
+        decipher.setAuthTag(tagFormatted);
 
-      // Loop through ciphertext and decrypt then return
-      const data = ciphertextFormatted
-        .map((block) => decipher.update(block))
-        .map((block) => block.toString('hex'));
-      decipher.final();
-      return data;
+        // Loop through ciphertext and decrypt then return
+        const data = ciphertextFormatted
+          .map((block) => decipher.update(block))
+          .map((block) => block.toString('hex'));
+        decipher.final();
+        return data;
+      } catch (err) {
+        if (!(err instanceof Error)) {
+          throw err;
+        }
+        throw new Error('Unable to decrypt ciphertext.');
+      }
     },
   },
   ctr: {

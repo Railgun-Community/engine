@@ -8,7 +8,7 @@ import { groth16 } from 'snarkjs';
 import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
-import { Commitment, TokenType } from '../../src/models/formatted-types';
+import { Commitment, OutputType, TokenType } from '../../src/models/formatted-types';
 import { Note } from '../../src/note';
 import { Groth16, Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
@@ -34,7 +34,7 @@ const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const random = randomHex(16);
-type makeNoteFn = (value?: bigint) => Note;
+type makeNoteFn = (value?: bigint) => Promise<Note>;
 let makeNote: makeNoteFn;
 
 const depositLeaf = (txid: string): Commitment => ({
@@ -69,8 +69,19 @@ describe('Transaction/Transaction Batch', function run() {
     prover.setGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
-    makeNote = (value: bigint = 65n * DECIMALS_18): Note =>
-      new Note(address, random, value, token, []);
+    makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<Note> => {
+      const senderBlindingKey = randomHex(15);
+      return Note.create(
+        address,
+        random,
+        value,
+        token,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.Transfer,
+        undefined, // memoText
+      );
+    };
     merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf('a')]);
     await merkletree.queueLeaves(1, 0, [
@@ -89,7 +100,7 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   it('Should validate transaction batch outputs', async () => {
-    transactionBatch.addOutput(makeNote(depositValue * 6n));
+    transactionBatch.addOutput(await makeNote(depositValue * 6n));
     const txs = await transactionBatch.generateSerializedTransactions(
       prover,
       wallet,
@@ -101,19 +112,19 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(makeNote(depositValue * 6n));
-    transactionBatch.addOutput(makeNote(1n));
+    transactionBatch.addOutput(await makeNote(depositValue * 6n));
+    transactionBatch.addOutput(await makeNote(1n));
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
     const txs2 = await transactionBatch.generateSerializedTransactions(
       prover,
       wallet,
@@ -125,10 +136,10 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
@@ -156,7 +167,7 @@ describe('Transaction/Transaction Batch', function run() {
 
     transactionBatch.resetOutputs();
     transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(makeNote(depositValue * 6n));
+    transactionBatch.addOutput(await makeNote(depositValue * 6n));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue * 1n);
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
@@ -164,11 +175,11 @@ describe('Transaction/Transaction Batch', function run() {
 
     transactionBatch.resetOutputs();
     transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
-    transactionBatch.addOutput(makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
+    transactionBatch.addOutput(await makeNote(depositValue));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue);
     const txs2 = await transactionBatch.generateSerializedTransactions(
       prover,
@@ -192,9 +203,9 @@ describe('Transaction/Transaction Batch', function run() {
     // Fix by using change from one note for the next output note... and so on.
     transactionBatch.resetOutputs();
     transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
-    transactionBatch.addOutput(makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(depositValue + 1n));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue + 1n);
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
@@ -208,7 +219,7 @@ describe('Transaction/Transaction Batch', function run() {
     await merkletree.queueLeaves(1, 0, [depositLeaf('g'), depositLeaf('h')]);
     transactionBatch.resetOutputs();
     transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(makeNote(0n));
+    transactionBatch.addOutput(await makeNote(0n));
     transactionBatch.setWithdraw(ethersWallet.address, depositValue * 5n);
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),

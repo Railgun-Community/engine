@@ -46,7 +46,7 @@ describe('Utils/Encryption', () => {
         },
         key,
       ),
-    ).to.throw('Unsupported state or unable to authenticate data');
+    ).to.throw('Unable to decrypt ciphertext.');
   });
 
   it('Should encrypt and decrypt GCM data', () => {

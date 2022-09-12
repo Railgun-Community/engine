@@ -38,6 +38,7 @@ export type TransactionHistoryTokenAmount = {
   token: string;
   amount: bigint;
   noteExtraData?: NoteExtraData;
+  memoText: Optional<string>;
 };
 export type TransactionHistoryTransferTokenAmount = TransactionHistoryTokenAmount & {
   recipientAddress: string;

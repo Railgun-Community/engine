@@ -18,7 +18,6 @@ import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import { OutputType, TokenType } from '../../../src/models/formatted-types';
 import { ERC20WithdrawNote, Note } from '../../../src/note';
 import { ByteLength, nToHex, randomHex } from '../../../src/utils/bytes';
-import { Memo } from '../../../src/note/memo';
 import { ERC20 } from '../../../src/typechain-types';
 import { Groth16 } from '../../../src/prover';
 
@@ -142,19 +141,15 @@ describe('Relay Adapt/Index', function test() {
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
 
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
-    const relayerFee = new Note(
+    const relayerFee = Note.create(
       wallet.addressKeys,
       randomHex(16),
       0n,
       WETH_TOKEN_ADDRESS,
-      memoField,
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      OutputType.RelayerFee,
+      undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
 
@@ -197,19 +192,15 @@ describe('Relay Adapt/Index', function test() {
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
-    const relayerFee = new Note(
+    const relayerFee = Note.create(
       wallet2.addressKeys,
       randomHex(16),
       100n,
       WETH_TOKEN_ADDRESS,
-      memoField,
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      OutputType.RelayerFee,
+      undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(
@@ -299,7 +290,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
-    // const relayerFee = new Note(wallet2.addressKeys, randomHex(16), 300n, WETH_TOKEN_ADDRESS);
+    // const relayerFee = Note.create(wallet2.addressKeys, randomHex(16), 300n, WETH_TOKEN_ADDRESS);
     // transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(
       relayAdaptContract.address,
@@ -350,19 +341,15 @@ describe('Relay Adapt/Index', function test() {
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
-    const relayerFee = new Note(
+    const relayerFee = Note.create(
       wallet2.addressKeys,
       randomHex(16),
       300n,
       WETH_TOKEN_ADDRESS,
-      memoField,
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      OutputType.RelayerFee,
+      undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(
@@ -507,19 +494,15 @@ describe('Relay Adapt/Index', function test() {
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
-    const relayerFee = new Note(
+    const relayerFee = Note.create(
       wallet2.addressKeys,
       randomHex(16),
       300n,
       WETH_TOKEN_ADDRESS,
-      memoField,
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      OutputType.RelayerFee,
+      undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(
@@ -661,19 +644,15 @@ describe('Relay Adapt/Index', function test() {
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
-    const relayerFee = new Note(
+    const relayerFee = Note.create(
       wallet2.addressKeys,
       randomHex(16),
       300n,
       WETH_TOKEN_ADDRESS,
-      memoField,
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      OutputType.RelayerFee,
+      undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(

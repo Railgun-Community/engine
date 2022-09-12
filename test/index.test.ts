@@ -16,7 +16,6 @@ import { RailgunProxyContract } from '../src/contracts/railgun-proxy';
 import { ZERO_ADDRESS } from '../src/utils/constants';
 import { GeneratedCommitment, OutputType, TokenType } from '../src/models/formatted-types';
 import { TransactionBatch } from '../src/transaction/transaction-batch';
-import { Memo } from '../src/note/memo';
 import { Groth16 } from '../src/prover';
 import { ERC20 } from '../src/typechain-types';
 import { promiseTimeout } from '../src/utils/promises';
@@ -170,15 +169,17 @@ describe('Lepton', function () {
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
     const senderBlindingKey = randomHex(15);
-    const memoFieldRelayerFee = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, randomHex(16), 1n, tokenAddress, memoFieldRelayerFee),
+      Note.create(
+        wallet2.addressKeys,
+        randomHex(16),
+        1n,
+        tokenAddress,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.RelayerFee,
+        undefined, // memoText
+      ),
     );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
@@ -214,6 +215,7 @@ describe('Lepton', function () {
       {
         token: tokenFormatted,
         amount: BigInt('109725000000000000000000'),
+        memoText: undefined,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -234,6 +236,7 @@ describe('Lepton', function () {
         outputType: OutputType.RelayerFee,
         senderBlindingKey,
       },
+      memoText: undefined,
     });
     expect(history[1].changeTokenAmounts).deep.eq([
       {
@@ -243,6 +246,7 @@ describe('Lepton', function () {
           outputType: OutputType.Change,
           senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
         },
+        memoText: undefined,
       },
     ]);
   }).timeout(90000);
@@ -265,30 +269,39 @@ describe('Lepton', function () {
     // Create transaction
     const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chainID);
 
+    const memoText =
+      'A really long memo with emojis 😐 👩🏾‍🔧 and other text, in order to test a major memo for a real live production use case.';
+
     // Add output for Transfer
     const senderBlindingKey = randomHex(15);
-    const memoFieldTransfer = Memo.createMemoField(
-      {
-        outputType: OutputType.Transfer,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, randomHex(16), 10n, tokenAddress, memoFieldTransfer),
+      Note.create(
+        wallet2.addressKeys,
+        randomHex(16),
+        10n,
+        tokenAddress,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.Transfer,
+        memoText,
+      ),
     );
+
+    const relayerMemoText = 'A short memo with only 32 chars.';
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
     const senderBlindingKey2 = randomHex(15);
-    const memoFieldRelayerFee = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey: senderBlindingKey2,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(wallet2.addressKeys, randomHex(16), 1n, tokenAddress, memoFieldRelayerFee),
+      Note.create(
+        wallet2.addressKeys,
+        randomHex(16),
+        1n,
+        tokenAddress,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey2,
+        OutputType.RelayerFee,
+        relayerMemoText, // memoText
+      ),
     );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
@@ -324,6 +337,7 @@ describe('Lepton', function () {
       {
         token: tokenFormatted,
         amount: BigInt('109725000000000000000000'),
+        memoText: undefined,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -345,6 +359,7 @@ describe('Lepton', function () {
           senderBlindingKey,
         },
         recipientAddress: wallet2.getAddress(0),
+        memoText,
       },
     ]);
     expect(history[1].relayerFeeTokenAmount).deep.eq({
@@ -354,6 +369,7 @@ describe('Lepton', function () {
         outputType: OutputType.RelayerFee,
         senderBlindingKey: senderBlindingKey2,
       },
+      memoText: relayerMemoText,
     });
     expect(history[1].changeTokenAmounts).deep.eq([
       {
@@ -363,8 +379,27 @@ describe('Lepton', function () {
           outputType: OutputType.Change,
           senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
         },
+        memoText: undefined,
       },
     ]);
+
+    const history2 = await wallet2.getTransactionHistory(chainID);
+    expect(history2.length).to.equal(1);
+    expect(history2[0].receiveTokenAmounts).deep.eq([
+      {
+        token: tokenFormatted,
+        amount: BigInt(10),
+        memoText,
+      },
+      {
+        token: tokenFormatted,
+        amount: BigInt(1),
+        memoText: relayerMemoText,
+      },
+    ]);
+    expect(history2[0].transferTokenAmounts).deep.eq([]);
+    expect(history2[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history2[0].changeTokenAmounts).deep.eq([]);
   }).timeout(90000);
 
   it('Should set/get last synced block', async () => {

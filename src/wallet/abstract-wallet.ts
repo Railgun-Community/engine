@@ -307,6 +307,7 @@ abstract class AbstractWallet extends EventEmitter {
         value: leaf.preImage.value,
         memoField: [], // Empty for non-private txs.
         recipientAddress: walletAddress,
+        memoText: undefined,
       };
       try {
         noteReceive = Note.deserialize(serialized, viewingPrivateKey);
@@ -569,6 +570,7 @@ abstract class AbstractWallet extends EventEmitter {
       txidTransactionMap[txid].receiveTokenAmounts.push({
         token,
         amount: note.value,
+        memoText: note.memoText,
       });
     });
 
@@ -599,9 +601,13 @@ abstract class AbstractWallet extends EventEmitter {
         token,
         amount: note.value,
         noteExtraData,
+        memoText: note.memoText,
       };
       const isTransfer = !noteExtraData || noteExtraData.outputType === OutputType.Transfer;
       if (isTransfer) {
+        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encode(
+          note.addressData,
+        );
         (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encode(
           note.addressData,
         );

@@ -45,10 +45,6 @@ export class ERC20Deposit {
     return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
   }
 
-  get valueHex(): string {
-    return nToHex(this.value, ByteLength.UINT_128);
-  }
-
   /**
    * Get note hash
    */

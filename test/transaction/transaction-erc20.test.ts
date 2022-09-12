@@ -48,7 +48,7 @@ const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const random = randomHex(16);
-type makeNoteFn = (value?: bigint) => Note;
+type makeNoteFn = (value?: bigint) => Promise<Note>;
 let makeNote: makeNoteFn;
 
 // const keypairs = [
@@ -109,24 +109,20 @@ describe('Transaction/ERC20', function () {
     prover.setGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
-    const vpk = wallet.getViewingKeyPair().privateKey;
-    makeNote = (
+    makeNote = async (
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
-    ): Note => {
+    ): Promise<Note> => {
       const senderBlindingKey = randomHex(15);
-      return new Note(
+      return Note.create(
         address,
         random,
         value,
         token,
-        Memo.createMemoField(
-          {
-            outputType,
-            senderBlindingKey,
-          },
-          vpk,
-        ),
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        outputType,
+        undefined, // memoText
       );
     };
     merkletree.validateRoot = () => Promise.resolve(true);
@@ -156,7 +152,7 @@ describe('Transaction/ERC20', function () {
     assert.typeOf(hashed, 'bigint');
   });
 
-  it('Should generate ciphertext decryptable by sender and recipient', async () => {
+  it('Should generate ciphertext decryptable by sender and recipient - with memo', async () => {
     const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
 
     const sender = wallet.getViewingKeyPair();
@@ -168,12 +164,17 @@ describe('Transaction/ERC20', function () {
       senderBlindingKey,
     };
 
-    const note = new Note(
+    const memoText = 'Some Memo Text';
+
+    const note = Note.create(
       wallet2.addressKeys,
       random,
       100n,
       token,
-      Memo.createMemoField(noteExtraData, sender.privateKey),
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      noteExtraData.outputType,
+      memoText,
     );
 
     assert.isTrue(note.viewingPublicKey === receiver.pubkey);
@@ -193,12 +194,12 @@ describe('Transaction/ERC20', function () {
     assert(receiverShared != null);
     expect(senderShared).to.deep.equal(receiverShared);
 
-    const encryptedNote = note.encrypt(senderShared);
+    const { noteCiphertext, noteMemo } = note.encrypt(senderShared);
 
     const senderDecrypted = Note.decrypt(
-      encryptedNote,
+      noteCiphertext,
       senderShared,
-      note.memoField,
+      noteMemo,
       ephemeralKeySender,
       senderBlindingKey,
     );
@@ -207,20 +208,92 @@ describe('Transaction/ERC20', function () {
     expect(Memo.decryptNoteExtraData(senderDecrypted.memoField, sender.privateKey)).to.deep.equal(
       noteExtraData,
     );
+    expect(senderDecrypted.memoText).to.equal(memoText);
 
     const receiverDecrypted = Note.decrypt(
-      encryptedNote,
+      noteCiphertext,
       receiverShared,
-      note.memoField,
+      noteMemo,
       undefined,
       undefined,
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.addressData.viewingPublicKey).to.deep.equal(new Uint8Array());
+    expect(receiverDecrypted.memoText).to.equal(memoText);
+  });
+
+  it('Should generate ciphertext decryptable by sender and recipient - no memo', async () => {
+    const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
+
+    const sender = wallet.getViewingKeyPair();
+    const receiver = wallet2.getViewingKeyPair();
+
+    const senderBlindingKey = randomHex(15);
+    const noteExtraData: NoteExtraData = {
+      outputType: OutputType.RelayerFee,
+      senderBlindingKey,
+    };
+
+    const memoText = undefined;
+
+    const note = Note.create(
+      wallet2.addressKeys,
+      random,
+      100n,
+      token,
+      wallet.getViewingKeyPair(),
+      senderBlindingKey,
+      noteExtraData.outputType,
+      memoText,
+    );
+
+    assert.isTrue(note.viewingPublicKey === receiver.pubkey);
+    const ephemeralKeys = await getEphemeralKeys(
+      sender.pubkey,
+      note.viewingPublicKey,
+      note.random,
+      senderBlindingKey,
+    );
+
+    const ephemeralKeyReceiver = ephemeralKeys[0];
+    const ephemeralKeySender = ephemeralKeys[1];
+
+    const senderShared = await getSharedSymmetricKey(sender.privateKey, ephemeralKeySender);
+    const receiverShared = await getSharedSymmetricKey(receiver.privateKey, ephemeralKeyReceiver);
+    assert(senderShared != null);
+    assert(receiverShared != null);
+    expect(senderShared).to.deep.equal(receiverShared);
+
+    const { noteCiphertext, noteMemo } = note.encrypt(senderShared);
+
+    const senderDecrypted = Note.decrypt(
+      noteCiphertext,
+      senderShared,
+      noteMemo,
+      ephemeralKeySender,
+      senderBlindingKey,
+    );
+    expect(senderDecrypted.hash).to.equal(note.hash);
+    expect(senderDecrypted.addressData.viewingPublicKey).to.deep.equal(receiver.pubkey);
+    expect(Memo.decryptNoteExtraData(senderDecrypted.memoField, sender.privateKey)).to.deep.equal(
+      noteExtraData,
+    );
+    expect(senderDecrypted.memoText).to.equal(memoText);
+
+    const receiverDecrypted = Note.decrypt(
+      noteCiphertext,
+      receiverShared,
+      noteMemo,
+      undefined,
+      undefined,
+    );
+    expect(receiverDecrypted.hash).to.equal(note.hash);
+    expect(receiverDecrypted.addressData.viewingPublicKey).to.deep.equal(new Uint8Array());
+    expect(receiverDecrypted.memoText).to.equal(memoText);
   });
 
   it('Should generate a valid signature for transaction', async () => {
-    transactionBatch.addOutput(makeNote());
+    transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
       wallet,
     );
@@ -241,7 +314,7 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should generate validated inputs for transaction batch', async () => {
-    transactionBatch.addOutput(makeNote());
+    transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
       wallet,
     );
@@ -255,28 +328,24 @@ describe('Transaction/ERC20', function () {
     expect(nullifiers.length).to.equal(1);
     expect(commitmentsOut.length).to.equal(2);
 
-    transactionBatch.addOutput(makeNote());
-    transactionBatch.addOutput(makeNote());
+    transactionBatch.addOutput(await makeNote());
+    transactionBatch.addOutput(await makeNote());
     await expect(
       transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Too many transaction outputs');
 
     transactionBatch.resetOutputs();
     const senderBlindingKey = randomHex(15);
-    const memoField = Memo.createMemoField(
-      {
-        outputType: OutputType.RelayerFee,
-        senderBlindingKey,
-      },
-      wallet.getViewingKeyPair().privateKey,
-    );
     transactionBatch.addOutput(
-      new Note(
+      Note.create(
         address,
         random,
         6500000000000n,
         '000925cdf66ddf5b88016df1fe915e68eff8f192',
-        memoField,
+        wallet.getViewingKeyPair(),
+        senderBlindingKey,
+        OutputType.RelayerFee,
+        undefined, // memoText
       ),
     );
 
@@ -285,13 +354,13 @@ describe('Transaction/ERC20', function () {
     ).to.eventually.be.rejectedWith('Token address mismatch on output 0');
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(makeNote(21000000000027360000000000n));
+    transactionBatch.addOutput(await makeNote(21000000000027360000000000n));
     await expect(
       transactionBatch.generateValidSpendingSolutionGroups(wallet),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(makeNote(11000000000027360000000000n));
+    transactionBatch.addOutput(await makeNote(11000000000027360000000000n));
     await expect(
       transactionBatch.generateValidSpendingSolutionGroups(wallet),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
@@ -308,7 +377,7 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should generate validated inputs for transaction batch - withdraw', async () => {
-    transactionBatch.addOutput(makeNote());
+    transactionBatch.addOutput(await makeNote());
     transactionBatch.setWithdraw(ethersWallet.address, 2n, true);
     const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
       wallet,
@@ -325,7 +394,7 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should create transaction proofs and serialized transactions', async () => {
-    transactionBatch.addOutput(makeNote(1n));
+    transactionBatch.addOutput(await makeNote(1n));
     const txs = await transactionBatch.generateSerializedTransactions(
       prover,
       wallet,
@@ -337,7 +406,7 @@ describe('Transaction/ERC20', function () {
     expect(txs[0].commitments.length).to.equal(2);
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(makeNote(1715000000000n));
+    transactionBatch.addOutput(await makeNote(1715000000000n));
 
     const txs2 = await transactionBatch.generateSerializedTransactions(
       prover,
@@ -350,7 +419,7 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should test transaction proof progress callback final value', async () => {
-    transactionBatch.addOutput(makeNote(1n));
+    transactionBatch.addOutput(await makeNote(1n));
     let loadProgress = 0;
     await transactionBatch.generateSerializedTransactions(
       prover,
@@ -364,7 +433,7 @@ describe('Transaction/ERC20', function () {
   });
 
   it('Should create dummy transaction proofs', async () => {
-    transactionBatch.addOutput(makeNote());
+    transactionBatch.addOutput(await makeNote());
     const txs = await transactionBatch.generateDummySerializedTransactions(
       prover,
       wallet,
@@ -381,7 +450,7 @@ describe('Transaction/ERC20', function () {
   //   const walletlocal = await Wallet.fromMnemonic(dblocal, testEncryptionKey, testMnemonic);
   //   const proverlocal = new Prover(artifactsGetter);
 
-  //   const note = new Note(
+  //   const note = Note.create(
   //     '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   //     '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
   //     new BN('11000000000000000000000000', 10),
@@ -408,7 +477,7 @@ describe('Transaction/ERC20', function () {
   //   const transactionlocal = new ERC20Transaction('5FbDB2315678afecb367f032d93F642f64180aa3', 1);
 
   //   transactionlocal.outputs = [
-  //     new Note(
+  //     Note.create(
   //       '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   //       '0x1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
   //       'ffff',

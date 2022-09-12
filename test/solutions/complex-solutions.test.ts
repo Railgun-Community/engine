@@ -2,6 +2,7 @@
 /* globals describe it */
 
 import { assert, expect } from 'chai';
+import { randomBytes } from 'ethers/lib/utils';
 import { Lepton, Note } from '../../src';
 import {
   createSpendingSolutionGroupsForOutput,
@@ -12,10 +13,12 @@ import {
 import { sortUTXOsBySize } from '../../src/solutions/utxos';
 import { TreeBalance, TXO } from '../../src/wallet/abstract-wallet';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
-import { TokenType } from '../../src/models/formatted-types';
+import { OutputType, TokenType } from '../../src/models/formatted-types';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { extractSpendingSolutionGroupsData } from '../../src/solutions/spending-group-extractor';
 import { randomHex } from '../../src/utils/bytes';
+import { getPublicViewingKey } from '../../src/utils/keys-utils';
+import { ViewingKeyPair } from '../../src/keyderivation/wallet-node';
 
 const addressData1 = Lepton.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
@@ -30,12 +33,29 @@ const addressData3 = Lepton.decodeAddress(
 const TOKEN_ADDRESS = 'abc';
 const CHAIN_ID = 1;
 
-const createMockNote = (addressData: AddressData, value: bigint) => {
-  return new Note(addressData, randomHex(16), value, TOKEN_ADDRESS, []);
+const createMockNote = async (addressData: AddressData, value: bigint) => {
+  const privateViewingKey = randomBytes(32);
+  const publicViewingKey = await getPublicViewingKey(privateViewingKey);
+  const viewingKeyPair: ViewingKeyPair = {
+    privateKey: privateViewingKey,
+    pubkey: publicViewingKey,
+  };
+  const senderBlindingKey = randomHex(15);
+
+  return Note.create(
+    addressData,
+    randomHex(16),
+    value,
+    TOKEN_ADDRESS,
+    viewingKeyPair,
+    senderBlindingKey,
+    OutputType.Transfer,
+    undefined, // memoText
+  );
 };
 
-const createMockTXO = (txid: string, value: bigint): TXO => {
-  const note = createMockNote(addressData1, value);
+const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
+  const note = await createMockNote(addressData1, value);
   return { txid, note } as TXO;
 };
 
@@ -75,16 +95,16 @@ describe('Solutions/Complex Solutions', () => {
     expect(shouldAddMoreUTXOsForSolutionBatch(8, 10, lowAmount, totalRequired)).to.equal(false);
   });
 
-  it('Should create next solution batch from utxos (5)', () => {
+  it('Should create next solution batch from utxos (5)', async () => {
     const treeBalance1: TreeBalance = {
       balance: BigInt(150),
       utxos: [
-        createMockTXO('a', BigInt(30)),
-        createMockTXO('b', BigInt(40)),
-        createMockTXO('c', BigInt(50)),
-        createMockTXO('d', BigInt(10)),
-        createMockTXO('e', BigInt(20)),
-        createMockTXO('f', BigInt(0)),
+        await createMockTXO('a', BigInt(30)),
+        await createMockTXO('b', BigInt(40)),
+        await createMockTXO('c', BigInt(50)),
+        await createMockTXO('d', BigInt(10)),
+        await createMockTXO('e', BigInt(20)),
+        await createMockTXO('f', BigInt(0)),
       ],
     };
 
@@ -135,19 +155,19 @@ describe('Solutions/Complex Solutions', () => {
     expect(solutionBatch6).to.equal(undefined);
   });
 
-  it('Should create next solution batch from utxos (9)', () => {
+  it('Should create next solution batch from utxos (9)', async () => {
     const treeBalance1: TreeBalance = {
       balance: BigInt(450),
       utxos: [
-        createMockTXO('a', BigInt(30)),
-        createMockTXO('b', BigInt(40)),
-        createMockTXO('c', BigInt(50)),
-        createMockTXO('d', BigInt(10)),
-        createMockTXO('e', BigInt(20)),
-        createMockTXO('f', BigInt(60)),
-        createMockTXO('g', BigInt(70)),
-        createMockTXO('h', BigInt(80)),
-        createMockTXO('i', BigInt(90)),
+        await createMockTXO('a', BigInt(30)),
+        await createMockTXO('b', BigInt(40)),
+        await createMockTXO('c', BigInt(50)),
+        await createMockTXO('d', BigInt(10)),
+        await createMockTXO('e', BigInt(20)),
+        await createMockTXO('f', BigInt(60)),
+        await createMockTXO('g', BigInt(70)),
+        await createMockTXO('h', BigInt(80)),
+        await createMockTXO('i', BigInt(90)),
       ],
     };
 
@@ -172,27 +192,27 @@ describe('Solutions/Complex Solutions', () => {
     expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['h']);
   });
 
-  it('Should create spending solution groups for various outputs', () => {
+  it('Should create spending solution groups for various outputs', async () => {
     const treeBalance0: TreeBalance = {
       balance: BigInt(20),
       utxos: [
-        createMockTXO('aa', BigInt(20)),
-        createMockTXO('ab', BigInt(0)),
-        createMockTXO('ac', BigInt(0)),
+        await createMockTXO('aa', BigInt(20)),
+        await createMockTXO('ab', BigInt(0)),
+        await createMockTXO('ac', BigInt(0)),
       ],
     };
     const treeBalance1: TreeBalance = {
       balance: BigInt(450),
       utxos: [
-        createMockTXO('a', BigInt(30)),
-        createMockTXO('b', BigInt(40)),
-        createMockTXO('c', BigInt(50)),
-        createMockTXO('d', BigInt(10)),
-        createMockTXO('e', BigInt(20)),
-        createMockTXO('f', BigInt(60)),
-        createMockTXO('g', BigInt(70)),
-        createMockTXO('h', BigInt(80)),
-        createMockTXO('i', BigInt(90)),
+        await createMockTXO('a', BigInt(30)),
+        await createMockTXO('b', BigInt(40)),
+        await createMockTXO('c', BigInt(50)),
+        await createMockTXO('d', BigInt(10)),
+        await createMockTXO('e', BigInt(20)),
+        await createMockTXO('f', BigInt(60)),
+        await createMockTXO('g', BigInt(70)),
+        await createMockTXO('h', BigInt(80)),
+        await createMockTXO('i', BigInt(90)),
       ],
     };
 
@@ -200,9 +220,9 @@ describe('Solutions/Complex Solutions', () => {
 
     // Case 1.
     const remainingOutputs1: Note[] = [
-      createMockNote(addressData1, BigInt(80)),
-      createMockNote(addressData2, BigInt(70)),
-      createMockNote(addressData3, BigInt(60)),
+      await createMockNote(addressData1, BigInt(80)),
+      await createMockNote(addressData2, BigInt(70)),
+      await createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups1 = createSpendingSolutionGroupsForOutput(
       sortedTreeBalances,
@@ -230,9 +250,9 @@ describe('Solutions/Complex Solutions', () => {
 
     // Case 2.
     const remainingOutputs2: Note[] = [
-      createMockNote(addressData1, BigInt(150)),
-      createMockNote(addressData2, BigInt(70)),
-      createMockNote(addressData3, BigInt(60)),
+      await createMockNote(addressData1, BigInt(150)),
+      await createMockNote(addressData2, BigInt(70)),
+      await createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups2 = createSpendingSolutionGroupsForOutput(
       sortedTreeBalances,
@@ -259,7 +279,7 @@ describe('Solutions/Complex Solutions', () => {
     ]);
 
     // Case 3.
-    const remainingOutputs3: Note[] = [createMockNote(addressData1, BigInt(500))];
+    const remainingOutputs3: Note[] = [await createMockNote(addressData1, BigInt(500))];
     expect(() =>
       createSpendingSolutionGroupsForOutput(
         sortedTreeBalances,
@@ -272,27 +292,27 @@ describe('Solutions/Complex Solutions', () => {
     );
   });
 
-  it('Should create complex spending solution groups for transaction batch', () => {
+  it('Should create complex spending solution groups for transaction batch', async () => {
     const treeBalance0: TreeBalance = {
       balance: BigInt(20),
       utxos: [
-        createMockTXO('aa', BigInt(20)),
-        createMockTXO('ab', BigInt(0)),
-        createMockTXO('ac', BigInt(0)),
+        await createMockTXO('aa', BigInt(20)),
+        await createMockTXO('ab', BigInt(0)),
+        await createMockTXO('ac', BigInt(0)),
       ],
     };
     const treeBalance1: TreeBalance = {
       balance: BigInt(450),
       utxos: [
-        createMockTXO('a', BigInt(30)),
-        createMockTXO('b', BigInt(40)),
-        createMockTXO('c', BigInt(50)),
-        createMockTXO('d', BigInt(10)),
-        createMockTXO('e', BigInt(20)),
-        createMockTXO('f', BigInt(60)),
-        createMockTXO('g', BigInt(70)),
-        createMockTXO('h', BigInt(80)),
-        createMockTXO('i', BigInt(90)),
+        await createMockTXO('a', BigInt(30)),
+        await createMockTXO('b', BigInt(40)),
+        await createMockTXO('c', BigInt(50)),
+        await createMockTXO('d', BigInt(10)),
+        await createMockTXO('e', BigInt(20)),
+        await createMockTXO('f', BigInt(60)),
+        await createMockTXO('g', BigInt(70)),
+        await createMockTXO('h', BigInt(80)),
+        await createMockTXO('i', BigInt(90)),
       ],
     };
 
@@ -301,9 +321,9 @@ describe('Solutions/Complex Solutions', () => {
     // Case 1.
     const transactionBatch1 = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, CHAIN_ID);
     const outputs1: Note[] = [
-      createMockNote(addressData1, BigInt(80)),
-      createMockNote(addressData2, BigInt(70)),
-      createMockNote(addressData3, BigInt(60)),
+      await createMockNote(addressData1, BigInt(80)),
+      await createMockNote(addressData2, BigInt(70)),
+      await createMockNote(addressData3, BigInt(60)),
     ];
     outputs1.forEach((output) => transactionBatch1.addOutput(output));
     const spendingSolutionGroups1 =
