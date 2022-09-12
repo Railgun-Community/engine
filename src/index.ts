@@ -24,6 +24,7 @@ import {
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
 import { CommitmentEvent } from './contracts/railgun-proxy/events';
+import WalletInfo from './wallet/wallet-info';
 
 export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
@@ -49,19 +50,25 @@ class Lepton extends EventEmitter {
 
   readonly quickSync: Optional<QuickSync>;
 
+  static walletSource: Optional<string>;
+
   /**
    * Create a lepton instance
+   * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
    * @param leveldown - abstract-leveldown compatible store
    * @param artifactsGetter - async function to retrieve artifacts, lepton doesn't handle caching
    * @param quickSync - quick sync function to speed up sync
+   * @param leptonDebugger - log and error callbacks for verbose logging
    */
   constructor(
+    walletSource: string,
     leveldown: AbstractLevelDOWN,
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
     leptonDebugger?: LeptonDebugger,
   ) {
     super();
+    WalletInfo.setWalletSource(walletSource);
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
     this.quickSync = quickSync;

@@ -49,7 +49,7 @@ describe('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter, undefined);
+    lepton = new Lepton('TestWalletAdapt', memdown(), artifactsGetter, undefined);
     lepton.prover.setGroth16(groth16 as Groth16);
 
     wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);

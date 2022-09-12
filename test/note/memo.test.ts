@@ -7,6 +7,7 @@ import { Database } from '../../src/database';
 import { NoteExtraData, OutputType } from '../../src/models/formatted-types';
 import { Memo } from '../../src/note/memo';
 import { Wallet } from '../../src/wallet/wallet';
+import WalletInfo from '../../src/wallet/wallet-info';
 import { config } from '../config.test';
 
 chai.use(chaiAsPromised);
@@ -22,6 +23,7 @@ describe('Memo', function run() {
   this.beforeAll(async () => {
     db = new Database(memdown());
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    WalletInfo.setWalletSource('Memo Wallet');
   });
 
   it('Should encrypt and decrypt note extra data', async () => {
@@ -30,8 +32,13 @@ describe('Memo', function run() {
     const noteExtraData: NoteExtraData = {
       outputType: OutputType.RelayerFee,
       senderBlindingKey: '1234567890abcde1234567890abcde', // 15 bytes
+      walletSource: 'memo wallet',
     };
-    const encryptedNoteExtraData = Memo.encryptNoteExtraData(noteExtraData, sender.privateKey);
+    const encryptedNoteExtraData = Memo.encryptNoteExtraData(
+      noteExtraData.outputType,
+      noteExtraData.senderBlindingKey,
+      sender.privateKey,
+    );
     expect(Memo.decryptNoteExtraData(encryptedNoteExtraData, sender.privateKey)).to.deep.equal(
       noteExtraData,
     );

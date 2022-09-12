@@ -64,11 +64,12 @@ export enum OutputType {
 }
 
 export type NoteExtraData = {
-  outputType: OutputType; // Byte 1 (1)
-  senderBlindingKey: string; // Bytes 2-16 (15)
+  outputType: OutputType; // Chunk 0: Byte 1 (1)
+  senderBlindingKey: string; // Chunk 0: Bytes 2-16 (15)
+  walletSource: Optional<string>; // Chunk 1: Bytes 22-32 (11) - can be extended left if needed
 };
 
-export type EncryptedNoteExtraData = [string] | [];
+export type EncryptedNoteExtraData = string[];
 
 export type CommitmentPreimage = {
   npk: string;

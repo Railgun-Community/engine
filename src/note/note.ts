@@ -4,7 +4,6 @@ import { ViewingKeyPair } from '../keyderivation/wallet-node';
 import {
   BigIntish,
   Ciphertext,
-  NoteExtraData,
   NoteSerialized,
   OutputType,
   TokenType,
@@ -92,11 +91,11 @@ export class Note {
     outputType: OutputType,
     memoText: Optional<string>,
   ): Note {
-    const noteExtraData: NoteExtraData = {
+    const memoField = Memo.encryptNoteExtraData(
       outputType,
-      senderBlindingKey: senderBlindingKey || MEMO_SENDER_BLINDING_KEY_NULL,
-    };
-    const memoField = Memo.encryptNoteExtraData(noteExtraData, senderViewingKeys.privateKey);
+      senderBlindingKey || MEMO_SENDER_BLINDING_KEY_NULL,
+      senderViewingKeys.privateKey,
+    );
     return new Note(receiverAddressData, random, value, token, memoField, memoText);
   }
 

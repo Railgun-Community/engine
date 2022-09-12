@@ -579,10 +579,10 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async getTransactionSpendHistory(chainID: number): Promise<TransactionHistoryEntrySpent[]> {
-    const SentCommitments = await this.getSentCommitments(chainID);
+    const sentCommitments = await this.getSentCommitments(chainID);
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    SentCommitments.forEach(({ txid, note, noteExtraData }) => {
+    sentCommitments.forEach(({ txid, note, noteExtraData }) => {
       if (note.value === 0n) {
         return;
       }
@@ -605,9 +605,6 @@ abstract class AbstractWallet extends EventEmitter {
       };
       const isTransfer = !noteExtraData || noteExtraData.outputType === OutputType.Transfer;
       if (isTransfer) {
-        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encode(
-          note.addressData,
-        );
         (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encode(
           note.addressData,
         );

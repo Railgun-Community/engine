@@ -54,12 +54,11 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
 };
 
-// eslint-disable-next-line func-names
-describe('Lepton', function () {
+describe('Lepton', function run() {
   this.timeout(240000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter, mockQuickSync);
+    lepton = new Lepton('Test Wallet', memdown(), artifactsGetter, mockQuickSync);
     lepton.prover.setGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
@@ -235,6 +234,7 @@ describe('Lepton', function () {
       noteExtraData: {
         outputType: OutputType.RelayerFee,
         senderBlindingKey,
+        walletSource: 'test wallet',
       },
       memoText: undefined,
     });
@@ -245,6 +245,7 @@ describe('Lepton', function () {
         noteExtraData: {
           outputType: OutputType.Change,
           senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
+          walletSource: 'test wallet',
         },
         memoText: undefined,
       },
@@ -357,6 +358,7 @@ describe('Lepton', function () {
         noteExtraData: {
           outputType: OutputType.Transfer,
           senderBlindingKey,
+          walletSource: 'test wallet',
         },
         recipientAddress: wallet2.getAddress(0),
         memoText,
@@ -368,6 +370,7 @@ describe('Lepton', function () {
       noteExtraData: {
         outputType: OutputType.RelayerFee,
         senderBlindingKey: senderBlindingKey2,
+        walletSource: 'test wallet',
       },
       memoText: relayerMemoText,
     });
@@ -378,6 +381,7 @@ describe('Lepton', function () {
         noteExtraData: {
           outputType: OutputType.Change,
           senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
+          walletSource: 'test wallet',
         },
         memoText: undefined,
       },

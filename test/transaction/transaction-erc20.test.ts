@@ -162,6 +162,7 @@ describe('Transaction/ERC20', function () {
     const noteExtraData: NoteExtraData = {
       outputType: OutputType.RelayerFee,
       senderBlindingKey,
+      walletSource: 'memo wallet',
     };
 
     const memoText = 'Some Memo Text';
@@ -232,6 +233,7 @@ describe('Transaction/ERC20', function () {
     const noteExtraData: NoteExtraData = {
       outputType: OutputType.RelayerFee,
       senderBlindingKey,
+      walletSource: 'memo wallet',
     };
 
     const memoText = undefined;

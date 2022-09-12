@@ -1,9 +1,15 @@
-import { CTRCiphertext, EncryptedNoteExtraData, NoteExtraData } from '../models/formatted-types';
+import {
+  CTRCiphertext,
+  EncryptedNoteExtraData,
+  NoteExtraData,
+  OutputType,
+} from '../models/formatted-types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
 import { encryption } from '../utils';
 import { arrayify, ByteLength, chunk, combine, hexlify, nToHex, padToLength } from '../utils/bytes';
+import WalletInfo from '../wallet/wallet-info';
 
-export const MEMO_METADATA_BYTE_CHUNKS = 1;
+export const MEMO_METADATA_BYTE_CHUNKS = 2;
 
 export class Memo {
   static decryptNoteExtraData(
@@ -15,19 +21,28 @@ export class Memo {
     }
 
     try {
-      const metadataField: string = memoField[0];
+      const hasTwoBytes = memoField.length > 1;
+
       const metadataCiphertext = {
-        iv: metadataField.substring(0, 32),
-        data: [metadataField.substring(32, 64)],
+        iv: memoField[0].substring(0, 32),
+        data: hasTwoBytes
+          ? [
+              memoField[0].substring(32, 64),
+              memoField[1].substring(0, 32),
+              memoField[1].substring(32, 64),
+            ]
+          : [memoField[0].substring(32, 64)],
       };
-      const decryptedMetadata: string = encryption.aes.ctr.decrypt(
-        metadataCiphertext,
-        viewingPrivateKey,
-      )[0];
+      const decrypted = encryption.aes.ctr.decrypt(metadataCiphertext, viewingPrivateKey);
+
+      const walletSource: Optional<string> = hasTwoBytes
+        ? this.decodeWalletSource(decrypted[2])
+        : undefined;
 
       const noteExtraData: NoteExtraData = {
-        outputType: parseInt(decryptedMetadata.substring(0, 2), 16),
-        senderBlindingKey: decryptedMetadata.substring(2, 32),
+        outputType: parseInt(decrypted[0].substring(0, 2), 16),
+        senderBlindingKey: decrypted[0].substring(2, 32),
+        walletSource,
       };
       return noteExtraData;
     } catch (err) {
@@ -43,34 +58,58 @@ export class Memo {
     return noteExtraData ? noteExtraData.senderBlindingKey : MEMO_SENDER_BLINDING_KEY_NULL;
   };
 
+  private static decodeWalletSource(decryptedBytes: string): Optional<string> {
+    try {
+      const decoded = WalletInfo.decodeWalletSource(decryptedBytes);
+      return decoded;
+    } catch (err) {
+      return undefined;
+    }
+  }
+
   private static createEncryptedNoteExtraData(
-    noteExtraData: NoteExtraData,
+    outputType: OutputType,
+    senderBlindingKey: string,
     viewingPrivateKey: Uint8Array,
-  ): string {
-    const outputTypeFormatted = nToHex(BigInt(noteExtraData.outputType), ByteLength.UINT_8); // 1 byte
-    const senderBlindingKeyFormatted = noteExtraData.senderBlindingKey; // 15 bytes
-    const metadataField: string = `${outputTypeFormatted}${senderBlindingKeyFormatted}`;
-    if (metadataField.length !== 32) {
-      throw new Error('Metadata field must be 16 bytes.');
+  ): string[] {
+    const outputTypeFormatted = nToHex(BigInt(outputType), ByteLength.UINT_8); // 1 byte
+    const senderBlindingKeyFormatted = senderBlindingKey; // 15 bytes
+    const metadataField0: string = `${outputTypeFormatted}${senderBlindingKeyFormatted}`;
+    if (metadataField0.length !== 32) {
+      throw new Error('Metadata field 0 must be 16 bytes.');
     }
 
+    const metadataField1 = new Array<string>(32).fill('0').join(''); // 32 zeroes
+
+    let metadataField2 = WalletInfo.getEncodedWalletSource();
+    while (metadataField2.length < 32) {
+      metadataField2 = `0${metadataField2}`;
+    }
+
+    const toEncrypt = [metadataField0, metadataField1, metadataField2];
+
     const metadataCiphertext: CTRCiphertext = encryption.aes.ctr.encrypt(
-      [metadataField],
+      toEncrypt,
       viewingPrivateKey,
     );
 
-    return `${metadataCiphertext.iv}${metadataCiphertext.data.join('')}`;
+    return [
+      `${metadataCiphertext.iv}${metadataCiphertext.data[0]}`,
+      `${metadataCiphertext.data[1]}${metadataCiphertext.data[2]}`,
+    ];
   }
 
   static encryptNoteExtraData(
-    noteExtraData: NoteExtraData,
+    outputType: OutputType,
+    senderBlindingKey: string,
     viewingPrivateKey: Uint8Array,
   ): EncryptedNoteExtraData {
-    const metadataField: string = this.createEncryptedNoteExtraData(
-      noteExtraData,
+    const metadataField: string[] = this.createEncryptedNoteExtraData(
+      outputType,
+      senderBlindingKey,
       viewingPrivateKey,
     );
-    return [metadataField];
+    return metadataField;
   }
 
   static encodeSplitMemoText(memoText: Optional<string>): string[] {

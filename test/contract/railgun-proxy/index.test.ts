@@ -59,7 +59,7 @@ describe('Railgun Proxy/Index', function () {
   this.timeout(60000);
 
   beforeEach(async () => {
-    lepton = new Lepton(memdown(), artifactsGetter, undefined);
+    lepton = new Lepton('Test Proxy', memdown(), artifactsGetter, undefined);
     lepton.prover.setGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
@@ -461,8 +461,8 @@ describe('Railgun Proxy/Index', function () {
     expect(result.treeNumber).to.equal(0);
     expect(result.startPosition).to.equal(1);
     expect(result.commitments.length).to.equal(2);
-    expect((result.commitments as EncryptedCommitment[])[0].ciphertext.memo.length).to.equal(1);
-    expect((result.commitments as EncryptedCommitment[])[1].ciphertext.memo.length).to.equal(1);
+    expect((result.commitments as EncryptedCommitment[])[0].ciphertext.memo.length).to.equal(2);
+    expect((result.commitments as EncryptedCommitment[])[1].ciphertext.memo.length).to.equal(2);
     expect(
       Memo.decryptNoteExtraData(
         (result.commitments as EncryptedCommitment[])[0].ciphertext.memo,
@@ -471,6 +471,7 @@ describe('Railgun Proxy/Index', function () {
     ).to.deep.equal({
       outputType: OutputType.RelayerFee,
       senderBlindingKey,
+      walletSource: 'test proxy',
     });
     expect(
       Memo.decryptNoteExtraData(
@@ -480,6 +481,7 @@ describe('Railgun Proxy/Index', function () {
     ).to.deep.equal({
       outputType: OutputType.Change,
       senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
+      walletSource: 'test proxy',
     });
   }).timeout(120000);
 
