@@ -62,7 +62,7 @@ describe('Memo', function run() {
       '9fa79e20f09fa4a120f09f998020f09fa5b020f09f91a9f09f8fbfe2808df09f',
       '9a9220f09fa79e2c20696e206f7264657220746f20746573742061206d616a6f',
       '72206d656d6f20666f722061207265616c206c6976652070726f64756374696f',
-      '0000000000000000000000000000000000000000006e2075736520636173652e',
+      '6e2075736520636173652e000000000000000000000000000000000000000000',
     ]);
     encoded.forEach((encodedChunk) => {
       // eslint-disable-next-line no-unused-expressions
@@ -80,7 +80,7 @@ describe('Memo', function run() {
     expect(encoded).to.deep.equal([
       '50726976617465206d656d6f206669656c6420f09fa4a1f09f9980f09fa5b0f0',
       '9f91a9f09f8fbfe2808df09f9a92f09fa79e20f09fa4a120f09f998020f09fa5',
-      '000000000000000000b020f09f91a9f09f8fbfe2808df09f9a9220f09fa79e2c',
+      'b020f09f91a9f09f8fbfe2808df09f9a9220f09fa79e2c000000000000000000',
     ]);
     encoded.forEach((encodedChunk) => {
       // eslint-disable-next-line no-unused-expressions

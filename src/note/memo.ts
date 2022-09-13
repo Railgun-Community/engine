@@ -120,7 +120,7 @@ export class Memo {
     const chunked = chunk(encoded);
 
     const lastChunk = chunked[chunked.length - 1];
-    const paddedLastChunk = padToLength(lastChunk, ByteLength.UINT_256) as string;
+    const paddedLastChunk = padToLength(lastChunk, ByteLength.UINT_256, 'right') as string;
 
     return [...chunked.slice(0, -1), paddedLastChunk];
   }
