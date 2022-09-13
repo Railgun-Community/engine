@@ -47,6 +47,7 @@ export enum TokenType {
 export type TransactionReceiptLog = {
   topics: string[];
   data: string;
+  address: string;
 };
 
 export type TokenData = {

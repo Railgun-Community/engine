@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { BigNumber, ethers, PopulatedTransaction } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { TransactionReceipt } from '@ethersproject/abstract-provider';
+import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { RelayAdaptContract } from '../../../src/contracts/relay-adapt';
 import { RelayAdaptHelper } from '../../../src/contracts/relay-adapt/relay-adapt-helper';
 import { Lepton } from '../../../src';
@@ -828,6 +828,23 @@ describe('Relay Adapt/Index', function test() {
         '0x0000000000000000000000000000000000000000',
       );
     });
+  });
+
+  it('Should parse relay adapt error messages', async () => {
+    const polygonProvider = new JsonRpcProvider('https://polygon-rpc.com');
+    const txReceipt: TransactionReceipt = await polygonProvider.getTransactionReceipt(
+      '0x56c3b9bfb573e6f49f21b8e09282edd01a93bbb965b1f4debbf7316ea3d878dd',
+    );
+    expect(RelayAdaptContract.getCallResultError(txReceipt.logs)).to.equal(
+      'Unknown Relay Adapt error.',
+    );
+
+    const txReceipt2: TransactionReceipt = await polygonProvider.getTransactionReceipt(
+      '0xeeaf0c55b4c34516402ce1c0d1eb4e3d2664b11204f2fc9988ec57ae7a1220ff',
+    );
+    expect(RelayAdaptContract.getCallResultError(txReceipt2.logs)).to.equal(
+      'ERC20: transfer amount exceeds allowance',
+    );
   });
 
   afterEach(async () => {
