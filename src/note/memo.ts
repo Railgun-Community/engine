@@ -131,7 +131,8 @@ export class Memo {
     }
 
     const combined = combine(encoded);
-    // eslint-disable-next-line no-control-regex
-    return new TextDecoder().decode(Buffer.from(arrayify(combined))).replace(/\u0000/g, '');
+    return new TextDecoder().decode(
+      Buffer.from(arrayify(combined).filter((arrayValue) => arrayValue !== 0)),
+    );
   }
 }
