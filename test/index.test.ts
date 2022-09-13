@@ -54,7 +54,7 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
 };
 
-describe('Lepton', function run() {
+describe('Lepton', function runTests() {
   this.timeout(240000);
 
   beforeEach(async () => {

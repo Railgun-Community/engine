@@ -51,15 +51,18 @@ describe('Memo', function run() {
 
   it('Should encode and decode memo text', async () => {
     const memoText =
-      'A really long memo with emojis 😐 👩🏾‍🔧 and other text, in order to test a major memo for a real live production use case.';
+      'A really long memo with emojis 😐👩🏾‍🔧😎 and other text !@#$%^&*() Private memo field 🤡🙀🥰👩🏿‍🚒🧞 🤡 🙀 🥰 👩🏿‍🚒 🧞, in order to test a major memo for a real live production use case.';
 
     const encoded = Memo.encodeSplitMemoText(memoText);
     expect(encoded).to.deep.equal([
       '41207265616c6c79206c6f6e67206d656d6f207769746820656d6f6a697320f0',
-      '9f989020f09f91a9f09f8fbee2808df09f94a720616e64206f74686572207465',
-      '78742c20696e206f7264657220746f20746573742061206d616a6f72206d656d',
-      '6f20666f722061207265616c206c6976652070726f64756374696f6e20757365',
-      '000000000000000000000000000000000000000000000000000020636173652e',
+      '9f9890f09f91a9f09f8fbee2808df09f94a7f09f988e20616e64206f74686572',
+      '20746578742021402324255e262a28292050726976617465206d656d6f206669',
+      '656c6420f09fa4a1f09f9980f09fa5b0f09f91a9f09f8fbfe2808df09f9a92f0',
+      '9fa79e20f09fa4a120f09f998020f09fa5b020f09f91a9f09f8fbfe2808df09f',
+      '9a9220f09fa79e2c20696e206f7264657220746f20746573742061206d616a6f',
+      '72206d656d6f20666f722061207265616c206c6976652070726f64756374696f',
+      '0000000000000000000000000000000000000000006e2075736520636173652e',
     ]);
     encoded.forEach((encodedChunk) => {
       // eslint-disable-next-line no-unused-expressions
