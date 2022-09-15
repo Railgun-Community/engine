@@ -386,7 +386,7 @@ describe('MerkleTree/Index', () => {
     ]);
 
     // Get proof
-    const proof = await merkletree.getProof(0, 3);
+    const proof = await merkletree.getMerkleProof(0, 3);
 
     // Check proof is what we expect
     expect(proof).to.deep.equal({
@@ -432,7 +432,7 @@ describe('MerkleTree/Index', () => {
     );
 
     // Get proof
-    const proof2 = await merkletree.getProof(1, 34);
+    const proof2 = await merkletree.getMerkleProof(1, 34);
 
     expect(proof2.root).to.not.equal(proof.root);
     // Check proof is what we expect

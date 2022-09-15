@@ -109,7 +109,7 @@ class MerkleTree {
    * @param index - index of leaf
    * @returns Merkle proof
    */
-  async getProof(tree: number, index: number): Promise<MerkleProof> {
+  async getMerkleProof(tree: number, index: number): Promise<MerkleProof> {
     // Fetch leaf
     const leaf = await this.getNode(tree, 0, index);
 

@@ -137,8 +137,8 @@ class Transaction {
 
       // Push path elements
       // eslint-disable-next-line no-await-in-loop
-      const proof = await merkleTree.getProof(this.spendingTree, utxo.position);
-      pathElements.push(proof.elements.map((element) => hexToBigInt(element)));
+      const merkleProof = await merkleTree.getMerkleProof(this.spendingTree, utxo.position);
+      pathElements.push(merkleProof.elements.map((element) => hexToBigInt(element)));
 
       // Push path indicies
       pathIndices.push(BigInt(utxo.position));
