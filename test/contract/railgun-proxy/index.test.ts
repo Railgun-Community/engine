@@ -316,7 +316,7 @@ describe('Railgun Proxy/Index', function runTests() {
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
-  it.only('[HH] Should scan and rescan history for events', async function run() {
+  it('[HH] Should scan and rescan history for events', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
