@@ -20,11 +20,12 @@ import { Groth16 } from '../src/prover';
 import { ERC20 } from '../src/typechain-types';
 import { promiseTimeout } from '../src/utils/promises';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../src/transaction/constants';
+import { Chain, ChainType } from '../src/models/lepton-types';
 
 chai.use(chaiAsPromised);
 
 let provider: ethers.providers.JsonRpcProvider;
-let chainID: number;
+let chain: Chain;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
@@ -51,7 +52,7 @@ const makeTestDeposit = async (address: string, value: bigint) => {
 
   // Send deposit on chain
   await etherswallet.sendTransaction(depositTx);
-  await expect(awaitScan(wallet, chainID)).to.be.fulfilled;
+  await expect(awaitScan(wallet, chain)).to.be.fulfilled;
 };
 
 describe('Lepton', function runTests() {
@@ -67,7 +68,10 @@ describe('Lepton', function runTests() {
 
     // LeptonDebug.init(console); // uncomment for logs
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
-    chainID = (await provider.getNetwork()).chainId;
+    chain = {
+      type: ChainType.EVM,
+      id: (await provider.getNetwork()).chainId,
+    };
 
     etherswallet = getEthersWallet(config.mnemonic, provider);
 
@@ -81,14 +85,14 @@ describe('Lepton', function runTests() {
     wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
     await lepton.loadNetwork(
-      chainID,
+      chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
       24,
     );
-    merkleTree = lepton.merkletree[chainID].erc20;
-    proxyContract = lepton.proxyContracts[chainID];
+    merkleTree = lepton.merkletrees[chain.type][chain.id].erc20;
+    proxyContract = lepton.proxyContracts[chain.type][chain.id];
   });
 
   it('[HH] Should load existing wallets', async function run() {
@@ -129,17 +133,17 @@ describe('Lepton', function runTests() {
     merkleTree.validateRoot = () => Promise.resolve(true);
     await merkleTree.queueLeaves(0, 0, [commitment]);
 
-    await wallet.scanBalances(chainID);
-    const balance = await wallet.getBalance(chainID, tokenAddress);
+    await wallet.scanBalances(chain);
+    const balance = await wallet.getBalance(chain, tokenAddress);
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
-    await wallet.fullRescanBalances(chainID);
-    const balanceRescan = await wallet.getBalance(chainID, tokenAddress);
+    await wallet.fullRescanBalances(chain);
+    const balanceRescan = await wallet.getBalance(chain, tokenAddress);
     expect(balanceRescan).to.equal(value);
 
-    await wallet.clearScannedBalances(chainID);
-    const balanceClear = await wallet.getBalance(chainID, tokenAddress);
+    await wallet.clearScannedBalances(chain);
+    const balanceClear = await wallet.getBalance(chain, tokenAddress);
     expect(balanceClear).to.equal(undefined);
   });
 
@@ -149,17 +153,17 @@ describe('Lepton', function runTests() {
       return;
     }
 
-    const initialBalance = await wallet.getBalance(chainID, tokenAddress);
+    const initialBalance = await wallet.getBalance(chain, tokenAddress);
     expect(initialBalance).to.equal(undefined);
 
-    const address = wallet.getAddress(chainID);
+    const address = wallet.getAddress(chain);
     await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalance(chainID, tokenAddress);
+    const balance = await wallet.getBalance(chain, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
-    const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chain);
     transactionBatch.setWithdraw(
       etherswallet.address,
       BigInt(300) * DECIMALS_18,
@@ -192,19 +196,19 @@ describe('Lepton', function runTests() {
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
     await Promise.all([
-      promiseTimeout(awaitScan(wallet, chainID), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(wallet2, chainID), 15000, 'Timed out wallet2 scan'),
+      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
     ]);
 
     // BALANCE = deposited amount - 300(decimals) - 1
-    const newBalance = await wallet.getBalance(chainID, tokenAddress);
+    const newBalance = await wallet.getBalance(chain, tokenAddress);
     expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
 
-    const newBalance2 = await wallet2.getBalance(chainID, tokenAddress);
+    const newBalance2 = await wallet2.getBalance(chain, tokenAddress);
     expect(newBalance2).to.equal(BigInt(1));
 
     // check the transactions log
-    const history = await wallet.getTransactionHistory(chainID);
+    const history = await wallet.getTransactionHistory(chain);
     expect(history.length).to.equal(2);
 
     const tokenFormatted = formatToByteLength(tokenAddress, 32, false);
@@ -258,17 +262,17 @@ describe('Lepton', function runTests() {
       return;
     }
 
-    const initialBalance = await wallet.getBalance(chainID, tokenAddress);
+    const initialBalance = await wallet.getBalance(chain, tokenAddress);
     expect(initialBalance).to.equal(undefined);
 
-    const address = wallet.getAddress(chainID);
+    const address = wallet.getAddress(chain);
     await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalance(chainID, tokenAddress);
+    const balance = await wallet.getBalance(chain, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
-    const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chain);
 
     const memoText =
       'A really long memo with emojis 😐 👩🏾‍🔧 and other text, in order to test a major memo for a real live production use case.';
@@ -316,19 +320,19 @@ describe('Lepton', function runTests() {
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
     await Promise.all([
-      promiseTimeout(awaitScan(wallet, chainID), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(wallet2, chainID), 15000, 'Timed out wallet2 scan'),
+      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
     ]);
 
     // BALANCE = deposited amount - 300(decimals) - 1
-    const newBalance = await wallet.getBalance(chainID, tokenAddress);
+    const newBalance = await wallet.getBalance(chain, tokenAddress);
     expect(newBalance).to.equal(109724999999999999999989n, 'Failed to receive expected balance');
 
-    const newBalance2 = await wallet2.getBalance(chainID, tokenAddress);
+    const newBalance2 = await wallet2.getBalance(chain, tokenAddress);
     expect(newBalance2).to.equal(BigInt(11));
 
     // check the transactions log
-    const history = await wallet.getTransactionHistory(chainID);
+    const history = await wallet.getTransactionHistory(chain);
     expect(history.length).to.equal(2);
 
     const tokenFormatted = formatToByteLength(tokenAddress, 32, false);
@@ -360,7 +364,7 @@ describe('Lepton', function runTests() {
           senderBlindingKey,
           walletSource: 'test wallet',
         },
-        recipientAddress: wallet2.getAddress(0),
+        recipientAddress: wallet2.getAddress(),
         memoText,
       },
     ]);
@@ -387,7 +391,7 @@ describe('Lepton', function runTests() {
       },
     ]);
 
-    const history2 = await wallet2.getTransactionHistory(chainID);
+    const history2 = await wallet2.getTransactionHistory(chain);
     expect(history2.length).to.equal(1);
     expect(history2[0].receiveTokenAmounts).deep.eq([
       {
@@ -407,14 +411,17 @@ describe('Lepton', function runTests() {
   }).timeout(90000);
 
   it('Should set/get last synced block', async () => {
-    const chainIDForSyncedBlock = 10010;
-    let lastSyncedBlock = await lepton.getLastSyncedBlock(chainIDForSyncedBlock);
+    const chainForSyncedBlock = {
+      type: ChainType.EVM,
+      id: 10010,
+    };
+    let lastSyncedBlock = await lepton.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await lepton.setLastSyncedBlock(100, chainIDForSyncedBlock);
-    lastSyncedBlock = await lepton.getLastSyncedBlock(chainIDForSyncedBlock);
+    await lepton.setLastSyncedBlock(100, chainForSyncedBlock);
+    lastSyncedBlock = await lepton.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await lepton.setLastSyncedBlock(100000, chainIDForSyncedBlock);
-    lastSyncedBlock = await lepton.getLastSyncedBlock(chainIDForSyncedBlock);
+    await lepton.setLastSyncedBlock(100000, chainForSyncedBlock);
+    lastSyncedBlock = await lepton.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 

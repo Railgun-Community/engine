@@ -36,7 +36,7 @@ class Database {
 
   /**
    * Parses path and returns key
-   * @param path - path to covert
+   * @param path - path to convert
    * @returns key
    */
   static pathToKey(path: BytesData[]): string {

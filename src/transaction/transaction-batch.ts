@@ -22,6 +22,7 @@ import {
 } from '../solutions/spending-group-extractor';
 import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
+import { Chain } from '../models/lepton-types';
 
 class TransactionBatch {
   private adaptID: AdaptID = {
@@ -29,7 +30,7 @@ class TransactionBatch {
     parameters: HashZero,
   };
 
-  private chainID: number;
+  private chain: Chain;
 
   private tokenAddress: string;
 
@@ -47,12 +48,12 @@ class TransactionBatch {
    * Create ERC20Transaction Object
    * @param tokenAddress - token address, unformatted
    * @param tokenType - enum of token type
-   * @param chainID - chainID of network transaction will be built for
+   * @param chain - chain type/id of network
    */
-  constructor(tokenAddress: string, tokenType: TokenType, chainID: number) {
+  constructor(tokenAddress: string, tokenType: TokenType, chain: Chain) {
     this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
     this.tokenType = tokenType;
-    this.chainID = chainID;
+    this.chain = chain;
   }
 
   addOutput(output: Note) {
@@ -100,7 +101,7 @@ class TransactionBatch {
     });
 
     // Get UTXOs sorted by tree
-    const treeSortedBalances = (await wallet.balancesByTree(this.chainID))[
+    const treeSortedBalances = (await wallet.balancesByTree(this.chain))[
       formatToByteLength(this.tokenAddress, 32, false)
     ];
 
@@ -320,7 +321,7 @@ class TransactionBatch {
     const transaction = new Transaction(
       this.tokenAddress,
       this.tokenType,
-      this.chainID,
+      this.chain,
       spendingTree,
       utxos,
       this.adaptID,

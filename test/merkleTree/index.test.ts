@@ -10,6 +10,7 @@ import { MERKLE_ZERO_VALUE, MerkleTree } from '../../src/merkletree';
 import type { TreePurpose } from '../../src/merkletree';
 import { ZERO_ADDRESS } from '../../src/utils/constants';
 import { TokenType } from '../../src/models/formatted-types';
+import { Chain, ChainType } from '../../src/models/lepton-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -90,7 +91,7 @@ describe('MerkleTree/Index', () => {
 
   it('Should get DB paths', () => {
     type Vector = {
-      chainID: number;
+      chain: Chain;
       purpose: TreePurpose;
       treeNumber: number;
       level: number;
@@ -100,7 +101,7 @@ describe('MerkleTree/Index', () => {
 
     const vectors: Vector[] = [
       {
-        chainID: 0,
+        chain: { type: ChainType.EVM, id: 0 },
         purpose: 'erc20',
         treeNumber: 0,
         level: 1,
@@ -114,7 +115,7 @@ describe('MerkleTree/Index', () => {
         ],
       },
       {
-        chainID: 4,
+        chain: { type: ChainType.EVM, id: 4 },
         purpose: 'erc20',
         treeNumber: 2,
         level: 7,
@@ -128,7 +129,7 @@ describe('MerkleTree/Index', () => {
         ],
       },
       {
-        chainID: 3,
+        chain: { type: ChainType.EVM, id: 3 },
         purpose: 'erc721',
         treeNumber: 1,
         level: 9,
@@ -146,7 +147,7 @@ describe('MerkleTree/Index', () => {
     vectors.forEach((vector) => {
       const merkletreeVectorTest = new MerkleTree(
         db,
-        vector.chainID,
+        vector.chain,
         vector.purpose,
         async () => true,
       );

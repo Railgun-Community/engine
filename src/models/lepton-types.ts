@@ -4,6 +4,15 @@ export type LeptonDebugger = {
 };
 
 export type KeyNode = {
-  chainKey: string,
-  chainCode: string,
+  chainKey: string;
+  chainCode: string;
+};
+
+export enum ChainType {
+  EVM = 0,
+}
+
+export type Chain = {
+  type: ChainType;
+  id: number;
 };

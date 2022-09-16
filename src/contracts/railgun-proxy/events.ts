@@ -1,11 +1,5 @@
-import type { BigNumber, BigNumberish } from 'ethers';
-import {
-  BytesData,
-  Commitment,
-  EncryptedCommitment,
-  GeneratedCommitment,
-  Nullifier,
-} from '../../models/formatted-types';
+import type { BigNumber } from 'ethers';
+import { EncryptedCommitment, GeneratedCommitment, Nullifier } from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 import LeptonDebug from '../../debugger';
@@ -14,64 +8,17 @@ import {
   GeneratedCommitmentBatchEvent,
   NullifiersEvent,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
-
-export type CommitmentEvent = {
-  txid: BytesData;
-  treeNumber: number;
-  startPosition: number;
-  commitments: Commitment[];
-  blockNumber: number;
-};
-
-export type EventsListener = (event: CommitmentEvent) => Promise<void>;
-export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
-
-export type CommitmentCiphertextArgs = {
-  ciphertext: [BigNumber, BigNumber, BigNumber, BigNumber];
-  ephemeralKeys: [BigNumber, BigNumber];
-  memo: BigNumber[];
-};
-
-export type CommitmentTokenData = {
-  tokenType: BigNumberish;
-  tokenAddress: string;
-  tokenSubID: BigNumberish;
-};
-
-export type EncryptedDataArgs = [BigNumber, BigNumber];
-
-export type CommitmentPreimageArgs = {
-  npk: BigNumber;
-  token: CommitmentTokenData;
-  value: BigNumber;
-};
-
-export type EventTokenData = { tokenType: BigNumber; tokenAddress: string; tokenSubID: BigNumber };
-
-/**
- * event.args of GeneratedCommitmentBatch Event
- */
-export type GeneratedCommitmentBatchEventArgs = {
-  treeNumber: BigNumber;
-  startPosition: BigNumber;
-  commitments: CommitmentPreimageArgs[];
-  encryptedRandom: EncryptedDataArgs[];
-};
-
-/**
- * event.args of CommitmentBatch Event
- */
-export type CommitmentBatchEventArgs = {
-  treeNumber: BigNumber;
-  startPosition: BigNumber;
-  hash: BigNumber[];
-  ciphertext: CommitmentCiphertextArgs[];
-};
-
-export type NullifierEventArgs = {
-  treeNumber: BigNumber;
-  nullifier: BigNumber[];
-};
+import {
+  CommitmentPreimageArgs,
+  EncryptedDataArgs,
+  GeneratedCommitmentBatchEventArgs,
+  CommitmentEvent,
+  CommitmentCiphertextArgs,
+  CommitmentBatchEventArgs,
+  EventsListener,
+  NullifierEventArgs,
+  EventsNullifierListener,
+} from '../../models/event-types';
 
 /**
  * Parse event data for database

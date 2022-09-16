@@ -6,6 +6,7 @@ import { poseidon, sha256 } from './hash';
 const { bytesToHex, randomBytes } = utilsEd25519;
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
+  if (privateKey.length !== 32) throw Error('Invalid private key length');
   return eddsa.prv2pub(Buffer.from(privateKey));
 }
 

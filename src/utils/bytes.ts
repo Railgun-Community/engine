@@ -5,6 +5,7 @@ import { BytesData } from '../models/formatted-types';
 
 export enum ByteLength {
   UINT_8 = 1,
+  UINT_56 = 7,
   UINT_120 = 15,
   UINT_128 = 16,
   Address = 20,

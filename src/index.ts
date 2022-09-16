@@ -1,6 +1,5 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
-import BN from 'bn.js';
 import EventEmitter from 'events';
 import { RailgunProxyContract } from './contracts/railgun-proxy';
 import { RelayAdaptContract } from './contracts/relay-adapt';
@@ -11,42 +10,37 @@ import { Prover, ArtifactsGetter } from './prover';
 import { Transaction } from './transaction';
 import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
-import { hexlify, padToLength } from './utils/bytes';
+import { hexlify } from './utils/bytes';
 import { Wallet } from './wallet/wallet';
 import LeptonDebug from './debugger';
-import { LeptonDebugger } from './models/lepton-types';
+import { Chain, LeptonDebugger } from './models/lepton-types';
 import { Commitment, Nullifier } from './models/formatted-types';
 import {
+  CommitmentEvent,
   LeptonEvent,
   MerkletreeHistoryScanEventData,
   MerkletreeHistoryScanUpdateData,
+  QuickSync,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
-import { CommitmentEvent } from './contracts/railgun-proxy/events';
 import WalletInfo from './wallet/wallet-info';
-
-export type AccumulatedEvents = {
-  commitmentEvents: CommitmentEvent[];
-  nullifierEvents: Nullifier[];
-};
-
-export type QuickSync = (chainID: number, startingBlock: number) => Promise<AccumulatedEvents>;
+import { getChainFullNetworkID } from './chain';
 
 class Lepton extends EventEmitter {
   readonly db;
 
-  readonly merkletree: { erc20: MerkleTree /* erc721: MerkleTree */ }[] = [];
+  readonly merkletrees: { erc20: MerkleTree /* erc721: MerkleTree */ }[][] = [];
 
-  readonly proxyContracts: RailgunProxyContract[] = [];
+  readonly proxyContracts: RailgunProxyContract[][] = [];
 
-  readonly relayAdaptContracts: RelayAdaptContract[] = [];
+  readonly relayAdaptContracts: RelayAdaptContract[][] = [];
 
   readonly prover: Prover;
 
   readonly wallets: { [key: string]: AbstractWallet } = {};
 
-  readonly deploymentBlocks: number[] = [];
+  readonly deploymentBlocks: number[][] = [];
 
   readonly quickSync: Optional<QuickSync>;
 
@@ -83,33 +77,41 @@ class Lepton extends EventEmitter {
 
   /**
    * Handle new commitment events and kick off balance scan on wallets
-   * @param {number} chainID - chainID of commitments
-   * @param {number} treeNumber - tree of commitments
-   * @param {number} startingIndex - starting index of commitments
-   * @param {Commitment[]} leaves - commitment data from events
+   * @param chain - chain type/id for commitments
+   * @param treeNumber - tree of commitments
+   * @param startingIndex - starting index of commitments
+   * @param leaves - commitment data from events
    */
-  async listener(chainID: number, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
+  async listener(chain: Chain, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
     if (leaves.length) {
-      LeptonDebug.log(`lepton.listener[${chainID}]: ${leaves.length} queued at ${startingIndex}`);
+      LeptonDebug.log(
+        `lepton.listener[${chain.type}:${chain.id}]: ${leaves.length} queued at ${startingIndex}`,
+      );
       // Queue leaves to merkle tree
-      await this.merkletree[chainID].erc20.queueLeaves(treeNumber, startingIndex, leaves);
+      await this.merkletrees[chain.type][chain.id].erc20.queueLeaves(
+        treeNumber,
+        startingIndex,
+        leaves,
+      );
     }
   }
 
   /**
    * Handle new nullifiers
-   * @param {number} chainID - chainID of nullifiers
-   * @param {Nullifier[]} nullifiers - transaction info to nullify commitment
+   * @param chain - chain type/id for nullifiers
+   * @param nullifiers - transaction info to nullify commitment
    */
-  async nullifierListener(chainID: number, nullifiers: Nullifier[]) {
+  async nullifierListener(chain: Chain, nullifiers: Nullifier[]) {
     if (nullifiers.length) {
-      LeptonDebug.log(`lepton.nullifierListener[${chainID}] ${nullifiers.length}`);
-      await this.merkletree[chainID].erc20.nullify(nullifiers);
+      LeptonDebug.log(`lepton.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
+      await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
     }
   }
 
-  async getMostRecentValidCommitmentBlock(chainID: number): Promise<Optional<number>> {
-    const merkletree = this.merkletree[chainID].erc20;
+  async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
+    const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+    const proxyContract = this.proxyContracts[chain.type][chain.id];
+    const { provider } = proxyContract.contract;
 
     // Get latest tree
     const latestTree = await merkletree.latestTree();
@@ -125,15 +127,10 @@ class Lepton extends EventEmitter {
     while (latestEventIndex >= 0 && !startScanningBlock) {
       // Get block number of last scanned event
       // eslint-disable-next-line no-await-in-loop
-      const latestEvent = await this.merkletree[chainID].erc20.getCommitment(
-        latestTree,
-        latestEventIndex,
-      );
+      const latestEvent = await merkletree.getCommitment(latestTree, latestEventIndex);
       if (latestEvent) {
         // eslint-disable-next-line no-await-in-loop
-        const txReceipt = await this.proxyContracts[
-          chainID
-        ].contract.provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
+        const txReceipt = await provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
         if (txReceipt) {
           startScanningBlock = txReceipt.blockNumber;
         } else {
@@ -152,15 +149,15 @@ class Lepton extends EventEmitter {
     return startScanningBlock;
   }
 
-  async getStartScanningBlock(chainID: number): Promise<number> {
-    let startScanningBlock = await this.getMostRecentValidCommitmentBlock(chainID);
+  async getStartScanningBlock(chain: Chain): Promise<number> {
+    let startScanningBlock = await this.getMostRecentValidCommitmentBlock(chain);
     LeptonDebug.log(`most recent valid commitment block: ${startScanningBlock}`);
     if (startScanningBlock == null) {
       // If we haven't scanned anything yet, start scanning at deployment block
-      startScanningBlock = this.deploymentBlocks[chainID];
+      startScanningBlock = this.deploymentBlocks[chain.type][chain.id];
     }
 
-    const lastSyncedBlock = await this.getLastSyncedBlock(chainID);
+    const lastSyncedBlock = await this.getLastSyncedBlock(chain);
     LeptonDebug.log(`last synced block: ${startScanningBlock}`);
     if (lastSyncedBlock && lastSyncedBlock > startScanningBlock) {
       startScanningBlock = lastSyncedBlock;
@@ -169,45 +166,45 @@ class Lepton extends EventEmitter {
     return startScanningBlock;
   }
 
-  private async performQuickScan(chainID: number, endProgress: number) {
+  private async performQuickScan(chain: Chain, endProgress: number) {
     if (!this.quickSync) {
       return;
     }
     try {
-      LeptonDebug.log(`quickSync: chainID ${chainID}`);
-      const merkletree = this.merkletree[chainID].erc20;
+      LeptonDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
+      const merkletree = this.merkletrees[chain.type][chain.id].erc20;
 
-      const startScanningBlockQuickSync = await this.getStartScanningBlock(chainID);
+      const startScanningBlockQuickSync = await this.getStartScanningBlock(chain);
 
-      this.emitScanUpdateEvent(chainID, endProgress * 0.1); // 5% / 50%
+      this.emitScanUpdateEvent(chain, endProgress * 0.1); // 5% / 50%
 
       // Fetch events
       const { commitmentEvents, nullifierEvents } = await this.quickSync(
-        chainID,
+        chain,
         startScanningBlockQuickSync,
       );
 
-      this.emitScanUpdateEvent(chainID, endProgress * 0.2); // 10% / 50%
+      this.emitScanUpdateEvent(chain, endProgress * 0.2); // 10% / 50%
 
       // Pass nullifier events to listener
-      await this.nullifierListener(chainID, nullifierEvents);
+      await this.nullifierListener(chain, nullifierEvents);
 
-      this.emitScanUpdateEvent(chainID, endProgress * 0.3); // 15% / 50%
+      this.emitScanUpdateEvent(chain, endProgress * 0.3); // 15% / 50%
 
       // Pass events to commitments listener and wait for resolution
       await Promise.all(
         commitmentEvents.map(async (commitmentEvent) => {
           const { treeNumber, startPosition, commitments } = commitmentEvent;
-          await this.listener(chainID, treeNumber, startPosition, commitments);
+          await this.listener(chain, treeNumber, startPosition, commitments);
         }),
       );
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
-        this.emitScanUpdateEvent(chainID, endProgress * 0.5); // 25% / 50%
+        this.emitScanUpdateEvent(chain, endProgress * 0.5); // 25% / 50%
         await merkletree.waitForTreesToFullyUpdate();
-        this.emitScanUpdateEvent(chainID, endProgress * 0.8); // 40% / 50%
-        await this.scanAllWallets(chainID);
+        this.emitScanUpdateEvent(chain, endProgress * 0.8); // 40% / 50%
+        await this.scanAllWallets(chain);
       }
     } catch (err) {
       if (!(err instanceof Error)) {
@@ -217,9 +214,9 @@ class Lepton extends EventEmitter {
     }
   }
 
-  private emitScanUpdateEvent(chainID: number, progress: number) {
+  private emitScanUpdateEvent(chain: Chain, progress: number) {
     const updateData: MerkletreeHistoryScanUpdateData = {
-      chainID,
+      chain,
       progress,
     };
     this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, updateData);
@@ -227,73 +224,81 @@ class Lepton extends EventEmitter {
 
   /**
    * Scan contract history and sync
-   * @param chainID - chainID to scan
+   * @param chain - chain type/id to scan
    */
-  async scanHistory(chainID: number) {
-    if (!this.merkletree[chainID]) {
-      LeptonDebug.log(`Cannot scan history. Merkletree not yet loaded for chain ${chainID}.`);
+  async scanHistory(chain: Chain) {
+    if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
+      LeptonDebug.log(
+        `Cannot scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+      );
       return;
     }
-    const merkletree = this.merkletree[chainID].erc20;
+    if (!this.proxyContracts[chain.type] || !this.proxyContracts[chain.type][chain.id]) {
+      LeptonDebug.log(
+        `Cannot scan history. Proxy contract not yet loaded for chain ${chain.type}:${chain.id}.`,
+      );
+      return;
+    }
+    const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+    const proxyContract = this.proxyContracts[chain.type][chain.id];
     if (merkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
-      LeptonDebug.log('Already scanning. Killing additional re-scan.');
+      LeptonDebug.log('Already scanning. Stopping additional re-scan.');
       return;
     }
     merkletree.isScanning = true;
 
-    this.emitScanUpdateEvent(chainID, 0.03); // 3%
+    this.emitScanUpdateEvent(chain, 0.03); // 3%
 
     const postQuickSyncProgress = 0.5;
-    await this.performQuickScan(chainID, postQuickSyncProgress);
+    await this.performQuickScan(chain, postQuickSyncProgress);
 
-    this.emitScanUpdateEvent(chainID, postQuickSyncProgress); // 50%
+    this.emitScanUpdateEvent(chain, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid merkletree.
-    const startScanningBlockSlowScan = await this.getStartScanningBlock(chainID);
+    const startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
     LeptonDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
-    const latestBlock = (await this.proxyContracts[chainID].contract.provider.getBlock('latest'))
-      .number;
+    const latestBlock = (await proxyContract.contract.provider.getBlock('latest')).number;
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
 
     try {
       // Run slow scan
-      await this.proxyContracts[chainID].getHistoricalEvents(
+      await proxyContract.getHistoricalEvents(
         startScanningBlockSlowScan,
         latestBlock,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
-          await this.listener(chainID, treeNumber, startPosition, commitments);
+          await this.listener(chain, treeNumber, startPosition, commitments);
         },
         async (nullifiers: Nullifier[]) => {
-          await this.nullifierListener(chainID, nullifiers);
+          await this.nullifierListener(chain, nullifiers);
         },
         async (syncedBlock: number) => {
           const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
           const scanUpdateData: MerkletreeHistoryScanUpdateData = {
-            chainID,
+            chain,
             progress:
               postQuickSyncProgress +
               ((1 - postQuickSyncProgress) * scannedBlocks) / totalBlocksToScan, // From 50% -> 100%
           };
           this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
-          await this.setLastSyncedBlock(syncedBlock, chainID);
+          await this.setLastSyncedBlock(syncedBlock, chain);
         },
       );
 
       // Final scan after all leaves added.
-      await this.scanAllWallets(chainID);
-      const scanCompleteData: MerkletreeHistoryScanEventData = { chainID };
+      await this.scanAllWallets(chain);
+      const scanCompleteData: MerkletreeHistoryScanEventData = { chain };
       this.emit(LeptonEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       merkletree.isScanning = false;
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
       }
-      LeptonDebug.log(`Scan incomplete for chain ${chainID}`);
+      LeptonDebug.log(`Scan incomplete for chain ${chain.type}:${chain.id}`);
       LeptonDebug.error(err);
-      await this.scanAllWallets(chainID);
-      const scanIncompleteData: MerkletreeHistoryScanEventData = { chainID };
+      await this.scanAllWallets(chain);
+      const scanIncompleteData: MerkletreeHistoryScanEventData = { chain };
       this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, scanIncompleteData);
       merkletree.isScanning = false;
     }
@@ -301,31 +306,35 @@ class Lepton extends EventEmitter {
 
   /**
    * Clears all merkletree leaves stored in database.
-   * @param chainID - chainID to clear
+   * @param chain - chain type/id to clear
    */
-  async clearSyncedMerkletreeLeaves(chainID: number) {
-    await this.merkletree[chainID].erc20.clearLeavesFromDB();
-    await this.db.clearNamespace(Lepton.getLastSyncedBlockDBPrefix(chainID));
+  async clearSyncedMerkletreeLeaves(chain: Chain) {
+    await this.merkletrees[chain.type][chain.id].erc20.clearLeavesFromDB();
+    await this.db.clearNamespace(Lepton.getLastSyncedBlockDBPrefix(chain));
   }
 
   /**
    * Clears stored merkletree leaves and wallet balances, and re-scans fully.
-   * @param chainID - chainID to rescan
+   * @param chain - chain type/id to rescan
    */
-  async fullRescanMerkletreesAndWallets(chainID: number) {
-    if (!this.merkletree[chainID]) {
-      LeptonDebug.log(`Cannot re-scan history. Merkletree not yet loaded for chain ${chainID}.`);
+  async fullRescanMerkletreesAndWallets(chain: Chain) {
+    if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
+      LeptonDebug.log(
+        `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+      );
       return;
     }
-    if (this.merkletree[chainID].erc20.isScanning) {
+    const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+    if (merkletree.isScanning) {
       LeptonDebug.log('Already scanning. Killing full re-scan.');
       return;
     }
-    this.emitScanUpdateEvent(chainID, 0.01); // 1%
-    this.merkletree[chainID].erc20.isScanning = true;
-    await this.clearSyncedMerkletreeLeaves(chainID);
-    await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chainID)));
-    await this.scanHistory(chainID);
+    this.emitScanUpdateEvent(chain, 0.01); // 1%
+    merkletree.isScanning = true; // Don't allow scans while removing leaves.
+    await this.clearSyncedMerkletreeLeaves(chain);
+    await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chain)));
+    merkletree.isScanning = false; // Clear before calling scanHistory.
+    await this.scanHistory(chain);
   }
 
   /**
@@ -336,106 +345,125 @@ class Lepton extends EventEmitter {
    * @param deploymentBlock - block number to start scanning from
    */
   async loadNetwork(
-    chainID: number,
+    chain: Chain,
     proxyContractAddress: string,
     relayAdaptContractAddress: string,
     provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
-    LeptonDebug.log(`loadNetwork: ${chainID}`);
+    LeptonDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
-    // If a network with this chainID exists, unload it and load the provider as a new network
     if (
-      this.merkletree[chainID] ||
-      this.proxyContracts[chainID] ||
-      this.relayAdaptContracts[chainID]
-    )
-      this.unloadNetwork(chainID);
+      (this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id]) ||
+      (this.proxyContracts[chain.type] && this.proxyContracts[chain.type][chain.id]) ||
+      (this.relayAdaptContracts[chain.type] && this.relayAdaptContracts[chain.type][chain.id])
+    ) {
+      // If a network with this chainID exists, unload it and load the provider as a new network
+      this.unloadNetwork(chain);
+    }
 
     // Create proxy contract instance
-    const proxyContract = new RailgunProxyContract(proxyContractAddress, provider);
-    this.proxyContracts[chainID] = proxyContract;
+    if (!this.proxyContracts[chain.type]) {
+      this.proxyContracts[chain.type] = [];
+    }
+    this.proxyContracts[chain.type][chain.id] = new RailgunProxyContract(
+      proxyContractAddress,
+      provider,
+    );
 
     // Create relay adapt contract instance
-    const relayAdaptContract = new RelayAdaptContract(relayAdaptContractAddress, provider);
-    this.relayAdaptContracts[chainID] = relayAdaptContract;
+    if (!this.relayAdaptContracts[chain.type]) {
+      this.relayAdaptContracts[chain.type] = [];
+    }
+    this.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
+      relayAdaptContractAddress,
+      provider,
+    );
 
     // Create tree controllers
-    this.merkletree[chainID] = {
-      erc20: new MerkleTree(this.db, chainID, 'erc20', (tree, root) =>
-        proxyContract.validateRoot(tree, root),
+    if (!this.merkletrees[chain.type]) {
+      this.merkletrees[chain.type] = [];
+    }
+    this.merkletrees[chain.type][chain.id] = {
+      erc20: new MerkleTree(this.db, chain, 'erc20', (tree, root) =>
+        this.proxyContracts[chain.type][chain.id].validateRoot(tree, root),
       ),
     };
 
-    this.deploymentBlocks[chainID] = deploymentBlock;
+    if (!this.deploymentBlocks[chain.type]) {
+      this.deploymentBlocks[chain.type] = [];
+    }
+    this.deploymentBlocks[chain.type][chain.id] = deploymentBlock;
 
     // Load merkle tree to wallets
     Object.values(this.wallets).forEach((wallet) => {
-      wallet.loadTree(this.merkletree[chainID].erc20);
+      wallet.loadTree(this.merkletrees[chain.type][chain.id].erc20);
     });
 
     const eventsListener = async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
-      await this.listener(chainID, treeNumber, startPosition, commitments);
-      await this.scanAllWallets(chainID);
+      await this.listener(chain, treeNumber, startPosition, commitments);
+      await this.scanAllWallets(chain);
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {
-      await this.nullifierListener(chainID, nullifiers);
+      await this.nullifierListener(chain, nullifiers);
     };
-    // Setup listeners
-    this.proxyContracts[chainID].treeUpdates(eventsListener, nullifierListener);
 
-    await this.scanHistory(chainID);
+    // Setup listeners
+    this.proxyContracts[chain.type][chain.id].treeUpdates(eventsListener, nullifierListener);
+
+    await this.scanHistory(chain);
   }
 
   /**
    * Unload network
-   * @param chainID - chainID of network to unload
+   * @param chain - chainID of network to unload
    */
-  unloadNetwork(chainID: number) {
-    if (this.proxyContracts[chainID]) {
+  unloadNetwork(chain: Chain) {
+    if (this.proxyContracts[chain.type] && this.proxyContracts[chain.id]) {
       // Unload listeners
-      this.proxyContracts[chainID].unload();
+      this.proxyContracts[chain.type][chain.id].unload();
 
       // Unlaod tree from wallets
       Object.values(this.wallets).forEach((wallet) => {
-        wallet.unloadTree(chainID);
+        wallet.unloadTree(chain);
       });
 
       // Delete contract and merkle tree objects
-      delete this.proxyContracts[chainID];
-      delete this.merkletree[chainID];
+      delete this.proxyContracts[chain.id][chain.type];
+      delete this.relayAdaptContracts[chain.id][chain.type];
+      delete this.merkletrees[chain.id][chain.type];
     }
   }
 
-  private static getLastSyncedBlockDBPrefix(chainID?: number): string[] {
+  private static getLastSyncedBlockDBPrefix(chain?: Chain): string[] {
     const path = [DatabaseNamespace.ChainSyncInfo, 'last_synced_block'];
-    if (chainID != null) path.push(hexlify(padToLength(new BN(chainID), 32)));
+    if (chain != null) path.push(getChainFullNetworkID(chain));
     return path;
   }
 
   /**
    * Sets last synced block to resume syncing on next load.
    * @param lastSyncedBlock - last synced block
-   * @param chainID - chain to store value for
+   * @param chain - chain type/id to store value for
    */
-  setLastSyncedBlock(lastSyncedBlock: number, chainID: number): Promise<void> {
-    return this.db.put(Lepton.getLastSyncedBlockDBPrefix(chainID), lastSyncedBlock, 'utf8');
+  setLastSyncedBlock(lastSyncedBlock: number, chain: Chain): Promise<void> {
+    return this.db.put(Lepton.getLastSyncedBlockDBPrefix(chain), lastSyncedBlock, 'utf8');
   }
 
   /**
    * Gets last synced block to resume syncing from.
-   * @param chainID - chain to get value for
+   * @param chain - chain type/id to get value for
    * @returns lastSyncedBlock - last synced block
    */
-  getLastSyncedBlock(chainID: number): Promise<Optional<number>> {
+  getLastSyncedBlock(chain: Chain): Promise<Optional<number>> {
     return this.db
-      .get(Lepton.getLastSyncedBlockDBPrefix(chainID), 'utf8')
+      .get(Lepton.getLastSyncedBlockDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
 
-  private async scanAllWallets(chainID: number) {
-    await Promise.all(this.allWallets().map((wallet) => wallet.scanBalances(chainID)));
+  private async scanAllWallets(chain: Chain) {
+    await Promise.all(this.allWallets().map((wallet) => wallet.scanBalances(chain)));
   }
 
   private allWallets(): AbstractWallet[] {
@@ -455,9 +483,11 @@ class Lepton extends EventEmitter {
    */
   unload() {
     // Unload chains
-    this.proxyContracts.forEach((contract, chainID) => {
-      LeptonDebug.log(`unload contract for ${chainID}`);
-      this.unloadNetwork(chainID);
+    this.proxyContracts.forEach((contractsForChainType, chainType) => {
+      contractsForChainType.forEach((_contract, chainID) => {
+        LeptonDebug.log(`unload contract for ${chainType}:${chainID}`);
+        this.unloadNetwork({ type: chainType, id: chainID });
+      });
     });
 
     // Unload wallets
@@ -480,8 +510,10 @@ class Lepton extends EventEmitter {
     this.wallets[wallet.id] = wallet;
 
     // Load merkle trees for wallet
-    this.merkletree.forEach((tree) => {
-      wallet.loadTree(tree.erc20);
+    this.merkletrees.forEach((merkletreesForChainType) => {
+      merkletreesForChainType.forEach((merkletree) => {
+        wallet.loadTree(merkletree.erc20);
+      });
     });
   }
 

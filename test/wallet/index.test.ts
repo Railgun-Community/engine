@@ -13,6 +13,7 @@ import { verifyED25519 } from '../../src/utils/keys-utils';
 import { Wallet } from '../../src/wallet/wallet';
 import { ViewOnlyWallet } from '../../src/wallet/view-only-wallet';
 import { config } from '../config.test';
+import { Chain, ChainType } from '../../src/models/lepton-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -21,7 +22,10 @@ let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
 let viewOnlyWallet: ViewOnlyWallet;
-const chainID: number = 1;
+const chain: Chain = {
+  type: ChainType.EVM,
+  id: 1,
+};
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -30,7 +34,7 @@ describe('Wallet/Index', () => {
   beforeEach(async () => {
     // Create database and wallet
     db = new Database(memdown());
-    merkletree = new MerkleTree(db, 1, 'erc20', async () => true);
+    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     wallet.loadTree(merkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
@@ -55,10 +59,10 @@ describe('Wallet/Index', () => {
   });
 
   it('Should get wallet prefix path', async () => {
-    const path = wallet.getWalletDBPrefix(chainID);
+    const path = wallet.getWalletDBPrefix(chain);
     expect(path[1]).to.equal(hash.sha256(bytes.combine([mnemonicToSeed(testMnemonic), '00'])));
     expect(path[1]).to.equal(wallet.id);
-    expect(wallet.getWalletDBPrefix(chainID)).to.deep.equal([
+    expect(wallet.getWalletDBPrefix(chain)).to.deep.equal([
       '000000000000000000000000000000000000000000000000000077616c6c6574',
       'bee63912e0e4cfa6830ebc8342d3efa9aa1336548c77bf4336c54c17409f2990',
       '0000000000000000000000000000000000000000000000000000000000000001',
@@ -66,7 +70,7 @@ describe('Wallet/Index', () => {
   });
 
   it('Should get wallet details path', async () => {
-    expect(wallet.getWalletDetailsPath(chainID)).to.deep.equal([
+    expect(wallet.getWalletDetailsPath(chain)).to.deep.equal([
       '000000000000000000000000000000000000000000000000000077616c6c6574',
       'bee63912e0e4cfa6830ebc8342d3efa9aa1336548c77bf4336c54c17409f2990',
       '0000000000000000000000000000000000000000000000000000000000000001',
@@ -133,38 +137,47 @@ describe('Wallet/Index', () => {
   });
 
   it('Should get addresses', async () => {
-    expect(wallet.getAddress(0)).to.equal(
+    expect(wallet.getAddress()).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990',
     );
-    expect(viewOnlyWallet.getAddress(0)).to.equal(
+    expect(viewOnlyWallet.getAddress()).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990',
     );
-    expect(wallet.getAddress(1)).to.equal(
+    expect(wallet.getAddress({ type: ChainType.EVM, id: 0 })).to.equal(
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqpma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5qq7f22',
+    );
+    expect(wallet.getAddress({ type: ChainType.EVM, id: 1 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw56ltkfa',
     );
-    expect(wallet.getAddress(2)).to.equal(
+    expect(wallet.getAddress({ type: ChainType.EVM, id: 2 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqfma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5aha7vd',
     );
-    expect(wallet.getAddress(3)).to.equal(
+    expect(wallet.getAddress({ type: ChainType.EVM, id: 3 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwqdma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw58ggp06',
     );
-    expect(wallet.getAddress(4)).to.equal(
+    expect(wallet.getAddress({ type: ChainType.EVM, id: 4 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq3ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5n8cwxy',
+    );
+    expect(wallet.getAddress({ type: 1, id: 0 })).to.equal(
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7umpd9kxwatwqpma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5knt45s',
+    );
+    expect(wallet.getAddress({ type: 1, id: 1 })).to.equal(
+      '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7umpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5vv72h8',
     );
   });
 
   it('Should derive addresses correctly', async () => {
-    const address = wallet.getAddress(chainID);
+    const address = wallet.getAddress(chain);
     const decoded = bech32.decode(address);
     expect(decoded.masterPublicKey).to.equal(wallet.masterPublicKey);
-    expect(decoded.chainID).to.equal(chainID);
+    expect(decoded.chain).to.deep.equal(chain);
   });
 
   it('Should get empty wallet details', async () => {
-    expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
+    expect(await wallet.getWalletDetails(chain)).to.deep.equal({
       treeScannedHeights: [],
     });
-    expect(await viewOnlyWallet.getWalletDetails(chainID)).to.deep.equal({
+    expect(await viewOnlyWallet.getWalletDetails(chain)).to.deep.equal({
       treeScannedHeights: [],
     });
   });
@@ -178,7 +191,7 @@ describe('Wallet/Index', () => {
   //   wallet.scanBalances(1);
   //   await process;
 
-  //   expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
+  //   expect(await wallet.getWalletDetails(chain)).to.deep.equal({
   //     treeScannedHeights: [5],
   //     primaryHeight: 5,
   //     changeHeight: 2,
@@ -188,7 +201,7 @@ describe('Wallet/Index', () => {
 
   //   await wallet.scanBalances(1);
 
-  //   expect(await wallet.getWalletDetails(chainID)).to.deep.equal({
+  //   expect(await wallet.getWalletDetails(chain)).to.deep.equal({
   //     treeScannedHeights: [11],
   //   });
 
@@ -247,7 +260,7 @@ describe('Wallet/Index', () => {
 
   afterEach(() => {
     // Clean up database
-    wallet.unloadTree(merkletree.chainID);
+    wallet.unloadTree(merkletree.chain);
     db.close();
   });
 });

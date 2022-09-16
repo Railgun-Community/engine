@@ -19,6 +19,7 @@ import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 import { TXO } from '../models/txo-types';
 import { Memo } from '../note/memo';
+import { Chain } from '../models/lepton-types';
 
 const abiCoder = defaultAbiCoder;
 
@@ -37,7 +38,7 @@ export function hashBoundParams(boundParams: BoundParams) {
 class Transaction {
   private adaptID: AdaptID;
 
-  private chainID: number;
+  private chain: Chain;
 
   private tokenAddress: string;
 
@@ -59,21 +60,21 @@ class Transaction {
    * Create ERC20Transaction Object
    * @param tokenAddress - token address, unformatted
    * @param tokenType - enum of token type
-   * @param chainID - chainID of network transaction will be built for
+   * @param chain - chain type/id of network
    * @param spendingTree - tree index to spend from
    * @param utxos - UTXOs to spend from
    */
   constructor(
     tokenAddress: string,
     tokenType: TokenType,
-    chainID: number,
+    chain: Chain,
     spendingTree: number,
     utxos: TXO[],
     adaptID: AdaptID,
   ) {
     this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
     this.tokenType = tokenType;
-    this.chainID = chainID;
+    this.chain = chain;
     this.spendingTree = spendingTree;
     this.utxos = utxos;
     this.adaptID = adaptID;
@@ -112,8 +113,8 @@ class Transaction {
     publicInputs: PublicInputs;
     boundParams: BoundParams;
   }> {
-    const merkleTree = wallet.merkletree[this.chainID];
-    const merkleRoot = await merkleTree.getRoot(this.spendingTree); // TODO: Is this correct tree?
+    const merkletree = wallet.merkletrees[this.chain.type][this.chain.id];
+    const merkleRoot = await merkletree.getRoot(this.spendingTree); // TODO: Is this correct tree?
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();
     const senderViewingKeys = wallet.getViewingKeyPair();
@@ -137,7 +138,7 @@ class Transaction {
 
       // Push path elements
       // eslint-disable-next-line no-await-in-loop
-      const merkleProof = await merkleTree.getMerkleProof(this.spendingTree, utxo.position);
+      const merkleProof = await merkletree.getMerkleProof(this.spendingTree, utxo.position);
       pathElements.push(merkleProof.elements.map((element) => hexToBigInt(element)));
 
       // Push path indicies

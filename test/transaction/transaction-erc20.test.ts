@@ -14,6 +14,7 @@ import {
   OutputType,
   TokenType,
 } from '../../src/models/formatted-types';
+import { Chain, ChainType } from '../../src/models/lepton-types';
 import { Note } from '../../src/note';
 import { Memo } from '../../src/note/memo';
 import { Groth16, Prover } from '../../src/prover';
@@ -37,7 +38,7 @@ const { expect } = chai;
 let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
-let chainID: number;
+let chain: Chain;
 let ethersWallet: EthersWallet;
 let transactionBatch: TransactionBatch;
 let prover: Prover;
@@ -101,8 +102,11 @@ describe('Transaction/ERC20', function () {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
-    chainID = 1;
-    merkletree = new MerkleTree(db, chainID, 'erc20', async () => true);
+    chain = {
+      type: ChainType.EVM,
+      id: 1,
+    };
+    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
@@ -127,11 +131,11 @@ describe('Transaction/ERC20', function () {
     };
     merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
-    await wallet.scanBalances(chainID);
+    await wallet.scanBalances(chain);
   });
 
   beforeEach(async () => {
-    transactionBatch = new TransactionBatch(token, TokenType.ERC20, 1);
+    transactionBatch = new TransactionBatch(token, TokenType.ERC20, chain);
   });
 
   it('Should hash bound parameters', async () => {
@@ -367,7 +371,7 @@ describe('Transaction/ERC20', function () {
       transactionBatch.generateValidSpendingSolutionGroups(wallet),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
-    const transaction2 = new TransactionBatch('ff', TokenType.ERC20, 1);
+    const transaction2 = new TransactionBatch('ff', TokenType.ERC20, chain);
 
     transaction2.setWithdraw(ethersWallet.address, 12n);
 
@@ -494,7 +498,7 @@ describe('Transaction/ERC20', function () {
 
   this.afterAll(() => {
     // Clean up database
-    wallet.unloadTree(merkletree.chainID);
+    wallet.unloadTree(merkletree.chain);
     db.close();
   });
 });

@@ -1,4 +1,3 @@
-/* eslint-disable no-await-in-loop */
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
@@ -53,6 +52,8 @@ import {
 } from '../models/wallet-types';
 import { poseidon } from '../utils/hash';
 import { packPoint, unpackPoint } from '../keyderivation/babyjubjub';
+import { Chain } from '../models/lepton-types';
+import { getChainFullNetworkID } from '../chain';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -69,7 +70,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly nullifyingKey: bigint;
 
-  readonly merkletree: MerkleTree[] = [];
+  readonly merkletrees: MerkleTree[][] = [];
 
   /**
    * Create Wallet controller
@@ -100,29 +101,32 @@ abstract class AbstractWallet extends EventEmitter {
    * @param merkletree - merkletree to load
    */
   loadTree(merkletree: MerkleTree) {
-    this.merkletree[merkletree.chainID] = merkletree;
+    if (!this.merkletrees[merkletree.chain.type]) {
+      this.merkletrees[merkletree.chain.type] = [];
+    }
+    this.merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
   }
 
   /**
-   * Unload merkle tree by chainID
-   * @param chainID - chainID of tree to unload
+   * Unload merkle tree by chain
+   * @param chain - chain type/id of tree to unload
    */
-  unloadTree(chainID: number) {
-    delete this.merkletree[chainID];
+  unloadTree(chain: Chain) {
+    delete this.merkletrees[chain.type][chain.id];
   }
 
   /**
-   * Construct DB TXO path from chainID
-   * Prefix consists of ['wallet', id, chainID]
+   * Construct DB TXO path from chain
+   * Prefix consists of ['wallet', id, chain]
    * May be appended with tree and position
-   * @param chainID - chainID
+   * @param chain - chain type/id
    * @optional tree - without this param, all trees
    * @optional position - without this param, all positions
    * @returns wallet DB prefix
    */
-  getWalletDBPrefix(chainID: number, tree?: number, position?: number): string[] {
-    const path = [fromUTF8String('wallet'), hexlify(this.id), hexlify(new BN(chainID))].map(
-      (element) => element.padStart(64, '0'),
+  getWalletDBPrefix(chain: Chain, tree?: number, position?: number): string[] {
+    const path = [fromUTF8String('wallet'), hexlify(this.id), getChainFullNetworkID(chain)].map(
+      (el) => formatToByteLength(el, ByteLength.UINT_256),
     );
     if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
     if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
@@ -130,19 +134,19 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Construct DB spent commitment path from chainID
-   * Prefix consists of ['wallet', id + "-spent", chainID]
+   * Construct DB spent commitment path from chain
+   * Prefix consists of ['wallet', id + "-spent", chain]
    * May be appended with tree and position
-   * @param chainID - chainID
+   * @param chain - chain type/id
    * @optional tree - without this param, all trees
    * @optional position - without this param, all positions
    * @returns wallet DB prefix
    */
-  getWalletSentCommitmentDBPrefix(chainID: number, tree?: number, position?: number): string[] {
+  getWalletSentCommitmentDBPrefix(chain: Chain, tree?: number, position?: number): string[] {
     const path = [
       fromUTF8String('wallet'),
       `${hexlify(this.id)}-spent`,
-      hexlify(new BN(chainID)),
+      getChainFullNetworkID(chain),
     ].map((element) => element.padStart(64, '0'));
     if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
     if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
@@ -150,11 +154,11 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Construct DB path from chainID
+   * Construct DB path from chain
    * @returns wallet DB path
    */
-  getWalletDetailsPath(chainID: number): string[] {
-    return this.getWalletDBPrefix(chainID);
+  getWalletDetailsPath(chain: Chain): string[] {
+    return this.getWalletDBPrefix(chain);
   }
 
   /**
@@ -204,25 +208,25 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Encode address from (MPK, VK) + chainID
+   * Encode address from (MPK, VK) + chain
    * @returns {string} bech32 encoded RAILGUN address
    */
-  getAddress(chainID: Optional<number>): string {
-    return bech32.encode({ ...this.addressKeys, chainID });
+  getAddress(chain?: Chain): string {
+    return bech32.encode({ ...this.addressKeys, chain });
   }
 
   /**
    * Get encrypted wallet details for this wallet
-   * @param {number} chainID
-   * @returns {WalletDetails} including treeScannedHeight
+   * @param chain - chain type/id
+   * @returns walletDetails - including treeScannedHeight
    */
-  async getWalletDetails(chainID: number): Promise<WalletDetails> {
+  async getWalletDetails(chain: Chain): Promise<WalletDetails> {
     let walletDetails: WalletDetails;
 
     try {
       // Try fetching from database
       const walletDetailsEncoded = (await this.db.get(
-        this.getWalletDetailsPath(chainID),
+        this.getWalletDetailsPath(chain),
       )) as BytesData;
       walletDetails = msgpack.decode(arrayify(walletDetailsEncoded)) as WalletDetails;
     } catch {
@@ -259,7 +263,7 @@ abstract class AbstractWallet extends EventEmitter {
     leaf: Commitment,
     viewingPrivateKey: Uint8Array,
     tree: number,
-    chainID: number,
+    chain: Chain,
     position: number,
     totalLeaves: number,
   ): Promise<ScannedDBCommitment[]> {
@@ -268,7 +272,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     LeptonDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
 
-    const walletAddress = this.getAddress(0);
+    const walletAddress = this.getAddress();
 
     if ('ciphertext' in leaf) {
       const ephemeralKeyReceiver = hexStringToBytes(leaf.ciphertext.ephemeralKeys[0]);
@@ -329,7 +333,7 @@ abstract class AbstractWallet extends EventEmitter {
       LeptonDebug.log(`Adding RECEIVE commitment at ${position}.`);
       scannedCommitments.push({
         type: 'put',
-        key: this.getWalletDBPrefix(chainID, tree, position).join(':'),
+        key: this.getWalletDBPrefix(chain, tree, position).join(':'),
         value: msgpack.encode(storedCommitment),
       });
     }
@@ -344,7 +348,7 @@ abstract class AbstractWallet extends EventEmitter {
       LeptonDebug.log(`Adding SPEND commitment at ${position}.`);
       scannedCommitments.push({
         type: 'put',
-        key: this.getWalletSentCommitmentDBPrefix(chainID, tree, position).join(':'),
+        key: this.getWalletSentCommitmentDBPrefix(chain, tree, position).join(':'),
         value: msgpack.encode(storedCommitment),
       });
     }
@@ -357,18 +361,18 @@ abstract class AbstractWallet extends EventEmitter {
    * Commitment index in array should be same as commitment index in tree
    * @param {Commitment[]} leaves - commitments from events to attempt parsing
    * @param {number} tree - tree number we're scanning
-   * @param {number} chainID - chainID we're scanning
+   * @param {number} chain - chain type/id we're scanning
    * @param {number} scannedHeight - starting position
    */
   async scanLeaves(
     leaves: Optional<Commitment>[],
     tree: number,
-    chainID: number,
+    chain: Chain,
     scannedHeight: number,
     treeHeight: number,
   ): Promise<void> {
     LeptonDebug.log(
-      `wallet:scanLeaves tree:${tree} chain:${chainID} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
+      `wallet:scanLeaves tree:${tree} chain:${chain} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
     );
     const vpk = this.getViewingKeyPair().privateKey;
 
@@ -380,7 +384,7 @@ abstract class AbstractWallet extends EventEmitter {
         continue;
       }
       leafSyncPromises.push(
-        this.createScannedDBCommitments(leaf, vpk, tree, chainID, position, leaves.length),
+        this.createScannedDBCommitments(leaf, vpk, tree, chain, position, leaves.length),
       );
     }
 
@@ -408,16 +412,18 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Get TXOs list of a chain
-   * @param chainID - chainID to get UTXOs for
+   * @param chain - chain type/id to get UTXOs for
    * @returns UTXOs list
    */
-  async TXOs(chainID: number): Promise<TXO[]> {
+  async TXOs(chain: Chain): Promise<TXO[]> {
     const recipientAddress = encode(this.addressKeys);
     const vpk = this.getViewingKeyPair().privateKey;
 
-    const namespace = this.getWalletDBPrefix(chainID);
+    const namespace = this.getWalletDBPrefix(chain);
     const keys: string[] = await this.streamKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
+
+    const merkletree = this.merkletrees[chain.type][chain.id];
 
     // Calculate UTXOs
     return Promise.all(
@@ -431,7 +437,7 @@ abstract class AbstractWallet extends EventEmitter {
         // If this UTXO hasn't already been marked as spent, check if it has
         if (!txo.spendtxid) {
           // Get nullifier
-          const storedNullifier = await this.merkletree[chainID].getStoredNullifier(txo.nullifier);
+          const storedNullifier = await merkletree.getStoredNullifier(txo.nullifier);
 
           // If it's nullified write spend txid to wallet storage
           if (storedNullifier) {
@@ -466,13 +472,13 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Get spent commitments of a chain
-   * @param chainID - chainID to get spent commitments for
+   * @param chain - chain type/id to get spent commitments for
    * @returns SentCommitment list
    */
-  async getSentCommitments(chainID: number): Promise<SentCommitment[]> {
+  async getSentCommitments(chain: Chain): Promise<SentCommitment[]> {
     const vpk = this.getViewingKeyPair().privateKey;
 
-    const namespace = this.getWalletSentCommitmentDBPrefix(chainID);
+    const namespace = this.getWalletSentCommitmentDBPrefix(chain);
     const keys: string[] = await this.streamKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
@@ -500,12 +506,12 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Gets transactions history
-   * @param chainID - chainID to get transaction history for
+   * @param chain - chain type/id to get transaction history for
    * @returns history
    */
-  async getTransactionHistory(chainID: number): Promise<TransactionHistoryEntry[]> {
-    const receiveHistory = await this.getTransactionReceiveHistory(chainID);
-    const sendHistory = await this.getTransactionSpendHistory(chainID);
+  async getTransactionHistory(chain: Chain): Promise<TransactionHistoryEntry[]> {
+    const receiveHistory = await this.getTransactionReceiveHistory(chain);
+    const sendHistory = await this.getTransactionSpendHistory(chain);
 
     const history: TransactionHistoryEntry[] = sendHistory.map((sendItem) => ({
       ...sendItem,
@@ -549,11 +555,11 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Gets transactions history for "received" transactions
-   * @param chainID - chainID to get balances for
+   * @param chain - chain type/id to get balances for
    * @returns history
    */
-  async getTransactionReceiveHistory(chainID: number): Promise<TransactionHistoryEntryReceived[]> {
-    const TXOs = await this.TXOs(chainID);
+  async getTransactionReceiveHistory(chain: Chain): Promise<TransactionHistoryEntryReceived[]> {
+    const TXOs = await this.TXOs(chain);
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
     TXOs.forEach(({ txid, note }) => {
@@ -578,8 +584,8 @@ abstract class AbstractWallet extends EventEmitter {
     return history;
   }
 
-  async getTransactionSpendHistory(chainID: number): Promise<TransactionHistoryEntrySpent[]> {
-    const sentCommitments = await this.getSentCommitments(chainID);
+  async getTransactionSpendHistory(chain: Chain): Promise<TransactionHistoryEntrySpent[]> {
+    const sentCommitments = await this.getSentCommitments(chain);
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
     sentCommitments.forEach(({ txid, note, noteExtraData }) => {
@@ -656,11 +662,11 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Gets wallet balances
-   * @param chainID - chainID to get balances for
+   * @param chain - chain type/id to get balances for
    * @returns balances
    */
-  async balances(chainID: number): Promise<Balances> {
-    const TXOs = await this.TXOs(chainID);
+  async balances(chain: Chain): Promise<Balances> {
+    const TXOs = await this.TXOs(chain);
     const balances: Balances = {};
 
     // Loop through each TXO and add to balances if unspent
@@ -687,20 +693,20 @@ abstract class AbstractWallet extends EventEmitter {
     return balances;
   }
 
-  async getBalance(chainID: number, tokenAddress: string): Promise<Optional<bigint>> {
-    const balances = await this.balances(chainID);
+  async getBalance(chain: Chain, tokenAddress: string): Promise<Optional<bigint>> {
+    const balances = await this.balances(chain);
     const balanceForToken = balances[formatToByteLength(tokenAddress, 32, false)];
     return balanceForToken ? balanceForToken.balance : undefined;
   }
 
   /**
    * Sort token balances by tree
-   * @param chainID - chainID of token
+   * @param chain - chain type/id of token
    * @returns balances by tree
    */
-  async balancesByTree(chainID: number): Promise<BalancesByTree> {
+  async balancesByTree(chain: Chain): Promise<BalancesByTree> {
     // Fetch balances
-    const balances = await this.balances(chainID);
+    const balances = await this.balances(chain);
 
     // Sort token balances by tree
     const balancesByTree: BalancesByTree = {};
@@ -729,16 +735,18 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Scans for new balances
-   * @param chainID - chainID to scan
+   * @param chain - chain data to scan
    */
-  async scanBalances(chainID: number) {
-    LeptonDebug.log(`scan wallet balances: chainID ${chainID}`);
+  async scanBalances(chain: Chain) {
+    LeptonDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
+
+    const merkletree = this.merkletrees[chain.type][chain.id];
 
     try {
       // Fetch wallet details and latest tree.
       const [walletDetails, latestTree] = await Promise.all([
-        this.getWalletDetails(chainID),
-        this.merkletree[chainID].latestTree(),
+        this.getWalletDetails(chain),
+        merkletree.latestTree(),
       ]);
 
       // Fill list of tree heights with 0s up to # of trees
@@ -752,30 +760,34 @@ abstract class AbstractWallet extends EventEmitter {
         const scannedHeight = walletDetails.treeScannedHeights[tree];
 
         // Create sparse array of tree
-        const treeHeight = await this.merkletree[chainID].getTreeLength(tree);
+        // eslint-disable-next-line no-await-in-loop
+        const treeHeight = await merkletree.getTreeLength(tree);
         const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
         // Fetch each leaf we need to scan
         for (let index = scannedHeight; index < treeHeight; index += 1) {
-          fetcher[index] = this.merkletree[chainID].getCommitment(tree, index);
+          fetcher[index] = merkletree.getCommitment(tree, index);
         }
 
         // Wait until all leaves are fetched
+        // eslint-disable-next-line no-await-in-loop
         const leaves = await Promise.all(fetcher);
 
         // Start scanning primary and change
-        await this.scanLeaves(leaves, tree, chainID, scannedHeight, treeHeight);
+        // eslint-disable-next-line no-await-in-loop
+        await this.scanLeaves(leaves, tree, chain, scannedHeight, treeHeight);
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] = leaves.length;
 
         // Write new wallet details to db
-        await this.db.put(this.getWalletDetailsPath(chainID), msgpack.encode(walletDetails));
+        // eslint-disable-next-line no-await-in-loop
+        await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
       }
 
       // Emit scanned event for this chain
-      LeptonDebug.log(`wallet: scanned ${chainID}`);
-      this.emit(LeptonEvent.WalletScanComplete, { chainID } as ScannedEventData);
+      LeptonDebug.log(`wallet: scanned ${chain}`);
+      this.emit(LeptonEvent.WalletScanComplete, { chain } as ScannedEventData);
     } catch (err) {
       if (err instanceof Error) {
         LeptonDebug.log(`wallet.scan error: ${err.message}`);
@@ -786,20 +798,20 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Clears balances scanned from merkletrees and stored to database.
-   * @param chainID - chainID to clear
+   * @param chain - chain type/id to clear
    */
-  async clearScannedBalances(chainID: number) {
-    const namespace = this.getWalletDetailsPath(chainID);
+  async clearScannedBalances(chain: Chain) {
+    const namespace = this.getWalletDetailsPath(chain);
     await this.db.clearNamespace(namespace);
   }
 
   /**
    * Clears stored balances and re-scans fully.
-   * @param chainID - chainID to rescan
+   * @param chain - chain type/id to rescan
    */
-  async fullRescanBalances(chainID: number) {
-    await this.clearScannedBalances(chainID);
-    return this.scanBalances(chainID);
+  async fullRescanBalances(chain: Chain) {
+    await this.clearScannedBalances(chain);
+    return this.scanBalances(chain);
   }
 
   static dbPath(id: string): BytesData[] {

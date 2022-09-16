@@ -16,6 +16,8 @@ import {
 import LeptonDebug from '../debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
 import { waitForPassCondition } from '../utils/promises';
+import { Chain } from '../models/lepton-types';
+import { getChainFullNetworkID } from '../chain';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
@@ -50,7 +52,7 @@ enum CommitmentProcessingGroupSize {
 class MerkleTree {
   private db: Database;
 
-  readonly chainID: number;
+  readonly chain: Chain;
 
   readonly purpose: TreePurpose;
 
@@ -81,14 +83,14 @@ class MerkleTree {
    */
   constructor(
     db: Database,
-    chainID: number,
+    chain: Chain,
     purpose: TreePurpose,
     validateRoot: RootValidator,
     depth: number = depths[purpose],
   ) {
     // Set passed values
     this.db = db;
-    this.chainID = chainID;
+    this.chain = chain;
     this.trees = Array(depth)
       .fill(0)
       .map(() => []);
@@ -158,8 +160,8 @@ class MerkleTree {
    * @returns database prefix
    */
   getChainDBPrefix(): string[] {
-    return [fromUTF8String(`merkletree-${this.purpose}`), hexlify(new BN(this.chainID))].map(
-      (element) => element.padStart(64, '0'),
+    return [fromUTF8String(`merkletree-${this.purpose}`), getChainFullNetworkID(this.chain)].map(
+      (el) => formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -169,8 +171,8 @@ class MerkleTree {
    * @returns database prefix
    */
   getTreeDBPrefix(tree: number): string[] {
-    return [...this.getChainDBPrefix(), hexlify(new BN(tree))].map((element) =>
-      element.padStart(64, '0'),
+    return [...this.getChainDBPrefix(), hexlify(new BN(tree))].map((el) =>
+      formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -183,7 +185,7 @@ class MerkleTree {
    */
   getNodeDBPath(tree: number, level: number, index: number): string[] {
     return [...this.getTreeDBPrefix(tree), hexlify(new BN(level)), hexlify(new BN(index))].map(
-      (element) => element.padStart(64, '0'),
+      (el) => formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 

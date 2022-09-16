@@ -1,7 +1,13 @@
 /* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { encode, decode, ADDRESS_LENGTH_LIMIT } from '../../src/keyderivation/bech32-encode';
+import {
+  encode,
+  decode,
+  ADDRESS_LENGTH_LIMIT,
+  AddressData,
+} from '../../src/keyderivation/bech32-encode';
+import { ChainType } from '../../src/models/lepton-types';
 import {
   ByteLength,
   formatToByteLength,
@@ -17,21 +23,28 @@ describe('Key Derivation/Bech32 Encode', () => {
     const vectors = [
       {
         pubkey: '00000000',
-        chainID: 1,
+        chain: { type: ChainType.EVM, id: 1 },
         address:
           '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
         version: 1,
       },
       {
         pubkey: '01bfd5681c0479be9a8ef8dd8baadd97115899a9af30b3d2455843afb41b',
-        chainID: 56,
+        chain: { type: ChainType.EVM, id: 56 },
         address:
           '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
         version: 1,
       },
       {
+        pubkey: '01bfd5681c0479be9a8ef8dd8baadd97115899a9af30b3d2455843afb41b',
+        chain: { type: 1, id: 56 },
+        address:
+          '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkumpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkwrfm4m',
+        version: 1,
+      },
+      {
         pubkey: 'ee6b4c702f8070c8ddea1cbb8b0f6a4a518b77fa8d3f9b68617b664550e75f64',
-        chainID: undefined,
+        chain: undefined,
         address:
           '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
         version: 1,
@@ -39,18 +52,21 @@ describe('Key Derivation/Bech32 Encode', () => {
     ];
 
     vectors.forEach((vector, index) => {
-      const v = {
+      const addressData: AddressData = {
         masterPublicKey: hexToBigInt(vector.pubkey),
         viewingPublicKey: hexStringToBytes(
           formatToByteLength(vector.pubkey, ByteLength.UINT_256, false),
         ),
-        chainID: vector.chainID,
+        chain: vector.chain,
         version: vector.version,
       };
-      const encoded = encode(v);
+      const encoded = encode(addressData);
       expect(encoded).to.equal(vector.address);
       expect(encoded.length).to.equal(ADDRESS_LENGTH_LIMIT);
-      expect(decode(encoded)).to.deep.equal(v, `Incorrect values for vector index ${index}`);
+      expect(decode(encoded)).to.deep.equal(
+        addressData,
+        `Incorrect values for vector index ${index}`,
+      );
     });
   });
 

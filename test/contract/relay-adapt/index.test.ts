@@ -20,12 +20,13 @@ import { ERC20WithdrawNote, Note } from '../../../src/note';
 import { ByteLength, nToHex, randomHex } from '../../../src/utils/bytes';
 import { ERC20 } from '../../../src/typechain-types';
 import { Groth16 } from '../../../src/prover';
+import { Chain, ChainType } from '../../../src/models/lepton-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
-let chainID: number;
+let chain: Chain;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
@@ -60,16 +61,19 @@ describe('Relay Adapt/Index', function test() {
     }
 
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
-    chainID = (await provider.getNetwork()).chainId;
+    chain = {
+      type: ChainType.EVM,
+      id: (await provider.getNetwork()).chainId,
+    };
     await lepton.loadNetwork(
-      chainID,
+      chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
       DEPLOYMENT_BLOCK,
     );
-    proxyContract = lepton.proxyContracts[chainID];
-    relayAdaptContract = lepton.relayAdaptContracts[chainID];
+    proxyContract = lepton.proxyContracts[chain.type][chain.id];
+    relayAdaptContract = lepton.relayAdaptContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(testMnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -89,7 +93,7 @@ describe('Relay Adapt/Index', function test() {
 
       // Send deposit on chain
       const tx = await etherswallet.sendTransaction(depositTx);
-      return Promise.all([tx.wait(), awaitScan(wallet, chainID)]);
+      return Promise.all([tx.wait(), awaitScan(wallet, chain)]);
     };
   });
 
@@ -108,7 +112,7 @@ describe('Relay Adapt/Index', function test() {
 
     const depositTx = await relayAdaptContract.populateDepositBaseToken(depositInput);
 
-    const awaiterDeposit = awaitScan(wallet, chainID);
+    const awaiterDeposit = awaitScan(wallet, chain);
 
     // Send deposit on chain
     const txResponse = await etherswallet.sendTransaction(depositTx);
@@ -123,7 +127,7 @@ describe('Relay Adapt/Index', function test() {
     await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(awaiterDeposit).to.be.fulfilled;
 
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
   });
 
   it('[HH] Should return gas estimate for withdraw base token', async function run() {
@@ -133,12 +137,12 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(19950n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(19950n);
 
-    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
 
     const senderBlindingKey = randomHex(15);
     const relayerFee = Note.create(
@@ -187,10 +191,10 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
-    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
     const senderBlindingKey = randomHex(15);
     const relayerFee = Note.create(
       wallet2.addressKeys,
@@ -260,12 +264,12 @@ describe('Relay Adapt/Index', function test() {
       proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
     );
 
-    const awaiterScan = awaitScan(wallet, chainID);
+    const awaiterScan = awaitScan(wallet, chain);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(awaiterScan).to.be.fulfilled; // Withdraw
 
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
     );
 
@@ -286,10 +290,10 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
-    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
     // const relayerFee = Note.create(wallet2.addressKeys, randomHex(16), 300n, WETH_TOKEN_ADDRESS);
     // transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const withdrawNote = new ERC20WithdrawNote(
@@ -309,7 +313,7 @@ describe('Relay Adapt/Index', function test() {
 
     // Withdraw to relay adapt.
     const txTransact = await etherswallet.sendTransaction(transact);
-    await Promise.all([txTransact.wait(), awaitScan(wallet, chainID)]);
+    await Promise.all([txTransact.wait(), awaitScan(wallet, chain)]);
 
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
@@ -336,10 +340,10 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken();
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
-    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
     const senderBlindingKey = randomHex(15);
     const relayerFee = Note.create(
       wallet2.addressKeys,
@@ -450,7 +454,7 @@ describe('Relay Adapt/Index', function test() {
     );
 
     // 2 scans: Withdraw and Deposit
-    const scansAwaiter = awaitMultipleScans(wallet, chainID, 2);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(scansAwaiter).to.be.fulfilled;
@@ -478,7 +482,7 @@ describe('Relay Adapt/Index', function test() {
     const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
 
-    const privateWalletBalance = await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS);
+    const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
@@ -489,10 +493,10 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken(100000n);
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(99750n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(99750n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
-    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
     const senderBlindingKey = randomHex(15);
     const relayerFee = Note.create(
       wallet2.addressKeys,
@@ -598,7 +602,7 @@ describe('Relay Adapt/Index', function test() {
     );
 
     // 2 scans: Withdraw and Deposit
-    const scansAwaiter = awaitMultipleScans(wallet, chainID, 2);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(scansAwaiter).to.be.fulfilled;
@@ -626,7 +630,7 @@ describe('Relay Adapt/Index', function test() {
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
     const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
-    const privateWalletBalance = await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS);
+    const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
@@ -639,10 +643,10 @@ describe('Relay Adapt/Index', function test() {
     }
 
     await testDepositBaseToken(100000n);
-    expect(await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS)).to.equal(99750n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(99750n);
 
     // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
-    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
     const senderBlindingKey = randomHex(15);
     const relayerFee = Note.create(
       wallet2.addressKeys,
@@ -751,7 +755,7 @@ describe('Relay Adapt/Index', function test() {
     );
 
     // 2 scans: Withdraw and Deposit
-    const scansAwaiter = awaitMultipleScans(wallet, chainID, 2);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
     await expect(scansAwaiter).to.be.fulfilled;
@@ -781,7 +785,7 @@ describe('Relay Adapt/Index', function test() {
     expect(treasuryBalance.toBigInt()).to.equal(299n);
 
     const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
-    const privateWalletBalance = await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS);
+    const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     expect(proxyWethBalance).to.equal(expectedProxyBalance);
     expect(privateWalletBalance).to.equal(expectedWalletBalance);
@@ -796,7 +800,7 @@ describe('Relay Adapt/Index', function test() {
     // expect(treasuryBalance.toBigInt()).to.equal(250n);
 
     // const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
-    // const privateWalletBalance = await wallet.getBalance(chainID, WETH_TOKEN_ADDRESS);
+    // const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     // expect(proxyWethBalance).to.equal(expectedPrivateWethBalance);
     // expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);

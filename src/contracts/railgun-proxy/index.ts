@@ -7,10 +7,6 @@ import {
   DepositInput,
   SerializedTransaction,
 } from '../../models/formatted-types';
-import { LeptonEvent } from '../../models/event-types';
-import { hexlify } from '../../utils/bytes';
-import { promiseTimeout } from '../../utils/promises';
-import { ABIRailgunLogic } from '../../abi/abi';
 import {
   CommitmentBatchEventArgs,
   CommitmentCiphertextArgs,
@@ -18,11 +14,17 @@ import {
   EncryptedDataArgs,
   EventsListener,
   EventsNullifierListener,
+  GeneratedCommitmentBatchEventArgs,
+  LeptonEvent,
+  NullifierEventArgs,
+} from '../../models/event-types';
+import { hexlify } from '../../utils/bytes';
+import { promiseTimeout } from '../../utils/promises';
+import { ABIRailgunLogic } from '../../abi/abi';
+import {
   formatCommitmentBatchEvent,
   formatGeneratedCommitmentBatchEvent,
   formatNullifierEvents,
-  GeneratedCommitmentBatchEventArgs,
-  NullifierEventArgs,
   processCommitmentBatchEvents,
   processGeneratedCommitmentEvents,
   processNullifierEvents,

@@ -9,6 +9,7 @@ import { Database } from '../../src/database';
 import { AddressData } from '../../src/keyderivation/bech32-encode';
 import { MerkleTree } from '../../src/merkletree';
 import { Commitment, OutputType, TokenType } from '../../src/models/formatted-types';
+import { Chain, ChainType } from '../../src/models/lepton-types';
 import { Note } from '../../src/note';
 import { Groth16, Prover } from '../../src/prover';
 import { TransactionBatch } from '../../src/transaction/transaction-batch';
@@ -23,7 +24,7 @@ const { expect } = chai;
 let db: Database;
 let merkletree: MerkleTree;
 let wallet: Wallet;
-let chainID: number;
+let chain: Chain;
 let ethersWallet: EthersWallet;
 let transactionBatch: TransactionBatch;
 let prover: Prover;
@@ -61,8 +62,11 @@ describe('Transaction/Transaction Batch', function run() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
-    chainID = 1;
-    merkletree = new MerkleTree(db, chainID, 'erc20', async () => true);
+    chain = {
+      type: ChainType.EVM,
+      id: 1,
+    };
+    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
@@ -91,12 +95,12 @@ describe('Transaction/Transaction Batch', function run() {
       depositLeaf('e'),
       depositLeaf('f'),
     ]);
-    await wallet.scanBalances(chainID);
-    expect((await wallet.getWalletDetails(chainID)).treeScannedHeights).to.deep.equal([1, 5]);
+    await wallet.scanBalances(chain);
+    expect((await wallet.getWalletDetails(chain)).treeScannedHeights).to.deep.equal([1, 5]);
   });
 
   beforeEach(async () => {
-    transactionBatch = new TransactionBatch(token, TokenType.ERC20, 1);
+    transactionBatch = new TransactionBatch(token, TokenType.ERC20, chain);
   });
 
   it('Should validate transaction batch outputs', async () => {
@@ -230,7 +234,7 @@ describe('Transaction/Transaction Batch', function run() {
 
   this.afterAll(() => {
     // Clean up database
-    wallet.unloadTree(merkletree.chainID);
+    wallet.unloadTree(merkletree.chain);
     db.close();
   });
 });

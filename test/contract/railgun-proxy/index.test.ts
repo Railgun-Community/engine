@@ -14,7 +14,6 @@ import { Wallet } from '../../../src/wallet/wallet';
 import { hexlify, randomHex } from '../../../src/utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../helper';
 import { ERC20Deposit } from '../../../src/note/erc20-deposit';
-import { CommitmentEvent } from '../../../src/contracts/railgun-proxy/events';
 import { ERC20WithdrawNote } from '../../../src/note/erc20-withdraw';
 import {
   EncryptedCommitment,
@@ -23,19 +22,24 @@ import {
   TokenType,
 } from '../../../src/models/formatted-types';
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
-import { LeptonEvent, MerkletreeHistoryScanEventData } from '../../../src/models/event-types';
+import {
+  CommitmentEvent,
+  LeptonEvent,
+  MerkletreeHistoryScanEventData,
+} from '../../../src/models/event-types';
 import { Memo } from '../../../src/note/memo';
 import { ViewOnlyWallet } from '../../../src/wallet/view-only-wallet';
 import { Groth16 } from '../../../src/prover';
 import { ERC20 } from '../../../src/typechain-types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../src/transaction/constants';
 import { promiseTimeout } from '../../../src/utils/promises';
+import { Chain, ChainType } from '../../../src/models/lepton-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
-let chainID: number;
+let chain: Chain;
 let lepton: Lepton;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
@@ -54,8 +58,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDeposit: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-// eslint-disable-next-line func-names
-describe('Railgun Proxy/Index', function () {
+describe('Railgun Proxy/Index', function runTests() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -67,15 +70,18 @@ describe('Railgun Proxy/Index', function () {
     }
 
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
-    chainID = (await provider.getNetwork()).chainId;
+    chain = {
+      type: ChainType.EVM,
+      id: (await provider.getNetwork()).chainId,
+    };
     await lepton.loadNetwork(
-      chainID,
+      chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
       0,
     );
-    proxyContract = lepton.proxyContracts[chainID];
+    proxyContract = lepton.proxyContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -107,7 +113,7 @@ describe('Railgun Proxy/Index', function () {
 
       // Send deposit on chain
       const tx = await etherswallet.sendTransaction(depositTx);
-      return Promise.all([tx.wait(), awaitScan(wallet, chainID)]);
+      return Promise.all([tx.wait(), awaitScan(wallet, chain)]);
     };
   });
 
@@ -129,7 +135,7 @@ describe('Railgun Proxy/Index', function () {
     }
     await testDeposit();
 
-    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
     const senderBlindingKey = randomHex(15);
     transactionBatch.addOutput(
@@ -246,7 +252,7 @@ describe('Railgun Proxy/Index', function () {
 
     startingBlock = await provider.getBlockNumber();
 
-    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
     const senderBlindingKey = randomHex(15);
     transactionBatch.addOutput(
@@ -274,14 +280,12 @@ describe('Railgun Proxy/Index', function () {
     const txTransact = await etherswallet.sendTransaction(transact);
     const [txResponseTransact] = await Promise.all([
       txTransact.wait(),
-      promiseTimeout(awaitScan(wallet, chainID), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(viewOnlyWallet, chainID), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(viewOnlyWallet, chain), 15000, 'Timed out wallet1 scan'),
     ]);
 
-    expect(await wallet.getBalance(chainID, TOKEN_ADDRESS)).equal(109724999999999999999600n);
-    expect(await viewOnlyWallet.getBalance(chainID, TOKEN_ADDRESS)).equal(
-      109724999999999999999600n,
-    );
+    expect(await wallet.getBalance(chain, TOKEN_ADDRESS)).equal(109724999999999999999600n);
+    expect(await viewOnlyWallet.getBalance(chain, TOKEN_ADDRESS)).equal(109724999999999999999600n);
 
     // Event should have been scanned by automatic contract events:
 
@@ -312,7 +316,7 @@ describe('Railgun Proxy/Index', function () {
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
-  it('[HH] Should scan and rescan history for events', async function run() {
+  it.only('[HH] Should scan and rescan history for events', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -322,22 +326,24 @@ describe('Railgun Proxy/Index', function () {
 
     const tree = 0;
 
-    expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(1);
-    let historyScanCompletedForChainID;
+    const merkletree = lepton.merkletrees[chain.type][chain.id].erc20;
+
+    expect(await merkletree.getTreeLength(tree)).to.equal(1);
+    let historyScanCompletedForChain!: Chain;
     const historyScanListener = (data: MerkletreeHistoryScanEventData) => {
-      historyScanCompletedForChainID = data.chainID;
+      historyScanCompletedForChain = data.chain;
     };
     lepton.on(LeptonEvent.MerkletreeHistoryScanComplete, historyScanListener);
-    await lepton.scanHistory(chainID);
-    expect(historyScanCompletedForChainID).to.equal(chainID);
-    expect(await lepton.getStartScanningBlock(chainID)).to.be.above(0);
+    await lepton.scanHistory(chain);
+    expect(historyScanCompletedForChain).to.equal(chain);
+    expect(await lepton.getStartScanningBlock(chain)).to.be.above(0);
 
-    await lepton.clearSyncedMerkletreeLeaves(chainID);
-    expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(0);
-    expect(await lepton.getStartScanningBlock(chainID)).to.equal(0);
+    await lepton.clearSyncedMerkletreeLeaves(chain);
+    expect(await merkletree.getTreeLength(tree)).to.equal(0);
+    expect(await lepton.getStartScanningBlock(chain)).to.equal(0);
 
-    await lepton.fullRescanMerkletreesAndWallets(chainID);
-    expect(await lepton.merkletree[chainID].erc20.getTreeLength(tree)).to.equal(1);
+    await lepton.fullRescanMerkletreesAndWallets(chain);
+    expect(await merkletree.getTreeLength(tree)).to.equal(1);
   });
 
   it('[HH] Should get note hashes', async function run() {
@@ -375,7 +381,7 @@ describe('Railgun Proxy/Index', function () {
 
     const depositTx = await proxyContract.generateDeposit([depositInput]);
 
-    const awaiterDeposit = awaitScan(wallet, chainID);
+    const awaiterDeposit = awaitScan(wallet, chain);
 
     // Send deposit on chain
     await (await etherswallet.sendTransaction(depositTx)).wait();
@@ -418,7 +424,7 @@ describe('Railgun Proxy/Index', function () {
       async () => {},
     );
     // Create transaction
-    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chainID);
+    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
     const senderBlindingKey = randomHex(15);
     transactionBatch.addOutput(
