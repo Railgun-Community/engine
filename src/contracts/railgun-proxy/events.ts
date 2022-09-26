@@ -27,6 +27,7 @@ export function formatGeneratedCommitmentBatchCommitments(
   transactionHash: string,
   preImages: CommitmentPreimageArgs[],
   encryptedRandoms: EncryptedDataArgs[],
+  blockNumber: number,
 ): GeneratedCommitment[] {
   const randomFormatted = encryptedRandoms.map(
     (encryptedRandom) =>
@@ -46,6 +47,7 @@ export function formatGeneratedCommitmentBatchCommitments(
     return {
       hash: nToHex(note.hash, ByteLength.UINT_256),
       txid: transactionHash,
+      blockNumber,
       preImage: note.serialize(false),
       encryptedRandom: randomFormatted[index],
     };
@@ -74,6 +76,7 @@ export function formatGeneratedCommitmentBatchEvent(
     transactionHash,
     commitments,
     encryptedRandom,
+    blockNumber,
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
@@ -88,6 +91,7 @@ export function formatCommitmentBatchCommitments(
   transactionHash: string,
   hash: BigNumber[],
   commitments: CommitmentCiphertextArgs[],
+  blockNumber: number,
 ): EncryptedCommitment[] {
   return commitments.map((commitment, index) => {
     const { ephemeralKeys, memo } = commitment;
@@ -99,6 +103,7 @@ export function formatCommitmentBatchCommitments(
     return {
       hash: formatToByteLength(hash[index].toHexString(), ByteLength.UINT_256),
       txid: transactionHash,
+      blockNumber,
       ciphertext: {
         ciphertext: {
           iv: ivTag.substring(0, 32),
@@ -128,7 +133,12 @@ export function formatCommitmentBatchEvent(
     throw err;
   }
 
-  const formattedCommitments = formatCommitmentBatchCommitments(transactionHash, hash, ciphertext);
+  const formattedCommitments = formatCommitmentBatchCommitments(
+    transactionHash,
+    hash,
+    ciphertext,
+    blockNumber,
+  );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
     treeNumber: treeNumber.toNumber(),

@@ -123,6 +123,7 @@ export type GeneratedCommitment = {
   txid: string;
   preImage: PreImage;
   encryptedRandom: [string, string];
+  blockNumber: number;
 };
 
 export type CommitmentCiphertext = {
@@ -138,6 +139,7 @@ export type EncryptedCommitment = {
   hash: string;
   txid: string;
   ciphertext: CommitmentCiphertext;
+  blockNumber: number;
 };
 
 /**
