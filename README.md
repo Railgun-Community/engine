@@ -1,8 +1,12 @@
 [![Node.js CI Actions Status](https://github.com/Railgun-Community/engine/actions/workflows/node.js.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/engine/actions)
 
-# Engine
+# RAILGUN Engine
 
-Wallet framework for Railgun
+Private Wallet framework for RAILGUN smart contracts and balances.
+
+Read about RAILGUN: www.railgun.org
+
+For simple implementations, use RAILGUN Quickstart.
 
 ## Installing
 
