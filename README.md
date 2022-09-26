@@ -1,24 +1,32 @@
-[![Node.js CI Actions Status](https://github.com/Railgun-Community/lepton/actions/workflows/node.js.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/lepton/actions)
+[![Node.js CI Actions Status](https://github.com/Railgun-Community/engine/actions/workflows/node.js.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/engine/actions)
 
-# Lepton
+# Engine
+
 Wallet framework for Railgun
 
 ## Installing
+
 ### With NPM
-`npm install @railgun-community/lepton`
+
+`npm install @railgun-community/engine`
 
 ### With Yarn
-`yarn add @railgun-community/lepton`
+
+`yarn add @railgun-community/engine`
 
 ## Developing
+
 ### Install nodejs
+
 - [Via NVM (recommended)](https://github.com/nvm-sh/nvm)
 - [Via installer](https://nodejs.org)
 
 ### Install modules
-`npm install` OR `yarn install`
+
+`npm install` OR `yarn`
 
 ### Test environment setup
+
 Clone the contracts repo
 
 `git clone git@github.com:Railgun-Privacy/contract.git`
@@ -36,13 +44,17 @@ The default test config should work fine here as addresses are deterministic on 
 You can run subsequent test runs against the same hardhat node deployment as the testing suite will use snapshots to restore hardhat back to the initial state after each test. If for some reason the testing suite is interrupted before it can restore to snapshot you will need to terminate the hardhat node process, restart it, and run the deploy test script again.
 
 ### Run mocha tests (non-hardhat)
-`npm test` OR `yarn run test`
+
+`npm test` OR `yarn test`
 
 ### Run all tests (including hardhat)
-`npm run test-hardhat` OR `yarn run test-hardhat`
+
+`npm run test-hardhat` OR `yarn test-hardhat`
 
 ### Compile
-`npm compile` OR `yarn run compile`
+
+`npm compile` OR `yarn compile`
 
 ### Clean compile directory
-`npm clean` OR `yarn run clean`
+
+`npm clean` OR `yarn clean`
