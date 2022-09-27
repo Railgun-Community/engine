@@ -1,5 +1,6 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
+import libsodium from 'libsodium-wrappers';
 import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex } from './bytes';
 import { sha256 } from './hash';
 
@@ -84,9 +85,10 @@ async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array) {
   const head = adjustBytes25519(hash.slice(0, 32));
 
   // Convert head to scalar
-  const scalar = BigInt(`0x${utilsEd25519.bytesToHex(head.reverse())}`) % CURVE.l;
+  let bigint = BigInt(`0x${utilsEd25519.bytesToHex(head.reverse())}`) % CURVE.l;
+  if (bigint <= 0n) bigint = CURVE.l;
 
-  return scalar > 0n ? scalar : CURVE.l;
+  return bigintToUint8Array(bigint);
 }
 
 function getCommitmentBlindingKey(random: string, senderBlindingKey: string): bigint {
@@ -108,23 +110,35 @@ function getCommitmentBlindingKey(random: string, senderBlindingKey: string): bi
   return commitmentBlindingKeyNormalized;
 }
 
+function bigintToUint8Array(bigint: bigint): Uint8Array {
+  const hex = bigint.toString(16).padStart(64, '0');
+  // TODO: should this hex be reversed to convert from BE to LE?
+  return hexToBytes(hex);
+}
+
 async function getEphemeralKeys(
   senderViewingPublicKey: Uint8Array,
   receiverViewingPublicKey: Uint8Array,
   random: string,
   senderBlindingKey: string,
 ): Promise<[Uint8Array, Uint8Array]> {
-  const commitmentBlindingKey = getCommitmentBlindingKey(random, senderBlindingKey);
+  await libsodium.ready;
+
+  const commitmentBlindingKey = bigintToUint8Array(
+    getCommitmentBlindingKey(random, senderBlindingKey),
+  );
 
   // Multiply both sender and receiver viewing public keys with the public blinding key
   // The pub blinding key is only known to the sender and receiver preventing external
   // observers from being able to invert and retrieve the original value
-  const ephemeralKeyReceiver = Point.fromHex(bytesToHex(senderViewingPublicKey))
-    .multiply(commitmentBlindingKey)
-    .toRawBytes();
-  const ephemeralKeySender = Point.fromHex(bytesToHex(receiverViewingPublicKey))
-    .multiply(commitmentBlindingKey)
-    .toRawBytes();
+  const ephemeralKeyReceiver = libsodium.crypto_scalarmult(
+    senderViewingPublicKey,
+    commitmentBlindingKey,
+  );
+  const ephemeralKeySender = libsodium.crypto_scalarmult(
+    receiverViewingPublicKey,
+    commitmentBlindingKey,
+  );
 
   // Return blinded keys
   return [ephemeralKeyReceiver, ephemeralKeySender];
@@ -157,16 +171,15 @@ async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   ephemeralKey: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
+  await libsodium.ready;
   try {
-    // Create curve point instance from ephemeral key class
-    const pk = Point.fromHex(bytesToHex(ephemeralKey));
-
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKey);
 
-    // Multiply ephemeral key by private scalar to get shared key
-    const symmetricKey = pk.multiply(scalar);
-    return symmetricKey.toRawBytes();
+    // Multiply ephemeral key by private scalar to get shared symmetric key
+    const x = libsodium.crypto_scalarmult(ephemeralKey, scalar);
+    // TODO: protect with hash, according to libsodium docs
+    return x;
   } catch (err) {
     return undefined;
   }
