@@ -479,14 +479,15 @@ class RailgunEngine extends EventEmitter {
   }
 
   /**
-   * Unloads everything and closes DB
+   * Unloads wallets, removes listeners and closes DB.
    */
   unload() {
     // Unload chains
     this.proxyContracts.forEach((contractsForChainType, chainType) => {
-      contractsForChainType.forEach((_contract, chainID) => {
+      contractsForChainType.forEach((proxyContract, chainID) => {
         EngineDebug.log(`unload contract for ${chainType}:${chainID}`);
         this.unloadNetwork({ type: chainType, id: chainID });
+        proxyContract.contract.removeAllListeners();
       });
     });
 

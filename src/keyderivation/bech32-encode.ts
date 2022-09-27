@@ -18,8 +18,8 @@ export type AddressData = {
   chain?: Chain;
   version?: number;
 };
-export const ADDRESS_LENGTH_LIMIT = 127;
-export const ALL_CHAINS_NETWORK_ID = 'ffffffffffffffff';
+const ADDRESS_LENGTH_LIMIT = 127;
+const ALL_CHAINS_NETWORK_ID = 'ffffffffffffffff';
 const PREFIX = '0zk';
 
 /**
@@ -120,4 +120,4 @@ function decode(address: string): AddressData {
   }
 }
 
-export { encode, decode };
+export { encode, decode, ADDRESS_LENGTH_LIMIT, ALL_CHAINS_NETWORK_ID };

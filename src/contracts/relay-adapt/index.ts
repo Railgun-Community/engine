@@ -25,7 +25,7 @@ type CallResult = {
 
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigNumber.from(2_500_000);
+const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigNumber.from(2_500_000);
 // Contract call needs ~50,000 less gas than the gasLimit setting.
 const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigNumber.from(2_420_000);
 
@@ -274,4 +274,4 @@ class RelayAdaptContract {
   }
 }
 
-export { RelayAdaptContract };
+export { RelayAdaptContract, MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT };
