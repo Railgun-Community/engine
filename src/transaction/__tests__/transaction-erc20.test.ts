@@ -99,8 +99,7 @@ const depositLeaf: Commitment = {
   blockNumber: 0,
 };
 
-// eslint-disable-next-line func-names
-describe('Transaction/ERC20', function () {
+describe('Transaction/ERC20', function test() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
@@ -112,7 +111,7 @@ describe('Transaction/ERC20', function () {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
-    prover.setGroth16(groth16 as Groth16);
+    prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     makeNote = async (

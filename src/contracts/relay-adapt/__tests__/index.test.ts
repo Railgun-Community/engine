@@ -50,7 +50,7 @@ describe('Relay Adapt/Index', function test() {
 
   beforeEach(async () => {
     engine = new RailgunEngine('TestWalletAdapt', memdown(), artifactsGetter, undefined);
-    engine.prover.setGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
@@ -96,7 +96,7 @@ describe('Relay Adapt/Index', function test() {
     };
   });
 
-  it.only('[HH] Should wrap and deposit base token', async function run() {
+  it('[HH] Should wrap and deposit base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

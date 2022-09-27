@@ -9,16 +9,43 @@ import {
   SnarkProof,
 } from './types';
 
+type NativeProverFormattedJsonInputs = {
+  merkleRoot: string;
+  boundParamsHash: string;
+  nullifiers: string[];
+  commitmentsOut: string[];
+  token: string;
+  publicKey: string[];
+  signature: string[];
+  randomIn: string[];
+  valueIn: string[];
+  pathElements: string[];
+  leavesIndices: string[];
+  nullifyingKey: string;
+  npkOut: string[];
+  valueOut: string[];
+};
+
+type NativeProve = (
+  circuitId: number,
+  datBuffer: Buffer,
+  zkeyBuffer: Buffer,
+  inputJson: NativeProverFormattedJsonInputs,
+  progressCallback: ProverProgressCallback,
+) => Proof;
+
+type Groth16FullProve = (
+  formattedInputs: FormattedCircuitInputs,
+  wasm: Optional<ArrayLike<number>>,
+  zkey: ArrayLike<number>,
+  logger: { debug: (log: string) => void },
+  dat: Optional<ArrayLike<number>>,
+  progressCallback: ProverProgressCallback,
+) => Promise<{ proof: Proof }>;
+
 export type Groth16 = {
+  fullProve: Groth16FullProve;
   verify: Optional<(vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>>;
-  fullProve: (
-    formattedInputs: FormattedCircuitInputs,
-    wasm: Optional<ArrayLike<number>>,
-    zkey: ArrayLike<number>,
-    logger: { debug: (log: string) => void },
-    dat: Optional<ArrayLike<number>>,
-    progressCallback: ProverProgressCallback,
-  ) => Promise<{ proof: Proof }>;
 };
 
 export type ProverProgressCallback = (progress: number) => void;
@@ -35,10 +62,93 @@ export class Prover {
   }
 
   /**
-   * Used to set implementation from snarkjs.min.js, snarkjs or Native Prover.
+   * Used to set Groth16 implementation from snarkjs.min.js or snarkjs.
    */
-  setGroth16(groth16Implementation: Groth16) {
-    this.groth16 = groth16Implementation;
+  setSnarkJSGroth16(snarkJSGroth16: Groth16) {
+    this.groth16 = {
+      fullProve: snarkJSGroth16.fullProve,
+      verify: snarkJSGroth16.verify,
+    };
+  }
+
+  /**
+   * Used to set Groth16 implementation from RAILGUN Native Prover.
+   */
+  setNativeProverGroth16(nativeProve: NativeProve, circuits: { [name: string]: number }) {
+    const circuitIdForInputsOutputs = (inputs: number, outputs: number): number => {
+      const circuitString = `${inputs}X${outputs}`;
+      const circuitName = `JOINSPLIT_${circuitString}`;
+      const circuitId = circuits[circuitName];
+      if (circuitId == null) {
+        throw new Error(`No circuit found for ${circuitString.toLowerCase()}`);
+      }
+      return circuitId;
+    };
+
+    /**
+     * JSON.stringify does not handle bigint values out-of-the-box.
+     * This handler will safely stringify bigints into decimal strings.
+     */
+    const stringifySafe = (obj: object) => {
+      return JSON.stringify(obj, (_key, value) =>
+        typeof value === 'bigint' ? value.toString(10) : value,
+      );
+    };
+
+    const fullProve = async (
+      formattedInputs: FormattedCircuitInputs,
+      _wasm: ArrayLike<number> | undefined,
+      zkey: ArrayLike<number>,
+      logger: { debug: (log: string) => void },
+      dat: ArrayLike<number> | undefined,
+      progressCallback: ProverProgressCallback,
+    ): Promise<{
+      proof: Proof;
+    }> => {
+      try {
+        if (!dat) {
+          throw new Error('DAT artifact is required.');
+        }
+        const inputs = formattedInputs.nullifiers.length;
+        const outputs = formattedInputs.commitmentsOut.length;
+        const circuitId = circuitIdForInputsOutputs(inputs, outputs);
+
+        const stringInputs = stringifySafe(formattedInputs);
+        logger.debug(stringInputs);
+
+        const jsonInputs = JSON.parse(stringInputs) as NativeProverFormattedJsonInputs;
+
+        const datBuffer = dat as Buffer;
+        const zkeyBuffer = zkey as Buffer;
+
+        const start = Date.now();
+
+        const proof: Proof = nativeProve(
+          circuitId,
+          datBuffer,
+          zkeyBuffer,
+          jsonInputs,
+          progressCallback,
+        );
+
+        logger.debug(`Proof lapsed ${Date.now() - start} ms`);
+
+        return { proof };
+      } catch (err) {
+        if (!(err instanceof Error)) {
+          throw err;
+        }
+        logger.debug(err.message);
+        throw new Error(`Unable to generate proof: ${err.message}`);
+      }
+    };
+
+    this.groth16 = {
+      fullProve,
+
+      // Proof will be verified during gas estimate, and on-chain.
+      verify: undefined,
+    };
   }
 
   private async maybeVerify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {

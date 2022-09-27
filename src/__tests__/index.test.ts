@@ -65,7 +65,7 @@ describe('RailgunEngine', function test() {
 
   beforeEach(async () => {
     engine = new RailgunEngine('Test Wallet', memdown(), artifactsGetter, mockQuickSync);
-    engine.prover.setGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;

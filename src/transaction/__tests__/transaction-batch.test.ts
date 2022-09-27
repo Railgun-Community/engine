@@ -71,7 +71,7 @@ describe('Transaction/Transaction Batch', function run() {
     wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
-    prover.setGroth16(groth16 as Groth16);
+    prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<Note> => {

@@ -62,7 +62,7 @@ describe('Railgun Proxy/Index', function runTests() {
 
   beforeEach(async () => {
     engine = new RailgunEngine('Test Proxy', memdown(), artifactsGetter, undefined);
-    engine.prover.setGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
