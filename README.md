@@ -1,8 +1,8 @@
 [![Node.js CI Actions Status](https://github.com/Railgun-Community/engine/actions/workflows/node.js.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/engine/actions)
 
-# RAILGUN Engine
+# RAILGUN Engine SDK
 
-Private Wallet framework for RAILGUN smart contracts and balances.
+Wallet framework for RAILGUN smart contracts and private balances on Ethereum and more.
 
 Read about RAILGUN: www.railgun.org
 
@@ -29,7 +29,19 @@ For simple implementations, use RAILGUN Quickstart.
 
 `npm install` OR `yarn`
 
-### Test environment setup
+### Compile TypeScript
+
+`npm compile` OR `yarn compile`
+
+### Run unit tests
+
+`npm test` OR `yarn test`
+
+### Run all tests, including contract integration tests (requires Hardhat setup below)
+
+`npm run test-hardhat` OR `yarn test-hardhat`
+
+### Hardhat setup
 
 Clone the contracts repo
 
@@ -46,19 +58,3 @@ In another terminal deploy the contracts to the hardhat node network
 The default test config should work fine here as addresses are deterministic on the hardhat node network. If you are running your own test setup you will need to use the config override file. Copy `test/configOverrides.test.ts.example` to `test/configOverrides.test.ts` and enter your own values.
 
 You can run subsequent test runs against the same hardhat node deployment as the testing suite will use snapshots to restore hardhat back to the initial state after each test. If for some reason the testing suite is interrupted before it can restore to snapshot you will need to terminate the hardhat node process, restart it, and run the deploy test script again.
-
-### Run mocha tests (non-hardhat)
-
-`npm test` OR `yarn test`
-
-### Run all tests (including hardhat)
-
-`npm run test-hardhat` OR `yarn test-hardhat`
-
-### Compile
-
-`npm compile` OR `yarn compile`
-
-### Clean compile directory
-
-`npm clean` OR `yarn clean`

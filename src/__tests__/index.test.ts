@@ -4,7 +4,7 @@ import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { Note, RailgunEngine } from '..';
-import { abi as erc20abi } from '../test/erc20abi.test';
+import { abi as erc20Abi } from '../test/erc20-abi.test';
 import { config } from '../test/config.test';
 import { Wallet } from '../wallet/wallet';
 import {
@@ -60,7 +60,7 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   await expect(awaitScan(wallet, chain)).to.be.fulfilled;
 };
 
-describe('RailgunEngine', function test() {
+describe.only('RailgunEngine', function test() {
   this.timeout(240000);
 
   beforeEach(async () => {
@@ -81,7 +81,7 @@ describe('RailgunEngine', function test() {
     etherswallet = getEthersWallet(config.mnemonic, provider);
 
     snapshot = (await provider.send('evm_snapshot', [])) as number;
-    token = new ethers.Contract(config.contracts.rail, erc20abi, etherswallet) as ERC20;
+    token = new ethers.Contract(config.contracts.rail, erc20Abi, etherswallet) as ERC20;
     tokenAddress = formatToByteLength(token.address, 32, false);
 
     const balance = await token.balanceOf(etherswallet.address);

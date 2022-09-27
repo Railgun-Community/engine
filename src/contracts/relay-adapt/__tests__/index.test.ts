@@ -7,7 +7,7 @@ import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { RelayAdaptContract } from '..';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
 import { RailgunEngine } from '../../..';
-import { abi as erc20abi } from '../../../test/erc20abi.test';
+import { abi as erc20Abi } from '../../../test/erc20-abi.test';
 import { config } from '../../../test/config.test';
 import { Wallet } from '../../../wallet/wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
@@ -316,7 +316,7 @@ describe('Relay Adapt/Index', function test() {
 
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
-      erc20abi,
+      erc20Abi,
       etherswallet,
     ) as ERC20;
 
@@ -373,7 +373,7 @@ describe('Relay Adapt/Index', function test() {
     // Cross contract call: send 990n WETH tokens to Dead address.
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
-      erc20abi,
+      erc20Abi,
       etherswallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
@@ -526,7 +526,7 @@ describe('Relay Adapt/Index', function test() {
     // Cross contract call: send 1 WETH token to Dead address.
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
-      erc20abi,
+      erc20Abi,
       etherswallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
@@ -676,7 +676,7 @@ describe('Relay Adapt/Index', function test() {
     // Cross contract call: send 1 WETH token to Dead address.
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
-      erc20abi,
+      erc20Abi,
       etherswallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;

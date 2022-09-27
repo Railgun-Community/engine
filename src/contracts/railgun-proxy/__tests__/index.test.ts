@@ -7,7 +7,7 @@ import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { RailgunProxyContract } from '..';
 import { Note } from '../../../note';
 import { RailgunEngine } from '../../..';
-import { abi as erc20abi } from '../../../test/erc20abi.test';
+import { abi as erc20Abi } from '../../../test/erc20-abi.test';
 import { config } from '../../../test/config.test';
 import { Wallet } from '../../../wallet/wallet';
 import { hexlify, randomHex } from '../../../utils/bytes';
@@ -88,7 +88,7 @@ describe('Railgun Proxy/Index', function runTests() {
     etherswallet = new ethers.Wallet(privateKey, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
-    token = new ethers.Contract(TOKEN_ADDRESS, erc20abi, etherswallet) as ERC20;
+    token = new ethers.Contract(TOKEN_ADDRESS, erc20Abi, etherswallet) as ERC20;
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(proxyContract.address, balance);
 
