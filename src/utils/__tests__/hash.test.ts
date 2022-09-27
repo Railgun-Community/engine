@@ -1,8 +1,7 @@
-/* globals describe it */
+import { poseidon } from 'circomlibjs';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { hash } from '..';
-import { poseidon } from '../hash';
+import { keccak256, sha256, sha512HMAC } from '../hash';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -31,10 +30,10 @@ describe('Utils/Hash', () => {
 
     vectors.forEach((vector) => {
       // Test hex string hash
-      expect(hash.sha256(vector.preImage)).to.equal(vector.result);
+      expect(sha256(vector.preImage)).to.equal(vector.result);
 
       // Test bytes array hash
-      expect(hash.sha256(vector.array)).to.equal(vector.result);
+      expect(sha256(vector.array)).to.equal(vector.result);
     });
   });
 
@@ -61,10 +60,10 @@ describe('Utils/Hash', () => {
 
     vectors.forEach((vector) => {
       // Test hex string hash
-      expect(hash.keccak256(vector.preImage)).to.equal(vector.result);
+      expect(keccak256(vector.preImage)).to.equal(vector.result);
 
       // Test bytes array hash
-      expect(hash.keccak256(vector.array)).to.equal(vector.result);
+      expect(keccak256(vector.array)).to.equal(vector.result);
     });
   });
 
@@ -100,10 +99,10 @@ describe('Utils/Hash', () => {
 
     vectors.forEach((vector) => {
       // Test hex string hash
-      expect(hash.sha512HMAC(vector.key, vector.preImage)).to.equal(vector.result);
+      expect(sha512HMAC(vector.key, vector.preImage)).to.equal(vector.result);
 
       // Test bytes array hash
-      expect(hash.sha512HMAC(vector.keyArray, vector.array)).to.equal(vector.result);
+      expect(sha512HMAC(vector.keyArray, vector.array)).to.equal(vector.result);
     });
   });
 

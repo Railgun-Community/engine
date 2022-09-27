@@ -1,26 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* globals describe it beforeEach afterEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { utf8ToBytes } from 'ethereum-cryptography/utils';
 import { mnemonicToSeed } from 'ethers/lib/utils';
 import memdown from 'memdown';
-import { Database } from '../../database';
-import { bech32 } from '../../keyderivation';
-import { MerkleTree } from '../../merkletree';
-import { bytes, hash } from '../../utils';
 import { verifyED25519 } from '../../utils/keys-utils';
-import { Wallet } from '../wallet';
+import { RailgunWallet } from '../railgun-wallet';
 import { ViewOnlyWallet } from '../view-only-wallet';
 import { config } from '../../test/config.test';
 import { Chain, ChainType } from '../../models/engine-types';
+import { Database } from '../../database/database';
+import { MerkleTree } from '../../merkletree/merkletree';
+import { sha256 } from '../../utils/hash';
+import { combine } from '../../utils/bytes';
+import { RailgunEngine } from '../../railgun-engine';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let db: Database;
 let merkletree: MerkleTree;
-let wallet: Wallet;
+let wallet: RailgunWallet;
 let viewOnlyWallet: ViewOnlyWallet;
 const chain: Chain = {
   type: ChainType.EVM,
@@ -35,7 +34,7 @@ describe('Wallet/Index', () => {
     // Create database and wallet
     db = new Database(memdown());
     merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     wallet.loadTree(merkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
@@ -45,7 +44,7 @@ describe('Wallet/Index', () => {
   });
 
   it('Should load existing wallet', async () => {
-    const wallet2 = await Wallet.loadExisting(db, testEncryptionKey, wallet.id);
+    const wallet2 = await RailgunWallet.loadExisting(db, testEncryptionKey, wallet.id);
     expect(wallet2.id).to.equal(wallet.id);
   });
 
@@ -60,7 +59,7 @@ describe('Wallet/Index', () => {
 
   it('Should get wallet prefix path', async () => {
     const path = wallet.getWalletDBPrefix(chain);
-    expect(path[1]).to.equal(hash.sha256(bytes.combine([mnemonicToSeed(testMnemonic), '00'])));
+    expect(path[1]).to.equal(sha256(combine([mnemonicToSeed(testMnemonic), '00'])));
     expect(path[1]).to.equal(wallet.id);
     expect(wallet.getWalletDBPrefix(chain)).to.deep.equal([
       '000000000000000000000000000000000000000000000000000077616c6c6574',
@@ -168,7 +167,7 @@ describe('Wallet/Index', () => {
 
   it('Should derive addresses correctly', async () => {
     const address = wallet.getAddress(chain);
-    const decoded = bech32.decode(address);
+    const decoded = RailgunEngine.decodeAddress(address);
     expect(decoded.masterPublicKey).to.equal(wallet.masterPublicKey);
     expect(decoded.chain).to.deep.equal(chain);
   });

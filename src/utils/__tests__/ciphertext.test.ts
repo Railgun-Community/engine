@@ -1,14 +1,13 @@
-/* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BytesData } from '../../models/formatted-types';
-import { encryption } from '..';
 import { randomHex } from '../bytes';
 import {
   ciphertextToEncryptedJSONData,
   ciphertextToEncryptedRandomData,
   encryptedDataToCiphertext,
 } from '../ciphertext';
+import { aes } from '../encryption';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -17,7 +16,7 @@ describe('Ciphertext', () => {
   it('Should translate ciphertext to encrypted random and back', () => {
     const plaintext: BytesData[] = [randomHex(16)];
     const key = randomHex(32);
-    const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
+    const ciphertext = aes.gcm.encrypt(plaintext, key);
 
     const encryptedData = ciphertextToEncryptedRandomData(ciphertext);
     const newCiphertext = encryptedDataToCiphertext(encryptedData);
@@ -27,10 +26,9 @@ describe('Ciphertext', () => {
 
   it('Should translate ciphertext to encrypted data and back', () => {
     const plaintext: BytesData[] = [];
-    // eslint-disable-next-line no-plusplus
-    for (let i = 0; i < 40; i++) plaintext.push(randomHex(32));
+    for (let i = 0; i < 40; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
-    const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
+    const ciphertext = aes.gcm.encrypt(plaintext, key);
 
     const encryptedData = ciphertextToEncryptedJSONData(ciphertext);
     const newCiphertext = encryptedDataToCiphertext(encryptedData);

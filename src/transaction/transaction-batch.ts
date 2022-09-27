@@ -1,9 +1,7 @@
-import { Note } from '../note';
-import { bytes } from '../utils';
 import { TXO, TreeBalance } from '../wallet/abstract-wallet';
-import { Wallet } from '../wallet/wallet';
-import { Prover, ProverProgressCallback } from '../prover';
-import { ByteLength, formatToByteLength, HashZero } from '../utils/bytes';
+import { RailgunWallet } from '../wallet/railgun-wallet';
+import { Prover, ProverProgressCallback } from '../prover/prover';
+import { ByteLength, formatToByteLength, HashZero, trim } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup } from '../models/txo-types';
@@ -15,7 +13,7 @@ import {
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isValidFor3Outputs } from '../solutions/nullifiers';
-import EngineDebug from '../debugger';
+import EngineDebug from '../debugger/debugger';
 import {
   extractSpendingSolutionGroupsData,
   serializeExtractedSpendingSolutionGroupsData,
@@ -23,6 +21,7 @@ import {
 import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
+import { Note } from '../note/note';
 
 class TransactionBatch {
   private adaptID: AdaptID = {
@@ -88,7 +87,9 @@ class TransactionBatch {
    * Generates spending solution groups for outputs
    * @param wallet - wallet to spend from
    */
-  async generateValidSpendingSolutionGroups(wallet: Wallet): Promise<SpendingSolutionGroup[]> {
+  async generateValidSpendingSolutionGroups(
+    wallet: RailgunWallet,
+  ): Promise<SpendingSolutionGroup[]> {
     const outputTotal = this.outputs.reduce((left, right) => left + right.value, BigInt(0));
 
     // Calculate total required to be supplied by UTXOs
@@ -106,7 +107,7 @@ class TransactionBatch {
     ];
 
     if (treeSortedBalances === undefined) {
-      const formattedTokenAddress = `0x${bytes.trim(this.tokenAddress, ByteLength.Address)}`;
+      const formattedTokenAddress = `0x${trim(this.tokenAddress, ByteLength.Address)}`;
       throw new Error(`No wallet balance for token: ${formattedTokenAddress}`);
     }
 
@@ -249,7 +250,7 @@ class TransactionBatch {
    */
   async generateSerializedTransactions(
     prover: Prover,
-    wallet: Wallet,
+    wallet: RailgunWallet,
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
   ): Promise<SerializedTransaction[]> {
@@ -292,7 +293,7 @@ class TransactionBatch {
    */
   async generateDummySerializedTransactions(
     prover: Prover,
-    wallet: Wallet,
+    wallet: RailgunWallet,
     encryptionKey: string,
   ): Promise<SerializedTransaction[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);

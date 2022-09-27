@@ -1,9 +1,5 @@
-/* eslint-disable no-unused-expressions */
-/* globals describe it */
-
 import { assert, expect } from 'chai';
 import { randomBytes } from 'ethers/lib/utils';
-import { RailgunEngine, Note } from '../..';
 import {
   createSpendingSolutionGroupsForOutput,
   findNextSolutionBatch,
@@ -14,12 +10,14 @@ import { sortUTXOsBySize } from '../utxos';
 import { TreeBalance, TXO } from '../../wallet/abstract-wallet';
 import { TransactionBatch } from '../../transaction/transaction-batch';
 import { OutputType, TokenType } from '../../models/formatted-types';
-import { AddressData } from '../../keyderivation/bech32-encode';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
 import { randomHex } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
-import { ViewingKeyPair } from '../../keyderivation/wallet-node';
 import { ChainType } from '../../models/engine-types';
+import { AddressData } from '../../key-derivation/bech32';
+import { ViewingKeyPair } from '../../key-derivation/wallet-node';
+import { Note } from '../../note/note';
+import { RailgunEngine } from '../../railgun-engine';
 
 const addressData1 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',

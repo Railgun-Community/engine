@@ -1,7 +1,7 @@
+import { poseidon } from 'circomlibjs';
 import { CommitmentPreimage, TokenData, TokenType } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ZERO_ADDRESS } from '../utils/constants';
-import { poseidon } from '../utils/hash';
 import { Note } from './note';
 
 export class ERC20WithdrawNote {
@@ -11,7 +11,7 @@ export class ERC20WithdrawNote {
 
   readonly tokenAddress: string;
 
-  readonly tokenType = TokenType.ERC20;
+  readonly tokenType: TokenType;
 
   readonly hash: bigint;
 
@@ -23,12 +23,13 @@ export class ERC20WithdrawNote {
    * @param {string} tokenAddress - note token
    * @param {TokenType} tokenType - note token type
    */
-  constructor(withdrawAddress: string, value: bigint, tokenAddress: string) {
-    Note.assertValidToken(tokenAddress, this.tokenType);
+  constructor(withdrawAddress: string, value: bigint, tokenAddress: string, tokenType: TokenType) {
+    Note.assertValidToken(tokenAddress, tokenType);
 
     this.withdrawAddress = withdrawAddress;
     this.value = value;
     this.tokenAddress = tokenAddress;
+    this.tokenType = tokenType;
     this.hash = this.getHash();
   }
 
@@ -83,6 +84,6 @@ export class ERC20WithdrawNote {
   }
 
   static empty() {
-    return new ERC20WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS);
+    return new ERC20WithdrawNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS, TokenType.ERC20);
   }
 }

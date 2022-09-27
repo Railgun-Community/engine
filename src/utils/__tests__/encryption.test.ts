@@ -1,10 +1,8 @@
-/* eslint-disable no-plusplus */
-/* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BytesData } from '../../models/formatted-types';
-import { encryption } from '../../utils';
-import { ByteLength, nToHex, randomHex } from '../../utils/bytes';
+import { ByteLength, nToHex, randomHex } from '../bytes';
+import { aes } from '../encryption';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -12,13 +10,13 @@ const { expect } = chai;
 describe('Utils/Encryption', () => {
   it('Should test the correctness of encrypt/decrypt with AES-256-GCM', () => {
     const plaintext: BytesData[] = [];
-    for (let i = 0; i < 8; i++) plaintext.push(randomHex(32));
+    for (let i = 0; i < 8; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
-    const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
+    const ciphertext = aes.gcm.encrypt(plaintext, key);
 
     // Test decryption returns correct plaintext array
     expect(
-      encryption.aes.gcm.decrypt(
+      aes.gcm.decrypt(
         {
           iv: ciphertext.iv,
           tag: ciphertext.tag,
@@ -31,14 +29,14 @@ describe('Utils/Encryption', () => {
 
   it('Should reject invalid tag', () => {
     const plaintext: BytesData[] = [];
-    for (let i = 0; i < 8; i++) plaintext.push(randomHex(32));
+    for (let i = 0; i < 8; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
-    const ciphertext = encryption.aes.gcm.encrypt(plaintext, key);
+    const ciphertext = aes.gcm.encrypt(plaintext, key);
     const randomTag = randomHex(16);
 
     // Test decryption returns correct plaintext array
     expect(() =>
-      encryption.aes.gcm.decrypt(
+      aes.gcm.decrypt(
         {
           iv: ciphertext.iv,
           tag: randomTag,
@@ -53,26 +51,23 @@ describe('Utils/Encryption', () => {
     const randomValue = randomHex();
     const viewingPrivateKey =
       71304128950017749550555748140089622855554443655032326837948344032235540545721n;
-    const ciphertext = encryption.aes.gcm.encrypt(
+    const ciphertext = aes.gcm.encrypt(
       [randomValue],
       nToHex(viewingPrivateKey, ByteLength.UINT_256),
     );
-    const decrypted = encryption.aes.gcm.decrypt(
-      ciphertext,
-      nToHex(viewingPrivateKey, ByteLength.UINT_256),
-    );
+    const decrypted = aes.gcm.decrypt(ciphertext, nToHex(viewingPrivateKey, ByteLength.UINT_256));
     expect(randomValue).to.equal(decrypted[0]);
   });
 
   it('Should test the correctness of encrypt/decrypt with AES-256-CTR', () => {
     const plaintext: string[] = [];
-    for (let i = 0; i < 16; i++) plaintext.push(randomHex(32));
+    for (let i = 0; i < 16; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
-    const ciphertext = encryption.aes.ctr.encrypt(plaintext, key);
+    const ciphertext = aes.ctr.encrypt(plaintext, key);
 
     // Test decryption returns correct plaintext array
     expect(
-      encryption.aes.ctr.decrypt(
+      aes.ctr.decrypt(
         {
           iv: ciphertext.iv,
           data: ciphertext.data,
@@ -86,14 +81,8 @@ describe('Utils/Encryption', () => {
     const plaintext = randomHex(32);
     const viewingPrivateKey =
       71304128950017749550555748140089622855554443655032326837948344032235540545721n;
-    const ciphertext = encryption.aes.ctr.encrypt(
-      [plaintext],
-      nToHex(viewingPrivateKey, ByteLength.UINT_256),
-    );
-    const decrypted = encryption.aes.ctr.decrypt(
-      ciphertext,
-      nToHex(viewingPrivateKey, ByteLength.UINT_256),
-    );
+    const ciphertext = aes.ctr.encrypt([plaintext], nToHex(viewingPrivateKey, ByteLength.UINT_256));
+    const decrypted = aes.ctr.decrypt(ciphertext, nToHex(viewingPrivateKey, ByteLength.UINT_256));
     expect(plaintext).to.equal(decrypted[0]);
   });
 });

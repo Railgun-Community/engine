@@ -1,7 +1,7 @@
 import type { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, Contract, Event, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
-import EngineDebug from '../../debugger';
+import EngineDebug from '../../debugger/debugger';
 import {
   CommitmentPreimage,
   DepositInput,

@@ -4,22 +4,23 @@ import { BigNumber, ethers, PopulatedTransaction } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
-import { RelayAdaptContract } from '..';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
-import { RailgunEngine } from '../../..';
 import { abi as erc20Abi } from '../../../test/erc20-abi.test';
 import { config } from '../../../test/config.test';
-import { Wallet } from '../../../wallet/wallet';
+import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
 import { ERC20Deposit } from '../../../note/erc20-deposit';
-import { RailgunProxyContract } from '../../railgun-proxy';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { OutputType, TokenType } from '../../../models/formatted-types';
-import { ERC20WithdrawNote, Note } from '../../../note';
 import { ByteLength, nToHex, randomHex } from '../../../utils/bytes';
 import { ERC20 } from '../../../typechain-types';
-import { Groth16 } from '../../../prover';
+import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
+import { ERC20WithdrawNote } from '../../../note/erc20-withdraw';
+import { RailgunEngine } from '../../../railgun-engine';
+import { RailgunProxyContract } from '../../railgun-proxy/railgun-proxy';
+import { RelayAdaptContract } from '../relay-adapt';
+import { Note } from '../../../note/note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -31,8 +32,8 @@ let etherswallet: ethers.Wallet;
 let snapshot: number;
 let relayAdaptContract: RelayAdaptContract;
 let proxyContract: RailgunProxyContract;
-let wallet: Wallet;
-let wallet2: Wallet;
+let wallet: RailgunWallet;
+let wallet2: RailgunWallet;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -160,6 +161,7 @@ describe('Relay Adapt/Index', function test() {
       relayAdaptContract.address,
       19900n,
       WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
@@ -210,6 +212,7 @@ describe('Relay Adapt/Index', function test() {
       relayAdaptContract.address,
       300n,
       WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
@@ -299,6 +302,7 @@ describe('Relay Adapt/Index', function test() {
       relayAdaptContract.address,
       1000n,
       WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
@@ -359,6 +363,7 @@ describe('Relay Adapt/Index', function test() {
       relayAdaptContract.address,
       1000n,
       WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
@@ -512,6 +517,7 @@ describe('Relay Adapt/Index', function test() {
       relayAdaptContract.address,
       10000n,
       WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
@@ -662,6 +668,7 @@ describe('Relay Adapt/Index', function test() {
       relayAdaptContract.address,
       10000n,
       WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
     );
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 

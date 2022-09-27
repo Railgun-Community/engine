@@ -1,11 +1,9 @@
-/* globals describe it */
+import { poseidon } from 'circomlibjs';
 import { bytesToHex, randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../transaction/constants';
-import { ByteLength, nToHex, randomHex } from '../../utils/bytes';
-import { poseidon } from '../../utils/hash';
 import {
   getEphemeralKeys,
   getPublicSpendingKey,
@@ -17,7 +15,8 @@ import {
   unblindEphemeralKey,
   verifyED25519,
   verifyEDDSA,
-} from '../../utils/keys-utils';
+} from '../keys-utils';
+import { nToHex, ByteLength, randomHex } from '../bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

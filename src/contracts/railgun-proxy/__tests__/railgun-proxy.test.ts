@@ -4,12 +4,9 @@ import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
-import { RailgunProxyContract } from '..';
-import { Note } from '../../../note';
-import { RailgunEngine } from '../../..';
 import { abi as erc20Abi } from '../../../test/erc20-abi.test';
 import { config } from '../../../test/config.test';
-import { Wallet } from '../../../wallet/wallet';
+import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import { hexlify, randomHex } from '../../../utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../../test/helper.test';
 import { ERC20Deposit } from '../../../note/erc20-deposit';
@@ -28,11 +25,14 @@ import {
 } from '../../../models/event-types';
 import { Memo } from '../../../note/memo';
 import { ViewOnlyWallet } from '../../../wallet/view-only-wallet';
-import { Groth16 } from '../../../prover';
+import { Groth16 } from '../../../prover/prover';
 import { ERC20 } from '../../../typechain-types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../transaction/constants';
 import { promiseTimeout } from '../../../utils/promises';
 import { Chain, ChainType } from '../../../models/engine-types';
+import { RailgunEngine } from '../../../railgun-engine';
+import { RailgunProxyContract } from '../railgun-proxy';
+import { Note } from '../../../note/note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -44,8 +44,8 @@ let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
 let proxyContract: RailgunProxyContract;
-let wallet: Wallet;
-let wallet2: Wallet;
+let wallet: RailgunWallet;
+let wallet2: RailgunWallet;
 let viewOnlyWallet: ViewOnlyWallet;
 
 const testMnemonic = config.mnemonic;
@@ -350,7 +350,12 @@ describe('Railgun Proxy/Index', function runTests() {
       this.skip();
       return;
     }
-    const withdraw = new ERC20WithdrawNote(etherswallet.address, 100n, token.address);
+    const withdraw = new ERC20WithdrawNote(
+      etherswallet.address,
+      100n,
+      token.address,
+      TokenType.ERC20,
+    );
     const contractHash = await proxyContract.hashCommitment(withdraw.preImage);
 
     expect(hexlify(contractHash)).to.equal(withdraw.hashHex);

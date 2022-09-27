@@ -1,5 +1,5 @@
-import { RailgunEngine } from '..';
-import { AddressData } from '../keyderivation/bech32-encode';
+import { RailgunEngine } from '../railgun-engine';
+import { AddressData } from '../key-derivation/bech32';
 import { SpendingSolutionGroup } from '../models/txo-types';
 
 type ExtractedSpendingSolutionGroupsData = {

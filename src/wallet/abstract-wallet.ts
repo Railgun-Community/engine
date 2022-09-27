@@ -1,13 +1,13 @@
+import { poseidon } from 'circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
-import { Database } from '../database';
-import EngineDebug from '../debugger';
-import { bech32 } from '../keyderivation';
-import { encode } from '../keyderivation/bech32-encode';
-import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../keyderivation/wallet-node';
-import { MerkleTree } from '../merkletree';
+import { Database } from '../database/database';
+import EngineDebug from '../debugger/debugger';
+import { encodeAddress } from '../key-derivation/bech32';
+import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../key-derivation/wallet-node';
+import { MerkleTree } from '../merkletree/merkletree';
 import { EngineEvent, ScannedEventData } from '../models/event-types';
 import {
   BytesData,
@@ -19,7 +19,6 @@ import {
   StoredSendCommitment,
 } from '../models/formatted-types';
 import { SentCommitment, TXO } from '../models/txo-types';
-import { Note } from '../note';
 import { Memo } from '../note/memo';
 import {
   arrayify,
@@ -50,10 +49,10 @@ import {
   WalletData,
   WalletDetails,
 } from '../models/wallet-types';
-import { poseidon } from '../utils/hash';
-import { packPoint, unpackPoint } from '../keyderivation/babyjubjub';
+import { packPoint, unpackPoint } from '../key-derivation/babyjubjub';
 import { Chain } from '../models/engine-types';
-import { getChainFullNetworkID } from '../chain';
+import { getChainFullNetworkID } from '../chain/chain';
+import { Note } from '../note/note';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -212,7 +211,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @returns {string} bech32 encoded RAILGUN address
    */
   getAddress(chain?: Chain): string {
-    return bech32.encode({ ...this.addressKeys, chain });
+    return encodeAddress({ ...this.addressKeys, chain });
   }
 
   /**
@@ -343,7 +342,7 @@ abstract class AbstractWallet extends EventEmitter {
         txid: hexlify(leaf.txid),
         decrypted: noteSend.serialize(viewingPrivateKey),
         noteExtraData: Memo.decryptNoteExtraData(noteSend.memoField, viewingPrivateKey),
-        recipientAddress: encode(noteSend.addressData),
+        recipientAddress: encodeAddress(noteSend.addressData),
       };
       EngineDebug.log(`Adding SPEND commitment at ${position}.`);
       scannedCommitments.push({
@@ -416,7 +415,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @returns UTXOs list
    */
   async TXOs(chain: Chain): Promise<TXO[]> {
-    const recipientAddress = encode(this.addressKeys);
+    const recipientAddress = encodeAddress(this.addressKeys);
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletDBPrefix(chain);
@@ -611,7 +610,7 @@ abstract class AbstractWallet extends EventEmitter {
       };
       const isTransfer = !noteExtraData || noteExtraData.outputType === OutputType.Transfer;
       if (isTransfer) {
-        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encode(
+        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
           note.addressData,
         );
       }

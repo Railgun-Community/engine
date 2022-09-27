@@ -1,11 +1,9 @@
 /* eslint-disable no-unused-expressions */
-/* globals describe it */
-
 import { expect } from 'chai';
-import { PublicInputs } from '../../prover';
-import { VALID_NULLIFIER_COUNTS } from '../../solutions/nullifiers';
-import { shouldAddMoreUTXOsToConsolidateBalances } from '../../solutions/simple-solutions';
+import { PublicInputs } from '../../prover/types';
 import { artifactsGetter } from '../../test/helper.test';
+import { VALID_NULLIFIER_COUNTS } from '../nullifiers';
+import { shouldAddMoreUTXOsToConsolidateBalances } from '../simple-solutions';
 
 describe('Solutions/Simple Solutions', () => {
   it('Should test basic artifacts exist for each valid nullifier', () => {

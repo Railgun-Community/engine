@@ -1,6 +1,6 @@
-import { Signature } from 'circomlibjs';
-import { AddressData, decode, encode } from '../keyderivation/bech32-encode';
-import { ViewingKeyPair } from '../keyderivation/wallet-node';
+import { poseidon, Signature } from 'circomlibjs';
+import { AddressData, decodeAddress, encodeAddress } from '../key-derivation/bech32';
+import { ViewingKeyPair } from '../key-derivation/wallet-node';
 import {
   BigIntish,
   Ciphertext,
@@ -10,7 +10,6 @@ import {
 } from '../models/formatted-types';
 import { PublicInputs } from '../prover/types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
-import { encryption, keysUtils } from '../utils';
 import {
   ByteLength,
   formatToByteLength,
@@ -20,8 +19,8 @@ import {
   randomHex,
 } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
-import { poseidon } from '../utils/hash';
-import { unblindEphemeralKey } from '../utils/keys-utils';
+import { aes } from '../utils/encryption';
+import { signEDDSA, unblindEphemeralKey } from '../utils/keys-utils';
 import { Memo, MEMO_METADATA_BYTE_CHUNKS } from './memo';
 
 export class Note {
@@ -120,7 +119,7 @@ export class Note {
   static sign(publicInputs: PublicInputs, spendingKeyPrivate: Uint8Array): Signature {
     const entries = Object.values(publicInputs).flatMap((x) => x);
     const msg = poseidon(entries);
-    return keysUtils.signEDDSA(spendingKeyPrivate, msg);
+    return signEDDSA(spendingKeyPrivate, msg);
   }
 
   /**
@@ -132,7 +131,7 @@ export class Note {
     const { masterPublicKey, token, value, random } = this.formatFields(prefix);
 
     const encodedMemoText = Memo.encodeSplitMemoText(this.memoText);
-    const ciphertext = encryption.aes.gcm.encrypt(
+    const ciphertext = aes.gcm.encrypt(
       [masterPublicKey, token, `${random}${value}`, ...encodedMemoText],
       sharedKey,
     );
@@ -182,7 +181,7 @@ export class Note {
     };
 
     // Decrypt values
-    const decryptedValues = encryption.aes.gcm
+    const decryptedValues = aes.gcm
       .decrypt(fullCiphertext, sharedKey)
       .map((value) => hexlify(value));
 
@@ -229,7 +228,7 @@ export class Note {
    */
   serialize(viewingPrivateKey: Uint8Array, prefix?: boolean): NoteSerialized {
     const { npk, token, value, random, memoField } = this.formatFields(prefix);
-    const randomCiphertext = encryption.aes.gcm.encrypt([random], viewingPrivateKey);
+    const randomCiphertext = aes.gcm.encrypt([random], viewingPrivateKey);
     const [ivTag, data] = ciphertextToEncryptedRandomData(randomCiphertext);
 
     return {
@@ -238,7 +237,7 @@ export class Note {
       value,
       encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)) as [string, string],
       memoField,
-      recipientAddress: encode(this.addressData),
+      recipientAddress: encodeAddress(this.addressData),
       memoText: this.memoText,
     };
   }
@@ -251,11 +250,11 @@ export class Note {
    */
   static deserialize(noteData: NoteSerialized, viewingPrivateKey: Uint8Array): Note {
     const randomCiphertext = encryptedDataToCiphertext(noteData.encryptedRandom);
-    const decryptedRandom = encryption.aes.gcm.decrypt(randomCiphertext, viewingPrivateKey);
+    const decryptedRandom = aes.gcm.decrypt(randomCiphertext, viewingPrivateKey);
     const ivTag = decryptedRandom[0];
     // Call hexlify to ensure all note data isn't 0x prefixed
     return new Note(
-      decode(noteData.recipientAddress),
+      decodeAddress(noteData.recipientAddress),
       hexlify(ivTag),
       hexToBigInt(noteData.value),
       hexlify(noteData.token),

@@ -3,7 +3,8 @@ import encode from 'encoding-down';
 import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
 import { BytesData, Ciphertext } from '../models/formatted-types';
-import { bytes, encryption } from '../utils';
+import { chunk, combine, hexlify } from '../utils/bytes';
+import { aes } from '../utils/encryption';
 
 // TODO: Remove JSON encoding and standardize everything as msgpack
 export type Encoding =
@@ -41,7 +42,7 @@ class Database {
    */
   static pathToKey(path: BytesData[]): string {
     // Convert to hex string, pad to 32 bytes, and join with :
-    return path.map((element) => bytes.hexlify(element).toLowerCase().padStart(64, '0')).join(':');
+    return path.map((element) => hexlify(element).toLowerCase().padStart(64, '0')).join(':');
   }
 
   /**
@@ -98,7 +99,7 @@ class Database {
    */
   async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData) {
     // Encrypt data
-    const encrypted = encryption.aes.gcm.encrypt(bytes.chunk(value), encryptionKey);
+    const encrypted = aes.gcm.encrypt(chunk(value), encryptionKey);
 
     // Write to database
     await this.put(path, encrypted, 'json');
@@ -115,7 +116,7 @@ class Database {
     const encrypted: Ciphertext = (await this.get(path, 'json')) as Ciphertext;
 
     // Decrypt and return
-    return bytes.combine(encryption.aes.gcm.decrypt(encrypted, encryptionKey));
+    return combine(aes.gcm.decrypt(encrypted, encryptionKey));
   }
 
   /**

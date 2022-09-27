@@ -1,12 +1,16 @@
 import { ethers, PopulatedTransaction, BigNumber } from 'ethers';
 import { DepositInput, SerializedTransaction } from '../../models/formatted-types';
-import { ERC20Deposit } from '../../note';
 import { formatToByteLength, ByteLength } from '../../utils/bytes';
-import { Wallet } from '../../wallet/wallet';
+import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { RelayAdapt } from '../../typechain-types/contracts/adapt/relay/Relay.sol/RelayAdapt';
+import { ERC20Deposit } from '../../note/erc20-deposit';
 
 class RelayAdaptHelper {
-  static generateRelayDepositInputs(wallet: Wallet, random: string, depositTokens: string[]) {
+  static generateRelayDepositInputs(
+    wallet: RailgunWallet,
+    random: string,
+    depositTokens: string[],
+  ) {
     const relayDeposits = RelayAdaptHelper.createRelayDeposits(
       wallet.masterPublicKey,
       random,

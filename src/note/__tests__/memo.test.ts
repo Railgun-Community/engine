@@ -1,14 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* globals describe it beforeEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
-import { Database } from '../../database';
 import { NoteExtraData, OutputType } from '../../models/formatted-types';
 import { Memo } from '../memo';
-import { Wallet } from '../../wallet/wallet';
 import WalletInfo from '../../wallet/wallet-info';
 import { config } from '../../test/config.test';
+import { Database } from '../../database/database';
+import { RailgunWallet } from '../../wallet/railgun-wallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -17,12 +15,12 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 let db: Database;
-let wallet: Wallet;
+let wallet: RailgunWallet;
 
 describe('Memo', function run() {
   this.beforeAll(async () => {
     db = new Database(memdown());
-    wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     WalletInfo.setWalletSource('Memo Wallet');
   });
 

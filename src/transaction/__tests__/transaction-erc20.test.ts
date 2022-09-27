@@ -1,13 +1,9 @@
-/* globals describe it beforeEach */
+import { poseidon, Signature } from 'circomlibjs';
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Signature } from 'circomlibjs';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Database } from '../../database';
-import { AddressData } from '../../keyderivation/bech32-encode';
-import { MerkleTree } from '../../merkletree';
 import {
   BoundParams,
   Commitment,
@@ -16,29 +12,31 @@ import {
   TokenType,
 } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
-import { Note } from '../../note';
 import { Memo } from '../../note/memo';
-import { Groth16, Prover } from '../../prover';
 import { hashBoundParams } from '../transaction';
 import { TransactionBatch } from '../transaction-batch';
 import { formatToByteLength, randomHex } from '../../utils/bytes';
-import { poseidon } from '../../utils/hash';
 import {
   getEphemeralKeys,
   getSharedSymmetricKey,
   signEDDSA,
   verifyEDDSA,
 } from '../../utils/keys-utils';
-import { Wallet } from '../../wallet/wallet';
-import { config } from '../../test/config.test';
 import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
+import { Database } from '../../database/database';
+import { AddressData } from '../../key-derivation/bech32';
+import { MerkleTree } from '../../merkletree/merkletree';
+import { Note } from '../../note/note';
+import { Prover, Groth16 } from '../../prover/prover';
+import { RailgunWallet } from '../../wallet/railgun-wallet';
+import { config } from '../../test/config.test';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let db: Database;
 let merkletree: MerkleTree;
-let wallet: Wallet;
+let wallet: RailgunWallet;
 let chain: Chain;
 let ethersWallet: EthersWallet;
 let transactionBatch: TransactionBatch;
@@ -108,7 +106,7 @@ describe('Transaction/ERC20', function test() {
       id: 1,
     };
     merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
@@ -158,7 +156,7 @@ describe('Transaction/ERC20', function test() {
   });
 
   it('Should generate ciphertext decryptable by sender and recipient - with memo', async () => {
-    const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
+    const wallet2 = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
 
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
@@ -229,7 +227,7 @@ describe('Transaction/ERC20', function test() {
   });
 
   it('Should generate ciphertext decryptable by sender and recipient - no memo', async () => {
-    const wallet2 = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
+    const wallet2 = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
 
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();

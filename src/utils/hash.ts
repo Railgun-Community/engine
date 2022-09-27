@@ -1,4 +1,3 @@
-import { poseidon } from 'circomlibjs';
 import { utils as ethersutils } from 'ethers';
 import { BytesData } from '../models/formatted-types';
 import { arrayify } from './bytes';
@@ -49,4 +48,4 @@ function keccak256(preImage: BytesData): string {
   return ethersutils.keccak256(preImageFormatted).slice(2);
 }
 
-export { sha256, sha512HMAC, keccak256, poseidon };
+export { sha256, sha512HMAC, keccak256 };

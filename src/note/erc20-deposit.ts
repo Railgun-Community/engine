@@ -1,9 +1,9 @@
+import { poseidon } from 'circomlibjs';
 import { DepositInput, TokenType } from '../models/formatted-types';
-import { encryption } from '../utils';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData } from '../utils/ciphertext';
 import { ZERO_ADDRESS } from '../utils/constants';
-import { poseidon } from '../utils/hash';
+import { aes } from '../utils/encryption';
 import { Note } from './note';
 
 export class ERC20Deposit {
@@ -59,7 +59,7 @@ export class ERC20Deposit {
    * @returns serialized note
    */
   serialize(viewingPrivateKey: Uint8Array): DepositInput {
-    const ciphertext = encryption.aes.gcm.encrypt([this.random], viewingPrivateKey);
+    const ciphertext = aes.gcm.encrypt([this.random], viewingPrivateKey);
     return {
       preImage: {
         npk: nToHex(this.notePublicKey, ByteLength.UINT_256, true),

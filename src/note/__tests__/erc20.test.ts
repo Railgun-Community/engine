@@ -1,10 +1,8 @@
-/* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { randomBytes } from 'ethers/lib/utils';
-import { ViewingKeyPair } from '../../keyderivation/wallet-node';
+import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { Ciphertext, NoteSerialized, OutputType } from '../../models/formatted-types';
-import { Note } from '../../note';
 import {
   ByteLength,
   hexlify,
@@ -14,6 +12,7 @@ import {
   randomHex,
 } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
+import { Note } from '../note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

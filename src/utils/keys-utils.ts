@@ -1,7 +1,7 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
-import { eddsa, Signature } from 'circomlibjs';
+import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex } from './bytes';
-import { poseidon, sha256 } from './hash';
+import { sha256 } from './hash';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
 

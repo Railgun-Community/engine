@@ -1,8 +1,8 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { encode, decode, ADDRESS_LENGTH_LIMIT, AddressData } from '../bech32-encode';
 import { ChainType } from '../../models/engine-types';
 import { ByteLength, formatToByteLength, hexStringToBytes, hexToBigInt } from '../../utils/bytes';
+import { AddressData, ADDRESS_LENGTH_LIMIT, decodeAddress, encodeAddress } from '../bech32';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -49,10 +49,10 @@ describe('Key Derivation/Bech32 Encode', () => {
         chain: vector.chain,
         version: vector.version,
       };
-      const encoded = encode(addressData);
+      const encoded = encodeAddress(addressData);
       expect(encoded).to.equal(vector.address);
       expect(encoded.length).to.equal(ADDRESS_LENGTH_LIMIT);
-      expect(decode(encoded)).to.deep.equal(
+      expect(decodeAddress(encoded)).to.deep.equal(
         addressData,
         `Incorrect values for vector index ${index}`,
       );
@@ -61,13 +61,13 @@ describe('Key Derivation/Bech32 Encode', () => {
 
   it('Should throw error on invalid address checksum', () => {
     expect(() => {
-      decode('rgany1pnj7u66vwqhcquxgmh4pewutpa4y55vtwlag60umdpshkej92rn47ey76ges3t3enn');
+      decodeAddress('rgany1pnj7u66vwqhcquxgmh4pewutpa4y55vtwlag60umdpshkej92rn47ey76ges3t3enn');
     }).to.throw('Invalid checksum');
   });
 
   it('Should throw error on invalid address prefix', () => {
     expect(() => {
-      decode(
+      decodeAddress(
         'rg1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsfhuuw',
       );
     }).to.throw('Invalid address prefix');

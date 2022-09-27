@@ -1,29 +1,27 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* globals describe it beforeEach */
 import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Database } from '../../database';
-import { AddressData } from '../../keyderivation/bech32-encode';
-import { MerkleTree } from '../../merkletree';
 import { Commitment, OutputType, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
-import { Note } from '../../note';
-import { Groth16, Prover } from '../../prover';
 import { TransactionBatch } from '../transaction-batch';
 import { randomHex } from '../../utils/bytes';
-import { Wallet } from '../../wallet/wallet';
 import { config } from '../../test/config.test';
 import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
+import { Database } from '../../database/database';
+import { AddressData } from '../../key-derivation/bech32';
+import { MerkleTree } from '../../merkletree/merkletree';
+import { Note } from '../../note/note';
+import { Prover, Groth16 } from '../../prover/prover';
+import { RailgunWallet } from '../../wallet/railgun-wallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let db: Database;
 let merkletree: MerkleTree;
-let wallet: Wallet;
+let wallet: RailgunWallet;
 let chain: Chain;
 let ethersWallet: EthersWallet;
 let transactionBatch: TransactionBatch;
@@ -68,7 +66,7 @@ describe('Transaction/Transaction Batch', function run() {
       id: 1,
     };
     merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    wallet = await Wallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);

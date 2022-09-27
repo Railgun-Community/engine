@@ -1,4 +1,4 @@
-import EngineDebug from '../debugger';
+import EngineDebug from '../debugger/debugger';
 import { ByteLength, nToHex } from '../utils/bytes';
 import {
   ArtifactsGetter,

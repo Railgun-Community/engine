@@ -1,7 +1,7 @@
 import BN from 'bn.js';
-import { bytes, hash } from '../utils';
 import { KeyNode } from '../models/engine-types';
-import { fromUTF8String } from '../utils/bytes';
+import { fromUTF8String, padToLength } from '../utils/bytes';
+import { sha512HMAC } from '../utils/hash';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
 
@@ -45,13 +45,13 @@ export function childKeyDerivationHardened(
   offset: number = 0x80000000,
 ): KeyNode {
   // Convert index to bytes as 32bit big endian
-  const indexFormatted = bytes.padToLength(new BN(index + offset), 4);
+  const indexFormatted = padToLength(new BN(index + offset), 4);
 
   // Calculate HMAC preImage
   const preImage = `00${node.chainKey}${indexFormatted}`;
 
   // Calculate I
-  const I = hash.sha512HMAC(node.chainCode, preImage);
+  const I = sha512HMAC(node.chainCode, preImage);
 
   // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
   const chainKey = I.slice(0, 64);
@@ -71,7 +71,7 @@ export function childKeyDerivationHardened(
  */
 export function getMasterKeyFromSeed(seed: string): KeyNode {
   // HMAC with seed to get I
-  const I = hash.sha512HMAC(CURVE_SEED, seed);
+  const I = sha512HMAC(CURVE_SEED, seed);
 
   // Slice 32 bytes for IL and IR values, IL = key, IR = chainCode
   const chainKey = I.slice(0, 64);

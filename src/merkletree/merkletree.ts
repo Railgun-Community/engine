@@ -1,9 +1,8 @@
 /* eslint-disable no-await-in-loop */
-/* eslint-disable no-bitwise */
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
-import type { Database } from '../database';
-import { constants, hash } from '../utils';
+import { poseidon } from 'circomlibjs';
+import type { Database } from '../database/database';
 import {
   fromUTF8String,
   numberify,
@@ -13,11 +12,13 @@ import {
   nToHex,
   hexToBigInt,
 } from '../utils/bytes';
-import EngineDebug from '../debugger';
+import EngineDebug from '../debugger/debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
 import { waitForPassCondition } from '../utils/promises';
 import { Chain } from '../models/engine-types';
-import { getChainFullNetworkID } from '../chain';
+import { getChainFullNetworkID } from '../chain/chain';
+import { SNARK_PRIME } from '../utils/constants';
+import { keccak256 } from '../utils/hash';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
@@ -33,8 +34,8 @@ export type TreePurpose = keyof typeof depths;
 
 // Calculate tree zero value
 export const MERKLE_ZERO_VALUE: string = formatToByteLength(
-  numberify(hash.keccak256(fromUTF8String('Railgun')))
-    .mod(constants.SNARK_PRIME)
+  numberify(keccak256(fromUTF8String('Railgun')))
+    .mod(SNARK_PRIME)
     .toString('hex'),
   ByteLength.UINT_256,
 );
@@ -152,7 +153,7 @@ class MerkleTree {
    * @returns hash
    */
   static hashLeftRight(left: string, right: string): string {
-    return nToHex(hash.poseidon([hexToBigInt(left), hexToBigInt(right)]), 32);
+    return nToHex(poseidon([hexToBigInt(left), hexToBigInt(right)]), 32);
   }
 
   /**

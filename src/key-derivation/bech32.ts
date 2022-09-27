@@ -1,16 +1,17 @@
 // import BN from 'bn.js';
 import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
-import { getChainFullNetworkID } from '../chain';
+import { getChainFullNetworkID } from '../chain/chain';
 import { Chain } from '../models/engine-types';
-import { bytes, constants } from '../utils';
 import {
   ByteLength,
   formatToByteLength,
+  hexlify,
   hexStringToBytes,
   hexToBigInt,
   nToHex,
 } from '../utils/bytes';
+import { ADDRESS_VERSION } from '../utils/constants';
 
 export type AddressData = {
   masterPublicKey: bigint;
@@ -54,7 +55,7 @@ const networkIDToChain = (networkID: string): Optional<Chain> => {
  * Bech32 encodes address
  * @param addressData - AddressData to encode
  */
-function encode(addressData: AddressData): string {
+function encodeAddress(addressData: AddressData): string {
   const masterPublicKey = nToHex(addressData.masterPublicKey, ByteLength.UINT_256, false);
   const viewingPublicKey = formatToByteLength(addressData.viewingPublicKey, ByteLength.UINT_256);
 
@@ -78,7 +79,7 @@ function encode(addressData: AddressData): string {
  * @param address - RAILGUN encoded address
  * @returns
  */
-function decode(address: string): AddressData {
+function decodeAddress(address: string): AddressData {
   try {
     if (!address) {
       throw new Error('No address to decode');
@@ -91,7 +92,7 @@ function decode(address: string): AddressData {
     }
 
     // Hexlify data
-    const data = bytes.hexlify(bech32m.fromWords(decoded.words));
+    const data = hexlify(bech32m.fromWords(decoded.words));
 
     // Get version
     const version = parseInt(data.slice(0, 2), 16);
@@ -102,7 +103,7 @@ function decode(address: string): AddressData {
     const chain: Optional<Chain> = networkIDToChain(networkID);
 
     // Throw if address version is not supported
-    if (version !== constants.VERSION) throw new Error('Incorrect address version');
+    if (version !== ADDRESS_VERSION) throw new Error('Incorrect address version');
 
     const result: AddressData = {
       masterPublicKey,
@@ -120,4 +121,4 @@ function decode(address: string): AddressData {
   }
 }
 
-export { encode, decode, ADDRESS_LENGTH_LIMIT, ALL_CHAINS_NETWORK_ID };
+export { encodeAddress, decodeAddress, ADDRESS_LENGTH_LIMIT, ALL_CHAINS_NETWORK_ID };

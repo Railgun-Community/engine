@@ -3,10 +3,10 @@ import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Note, RailgunEngine } from '..';
+import { RailgunEngine } from '../railgun-engine';
 import { abi as erc20Abi } from '../test/erc20-abi.test';
 import { config } from '../test/config.test';
-import { Wallet } from '../wallet/wallet';
+import { RailgunWallet } from '../wallet/railgun-wallet';
 import {
   artifactsGetter,
   awaitScan,
@@ -15,17 +15,18 @@ import {
   mockQuickSync,
 } from '../test/helper.test';
 import { ERC20Deposit } from '../note/erc20-deposit';
-import { MerkleTree } from '../merkletree';
+import { MerkleTree } from '../merkletree/merkletree';
 import { formatToByteLength, hexToBigInt, randomHex } from '../utils/bytes';
-import { RailgunProxyContract } from '../contracts/railgun-proxy';
+import { RailgunProxyContract } from '../contracts/railgun-proxy/railgun-proxy';
 import { ZERO_ADDRESS } from '../utils/constants';
 import { GeneratedCommitment, OutputType, TokenType } from '../models/formatted-types';
 import { TransactionBatch } from '../transaction/transaction-batch';
-import { Groth16 } from '../prover';
+import { Groth16 } from '../prover/prover';
 import { ERC20 } from '../typechain-types';
 import { promiseTimeout } from '../utils/promises';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
 import { Chain, ChainType } from '../models/engine-types';
+import { Note } from '../note/note';
 
 chai.use(chaiAsPromised);
 
@@ -35,8 +36,8 @@ let engine: RailgunEngine;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
-let wallet: Wallet;
-let wallet2: Wallet;
+let wallet: RailgunWallet;
+let wallet2: RailgunWallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
 let proxyContract: RailgunProxyContract;

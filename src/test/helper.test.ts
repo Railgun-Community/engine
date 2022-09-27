@@ -4,7 +4,7 @@ import { HDKey } from 'ethereum-cryptography/hdkey';
 import artifacts from '@railgun-privacy/native-artifacts';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { PublicInputs } from '../prover';
+import { PublicInputs } from '../prover/prover';
 import { Nullifier } from '../models/formatted-types';
 import {
   AccumulatedEvents,

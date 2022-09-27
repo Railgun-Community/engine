@@ -1,8 +1,13 @@
 import type { BigNumber } from 'ethers';
-import { EncryptedCommitment, GeneratedCommitment, Nullifier } from '../../models/formatted-types';
+import {
+  EncryptedCommitment,
+  GeneratedCommitment,
+  Nullifier,
+  TokenType,
+} from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
-import EngineDebug from '../../debugger';
+import EngineDebug from '../../debugger/debugger';
 import {
   CommitmentBatchEvent,
   GeneratedCommitmentBatchEvent,
@@ -43,6 +48,7 @@ export function formatGeneratedCommitmentBatchCommitments(
       formatToByteLength(item.npk.toHexString(), ByteLength.UINT_256),
       item.value.toBigInt(),
       item.token.tokenAddress,
+      TokenType.ERC20,
     );
     return {
       hash: nToHex(note.hash, ByteLength.UINT_256),

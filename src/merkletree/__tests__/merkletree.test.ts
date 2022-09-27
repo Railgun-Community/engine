@@ -1,16 +1,12 @@
-/* globals describe it beforeEach afterEach */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-
 import memdown from 'memdown';
 import { BN } from 'bn.js';
-import { Database } from '../../database';
-
-import { MERKLE_ZERO_VALUE, MerkleTree } from '..';
-import type { TreePurpose } from '..';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { Commitment, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
+import { Database } from '../../database/database';
+import { MerkleTree, TreePurpose, MERKLE_ZERO_VALUE } from '../merkletree';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

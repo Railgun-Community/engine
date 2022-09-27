@@ -1,8 +1,12 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
-import { Note } from '../note';
-import { hash } from '../utils';
-import { Wallet } from '../wallet/wallet';
-import { PrivateInputs, PublicInputs, Prover, Proof, ProverProgressCallback } from '../prover';
+import { RailgunWallet } from '../wallet/railgun-wallet';
+import {
+  PrivateInputs,
+  PublicInputs,
+  Prover,
+  Proof,
+  ProverProgressCallback,
+} from '../prover/prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../utils/bytes';
 import {
@@ -20,14 +24,17 @@ import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 import { TXO } from '../models/txo-types';
 import { Memo } from '../note/memo';
 import { Chain } from '../models/engine-types';
+import { Note } from '../note/note';
+import { keccak256 } from '../utils/hash';
 
 const abiCoder = defaultAbiCoder;
 
 export function hashBoundParams(boundParams: BoundParams) {
-  const hashed = hash.keccak256(
+  const hashed = keccak256(
     abiCoder.encode(
-      // prettier-ignore
-      ['tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',],
+      [
+        'tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
+      ],
       [boundParams],
     ),
   );
@@ -92,7 +99,12 @@ class Transaction {
       throw new Error('You may only call .withdraw once for a given transaction.');
     }
 
-    this.withdrawNote = new ERC20WithdrawNote(withdrawAddress, value, this.tokenAddress);
+    this.withdrawNote = new ERC20WithdrawNote(
+      withdrawAddress,
+      value,
+      this.tokenAddress,
+      this.tokenType,
+    );
     this.withdrawFlag = allowOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
   }
 
@@ -106,7 +118,7 @@ class Transaction {
    * @param encryptionKey - encryption key of wallet
    */
   async generateInputs(
-    wallet: Wallet,
+    wallet: RailgunWallet,
     encryptionKey: string,
   ): Promise<{
     inputs: PrivateInputs;
@@ -270,7 +282,7 @@ class Transaction {
    */
   async prove(
     prover: Prover,
-    wallet: Wallet,
+    wallet: RailgunWallet,
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
   ): Promise<SerializedTransaction> {
@@ -299,7 +311,7 @@ class Transaction {
    */
   async dummyProve(
     prover: Prover,
-    wallet: Wallet,
+    wallet: RailgunWallet,
     encryptionKey: string,
   ): Promise<SerializedTransaction> {
     // Get inputs

@@ -1,14 +1,13 @@
-/* globals describe it */
+import { poseidon } from 'circomlibjs';
 import { randomBytes } from '@noble/hashes/utils';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { ERC20Deposit } from '..';
 import { formatToByteLength, hexlify, hexToBigInt, randomHex } from '../../utils/bytes';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { getRandomScalar } from '../../utils/keys-utils';
 import { config } from '../../test/config.test';
 import { TokenType } from '../../models/formatted-types';
-import { poseidon } from '../../utils/hash';
+import { ERC20Deposit } from '../erc20-deposit';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

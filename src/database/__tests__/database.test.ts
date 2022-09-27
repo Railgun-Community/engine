@@ -2,8 +2,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { config } from '../../test/config.test';
-
-import { Database } from '..';
+import { Database } from '../database';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

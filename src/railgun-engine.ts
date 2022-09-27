@@ -1,18 +1,15 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import EventEmitter from 'events';
-import { RailgunProxyContract } from './contracts/railgun-proxy';
-import { RelayAdaptContract } from './contracts/relay-adapt';
-import { Database, DatabaseNamespace } from './database';
-import { bip39 } from './keyderivation';
-import { MerkleTree } from './merkletree';
-import { Prover, ArtifactsGetter } from './prover';
-import { Transaction } from './transaction';
-import { Note } from './note';
-import { encode, decode } from './keyderivation/bech32-encode';
+import { RailgunProxyContract } from './contracts/railgun-proxy/railgun-proxy';
+import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
+import { Database, DatabaseNamespace } from './database/database';
+import { MerkleTree } from './merkletree/merkletree';
+import { Prover, ArtifactsGetter } from './prover/prover';
+import { encodeAddress, decodeAddress } from './key-derivation/bech32';
 import { hexlify } from './utils/bytes';
-import { Wallet } from './wallet/wallet';
-import EngineDebug from './debugger';
+import { RailgunWallet } from './wallet/railgun-wallet';
+import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
 import { Commitment, Nullifier } from './models/formatted-types';
 import {
@@ -25,7 +22,7 @@ import {
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
-import { getChainFullNetworkID } from './chain';
+import { getChainFullNetworkID } from './chain/chain';
 
 class RailgunEngine extends EventEmitter {
   readonly db;
@@ -524,8 +521,8 @@ class RailgunEngine extends EventEmitter {
    * @param {string} id - wallet ID
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: string, id: string): Promise<Wallet> {
-    const wallet = await Wallet.loadExisting(this.db, encryptionKey, id);
+  async loadExistingWallet(encryptionKey: string, id: string): Promise<RailgunWallet> {
+    const wallet = await RailgunWallet.loadExisting(this.db, encryptionKey, id);
     this.loadWallet(wallet);
     return wallet;
   }
@@ -553,8 +550,8 @@ class RailgunEngine extends EventEmitter {
     encryptionKey: string,
     mnemonic: string,
     index: number = 0,
-  ): Promise<Wallet> {
-    const wallet = await Wallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
+  ): Promise<RailgunWallet> {
+    const wallet = await RailgunWallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
     this.loadWallet(wallet);
     return wallet;
   }
@@ -572,16 +569,9 @@ class RailgunEngine extends EventEmitter {
     return wallet;
   }
 
-  /**
-   * Generate mnemonic
-   */
-  static createMnemonic(): string {
-    return bip39.generateMnemonic();
-  }
+  static encodeAddress = encodeAddress;
 
-  static encodeAddress = encode;
-
-  static decodeAddress = decode;
+  static decodeAddress = decodeAddress;
 }
 
-export { RailgunEngine, Note, Transaction };
+export { RailgunEngine };

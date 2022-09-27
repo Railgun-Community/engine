@@ -1,9 +1,10 @@
-import { Database } from '../database';
-import { ViewingKeyPair } from '../keyderivation/wallet-node';
+import { Database } from '../database/database';
+import { ViewingKeyPair } from '../key-derivation/wallet-node';
 import { BytesData } from '../models/formatted-types';
 import { ViewOnlyWalletData } from '../models/wallet-types';
-import { hash, keysUtils } from '../utils';
 import { hexStringToBytes } from '../utils/bytes';
+import { sha256 } from '../utils/hash';
+import { getPublicViewingKey } from '../utils/keys-utils';
 import { AbstractWallet } from './abstract-wallet';
 
 class ViewOnlyWallet extends AbstractWallet {
@@ -12,14 +13,14 @@ class ViewOnlyWallet extends AbstractWallet {
    * @returns {string} hash of mnemonic and index
    */
   private static generateID(shareableViewingKey: string): string {
-    return hash.sha256(shareableViewingKey);
+    return sha256(shareableViewingKey);
   }
 
   private static async getViewingKeyPair(viewingPrivateKey: string): Promise<ViewingKeyPair> {
     const vpk = hexStringToBytes(viewingPrivateKey);
     return {
       privateKey: vpk,
-      pubkey: await keysUtils.getPublicViewingKey(vpk),
+      pubkey: await getPublicViewingKey(vpk),
     };
   }
 

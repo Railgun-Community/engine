@@ -1,10 +1,10 @@
-import { Signature } from 'circomlibjs';
+import { poseidon, Signature } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { KeyNode } from '../models/engine-types';
-import { hash, keysUtils } from '../utils';
 import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } from './bip32';
 import { hexStringToBytes, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
+import { getPublicSpendingKey, getPublicViewingKey, signEDDSA } from '../utils/keys-utils';
 
 const HARDENED_OFFSET = 0x80000000;
 
@@ -89,7 +89,7 @@ export class WalletNode {
    */
   getSpendingKeyPair(): SpendingKeyPair {
     const privateKey = hexStringToBytes(this.chainKey);
-    const pubkey = keysUtils.getPublicSpendingKey(privateKey);
+    const pubkey = getPublicSpendingKey(privateKey);
     return {
       privateKey,
       pubkey,
@@ -97,22 +97,22 @@ export class WalletNode {
   }
 
   static getMasterPublicKey(spendingPublicKey: [bigint, bigint], nullifyingKey: bigint): bigint {
-    return hash.poseidon([...spendingPublicKey, nullifyingKey]);
+    return poseidon([...spendingPublicKey, nullifyingKey]);
   }
 
   async getViewingKeyPair(): Promise<ViewingKeyPair> {
     // TODO: THIS should be a separate node chainkey
     const privateKey = hexStringToBytes(this.chainKey);
-    const pubkey = await keysUtils.getPublicViewingKey(privateKey);
+    const pubkey = await getPublicViewingKey(privateKey);
     return { privateKey, pubkey };
   }
 
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    return hash.poseidon([hexToBigInt(bytesToHex(privateKey))]);
+    return poseidon([hexToBigInt(bytesToHex(privateKey))]);
   }
 
   signBySpendingKey(message: bigint): Signature {
-    return keysUtils.signEDDSA(this.getSpendingKeyPair().privateKey, message);
+    return signEDDSA(this.getSpendingKeyPair().privateKey, message);
   }
 }

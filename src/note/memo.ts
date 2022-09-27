@@ -5,8 +5,8 @@ import {
   OutputType,
 } from '../models/formatted-types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
-import { encryption } from '../utils';
 import { arrayify, ByteLength, chunk, combine, hexlify, nToHex, padToLength } from '../utils/bytes';
+import { aes } from '../utils/encryption';
 import WalletInfo from '../wallet/wallet-info';
 
 export const MEMO_METADATA_BYTE_CHUNKS = 2;
@@ -33,7 +33,7 @@ export class Memo {
             ]
           : [memoField[0].substring(32, 64)],
       };
-      const decrypted = encryption.aes.ctr.decrypt(metadataCiphertext, viewingPrivateKey);
+      const decrypted = aes.ctr.decrypt(metadataCiphertext, viewingPrivateKey);
 
       const walletSource: Optional<string> = hasTwoBytes
         ? this.decodeWalletSource(decrypted[2])
@@ -88,10 +88,7 @@ export class Memo {
 
     const toEncrypt = [metadataField0, metadataField1, metadataField2];
 
-    const metadataCiphertext: CTRCiphertext = encryption.aes.ctr.encrypt(
-      toEncrypt,
-      viewingPrivateKey,
-    );
+    const metadataCiphertext: CTRCiphertext = aes.ctr.encrypt(toEncrypt, viewingPrivateKey);
 
     return [
       `${metadataCiphertext.iv}${metadataCiphertext.data[0]}`,
