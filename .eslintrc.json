@@ -1,7 +1,7 @@
 {
   "env": {
     "browser": true,
-    "es2021": true,
+    "es2020": true,
     "node": true
   },
   "extends": [
@@ -9,10 +9,12 @@
     "prettier",
     "plugin:@typescript-eslint/recommended"
   ],
+  "globals": {
+    "Optional": "readonly"
+  },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 12,
-    "sourceType": "module",
     "project": ["./tsconfig.json", "./tsconfig.test.json"]
   },
   "plugins": [
@@ -48,7 +50,7 @@
     "@typescript-eslint/switch-exhaustiveness-check": "error",
     "@typescript-eslint/no-inferrable-types": "off",
     "@typescript-eslint/ban-ts-comment": "warn",
-    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-empty-function": "off",
     "default-case": "off",
     "@typescript-eslint/no-unsafe-call": "warn",

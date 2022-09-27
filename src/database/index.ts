@@ -51,6 +51,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   put(path: BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.put(key, value, { valueEncoding: encoding });
@@ -62,6 +63,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns value
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get(path: BytesData[], encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
     return this.level.get(key, { valueEncoding: encoding });

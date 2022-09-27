@@ -24,7 +24,7 @@ coverage
 
 # Project specific
 dist
-test/configOverrides.test.ts
+src/test/configOverrides.test.ts
 
 # Outputs
 .tgz

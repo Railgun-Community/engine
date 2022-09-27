@@ -1,6 +1,5 @@
 {
-  "ignore": "fuzz",
+  "file": ["./src/test/setup.test.ts"],
   "require": "ts-node/register",
-  "exit": true,
-  "timeout": 0
+  "exit": true
 }

@@ -7,13 +7,13 @@
   "main": "dist/index.js",
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
-    "lint": "eslint src/**/*.ts test/**/*.ts",
-    "test": "npm run lint && env NODE_ENV=test mocha 'test/**/*.test.ts'",
+    "lint": "eslint src/**/*.ts",
+    "test": "npm run compile-test && env NODE_ENV=test mocha 'src/**/__tests__/*.test.ts'",
     "test-hardhat": "env NODE_ENV=test RUN_HARDHAT_TESTS=1 npm test",
     "compile": "npm run clean && tsc",
+    "compile-test": "npm run clean && tsc -p tsconfig.test.json",
     "prepack": "npm install && npm run compile",
-    "release": "mkdir -p release && npm pack && mv *.tgz ./release",
-    "fuzz": "npm run compile && jsfuzz fuzz/utils/babyjubjub.js corpus"
+    "release": "mkdir -p release && npm pack && mv *.tgz ./release"
   },
   "files": [
     "/dist",
@@ -72,7 +72,7 @@
     "mocha": "^9.2.2",
     "nyc": "^15.1.0",
     "prettier": "^2.6.2",
-    "railgun-artifacts-node": "https://npm.railgun.org/railgun-artifacts-node-0.1.0.tgz",
+    "@railgun-privacy/native-artifacts": "^0.1.0",
     "rimraf": "^3.0.2",
     "snarkjs": "^0.4.16",
     "ts-node": "^10.7.0",

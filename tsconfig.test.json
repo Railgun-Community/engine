@@ -1,5 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["test/**/*.ts"],
-  "exclude": ["dist"]
+
+  /* Remove test code from 'exclude' array */
+  "exclude": ["node_modules", "dist"]
 }

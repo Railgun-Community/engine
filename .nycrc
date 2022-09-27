@@ -1,26 +1,11 @@
 {
   "cache": false,
   "check-coverage": false,
-  "extension": [
-    ".ts"
-  ],
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "fuzz/**",
-    "test/**",
-    "coverage/**",
-    "dist/**",
-    "node_modules/**",
-    "**/*.d.ts"
-  ],
+  "extension": [".ts"],
+  "include": ["**/*.ts"],
+  "exclude": ["test/**", "coverage/**", "dist/**", "node_modules/**", "**/*.d.ts"],
   "sourceMap": true,
-  "reporter": [
-    "html",
-    "text",
-    "text-summary"
-  ],
+  "reporter": ["html", "text", "text-summary"],
   "all": true,
   "instrument": true
 }

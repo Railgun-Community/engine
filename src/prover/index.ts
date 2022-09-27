@@ -1,3 +1,4 @@
+import EngineDebug from '../debugger';
 import { ByteLength, nToHex } from '../utils/bytes';
 import {
   ArtifactsGetter,
@@ -14,6 +15,7 @@ export type Groth16 = {
     formattedInputs: FormattedCircuitInputs,
     wasm: Optional<ArrayLike<number>>,
     zkey: ArrayLike<number>,
+    logger: { debug: (log: string) => void },
     dat: Optional<ArrayLike<number>>,
     progressCallback: ProverProgressCallback,
   ) => Promise<{ proof: Proof }>;
@@ -101,6 +103,7 @@ export class Prover {
       formattedInputs,
       artifacts.wasm,
       artifacts.zkey,
+      { debug: EngineDebug.log },
       artifacts.dat,
       (progress: number) => {
         progressCallback(
