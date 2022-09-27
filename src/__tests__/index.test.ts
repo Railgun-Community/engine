@@ -60,7 +60,7 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   await expect(awaitScan(wallet, chain)).to.be.fulfilled;
 };
 
-describe.only('RailgunEngine', function test() {
+describe('RailgunEngine', function test() {
   this.timeout(240000);
 
   beforeEach(async () => {

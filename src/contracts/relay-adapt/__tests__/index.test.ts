@@ -46,7 +46,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Relay Adapt/Index', function test() {
-  this.timeout(60000);
+  this.timeout(30000);
 
   beforeEach(async () => {
     engine = new RailgunEngine('TestWalletAdapt', memdown(), artifactsGetter, undefined);
@@ -96,7 +96,7 @@ describe('Relay Adapt/Index', function test() {
     };
   });
 
-  it('[HH] Should wrap and deposit base token', async function run() {
+  it.only('[HH] Should wrap and deposit base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

@@ -10,7 +10,7 @@ import {
 } from './types';
 
 export type Groth16 = {
-  verify: (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>;
+  verify: Optional<(vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>>;
   fullProve: (
     formattedInputs: FormattedCircuitInputs,
     wasm: Optional<ArrayLike<number>>,
@@ -41,13 +41,19 @@ export class Prover {
     this.groth16 = groth16Implementation;
   }
 
-  async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
+  private async maybeVerify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
     if (!this.groth16) {
       throw new Error('Requires groth16 verification implementation');
+    }
+    if (!this.groth16.verify) {
+      // Wallet-side verification is a fail-safe.
+      // Snark verification will occur during gas estimate (and on-chain) regardless.
+      return true;
     }
 
     // Fetch artifacts
     const artifacts = await this.artifactsGetter(publicInputs);
+
     // Return output of groth16 verify
     const publicSignals: bigint[] = [
       publicInputs.merkleRoot,
@@ -55,6 +61,7 @@ export class Prover {
       ...publicInputs.nullifiers,
       ...publicInputs.commitmentsOut,
     ];
+
     return this.groth16.verify(artifacts.vkey, publicSignals, proof);
   }
 
@@ -95,9 +102,9 @@ export class Prover {
     // Get formatted inputs
     const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
 
-    // Generate proof: Progress from 20 - 90%
+    // Generate proof: Progress from 20 - 99%
     const initialProgressProof = 20;
-    const finalProgressProof = 90;
+    const finalProgressProof = 99;
     progressCallback(initialProgressProof);
     const { proof } = await this.groth16.fullProve(
       formattedInputs,
@@ -114,8 +121,9 @@ export class Prover {
     progressCallback(finalProgressProof);
 
     // Throw if proof is invalid
-    const verified = await this.verify(publicInputs, proof);
-    if (verified !== true) throw new Error('Proof generation failed');
+    if (!(await this.maybeVerify(publicInputs, proof))) {
+      throw new Error('Proof generation failed');
+    }
     progressCallback(100);
 
     // Return proof with inputs
