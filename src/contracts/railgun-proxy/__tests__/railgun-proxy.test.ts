@@ -57,7 +57,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testDeposit: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Railgun Proxy/Index', function runTests() {
+describe('Railgun Proxy', function runTests() {
   this.timeout(60000);
 
   beforeEach(async () => {

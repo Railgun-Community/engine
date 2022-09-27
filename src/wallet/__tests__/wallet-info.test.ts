@@ -6,7 +6,7 @@ import WalletInfo from '../../wallet/wallet-info';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Wallet Source/Index', () => {
+describe('Wallet Source', () => {
   it('Should encode and decode wallet source', async () => {
     const walletSource = 'New Wallet';
     WalletInfo.setWalletSource(walletSource);

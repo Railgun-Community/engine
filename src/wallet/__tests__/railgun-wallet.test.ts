@@ -29,7 +29,7 @@ const chain: Chain = {
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-describe('Wallet/Index', () => {
+describe('Wallet', () => {
   beforeEach(async () => {
     // Create database and wallet
     db = new Database(memdown());

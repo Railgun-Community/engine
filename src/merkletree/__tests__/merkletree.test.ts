@@ -21,7 +21,7 @@ const chain: Chain = {
   id: 0,
 };
 
-describe('MerkleTree/Index', () => {
+describe('MerkleTree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());

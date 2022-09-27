@@ -46,7 +46,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 
 let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Relay Adapt/Index', function test() {
+describe('Relay Adapt', function test() {
   this.timeout(30000);
 
   beforeEach(async () => {
