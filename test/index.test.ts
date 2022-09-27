@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Lepton, Note } from '../src';
+import { Note, RailgunEngine } from '../src';
 import { abi as erc20abi } from './erc20abi.test';
 import { config } from './config.test';
 import { Wallet } from '../src/wallet/wallet';
@@ -20,13 +20,13 @@ import { Groth16 } from '../src/prover';
 import { ERC20 } from '../src/typechain-types';
 import { promiseTimeout } from '../src/utils/promises';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../src/transaction/constants';
-import { Chain, ChainType } from '../src/models/lepton-types';
+import { Chain, ChainType } from '../src/models/engine-types';
 
 chai.use(chaiAsPromised);
 
 let provider: ethers.providers.JsonRpcProvider;
 let chain: Chain;
-let lepton: Lepton;
+let engine: RailgunEngine;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
@@ -40,7 +40,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const makeTestDeposit = async (address: string, value: bigint) => {
-  const mpk = Lepton.decodeAddress(address).masterPublicKey;
+  const mpk = RailgunEngine.decodeAddress(address).masterPublicKey;
   const vpk = wallet.getViewingKeyPair().privateKey;
   const random = randomHex(16);
   const deposit = new ERC20Deposit(mpk, random, value, token.address);
@@ -55,18 +55,18 @@ const makeTestDeposit = async (address: string, value: bigint) => {
   await expect(awaitScan(wallet, chain)).to.be.fulfilled;
 };
 
-describe('Lepton', function test() {
+describe('RailgunEngine', function test() {
   this.timeout(240000);
 
   beforeEach(async () => {
-    lepton = new Lepton('Test Wallet', memdown(), artifactsGetter, mockQuickSync);
-    lepton.prover.setGroth16(groth16 as Groth16);
+    engine = new RailgunEngine('Test Wallet', memdown(), artifactsGetter, mockQuickSync);
+    engine.prover.setGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
 
-    // LeptonDebug.init(console); // uncomment for logs
+    // EngineDebug.init(console); // uncomment for logs
     provider = new ethers.providers.JsonRpcProvider(config.rpc);
     chain = {
       type: ChainType.EVM,
@@ -82,17 +82,17 @@ describe('Lepton', function test() {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(config.contracts.proxy, balance);
 
-    wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
-    wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    await lepton.loadNetwork(
+    wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
+    wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
+    await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
       24,
     );
-    merkleTree = lepton.merkletrees[chain.type][chain.id].erc20;
-    proxyContract = lepton.proxyContracts[chain.type][chain.id];
+    merkleTree = engine.merkletrees[chain.type][chain.id].erc20;
+    proxyContract = engine.proxyContracts[chain.type][chain.id];
   });
 
   it('[HH] Should load existing wallets', async function run() {
@@ -101,9 +101,9 @@ describe('Lepton', function test() {
       return;
     }
 
-    lepton.unloadWallet(wallet.id);
-    await lepton.loadExistingWallet(testEncryptionKey, wallet.id);
-    expect(lepton.wallets[wallet.id].id).to.equal(wallet.id);
+    engine.unloadWallet(wallet.id);
+    await engine.loadExistingWallet(testEncryptionKey, wallet.id);
+    expect(engine.wallets[wallet.id].id).to.equal(wallet.id);
   });
 
   it('[HH] Should show balance after deposit and rescan', async function run() {
@@ -128,6 +128,7 @@ describe('Lepton', function test() {
         '0xb47a353e294711ff73cf086f97ee1ed29b853b67c353bc2371b87fe72c716cc6',
         '0x3d321af08b8fa7a8f70379407706b752',
       ],
+      blockNumber: 0,
     };
     // Override root validator
     merkleTree.validateRoot = () => Promise.resolve(true);
@@ -186,7 +187,7 @@ describe('Lepton', function test() {
     );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -310,7 +311,7 @@ describe('Lepton', function test() {
     );
 
     const serializedTransactions = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -415,13 +416,13 @@ describe('Lepton', function test() {
       type: ChainType.EVM,
       id: 10010,
     };
-    let lastSyncedBlock = await lepton.getLastSyncedBlock(chainForSyncedBlock);
+    let lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await lepton.setLastSyncedBlock(100, chainForSyncedBlock);
-    lastSyncedBlock = await lepton.getLastSyncedBlock(chainForSyncedBlock);
+    await engine.setLastSyncedBlock(100, chainForSyncedBlock);
+    lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await lepton.setLastSyncedBlock(100000, chainForSyncedBlock);
-    lastSyncedBlock = await lepton.getLastSyncedBlock(chainForSyncedBlock);
+    await engine.setLastSyncedBlock(100000, chainForSyncedBlock);
+    lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
@@ -429,7 +430,7 @@ describe('Lepton', function test() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    lepton.unload();
+    engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });

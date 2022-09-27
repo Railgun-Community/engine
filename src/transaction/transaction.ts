@@ -19,7 +19,7 @@ import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 import { TXO } from '../models/txo-types';
 import { Memo } from '../note/memo';
-import { Chain } from '../models/lepton-types';
+import { Chain } from '../models/engine-types';
 
 const abiCoder = defaultAbiCoder;
 

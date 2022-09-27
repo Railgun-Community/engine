@@ -3,7 +3,7 @@
 
 import { assert, expect } from 'chai';
 import { randomBytes } from 'ethers/lib/utils';
-import { Lepton, Note } from '../../src';
+import { RailgunEngine, Note } from '../../src';
 import {
   createSpendingSolutionGroupsForOutput,
   findNextSolutionBatch,
@@ -19,19 +19,23 @@ import { extractSpendingSolutionGroupsData } from '../../src/solutions/spending-
 import { randomHex } from '../../src/utils/bytes';
 import { getPublicViewingKey } from '../../src/utils/keys-utils';
 import { ViewingKeyPair } from '../../src/keyderivation/wallet-node';
+import { ChainType } from '../../src/models/engine-types';
 
-const addressData1 = Lepton.decodeAddress(
+const addressData1 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
 );
-const addressData2 = Lepton.decodeAddress(
+const addressData2 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkunpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkcsu8tp',
 );
-const addressData3 = Lepton.decodeAddress(
+const addressData3 = RailgunEngine.decodeAddress(
   '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
 );
 
 const TOKEN_ADDRESS = 'abc';
-const CHAIN_ID = 1;
+const CHAIN = {
+  type: ChainType.EVM,
+  id: 1,
+};
 
 const createMockNote = async (addressData: AddressData, value: bigint) => {
   const privateViewingKey = randomBytes(32);
@@ -319,7 +323,7 @@ describe('Solutions/Complex Solutions', () => {
     const sortedTreeBalances = [treeBalance0, treeBalance1];
 
     // Case 1.
-    const transactionBatch1 = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, CHAIN_ID);
+    const transactionBatch1 = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, CHAIN);
     const outputs1: Note[] = [
       await createMockNote(addressData1, BigInt(80)),
       await createMockNote(addressData2, BigInt(70)),

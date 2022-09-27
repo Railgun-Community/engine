@@ -7,7 +7,7 @@ import { groth16 } from 'snarkjs';
 import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { RelayAdaptContract } from '../../../src/contracts/relay-adapt';
 import { RelayAdaptHelper } from '../../../src/contracts/relay-adapt/relay-adapt-helper';
-import { Lepton } from '../../../src';
+import { RailgunEngine } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
 import { config } from '../../config.test';
 import { Wallet } from '../../../src/wallet/wallet';
@@ -20,14 +20,14 @@ import { ERC20WithdrawNote, Note } from '../../../src/note';
 import { ByteLength, nToHex, randomHex } from '../../../src/utils/bytes';
 import { ERC20 } from '../../../src/typechain-types';
 import { Groth16 } from '../../../src/prover';
-import { Chain, ChainType } from '../../../src/models/lepton-types';
+import { Chain, ChainType } from '../../../src/models/engine-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
 let chain: Chain;
-let lepton: Lepton;
+let engine: RailgunEngine;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let relayAdaptContract: RelayAdaptContract;
@@ -50,11 +50,11 @@ describe('Relay Adapt/Index', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
-    lepton = new Lepton('TestWalletAdapt', memdown(), artifactsGetter, undefined);
-    lepton.prover.setGroth16(groth16 as Groth16);
+    engine = new RailgunEngine('TestWalletAdapt', memdown(), artifactsGetter, undefined);
+    engine.prover.setGroth16(groth16 as Groth16);
 
-    wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
-    wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
+    wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
+    wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
@@ -65,15 +65,15 @@ describe('Relay Adapt/Index', function test() {
       type: ChainType.EVM,
       id: (await provider.getNetwork()).chainId,
     };
-    await lepton.loadNetwork(
+    await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
       DEPLOYMENT_BLOCK,
     );
-    proxyContract = lepton.proxyContracts[chain.type][chain.id];
-    relayAdaptContract = lepton.relayAdaptContracts[chain.type][chain.id];
+    proxyContract = engine.proxyContracts[chain.type][chain.id];
+    relayAdaptContract = engine.relayAdaptContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(testMnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -165,7 +165,7 @@ describe('Relay Adapt/Index', function test() {
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
     );
@@ -216,7 +216,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
     );
@@ -238,7 +238,7 @@ describe('Relay Adapt/Index', function test() {
       parameters: relayAdaptParams,
     });
     const transactions = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -304,7 +304,7 @@ describe('Relay Adapt/Index', function test() {
     transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
 
     const serializedTxs = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -365,7 +365,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
     );
@@ -419,7 +419,7 @@ describe('Relay Adapt/Index', function test() {
       parameters: relayAdaptParams,
     });
     const transactions = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -518,7 +518,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
     );
@@ -573,7 +573,7 @@ describe('Relay Adapt/Index', function test() {
       parameters: relayAdaptParams,
     });
     const transactions = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -668,7 +668,7 @@ describe('Relay Adapt/Index', function test() {
 
     // 2. Create dummy transactions from batch.
     const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
     );
@@ -723,7 +723,7 @@ describe('Relay Adapt/Index', function test() {
       parameters: relayAdaptParams,
     });
     const transactions = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -855,7 +855,7 @@ describe('Relay Adapt/Index', function test() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    lepton.unload();
+    engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });

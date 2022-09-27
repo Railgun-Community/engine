@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { Chain } from '../models/lepton-types';
+import { Chain } from '../models/engine-types';
 import { formatToByteLength, ByteLength, hexlify } from '../utils/bytes';
 
 export const getChainFullNetworkID = (chain: Chain): string => {

@@ -1,8 +1,8 @@
 import { BigNumber, BigNumberish } from 'ethers';
 import { BytesData, Commitment, Nullifier } from './formatted-types';
-import { Chain } from './lepton-types';
+import { Chain } from './engine-types';
 
-export enum LeptonEvent {
+export enum EngineEvent {
   WalletScanComplete = 'scanned',
   ContractNullifierReceived = 'nullified',
   MerkletreeHistoryScanStarted = 'merkletree-history-scan-started',

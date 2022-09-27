@@ -7,7 +7,7 @@ import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { RailgunProxyContract } from '../../../src/contracts/railgun-proxy';
 import { Note } from '../../../src/note';
-import { Lepton } from '../../../src';
+import { RailgunEngine } from '../../../src';
 import { abi as erc20abi } from '../../erc20abi.test';
 import { config } from '../../config.test';
 import { Wallet } from '../../../src/wallet/wallet';
@@ -24,7 +24,7 @@ import {
 import { TransactionBatch } from '../../../src/transaction/transaction-batch';
 import {
   CommitmentEvent,
-  LeptonEvent,
+  EngineEvent,
   MerkletreeHistoryScanEventData,
 } from '../../../src/models/event-types';
 import { Memo } from '../../../src/note/memo';
@@ -33,14 +33,14 @@ import { Groth16 } from '../../../src/prover';
 import { ERC20 } from '../../../src/typechain-types';
 import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../src/transaction/constants';
 import { promiseTimeout } from '../../../src/utils/promises';
-import { Chain, ChainType } from '../../../src/models/lepton-types';
+import { Chain, ChainType } from '../../../src/models/engine-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let provider: ethers.providers.JsonRpcProvider;
 let chain: Chain;
-let lepton: Lepton;
+let engine: RailgunEngine;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
@@ -62,8 +62,8 @@ describe('Railgun Proxy/Index', function runTests() {
   this.timeout(60000);
 
   beforeEach(async () => {
-    lepton = new Lepton('Test Proxy', memdown(), artifactsGetter, undefined);
-    lepton.prover.setGroth16(groth16 as Groth16);
+    engine = new RailgunEngine('Test Proxy', memdown(), artifactsGetter, undefined);
+    engine.prover.setGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
@@ -74,14 +74,14 @@ describe('Railgun Proxy/Index', function runTests() {
       type: ChainType.EVM,
       id: (await provider.getNetwork()).chainId,
     };
-    await lepton.loadNetwork(
+    await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
       0,
     );
-    proxyContract = lepton.proxyContracts[chain.type][chain.id];
+    proxyContract = engine.proxyContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -93,9 +93,9 @@ describe('Railgun Proxy/Index', function runTests() {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(proxyContract.address, balance);
 
-    wallet = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
-    wallet2 = await lepton.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    viewOnlyWallet = await lepton.createViewOnlyWalletFromShareableViewingKey(
+    wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
+    wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
+    viewOnlyWallet = await engine.createViewOnlyWalletFromShareableViewingKey(
       testEncryptionKey,
       await wallet.generateShareableViewingKey(),
     );
@@ -152,7 +152,7 @@ describe('Railgun Proxy/Index', function runTests() {
     );
     const tx = await proxyContract.transact(
       await transactionBatch.generateDummySerializedTransactions(
-        lepton.prover,
+        engine.prover,
         wallet,
         testEncryptionKey,
       ),
@@ -219,7 +219,7 @@ describe('Railgun Proxy/Index', function runTests() {
     const nullifiersListener2 = (nullifiers: Nullifier[]) => {
       resultNullifiers2.push(...nullifiers);
     };
-    proxyContract.on(LeptonEvent.ContractNullifierReceived, nullifiersListener2);
+    proxyContract.on(EngineEvent.ContractNullifierReceived, nullifiersListener2);
 
     const [txResponse] = await testDeposit();
 
@@ -269,7 +269,7 @@ describe('Railgun Proxy/Index', function runTests() {
     );
     transactionBatch.setWithdraw(etherswallet.address, 100n);
     const serializedTxs = await transactionBatch.generateSerializedTransactions(
-      lepton.prover,
+      engine.prover,
       wallet,
       testEncryptionKey,
       () => {},
@@ -326,23 +326,23 @@ describe('Railgun Proxy/Index', function runTests() {
 
     const tree = 0;
 
-    const merkletree = lepton.merkletrees[chain.type][chain.id].erc20;
+    const merkletree = engine.merkletrees[chain.type][chain.id].erc20;
 
     expect(await merkletree.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChain!: Chain;
     const historyScanListener = (data: MerkletreeHistoryScanEventData) => {
       historyScanCompletedForChain = data.chain;
     };
-    lepton.on(LeptonEvent.MerkletreeHistoryScanComplete, historyScanListener);
-    await lepton.scanHistory(chain);
+    engine.on(EngineEvent.MerkletreeHistoryScanComplete, historyScanListener);
+    await engine.scanHistory(chain);
     expect(historyScanCompletedForChain).to.equal(chain);
-    expect(await lepton.getStartScanningBlock(chain)).to.be.above(0);
+    expect(await engine.getStartScanningBlock(chain)).to.be.above(0);
 
-    await lepton.clearSyncedMerkletreeLeaves(chain);
+    await engine.clearSyncedMerkletreeLeaves(chain);
     expect(await merkletree.getTreeLength(tree)).to.equal(0);
-    expect(await lepton.getStartScanningBlock(chain)).to.equal(0);
+    expect(await engine.getStartScanningBlock(chain)).to.equal(0);
 
-    await lepton.fullRescanMerkletreesAndWallets(chain);
+    await engine.fullRescanMerkletreesAndWallets(chain);
     expect(await merkletree.getTreeLength(tree)).to.equal(1);
   });
 
@@ -444,7 +444,7 @@ describe('Railgun Proxy/Index', function runTests() {
     // Create transact
     const transact = await proxyContract.transact(
       await transactionBatch.generateSerializedTransactions(
-        lepton.prover,
+        engine.prover,
         wallet,
         testEncryptionKey,
         () => {},
@@ -495,7 +495,7 @@ describe('Railgun Proxy/Index', function runTests() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    lepton.unload();
+    engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });

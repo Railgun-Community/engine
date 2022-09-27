@@ -2,7 +2,7 @@ import type { BigNumber } from 'ethers';
 import { EncryptedCommitment, GeneratedCommitment, Nullifier } from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
-import LeptonDebug from '../../debugger';
+import EngineDebug from '../../debugger';
 import {
   CommitmentBatchEvent,
   GeneratedCommitmentBatchEvent,
@@ -68,7 +68,7 @@ export function formatGeneratedCommitmentBatchEvent(
     encryptedRandom == null
   ) {
     const err = new Error('Invalid GeneratedCommitmentBatchEventArgs');
-    LeptonDebug.error(err);
+    EngineDebug.error(err);
     throw err;
   }
 
@@ -129,7 +129,7 @@ export function formatCommitmentBatchEvent(
   const { treeNumber, startPosition, hash, ciphertext } = commitmentBatchArgs;
   if (treeNumber == null || startPosition == null || hash == null || ciphertext == null) {
     const err = new Error('Invalid CommitmentBatchEventArgs');
-    LeptonDebug.error(err);
+    EngineDebug.error(err);
     throw err;
   }
 

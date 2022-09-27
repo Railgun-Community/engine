@@ -1,4 +1,4 @@
-import { Lepton } from '..';
+import { RailgunEngine } from '..';
 import { AddressData } from '../keyderivation/bech32-encode';
 import { SpendingSolutionGroup } from '../models/txo-types';
 
@@ -24,9 +24,7 @@ export const serializeExtractedSpendingSolutionGroupsData = (
       utxoTxids: data.utxoTxids,
       utxoValues: data.utxoValues.map((val) => val.toString(10)),
       outputValues: data.outputValues.map((val) => val.toString(10)),
-      outputAddresses: data.outputAddressDatas.map((addressData) =>
-        Lepton.encodeAddress(addressData),
-      ),
+      outputAddresses: data.outputAddressDatas.map(RailgunEngine.encodeAddress),
     };
   });
 };

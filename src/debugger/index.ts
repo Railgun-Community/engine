@@ -1,21 +1,21 @@
-import { LeptonDebugger } from '../models/lepton-types';
+import { EngineDebugger } from '../models/engine-types';
 
-export default class LeptonDebug {
-  private static leptonDebugger: Optional<LeptonDebugger>;
+export default class EngineDebug {
+  private static engineDebugger: Optional<EngineDebugger>;
 
-  static init(leptonDebugger: LeptonDebugger) {
-    this.leptonDebugger = leptonDebugger;
+  static init(engineDebugger: EngineDebugger) {
+    this.engineDebugger = engineDebugger;
   }
 
   static log(msg: string) {
-    if (this.leptonDebugger) {
-      this.leptonDebugger.log(msg);
+    if (this.engineDebugger) {
+      this.engineDebugger.log(msg);
     }
   }
 
   static error(err: Error, ignoreInTests = false) {
-    if (this.leptonDebugger) {
-      this.leptonDebugger.error(err);
+    if (this.engineDebugger) {
+      this.engineDebugger.error(err);
     }
     if (process.env.NODE_ENV === 'test' && !ignoreInTests) {
       // eslint-disable-next-line no-console

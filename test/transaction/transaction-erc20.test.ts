@@ -14,7 +14,7 @@ import {
   OutputType,
   TokenType,
 } from '../../src/models/formatted-types';
-import { Chain, ChainType } from '../../src/models/lepton-types';
+import { Chain, ChainType } from '../../src/models/engine-types';
 import { Note } from '../../src/note';
 import { Memo } from '../../src/note/memo';
 import { Groth16, Prover } from '../../src/prover';

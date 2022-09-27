@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { bytes, hash } from '../utils';
-import { KeyNode } from '../models/lepton-types';
+import { KeyNode } from '../models/engine-types';
 import { fromUTF8String } from '../utils/bytes';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');

@@ -7,7 +7,7 @@ import {
   ADDRESS_LENGTH_LIMIT,
   AddressData,
 } from '../../src/keyderivation/bech32-encode';
-import { ChainType } from '../../src/models/lepton-types';
+import { ChainType } from '../../src/models/engine-types';
 import {
   ByteLength,
   formatToByteLength,

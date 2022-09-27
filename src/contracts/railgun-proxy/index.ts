@@ -1,7 +1,7 @@
 import type { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, Contract, Event, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
-import LeptonDebug from '../../debugger';
+import EngineDebug from '../../debugger';
 import {
   CommitmentPreimage,
   DepositInput,
@@ -15,7 +15,7 @@ import {
   EventsListener,
   EventsNullifierListener,
   GeneratedCommitmentBatchEventArgs,
-  LeptonEvent,
+  EngineEvent,
   NullifierEventArgs,
 } from '../../models/event-types';
 import { hexlify } from '../../utils/bytes';
@@ -92,7 +92,7 @@ class RailgunProxyContract extends EventEmitter {
       // Return result of root history lookup
       return this.contract.rootHistory(tree, hexlify(root, true));
     } catch (err) {
-      LeptonDebug.error(err as Error);
+      EngineDebug.error(err as Error);
       throw err;
     }
   }
@@ -118,7 +118,7 @@ class RailgunProxyContract extends EventEmitter {
         );
         await eventsNullifierListener(formattedEventArgs);
         // @todo why is it emitted twice for a transaction of 1 input?
-        this.emit(LeptonEvent.ContractNullifierReceived, formattedEventArgs);
+        this.emit(EngineEvent.ContractNullifierReceived, formattedEventArgs);
       },
     );
 
@@ -185,14 +185,14 @@ class RailgunProxyContract extends EventEmitter {
       }
       if (retryCount < MAX_SCAN_RETRIES) {
         const retry = retryCount + 1;
-        LeptonDebug.log(
+        EngineDebug.log(
           `Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
         );
-        LeptonDebug.error(err);
+        EngineDebug.error(err);
         return this.scanEvents(eventFilter, startBlock, endBlock, retry);
       }
-      LeptonDebug.log(`Scan failed at block ${startBlock}. No longer retrying.`);
-      LeptonDebug.error(err);
+      EngineDebug.log(`Scan failed at block ${startBlock}. No longer retrying.`);
+      EngineDebug.error(err);
       throw err;
     }
   }
@@ -215,12 +215,12 @@ class RailgunProxyContract extends EventEmitter {
     const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
     const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
 
-    LeptonDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latestBlock}`);
+    EngineDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latestBlock}`);
 
     while (currentStartBlock < latestBlock) {
       // Process chunks of blocks at a time
       if ((currentStartBlock - startBlock) % 10000 === 0) {
-        LeptonDebug.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
+        EngineDebug.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
       }
       const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
       const [eventsNullifier, eventsGeneratedCommitment, eventsEncryptedCommitment] =
@@ -244,7 +244,7 @@ class RailgunProxyContract extends EventEmitter {
       currentStartBlock += SCAN_CHUNKS + 1;
     }
 
-    LeptonDebug.log('Finished historical event scan');
+    EngineDebug.log('Finished historical event scan');
   }
 
   /**

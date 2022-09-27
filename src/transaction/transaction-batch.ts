@@ -15,14 +15,14 @@ import {
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isValidFor3Outputs } from '../solutions/nullifiers';
-import LeptonDebug from '../debugger';
+import EngineDebug from '../debugger';
 import {
   extractSpendingSolutionGroupsData,
   serializeExtractedSpendingSolutionGroupsData,
 } from '../solutions/spending-group-extractor';
 import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
-import { Chain } from '../models/lepton-types';
+import { Chain } from '../models/engine-types';
 
 class TransactionBatch {
   private adaptID: AdaptID = {
@@ -254,8 +254,8 @@ class TransactionBatch {
     progressCallback: ProverProgressCallback,
   ): Promise<SerializedTransaction[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    LeptonDebug.log('Actual spending solution groups:');
-    LeptonDebug.log(
+    EngineDebug.log('Actual spending solution groups:');
+    EngineDebug.log(
       stringifySafe(
         serializeExtractedSpendingSolutionGroupsData(
           extractSpendingSolutionGroupsData(spendingSolutionGroups),
@@ -296,8 +296,8 @@ class TransactionBatch {
     encryptionKey: string,
   ): Promise<SerializedTransaction[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    LeptonDebug.log(`Dummy spending solution groups: token ${this.tokenAddress}`);
-    LeptonDebug.log(
+    EngineDebug.log(`Dummy spending solution groups: token ${this.tokenAddress}`);
+    EngineDebug.log(
       stringifySafe(
         serializeExtractedSpendingSolutionGroupsData(
           extractSpendingSolutionGroupsData(spendingSolutionGroups),

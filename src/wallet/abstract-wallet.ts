@@ -3,12 +3,12 @@ import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
 import { Database } from '../database';
-import LeptonDebug from '../debugger';
+import EngineDebug from '../debugger';
 import { bech32 } from '../keyderivation';
 import { encode } from '../keyderivation/bech32-encode';
 import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../keyderivation/wallet-node';
 import { MerkleTree } from '../merkletree';
-import { LeptonEvent, ScannedEventData } from '../models/event-types';
+import { EngineEvent, ScannedEventData } from '../models/event-types';
 import {
   BytesData,
   Commitment,
@@ -52,7 +52,7 @@ import {
 } from '../models/wallet-types';
 import { poseidon } from '../utils/hash';
 import { packPoint, unpackPoint } from '../keyderivation/babyjubjub';
-import { Chain } from '../models/lepton-types';
+import { Chain } from '../models/engine-types';
 import { getChainFullNetworkID } from '../chain';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
@@ -270,7 +270,7 @@ abstract class AbstractWallet extends EventEmitter {
     let noteReceive: Optional<Note>;
     let noteSend: Optional<Note>;
 
-    LeptonDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
+    EngineDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
 
     const walletAddress = this.getAddress();
 
@@ -330,7 +330,7 @@ abstract class AbstractWallet extends EventEmitter {
         nullifier: nToHex(nullifier, ByteLength.UINT_256),
         decrypted: noteReceive.serialize(viewingPrivateKey),
       };
-      LeptonDebug.log(`Adding RECEIVE commitment at ${position}.`);
+      EngineDebug.log(`Adding RECEIVE commitment at ${position}.`);
       scannedCommitments.push({
         type: 'put',
         key: this.getWalletDBPrefix(chain, tree, position).join(':'),
@@ -345,7 +345,7 @@ abstract class AbstractWallet extends EventEmitter {
         noteExtraData: Memo.decryptNoteExtraData(noteSend.memoField, viewingPrivateKey),
         recipientAddress: encode(noteSend.addressData),
       };
-      LeptonDebug.log(`Adding SPEND commitment at ${position}.`);
+      EngineDebug.log(`Adding SPEND commitment at ${position}.`);
       scannedCommitments.push({
         type: 'put',
         key: this.getWalletSentCommitmentDBPrefix(chain, tree, position).join(':'),
@@ -371,7 +371,7 @@ abstract class AbstractWallet extends EventEmitter {
     scannedHeight: number,
     treeHeight: number,
   ): Promise<void> {
-    LeptonDebug.log(
+    EngineDebug.log(
       `wallet:scanLeaves tree:${tree} chain:${chain} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
     );
     const vpk = this.getViewingKeyPair().privateKey;
@@ -738,7 +738,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain data to scan
    */
   async scanBalances(chain: Chain) {
-    LeptonDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
+    EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
     const merkletree = this.merkletrees[chain.type][chain.id];
 
@@ -786,12 +786,12 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // Emit scanned event for this chain
-      LeptonDebug.log(`wallet: scanned ${chain}`);
-      this.emit(LeptonEvent.WalletScanComplete, { chain } as ScannedEventData);
+      EngineDebug.log(`wallet: scanned ${chain}`);
+      this.emit(EngineEvent.WalletScanComplete, { chain } as ScannedEventData);
     } catch (err) {
       if (err instanceof Error) {
-        LeptonDebug.log(`wallet.scan error: ${err.message}`);
-        LeptonDebug.error(err);
+        EngineDebug.log(`wallet.scan error: ${err.message}`);
+        EngineDebug.error(err);
       }
     }
   }

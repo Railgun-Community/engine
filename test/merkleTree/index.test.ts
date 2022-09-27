@@ -10,7 +10,7 @@ import { MERKLE_ZERO_VALUE, MerkleTree } from '../../src/merkletree';
 import type { TreePurpose } from '../../src/merkletree';
 import { ZERO_ADDRESS } from '../../src/utils/constants';
 import { TokenType } from '../../src/models/formatted-types';
-import { Chain, ChainType } from '../../src/models/lepton-types';
+import { Chain, ChainType } from '../../src/models/engine-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

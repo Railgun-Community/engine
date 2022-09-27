@@ -13,10 +13,10 @@ import {
   nToHex,
   hexToBigInt,
 } from '../utils/bytes';
-import LeptonDebug from '../debugger';
+import EngineDebug from '../debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
 import { waitForPassCondition } from '../utils/promises';
-import { Chain } from '../models/lepton-types';
+import { Chain } from '../models/engine-types';
 import { getChainFullNetworkID } from '../chain';
 
 // eslint-disable-next-line no-unused-vars
@@ -384,7 +384,7 @@ class MerkleTree {
 
     nodeWriteGroup[level] = [];
 
-    LeptonDebug.log(`insertLeaves: startIndex ${startIndex}, length ${leaves.length}`);
+    EngineDebug.log(`insertLeaves: startIndex ${startIndex}, length ${leaves.length}`);
 
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
@@ -432,7 +432,7 @@ class MerkleTree {
     }
 
     if (!(await this.validateRoot(tree, nodeWriteGroup[this.depth][0]))) {
-      LeptonDebug.error(new Error(INVALID_MERKLE_ROOT_ERROR_MESSAGE), true);
+      EngineDebug.error(new Error(INVALID_MERKLE_ROOT_ERROR_MESSAGE), true);
       return;
     }
 
@@ -473,7 +473,7 @@ class MerkleTree {
         if (!(err instanceof Error)) {
           return;
         }
-        LeptonDebug.error(err);
+        EngineDebug.error(err);
         if (err.message === INVALID_MERKLE_ROOT_ERROR_MESSAGE) {
           switch (processingGroupSize) {
             case CommitmentProcessingGroupSize.Large:
@@ -576,7 +576,7 @@ class MerkleTree {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
-    LeptonDebug.log(`queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`);
+    EngineDebug.log(`queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`);
 
     // Ensure write queue for tree exists
     if (!this.writeQueue[tree]) {

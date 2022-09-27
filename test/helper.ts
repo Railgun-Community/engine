@@ -8,12 +8,12 @@ import { Nullifier } from '../src/models/formatted-types';
 import {
   AccumulatedEvents,
   CommitmentEvent,
-  LeptonEvent,
+  EngineEvent,
   QuickSync,
   ScannedEventData,
 } from '../src/models/event-types';
 import { AbstractWallet } from '../src/wallet/abstract-wallet';
-import { Chain } from '../src/models/lepton-types';
+import { Chain } from '../src/models/engine-types';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 const WALLET_PATH = "m/44'/60'/0'/0/0";
@@ -47,7 +47,7 @@ export const mockQuickSync: QuickSync = (
 
 export const awaitScan = (wallet: AbstractWallet, chain: Chain) =>
   new Promise((resolve, reject) =>
-    wallet.once(LeptonEvent.WalletScanComplete, ({ chain: returnedChain }: ScannedEventData) =>
+    wallet.once(EngineEvent.WalletScanComplete, ({ chain: returnedChain }: ScannedEventData) =>
       returnedChain.type === chain.type && returnedChain.id === chain.id
         ? resolve(returnedChain)
         : reject(),

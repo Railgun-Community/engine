@@ -12,12 +12,12 @@ import { Note } from './note';
 import { encode, decode } from './keyderivation/bech32-encode';
 import { hexlify } from './utils/bytes';
 import { Wallet } from './wallet/wallet';
-import LeptonDebug from './debugger';
-import { Chain, LeptonDebugger } from './models/lepton-types';
+import EngineDebug from './debugger';
+import { Chain, EngineDebugger } from './models/engine-types';
 import { Commitment, Nullifier } from './models/formatted-types';
 import {
   CommitmentEvent,
-  LeptonEvent,
+  EngineEvent,
   MerkletreeHistoryScanEventData,
   MerkletreeHistoryScanUpdateData,
   QuickSync,
@@ -27,7 +27,7 @@ import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain';
 
-class Lepton extends EventEmitter {
+class RailgunEngine extends EventEmitter {
   readonly db;
 
   readonly merkletrees: { erc20: MerkleTree /* erc721: MerkleTree */ }[][] = [];
@@ -47,32 +47,32 @@ class Lepton extends EventEmitter {
   static walletSource: Optional<string>;
 
   /**
-   * Create a lepton instance
+   * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
    * @param leveldown - abstract-leveldown compatible store
-   * @param artifactsGetter - async function to retrieve artifacts, lepton doesn't handle caching
+   * @param artifactsGetter - async function to retrieve artifacts, engine doesn't handle caching
    * @param quickSync - quick sync function to speed up sync
-   * @param leptonDebugger - log and error callbacks for verbose logging
+   * @param engineDebugger - log and error callbacks for verbose logging
    */
   constructor(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
-    leptonDebugger?: LeptonDebugger,
+    engineDebugger?: EngineDebugger,
   ) {
     super();
     WalletInfo.setWalletSource(walletSource);
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
     this.quickSync = quickSync;
-    if (leptonDebugger) {
-      LeptonDebug.init(leptonDebugger);
+    if (engineDebugger) {
+      EngineDebug.init(engineDebugger);
     }
   }
 
-  static setLeptonDebugger = (leptonDebugger: LeptonDebugger) => {
-    LeptonDebug.init(leptonDebugger);
+  static setEngineDebugger = (engineDebugger: EngineDebugger) => {
+    EngineDebug.init(engineDebugger);
   };
 
   /**
@@ -84,8 +84,8 @@ class Lepton extends EventEmitter {
    */
   async listener(chain: Chain, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
     if (leaves.length) {
-      LeptonDebug.log(
-        `lepton.listener[${chain.type}:${chain.id}]: ${leaves.length} queued at ${startingIndex}`,
+      EngineDebug.log(
+        `engine.listener[${chain.type}:${chain.id}]: ${leaves.length} queued at ${startingIndex}`,
       );
       // Queue leaves to merkle tree
       await this.merkletrees[chain.type][chain.id].erc20.queueLeaves(
@@ -103,7 +103,7 @@ class Lepton extends EventEmitter {
    */
   async nullifierListener(chain: Chain, nullifiers: Nullifier[]) {
     if (nullifiers.length) {
-      LeptonDebug.log(`lepton.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
+      EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
       await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
     }
   }
@@ -119,7 +119,7 @@ class Lepton extends EventEmitter {
     // Get latest synced event
     const treeLength = await merkletree.getTreeLength(latestTree);
 
-    LeptonDebug.log(`scanHistory: latestTree ${latestTree}, treeLength ${treeLength}`);
+    EngineDebug.log(`scanHistory: latestTree ${latestTree}, treeLength ${treeLength}`);
 
     let startScanningBlock: Optional<number>;
 
@@ -134,12 +134,12 @@ class Lepton extends EventEmitter {
         if (txReceipt) {
           startScanningBlock = txReceipt.blockNumber;
         } else {
-          LeptonDebug.log(
+          EngineDebug.log(
             `Could not find tx receipt for latest event: ${latestEvent.txid}. Trying prior index.`,
           );
         }
       } else {
-        LeptonDebug.log(
+        EngineDebug.log(
           `Could not find latest event for index ${latestEventIndex}. Trying prior index.`,
         );
       }
@@ -151,14 +151,14 @@ class Lepton extends EventEmitter {
 
   async getStartScanningBlock(chain: Chain): Promise<number> {
     let startScanningBlock = await this.getMostRecentValidCommitmentBlock(chain);
-    LeptonDebug.log(`most recent valid commitment block: ${startScanningBlock}`);
+    EngineDebug.log(`most recent valid commitment block: ${startScanningBlock}`);
     if (startScanningBlock == null) {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chain.type][chain.id];
     }
 
     const lastSyncedBlock = await this.getLastSyncedBlock(chain);
-    LeptonDebug.log(`last synced block: ${startScanningBlock}`);
+    EngineDebug.log(`last synced block: ${startScanningBlock}`);
     if (lastSyncedBlock && lastSyncedBlock > startScanningBlock) {
       startScanningBlock = lastSyncedBlock;
     }
@@ -171,7 +171,7 @@ class Lepton extends EventEmitter {
       return;
     }
     try {
-      LeptonDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
+      EngineDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
       const merkletree = this.merkletrees[chain.type][chain.id].erc20;
 
       const startScanningBlockQuickSync = await this.getStartScanningBlock(chain);
@@ -210,7 +210,7 @@ class Lepton extends EventEmitter {
       if (!(err instanceof Error)) {
         throw err;
       }
-      LeptonDebug.error(err);
+      EngineDebug.error(err);
     }
   }
 
@@ -219,7 +219,7 @@ class Lepton extends EventEmitter {
       chain,
       progress,
     };
-    this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, updateData);
+    this.emit(EngineEvent.MerkletreeHistoryScanUpdate, updateData);
   }
 
   /**
@@ -228,13 +228,13 @@ class Lepton extends EventEmitter {
    */
   async scanHistory(chain: Chain) {
     if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
-      LeptonDebug.log(
+      EngineDebug.log(
         `Cannot scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
       return;
     }
     if (!this.proxyContracts[chain.type] || !this.proxyContracts[chain.type][chain.id]) {
-      LeptonDebug.log(
+      EngineDebug.log(
         `Cannot scan history. Proxy contract not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
       return;
@@ -243,7 +243,7 @@ class Lepton extends EventEmitter {
     const proxyContract = this.proxyContracts[chain.type][chain.id];
     if (merkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
-      LeptonDebug.log('Already scanning. Stopping additional re-scan.');
+      EngineDebug.log('Already scanning. Stopping additional re-scan.');
       return;
     }
     merkletree.isScanning = true;
@@ -257,7 +257,7 @@ class Lepton extends EventEmitter {
 
     // Get updated start-scanning block from new valid merkletree.
     const startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
-    LeptonDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
+    EngineDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
     const latestBlock = (await proxyContract.contract.provider.getBlock('latest')).number;
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
@@ -281,7 +281,7 @@ class Lepton extends EventEmitter {
               postQuickSyncProgress +
               ((1 - postQuickSyncProgress) * scannedBlocks) / totalBlocksToScan, // From 50% -> 100%
           };
-          this.emit(LeptonEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
+          this.emit(EngineEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
           await this.setLastSyncedBlock(syncedBlock, chain);
         },
       );
@@ -289,17 +289,17 @@ class Lepton extends EventEmitter {
       // Final scan after all leaves added.
       await this.scanAllWallets(chain);
       const scanCompleteData: MerkletreeHistoryScanEventData = { chain };
-      this.emit(LeptonEvent.MerkletreeHistoryScanComplete, scanCompleteData);
+      this.emit(EngineEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       merkletree.isScanning = false;
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
       }
-      LeptonDebug.log(`Scan incomplete for chain ${chain.type}:${chain.id}`);
-      LeptonDebug.error(err);
+      EngineDebug.log(`Scan incomplete for chain ${chain.type}:${chain.id}`);
+      EngineDebug.error(err);
       await this.scanAllWallets(chain);
       const scanIncompleteData: MerkletreeHistoryScanEventData = { chain };
-      this.emit(LeptonEvent.MerkletreeHistoryScanIncomplete, scanIncompleteData);
+      this.emit(EngineEvent.MerkletreeHistoryScanIncomplete, scanIncompleteData);
       merkletree.isScanning = false;
     }
   }
@@ -310,7 +310,7 @@ class Lepton extends EventEmitter {
    */
   async clearSyncedMerkletreeLeaves(chain: Chain) {
     await this.merkletrees[chain.type][chain.id].erc20.clearLeavesFromDB();
-    await this.db.clearNamespace(Lepton.getLastSyncedBlockDBPrefix(chain));
+    await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
 
   /**
@@ -319,14 +319,14 @@ class Lepton extends EventEmitter {
    */
   async fullRescanMerkletreesAndWallets(chain: Chain) {
     if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
-      LeptonDebug.log(
+      EngineDebug.log(
         `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
       return;
     }
     const merkletree = this.merkletrees[chain.type][chain.id].erc20;
     if (merkletree.isScanning) {
-      LeptonDebug.log('Already scanning. Killing full re-scan.');
+      EngineDebug.log('Already scanning. Killing full re-scan.');
       return;
     }
     this.emitScanUpdateEvent(chain, 0.01); // 1%
@@ -351,7 +351,7 @@ class Lepton extends EventEmitter {
     provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
   ) {
-    LeptonDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
+    EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
     if (
       (this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id]) ||
@@ -447,7 +447,7 @@ class Lepton extends EventEmitter {
    * @param chain - chain type/id to store value for
    */
   setLastSyncedBlock(lastSyncedBlock: number, chain: Chain): Promise<void> {
-    return this.db.put(Lepton.getLastSyncedBlockDBPrefix(chain), lastSyncedBlock, 'utf8');
+    return this.db.put(RailgunEngine.getLastSyncedBlockDBPrefix(chain), lastSyncedBlock, 'utf8');
   }
 
   /**
@@ -457,7 +457,7 @@ class Lepton extends EventEmitter {
    */
   getLastSyncedBlock(chain: Chain): Promise<Optional<number>> {
     return this.db
-      .get(Lepton.getLastSyncedBlockDBPrefix(chain), 'utf8')
+      .get(RailgunEngine.getLastSyncedBlockDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
@@ -485,7 +485,7 @@ class Lepton extends EventEmitter {
     // Unload chains
     this.proxyContracts.forEach((contractsForChainType, chainType) => {
       contractsForChainType.forEach((_contract, chainID) => {
-        LeptonDebug.log(`unload contract for ${chainType}:${chainID}`);
+        EngineDebug.log(`unload contract for ${chainType}:${chainID}`);
         this.unloadNetwork({ type: chainType, id: chainID });
       });
     });
@@ -583,4 +583,4 @@ class Lepton extends EventEmitter {
   static decodeAddress = decode;
 }
 
-export { Lepton, Note, Transaction };
+export { RailgunEngine, Note, Transaction };

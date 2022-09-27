@@ -13,7 +13,7 @@ import { verifyED25519 } from '../../src/utils/keys-utils';
 import { Wallet } from '../../src/wallet/wallet';
 import { ViewOnlyWallet } from '../../src/wallet/view-only-wallet';
 import { config } from '../config.test';
-import { Chain, ChainType } from '../../src/models/lepton-types';
+import { Chain, ChainType } from '../../src/models/engine-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

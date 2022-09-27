@@ -1,6 +1,6 @@
 import { Signature } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { KeyNode } from '../models/lepton-types';
+import { KeyNode } from '../models/engine-types';
 import { hash, keysUtils } from '../utils';
 import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } from './bip32';
 import { hexStringToBytes, hexToBigInt } from '../utils/bytes';

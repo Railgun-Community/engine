@@ -1,4 +1,4 @@
-export type LeptonDebugger = {
+export type EngineDebugger = {
   log: (msg: string) => void;
   error: (error: Error) => void;
 };

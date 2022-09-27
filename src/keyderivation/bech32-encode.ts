@@ -2,7 +2,7 @@
 import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
 import { getChainFullNetworkID } from '../chain';
-import { Chain } from '../models/lepton-types';
+import { Chain } from '../models/engine-types';
 import { bytes, constants } from '../utils';
 import {
   ByteLength,

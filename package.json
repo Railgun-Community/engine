@@ -21,11 +21,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Railgun-Community/lepton.git"
+    "url": "git+https://github.com/Railgun-Community/engine.git"
   },
-  "homepage": "https://github.com/Railgun-Community/lepton#readme",
+  "homepage": "https://github.com/Railgun-Community/engine#readme",
   "bugs": {
-    "url": "https://github.com/Railgun-Community/lepton/issues"
+    "url": "https://github.com/Railgun-Community/engine/issues"
   },
   "dependencies": {
     "@ethersproject/abi": "^5.7.0",
