@@ -18,4 +18,4 @@ declare module 'circomlibjs' {
 }
 
 declare module 'snarkjs';
-declare module '@railgun-privacy/native-artifacts';
+declare module '@railgun-community/test-artifacts';

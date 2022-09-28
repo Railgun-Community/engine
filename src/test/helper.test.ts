@@ -1,7 +1,7 @@
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import artifacts from '@railgun-privacy/native-artifacts';
+import artifacts from '@railgun-community/test-artifacts';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { PublicInputs } from '../prover/prover';
