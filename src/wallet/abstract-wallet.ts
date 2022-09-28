@@ -71,6 +71,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly merkletrees: MerkleTree[][] = [];
 
+  private readonly creationBlockNumbers: Optional<number[][]>;
+
   /**
    * Create Wallet controller
    * @param id - wallet ID
@@ -81,6 +83,7 @@ abstract class AbstractWallet extends EventEmitter {
     db: Database,
     viewingKeyPair: ViewingKeyPair,
     spendingPublicKey: SpendingPublicKey,
+    creationBlockNumbers: Optional<number[][]>,
   ) {
     super();
 
@@ -93,6 +96,7 @@ abstract class AbstractWallet extends EventEmitter {
       spendingPublicKey,
       this.getNullifyingKey(),
     );
+    this.creationBlockNumbers = creationBlockNumbers;
   }
 
   /**
@@ -228,10 +232,14 @@ abstract class AbstractWallet extends EventEmitter {
         this.getWalletDetailsPath(chain),
       )) as BytesData;
       walletDetails = msgpack.decode(arrayify(walletDetailsEncoded)) as WalletDetails;
+      if (walletDetails.creationTreeHeight == null) {
+        walletDetails.creationTreeHeight = undefined;
+      }
     } catch {
       // If details don't exist yet, return defaults
       walletDetails = {
         treeScannedHeights: [],
+        creationTreeHeight: undefined,
       };
     }
 
@@ -753,10 +761,33 @@ abstract class AbstractWallet extends EventEmitter {
         walletDetails.treeScannedHeights.push(0);
       }
 
+      if (
+        this.creationBlockNumbers &&
+        this.creationBlockNumbers[chain.type] !== undefined &&
+        this.creationBlockNumbers[chain.type][chain.id] !== undefined
+      ) {
+        const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
+        if (creationBlockNumber !== undefined && walletDetails.creationTreeHeight == undefined) {
+          const creationTreeHeight = await this.getCreationTreeHeight(
+            merkletree,
+            latestTree,
+            creationBlockNumber,
+          );
+          if (creationTreeHeight !== undefined) {
+            walletDetails.creationTreeHeight = creationTreeHeight;
+          }
+        }
+      }
+
       // Loop through each tree and scan
       for (let tree = 0; tree <= latestTree; tree += 1) {
         // Get scanned height
-        const scannedHeight = walletDetails.treeScannedHeights[tree];
+        let startScanHeight = walletDetails.treeScannedHeights[tree];
+
+        // If creationTreeHeight exists, see if it is higher than default startScanHeight and start there if needed
+        if (walletDetails.creationTreeHeight !== undefined) {
+          startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
+        }
 
         // Create sparse array of tree
         // eslint-disable-next-line no-await-in-loop
@@ -764,7 +795,7 @@ abstract class AbstractWallet extends EventEmitter {
         const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
         // Fetch each leaf we need to scan
-        for (let index = scannedHeight; index < treeHeight; index += 1) {
+        for (let index = startScanHeight; index < treeHeight; index += 1) {
           fetcher[index] = merkletree.getCommitment(tree, index);
         }
 
@@ -774,7 +805,7 @@ abstract class AbstractWallet extends EventEmitter {
 
         // Start scanning primary and change
         // eslint-disable-next-line no-await-in-loop
-        await this.scanLeaves(leaves, tree, chain, scannedHeight, treeHeight);
+        await this.scanLeaves(leaves, tree, chain, startScanHeight, treeHeight);
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] = leaves.length;
@@ -796,12 +827,66 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
+   * Searches for creation tree height for given merkletree.
+   * @param merkletree - MerkleTree
+   * @param latestTree - number
+   */
+  async getCreationTreeHeight(
+    merkletree: MerkleTree,
+    latestTree: number,
+    creationBlockNumber: number,
+  ): Promise<Optional<number>> {
+    if (creationBlockNumber == undefined) {
+      return undefined;
+    }
+
+    // Loop through each tree and search commitments for creation tree height that matches block number
+    for (let tree = 0; tree <= latestTree; tree += 1) {
+      // Create sparse array of tree
+      // eslint-disable-next-line no-await-in-loop
+      const treeHeight = await merkletree.getTreeLength(tree);
+      const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
+
+      // Fetch each leaf we need to search
+      for (let index = 0; index < treeHeight; index += 1) {
+        fetcher[index] = merkletree.getCommitment(tree, index);
+      }
+
+      // Wait until all leaves are fetched
+      // eslint-disable-next-line no-await-in-loop
+      const leaves = await Promise.all(fetcher);
+
+      // TODO: Binary search all commitments until we find the closest index >= creationBlockNumber
+      // Search through leaves for matching blockNumber
+      if (leaves) {
+        const creationBlockIndex = leaves.findIndex(
+          (commitment) =>
+            commitment &&
+            commitment.blockNumber !== undefined &&
+            commitment.blockNumber >= creationBlockNumber,
+        );
+
+        if (creationBlockIndex > -1) {
+          return creationBlockIndex;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
    * Clears balances scanned from merkletrees and stored to database.
    * @param chain - chain type/id to clear
    */
   async clearScannedBalances(chain: Chain) {
+    const walletDetails = await this.getWalletDetails(chain);
+    walletDetails.treeScannedHeights = [];
+    // Clear namespace and then resave the walletDetails
     const namespace = this.getWalletDetailsPath(chain);
     await this.db.clearNamespace(namespace);
+    // eslint-disable-next-line no-await-in-loop
+    await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
   }
 
   /**

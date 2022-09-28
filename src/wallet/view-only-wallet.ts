@@ -30,7 +30,13 @@ class ViewOnlyWallet extends AbstractWallet {
     const viewingKeyPair: ViewingKeyPair = await ViewOnlyWallet.getViewingKeyPair(
       viewingPrivateKey,
     );
-    return new ViewOnlyWallet(id, db, viewingKeyPair, spendingPublicKey);
+    return new ViewOnlyWallet(
+      id,
+      db,
+      viewingKeyPair,
+      spendingPublicKey,
+      undefined, // creationBlocKNumbers
+    );
   }
 
   /**

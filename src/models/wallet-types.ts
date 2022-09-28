@@ -3,6 +3,7 @@ import { TXO } from './txo-types';
 
 export type WalletDetails = {
   treeScannedHeights: number[];
+  creationTreeHeight: Optional<number>;
 };
 
 export type TreeBalance = {
