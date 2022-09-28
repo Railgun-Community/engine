@@ -522,8 +522,17 @@ class RailgunEngine extends EventEmitter {
    * @param {string} id - wallet ID
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: string, id: string): Promise<RailgunWallet> {
-    const wallet = await RailgunWallet.loadExisting(this.db, encryptionKey, id);
+  async loadExistingWallet(
+    encryptionKey: string,
+    id: string,
+    creationBlockNumbers: Optional<number[][]>,
+  ): Promise<RailgunWallet> {
+    const wallet = await RailgunWallet.loadExisting(
+      this.db,
+      encryptionKey,
+      id,
+      creationBlockNumbers,
+    );
     this.loadWallet(wallet);
     return wallet;
   }
@@ -551,8 +560,15 @@ class RailgunEngine extends EventEmitter {
     encryptionKey: string,
     mnemonic: string,
     index: number = 0,
+    creationBlockNumbers: Optional<number[][]> = undefined,
   ): Promise<RailgunWallet> {
-    const wallet = await RailgunWallet.fromMnemonic(this.db, encryptionKey, mnemonic, index);
+    const wallet = await RailgunWallet.fromMnemonic(
+      this.db,
+      encryptionKey,
+      mnemonic,
+      index,
+      creationBlockNumbers,
+    );
     this.loadWallet(wallet);
     return wallet;
   }

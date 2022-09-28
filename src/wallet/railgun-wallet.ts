@@ -53,12 +53,18 @@ class RailgunWallet extends AbstractWallet {
     return sha256(combine([mnemonicToSeed(mnemonic), index.toString(16)]));
   }
 
-  private static async createWallet(id: string, db: Database, mnemonic: string, index: number) {
+  private static async createWallet(
+    id: string,
+    db: Database,
+    mnemonic: string,
+    index: number,
+    creationBlockNumbers: Optional<number[][]>,
+  ) {
     const nodes = deriveNodes(mnemonic, index);
 
     const viewingKeyPair = await nodes.viewing.getViewingKeyPair();
     const spendingPublicKey = nodes.spending.getSpendingKeyPair().pubkey;
-    return new RailgunWallet(id, db, viewingKeyPair, spendingPublicKey);
+    return new RailgunWallet(id, db, viewingKeyPair, spendingPublicKey, creationBlockNumbers);
   }
 
   /**
@@ -74,13 +80,14 @@ class RailgunWallet extends AbstractWallet {
     encryptionKey: BytesData,
     mnemonic: string,
     index: number = 0,
+    creationBlockNumbers: Optional<number[][]> = undefined,
   ): Promise<RailgunWallet> {
     const id = RailgunWallet.generateID(mnemonic, index);
 
     // Write encrypted mnemonic to DB
     await AbstractWallet.write(db, id, encryptionKey, { mnemonic, index });
 
-    return this.createWallet(id, db, mnemonic, index);
+    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers);
   }
 
   /**
@@ -94,6 +101,7 @@ class RailgunWallet extends AbstractWallet {
     db: Database,
     encryptionKey: BytesData,
     id: string,
+    creationBlockNumbers: Optional<number[][]>,
   ): Promise<RailgunWallet> {
     // Get encrypted mnemonic and index from DB
     const { mnemonic, index } = (await AbstractWallet.read(db, id, encryptionKey)) as WalletData;
@@ -101,7 +109,7 @@ class RailgunWallet extends AbstractWallet {
       throw new Error('Incorrect wallet type.');
     }
 
-    return this.createWallet(id, db, mnemonic, index);
+    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers);
   }
 }
 

@@ -44,7 +44,12 @@ describe('Wallet', () => {
   });
 
   it('Should load existing wallet', async () => {
-    const wallet2 = await RailgunWallet.loadExisting(db, testEncryptionKey, wallet.id);
+    const wallet2 = await RailgunWallet.loadExisting(
+      db,
+      testEncryptionKey,
+      wallet.id,
+      undefined, // creationBlockNumbers
+    );
     expect(wallet2.id).to.equal(wallet.id);
   });
 
@@ -175,9 +180,11 @@ describe('Wallet', () => {
   it('Should get empty wallet details', async () => {
     expect(await wallet.getWalletDetails(chain)).to.deep.equal({
       treeScannedHeights: [],
+      creationTreeHeight: undefined,
     });
     expect(await viewOnlyWallet.getWalletDetails(chain)).to.deep.equal({
       treeScannedHeights: [],
+      creationTreeHeight: undefined,
     });
   });
 

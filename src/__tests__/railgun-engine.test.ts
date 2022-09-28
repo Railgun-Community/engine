@@ -108,7 +108,11 @@ describe('RailgunEngine', function test() {
     }
 
     engine.unloadWallet(wallet.id);
-    await engine.loadExistingWallet(testEncryptionKey, wallet.id);
+    await engine.loadExistingWallet(
+      testEncryptionKey,
+      wallet.id,
+      undefined, // creationBlockNumbers
+    );
     expect(engine.wallets[wallet.id].id).to.equal(wallet.id);
   });
 
@@ -152,6 +156,58 @@ describe('RailgunEngine', function test() {
     await wallet.clearScannedBalances(chain);
     const balanceClear = await wallet.getBalance(chain, tokenAddress);
     expect(balanceClear).to.equal(undefined);
+  });
+
+  it('[HH] With a creation block number provided, should show balance after deposit and rescan', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    // @ts-ignore: force creationBlockNumbers for test
+    wallet.creationBlockNumbers = { [chain.type]: { [chain.id]: 0 } };
+
+    const commitment: GeneratedCommitment = {
+      hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
+      txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
+      preImage: {
+        npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
+        token: {
+          tokenType: TokenType.ERC20,
+          tokenAddress: `0x${tokenAddress}`,
+          tokenSubID: ZERO_ADDRESS,
+        },
+        value: '9138822709a9fc231cba6',
+      },
+      encryptedRandom: [
+        '0xb47a353e294711ff73cf086f97ee1ed29b853b67c353bc2371b87fe72c716cc6',
+        '0x3d321af08b8fa7a8f70379407706b752',
+      ],
+      blockNumber: 0,
+    };
+    // Override root validator
+    merkleTree.validateRoot = () => Promise.resolve(true);
+    await merkleTree.queueLeaves(0, 0, [commitment]);
+
+    await wallet.scanBalances(chain);
+    const balance = await wallet.getBalance(chain, tokenAddress);
+    const value = hexToBigInt(commitment.preImage.value);
+    expect(balance).to.equal(value);
+
+    const walletDetails = await wallet.getWalletDetails(chain);
+    expect(walletDetails.creationTreeHeight).to.equal(0);
+
+    await wallet.fullRescanBalances(chain);
+    const balanceRescan = await wallet.getBalance(chain, tokenAddress);
+    expect(balanceRescan).to.equal(value);
+
+    await wallet.clearScannedBalances(chain);
+    const balanceClear = await wallet.getBalance(chain, tokenAddress);
+    expect(balanceClear).to.equal(undefined);
+
+    const walletDetailsClear = await wallet.getWalletDetails(chain);
+    expect(walletDetailsClear.creationTreeHeight).to.equal(0); // creationTreeHeight should not get reset on clear
+    expect(walletDetailsClear.treeScannedHeights.length).to.equal(0);
   });
 
   it('[HH] Should deposit, withdraw and update balance, and pull formatted spend/receive transaction history', async function run() {
