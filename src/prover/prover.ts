@@ -151,7 +151,7 @@ export class Prover {
     };
   }
 
-  private async maybeVerify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
+  async maybeVerify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
     if (!this.groth16) {
       throw new Error('Requires groth16 verification implementation');
     }
