@@ -151,7 +151,7 @@ export class Prover {
     };
   }
 
-  async maybeVerify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
+  async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
     if (!this.groth16) {
       throw new Error('Requires groth16 verification implementation');
     }
@@ -231,7 +231,7 @@ export class Prover {
     progressCallback(finalProgressProof);
 
     // Throw if proof is invalid
-    if (!(await this.maybeVerify(publicInputs, proof))) {
+    if (!(await this.verify(publicInputs, proof))) {
       throw new Error('Proof generation failed');
     }
     progressCallback(100);
