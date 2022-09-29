@@ -13,4 +13,4 @@ git push -f;
 git checkout main;
 git rebase origin/release;
 git push --tags --no-verify;
-echo https://github.com/Railgun-Privacy/engine/actions;
+echo https://github.com/Railgun-Community/engine/actions;
