@@ -4,7 +4,6 @@ import { HDKey } from 'ethereum-cryptography/hdkey';
 import artifacts from '@railgun-community/test-artifacts';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { PublicInputs } from '../prover/prover';
 import { Nullifier } from '../models/formatted-types';
 import {
   AccumulatedEvents,
@@ -15,6 +14,7 @@ import {
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
+import { PublicInputs } from '../models/prover-types';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 const WALLET_PATH = "m/44'/60'/0'/0/0";

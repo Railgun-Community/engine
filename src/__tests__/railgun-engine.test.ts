@@ -24,9 +24,9 @@ import { TransactionBatch } from '../transaction/transaction-batch';
 import { Groth16 } from '../prover/prover';
 import { ERC20 } from '../typechain-types';
 import { promiseTimeout } from '../utils/promises';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
 import { Chain, ChainType } from '../models/engine-types';
 import { Note } from '../note/note';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../models/transaction-constants';
 
 chai.use(chaiAsPromised);
 

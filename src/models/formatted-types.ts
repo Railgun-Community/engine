@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { BigNumberish } from 'ethers';
-import { SnarkProof } from '../prover/types';
+import { SnarkProof } from './prover-types';
 
 export type BytesData = ArrayLike<number> | string | BN;
 

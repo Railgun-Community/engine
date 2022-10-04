@@ -8,8 +8,8 @@ import {
   OutputType,
   TokenType,
 } from '../models/formatted-types';
-import { PublicInputs } from '../prover/types';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
+import { PublicInputs } from '../models/prover-types';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../models/transaction-constants';
 import {
   ByteLength,
   formatToByteLength,

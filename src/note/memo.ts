@@ -4,7 +4,7 @@ import {
   NoteExtraData,
   OutputType,
 } from '../models/formatted-types';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../transaction/constants';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../models/transaction-constants';
 import { arrayify, ByteLength, chunk, combine, hexlify, nToHex, padToLength } from '../utils/bytes';
 import { aes } from '../utils/encryption';
 import WalletInfo from '../wallet/wallet-info';

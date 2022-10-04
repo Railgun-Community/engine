@@ -7,7 +7,7 @@ import {
   Proof,
   PublicInputs,
   SnarkProof,
-} from './types';
+} from '../models/prover-types';
 
 type NativeProverFormattedJsonInputs = {
   merkleRoot: string;
@@ -49,8 +49,6 @@ export type Groth16 = {
 };
 
 export type ProverProgressCallback = (progress: number) => void;
-
-export { ArtifactsGetter, FormattedCircuitInputs, PrivateInputs, Proof, PublicInputs, SnarkProof };
 
 export class Prover {
   private artifactsGetter: ArtifactsGetter;

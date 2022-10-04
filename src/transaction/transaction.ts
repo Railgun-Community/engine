@@ -1,12 +1,6 @@
 import { defaultAbiCoder } from 'ethers/lib/utils';
 import { RailgunWallet } from '../wallet/railgun-wallet';
-import {
-  PrivateInputs,
-  PublicInputs,
-  Prover,
-  Proof,
-  ProverProgressCallback,
-} from '../prover/prover';
+import { Prover, ProverProgressCallback } from '../prover/prover';
 import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../utils/bytes';
 import {
@@ -18,7 +12,11 @@ import {
   SerializedTransaction,
   TokenType,
 } from '../models/formatted-types';
-import { DEFAULT_TOKEN_SUB_ID, MEMO_SENDER_BLINDING_KEY_NULL, WithdrawFlag } from './constants';
+import {
+  DEFAULT_TOKEN_SUB_ID,
+  MEMO_SENDER_BLINDING_KEY_NULL,
+  WithdrawFlag,
+} from '../models/transaction-constants';
 import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { ERC20WithdrawNote } from '../note/erc20-withdraw';
 import { TXO } from '../models/txo-types';
@@ -26,6 +24,7 @@ import { Memo } from '../note/memo';
 import { Chain } from '../models/engine-types';
 import { Note } from '../note/note';
 import { keccak256 } from '../utils/hash';
+import { PrivateInputs, Proof, PublicInputs } from '../models/prover-types';
 
 const abiCoder = defaultAbiCoder;
 
