@@ -5,7 +5,7 @@ import { RailgunProxyContract } from './contracts/railgun-proxy/railgun-proxy';
 import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
 import { Database, DatabaseNamespace } from './database/database';
 import { MerkleTree } from './merkletree/merkletree';
-import { Prover, ArtifactsGetter } from './prover/prover';
+import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
 import { hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
@@ -23,6 +23,7 @@ import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
+import { ArtifactsGetter } from './models/prover-types';
 
 class RailgunEngine extends EventEmitter {
   readonly db;

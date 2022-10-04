@@ -3,7 +3,6 @@ import { bytesToHex, randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../transaction/constants';
 import {
   getEphemeralKeys,
   getPublicSpendingKey,
@@ -17,6 +16,7 @@ import {
   verifyEDDSA,
 } from '../keys-utils';
 import { nToHex, ByteLength, randomHex } from '../bytes';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../models/transaction-constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

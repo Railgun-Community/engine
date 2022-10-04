@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-expressions */
 import { expect } from 'chai';
-import { PublicInputs } from '../../prover/types';
+import { PublicInputs } from '../../models/prover-types';
 import { artifactsGetter } from '../../test/helper.test';
 import { VALID_NULLIFIER_COUNTS } from '../nullifiers';
 import { shouldAddMoreUTXOsToConsolidateBalances } from '../simple-solutions';

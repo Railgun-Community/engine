@@ -27,12 +27,12 @@ import { Memo } from '../../../note/memo';
 import { ViewOnlyWallet } from '../../../wallet/view-only-wallet';
 import { Groth16 } from '../../../prover/prover';
 import { ERC20 } from '../../../typechain-types';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../transaction/constants';
 import { promiseTimeout } from '../../../utils/promises';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunProxyContract } from '../railgun-proxy';
 import { Note } from '../../../note/note';
+import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../models/transaction-constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
