@@ -9,5 +9,6 @@ export * from './models';
 export * from './note';
 export * from './prover/prover';
 export * from './solutions';
+export * from './transaction';
 export * from './utils';
 export * from './wallet';
