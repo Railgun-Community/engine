@@ -24,19 +24,18 @@ class ViewOnlyWallet extends AbstractWallet {
     };
   }
 
-  private static async createWallet(id: string, db: Database, shareableViewingKey: string) {
+  private static async createWallet(
+    id: string,
+    db: Database,
+    shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
+  ) {
     const { viewingPrivateKey, spendingPublicKey } =
       AbstractWallet.getKeysFromShareableViewingKey(shareableViewingKey);
     const viewingKeyPair: ViewingKeyPair = await ViewOnlyWallet.getViewingKeyPair(
       viewingPrivateKey,
     );
-    return new ViewOnlyWallet(
-      id,
-      db,
-      viewingKeyPair,
-      spendingPublicKey,
-      undefined, // creationBlocKNumbers
-    );
+    return new ViewOnlyWallet(id, db, viewingKeyPair, spendingPublicKey, creationBlockNumbers);
   }
 
   /**
@@ -50,13 +49,14 @@ class ViewOnlyWallet extends AbstractWallet {
     db: Database,
     encryptionKey: BytesData,
     shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
   ): Promise<AbstractWallet> {
     const id = ViewOnlyWallet.generateID(shareableViewingKey);
 
     // Write encrypted shareableViewingKey to DB
     await AbstractWallet.write(db, id, encryptionKey, { shareableViewingKey });
 
-    return this.createWallet(id, db, shareableViewingKey);
+    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers);
   }
 
   /**
@@ -70,6 +70,7 @@ class ViewOnlyWallet extends AbstractWallet {
     db: Database,
     encryptionKey: BytesData,
     id: string,
+    creationBlockNumbers: Optional<number[][]>,
   ): Promise<AbstractWallet> {
     // Get encrypted shareableViewingKey from DB
     const { shareableViewingKey } = (await AbstractWallet.read(
@@ -83,7 +84,7 @@ class ViewOnlyWallet extends AbstractWallet {
       );
     }
 
-    return this.createWallet(id, db, shareableViewingKey);
+    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers);
   }
 }
 

@@ -34,12 +34,19 @@ describe('Wallet', () => {
     // Create database and wallet
     db = new Database(memdown());
     merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      0,
+      undefined, // creationBlockNumbers
+    );
     wallet.loadTree(merkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
       await wallet.generateShareableViewingKey(),
+      undefined, // creationBlockNumbers
     );
   });
 
@@ -58,6 +65,7 @@ describe('Wallet', () => {
       db,
       testEncryptionKey,
       viewOnlyWallet.id,
+      undefined, // creationBlockNumbers
     );
     expect(viewOnlyWallet2.id).to.equal(viewOnlyWallet.id);
   });

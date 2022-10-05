@@ -106,7 +106,13 @@ describe('Transaction/ERC20', function test() {
       id: 1,
     };
     merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      0,
+      undefined, // creationBlockNumbers
+    );
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
@@ -156,7 +162,13 @@ describe('Transaction/ERC20', function test() {
   });
 
   it('Should generate ciphertext decryptable by sender and recipient - with memo', async () => {
-    const wallet2 = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
+    const wallet2 = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      1,
+      undefined, // creationBlockNumbers
+    );
 
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
@@ -227,7 +239,13 @@ describe('Transaction/ERC20', function test() {
   });
 
   it('Should generate ciphertext decryptable by sender and recipient - no memo', async () => {
-    const wallet2 = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 1);
+    const wallet2 = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      1,
+      undefined, // creationBlockNumbers
+    );
 
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();

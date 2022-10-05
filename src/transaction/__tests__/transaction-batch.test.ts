@@ -66,7 +66,13 @@ describe('Transaction/Transaction Batch', function run() {
       id: 1,
     };
     merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      0,
+      undefined, // creationBlockNumbers
+    );
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);

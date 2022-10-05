@@ -543,8 +543,17 @@ class RailgunEngine extends EventEmitter {
    * @param {string} id - wallet ID
    * @returns id
    */
-  async loadExistingViewOnlyWallet(encryptionKey: string, id: string): Promise<ViewOnlyWallet> {
-    const wallet = await ViewOnlyWallet.loadExisting(this.db, encryptionKey, id);
+  async loadExistingViewOnlyWallet(
+    encryptionKey: string,
+    id: string,
+    creationBlockNumbers: Optional<number[][]>,
+  ): Promise<ViewOnlyWallet> {
+    const wallet = await ViewOnlyWallet.loadExisting(
+      this.db,
+      encryptionKey,
+      id,
+      creationBlockNumbers,
+    );
     this.loadWallet(wallet);
     return wallet;
   }
@@ -576,11 +585,13 @@ class RailgunEngine extends EventEmitter {
   async createViewOnlyWalletFromShareableViewingKey(
     encryptionKey: string,
     shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
   ): Promise<ViewOnlyWallet> {
     const wallet = await ViewOnlyWallet.fromShareableViewingKey(
       this.db,
       encryptionKey,
       shareableViewingKey,
+      creationBlockNumbers,
     );
     this.loadWallet(wallet);
     return wallet;

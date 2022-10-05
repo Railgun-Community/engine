@@ -97,6 +97,7 @@ describe('Railgun Proxy', function runTests() {
     viewOnlyWallet = await engine.createViewOnlyWalletFromShareableViewingKey(
       testEncryptionKey,
       await wallet.generateShareableViewingKey(),
+      undefined, // creationBlockNumbers
     );
 
     // fn to create deposit tx for tests

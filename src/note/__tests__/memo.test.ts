@@ -20,7 +20,13 @@ let wallet: RailgunWallet;
 describe('Memo', function run() {
   this.beforeAll(async () => {
     db = new Database(memdown());
-    wallet = await RailgunWallet.fromMnemonic(db, testEncryptionKey, testMnemonic, 0);
+    wallet = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      0,
+      undefined, // creationBlockNumbers
+    );
     WalletInfo.setWalletSource('Memo Wallet');
   });
 

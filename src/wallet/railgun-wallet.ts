@@ -79,8 +79,8 @@ class RailgunWallet extends AbstractWallet {
     db: Database,
     encryptionKey: BytesData,
     mnemonic: string,
-    index: number = 0,
-    creationBlockNumbers: Optional<number[][]> = undefined,
+    index: number,
+    creationBlockNumbers: Optional<number[][]>,
   ): Promise<RailgunWallet> {
     const id = RailgunWallet.generateID(mnemonic, index);
 
