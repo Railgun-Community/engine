@@ -962,14 +962,4 @@ abstract class AbstractWallet extends EventEmitter {
   }
 }
 
-export {
-  AbstractWallet,
-  WalletDetails,
-  AddressKeys,
-  Balances,
-  BalancesByTree,
-  ScannedEventData,
-  TXO,
-  WalletData,
-  TreeBalance,
-};
+export { AbstractWallet };
