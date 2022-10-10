@@ -44,7 +44,6 @@ import {
   TransactionHistoryItemVersion,
   TransactionHistoryTokenAmount,
   TransactionHistoryTransferTokenAmount,
-  TreeBalance,
   ViewOnlyWalletData,
   WalletData,
   WalletDetails,
@@ -763,17 +762,17 @@ abstract class AbstractWallet extends EventEmitter {
 
       if (
         this.creationBlockNumbers &&
-        this.creationBlockNumbers[chain.type] !== undefined &&
-        this.creationBlockNumbers[chain.type][chain.id] !== undefined
+        this.creationBlockNumbers[chain.type] != null &&
+        this.creationBlockNumbers[chain.type][chain.id] != null
       ) {
         const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
-        if (creationBlockNumber !== undefined && walletDetails.creationTreeHeight == undefined) {
-          const creationTreeHeight = await this.getCreationTreeHeight(
+        if (creationBlockNumber != null && walletDetails.creationTreeHeight == null) {
+          const creationTreeHeight = await AbstractWallet.getCreationTreeHeight(
             merkletree,
             latestTree,
             creationBlockNumber,
           );
-          if (creationTreeHeight !== undefined) {
+          if (creationTreeHeight != null) {
             walletDetails.creationTreeHeight = creationTreeHeight;
           }
         }
@@ -784,8 +783,8 @@ abstract class AbstractWallet extends EventEmitter {
         // Get scanned height
         let startScanHeight = walletDetails.treeScannedHeights[tree];
 
-        // If creationTreeHeight exists, see if it is higher than default startScanHeight and start there if needed
-        if (walletDetails.creationTreeHeight !== undefined) {
+        // If creationTreeHeight exists, check if it is higher than default startScanHeight and start there if needed
+        if (walletDetails.creationTreeHeight) {
           startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
         }
 
@@ -831,12 +830,12 @@ abstract class AbstractWallet extends EventEmitter {
    * @param merkletree - MerkleTree
    * @param latestTree - number
    */
-  async getCreationTreeHeight(
+  static async getCreationTreeHeight(
     merkletree: MerkleTree,
     latestTree: number,
     creationBlockNumber: number,
   ): Promise<Optional<number>> {
-    if (creationBlockNumber == undefined) {
+    if (creationBlockNumber == null) {
       return undefined;
     }
 
