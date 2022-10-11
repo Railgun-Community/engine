@@ -847,18 +847,18 @@ abstract class AbstractWallet extends EventEmitter {
       const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
       // Build reverse list.
-      for (let index = treeHeight - 1; index > -1; index -= 1) {
+      for (let index = 0; index < treeHeight; index += 1) {
         fetcher[index] = merkletree.getCommitment(tree, index);
       }
 
-      const leavesReversed = await Promise.all(fetcher);
-      if (!leavesReversed.length) {
+      const leaves = await Promise.all(fetcher);
+      if (!leaves.length) {
         return undefined;
       }
 
       // Search through leaves (descending) for first blockNumber before creation.
       const creationBlockIndexReversed = binarySearchForUpperBoundIndex(
-        leavesReversed,
+        leaves.reverse(),
         (commitment) =>
           commitment != null &&
           commitment.blockNumber != null &&
@@ -867,7 +867,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       if (creationBlockIndexReversed > -1) {
         // creationBlockIndexReversed is the "descending index" because of reversed array.
-        const creationTreeHeight = leavesReversed.length - 1 - creationBlockIndexReversed;
+        const creationTreeHeight = leaves.length - 1 - creationBlockIndexReversed;
         return { creationTree: tree, creationTreeHeight };
       }
     }
