@@ -164,8 +164,11 @@ describe('RailgunEngine', function test() {
       return;
     }
 
-    // @ts-ignore: force creationBlockNumbers for test
-    wallet.creationBlockNumbers = { [chain.type]: { [chain.id]: 0 } };
+    // { [chain.type]: { [chain.id]: 0 } }
+    const creationBlockNumbers: number[][] = [];
+    creationBlockNumbers[chain.type] = [];
+    creationBlockNumbers[chain.type][chain.id] = 0;
+    wallet.setCreationBlockNumbers(creationBlockNumbers);
 
     const commitment: GeneratedCommitment = {
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',

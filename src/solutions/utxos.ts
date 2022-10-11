@@ -1,9 +1,9 @@
-import { TXO } from '../wallet/abstract-wallet';
+import { TXO } from '../models/txo-types';
 
-export const calculateTotalSpend = (utxos: TXO[]) =>
+export const calculateTotalSpend = (utxos: TXO[]): bigint =>
   utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
-export const sortUTXOsBySize = (utxos: TXO[]) => {
+export const sortUTXOsBySize = (utxos: TXO[]): void => {
   utxos.sort((left, right) => {
     const leftNum = left.note.value;
     const rightNum = right.note.value;

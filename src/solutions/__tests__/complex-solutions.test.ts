@@ -7,7 +7,6 @@ import {
   shouldAddMoreUTXOsForSolutionBatch,
 } from '../complex-solutions';
 import { sortUTXOsBySize } from '../utxos';
-import { TreeBalance, TXO } from '../../wallet/abstract-wallet';
 import { TransactionBatch } from '../../transaction/transaction-batch';
 import { OutputType, TokenType } from '../../models/formatted-types';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
@@ -18,6 +17,7 @@ import { AddressData } from '../../key-derivation/bech32';
 import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { Note } from '../../note/note';
 import { RailgunEngine } from '../../railgun-engine';
+import { TXO, TreeBalance } from '../../models';
 
 const addressData1 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',

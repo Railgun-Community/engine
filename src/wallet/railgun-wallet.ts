@@ -2,9 +2,10 @@ import { HDNode, mnemonicToSeed } from '@ethersproject/hdnode';
 import { Database } from '../database/database';
 import { deriveNodes, SpendingKeyPair, WalletNode } from '../key-derivation/wallet-node';
 import { BytesData } from '../models/formatted-types';
+import { WalletData } from '../models/wallet-types';
 import { combine } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
-import { AbstractWallet, WalletData } from './abstract-wallet';
+import { AbstractWallet } from './abstract-wallet';
 
 class RailgunWallet extends AbstractWallet {
   /**

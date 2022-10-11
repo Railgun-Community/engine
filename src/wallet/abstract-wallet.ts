@@ -70,7 +70,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly merkletrees: MerkleTree[][] = [];
 
-  private readonly creationBlockNumbers: Optional<number[][]>;
+  private creationBlockNumbers: Optional<number[][]>;
 
   /**
    * Create Wallet controller
@@ -872,6 +872,10 @@ abstract class AbstractWallet extends EventEmitter {
     }
 
     return undefined;
+  }
+
+  setCreationBlockNumbers(creationBlockNumbers: Optional<number[][]>): void {
+    this.creationBlockNumbers = creationBlockNumbers;
   }
 
   /**

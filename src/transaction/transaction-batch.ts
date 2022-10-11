@@ -1,10 +1,9 @@
-import { TXO, TreeBalance } from '../wallet/abstract-wallet';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover, ProverProgressCallback } from '../prover/prover';
 import { ByteLength, formatToByteLength, HashZero, trim } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
-import { SpendingSolutionGroup } from '../models/txo-types';
+import { SpendingSolutionGroup, TXO } from '../models/txo-types';
 import { TokenType, BigIntish, SerializedTransaction, AdaptID } from '../models/formatted-types';
 import {
   consolidateBalanceError,
@@ -22,6 +21,7 @@ import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
 import { Note } from '../note/note';
+import { TreeBalance } from '../models';
 
 class TransactionBatch {
   private adaptID: AdaptID = {
