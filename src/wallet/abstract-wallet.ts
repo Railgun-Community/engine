@@ -240,6 +240,7 @@ abstract class AbstractWallet extends EventEmitter {
       // If details don't exist yet, return defaults
       walletDetails = {
         treeScannedHeights: [],
+        creationTree: undefined,
         creationTreeHeight: undefined,
       };
     }
@@ -769,24 +770,27 @@ abstract class AbstractWallet extends EventEmitter {
       ) {
         const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
         if (creationBlockNumber != null && walletDetails.creationTreeHeight == null) {
-          const creationTreeHeight = await AbstractWallet.getCreationTreeHeight(
+          const creationTreeInfo = await AbstractWallet.getCreationTreeHeight(
             merkletree,
             latestTree,
             creationBlockNumber,
           );
-          if (creationTreeHeight != null) {
-            walletDetails.creationTreeHeight = creationTreeHeight;
+          if (creationTreeInfo != null) {
+            walletDetails.creationTree = creationTreeInfo.creationTree;
+            walletDetails.creationTreeHeight = creationTreeInfo.creationTreeHeight;
           }
         }
       }
 
+      const startScanTree = walletDetails.creationTree || 0;
+
       // Loop through each tree and scan
-      for (let tree = 0; tree <= latestTree; tree += 1) {
+      for (let tree = startScanTree; tree <= latestTree; tree += 1) {
         // Get scanned height
         let startScanHeight = walletDetails.treeScannedHeights[tree];
 
         // If creationTreeHeight exists, check if it is higher than default startScanHeight and start there if needed
-        if (walletDetails.creationTreeHeight) {
+        if (tree === walletDetails.creationTree && walletDetails.creationTreeHeight) {
           startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
         }
 
@@ -832,26 +836,25 @@ abstract class AbstractWallet extends EventEmitter {
     merkletree: MerkleTree,
     latestTree: number,
     creationBlockNumber: number,
-  ): Promise<Optional<number>> {
+  ): Promise<Optional<{ creationTree: number; creationTreeHeight: number }>> {
     if (creationBlockNumber == null) {
       return undefined;
     }
 
-    // Loop through each tree and search commitments for creation tree height that matches block number
-    for (let tree = 0; tree <= latestTree; tree += 1) {
+    // Loop through each tree, descending, and search commitments for creation tree height <= block number
+    for (let tree = latestTree; tree > -1; tree -= 1) {
       const treeHeight = await merkletree.getTreeLength(tree);
       const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
-      for (let index = 0; index < treeHeight; index += 1) {
+      // Build reverse list.
+      for (let index = treeHeight - 1; index > -1; index -= 1) {
         fetcher[index] = merkletree.getCommitment(tree, index);
       }
 
-      const leaves = await Promise.all(fetcher);
-      if (!leaves.length) {
+      const leavesReversed = await Promise.all(fetcher);
+      if (!leavesReversed.length) {
         return undefined;
       }
-
-      const leavesReversed = leaves.reverse();
 
       // Search through leaves (descending) for first blockNumber before creation.
       const creationBlockIndexReversed = binarySearchForUpperBoundIndex(
@@ -864,8 +867,8 @@ abstract class AbstractWallet extends EventEmitter {
 
       if (creationBlockIndexReversed > -1) {
         // creationBlockIndexReversed is the "descending index" because of reversed array.
-        const creationTreeHeight = leaves.length - creationBlockIndexReversed;
-        return creationTreeHeight;
+        const creationTreeHeight = leavesReversed.length - 1 - creationBlockIndexReversed;
+        return { creationTree: tree, creationTreeHeight };
       }
     }
 

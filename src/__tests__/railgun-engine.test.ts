@@ -194,6 +194,7 @@ describe('RailgunEngine', function test() {
     expect(balance).to.equal(value);
 
     const walletDetails = await wallet.getWalletDetails(chain);
+    expect(walletDetails.creationTree).to.equal(0);
     expect(walletDetails.creationTreeHeight).to.equal(0);
 
     await wallet.fullRescanBalances(chain);
@@ -201,12 +202,13 @@ describe('RailgunEngine', function test() {
     expect(balanceRescan).to.equal(value);
 
     await wallet.clearScannedBalances(chain);
-    const balanceClear = await wallet.getBalance(chain, tokenAddress);
-    expect(balanceClear).to.equal(undefined);
+    const balanceCleared = await wallet.getBalance(chain, tokenAddress);
+    expect(balanceCleared).to.equal(undefined);
 
-    const walletDetailsClear = await wallet.getWalletDetails(chain);
-    expect(walletDetailsClear.creationTreeHeight).to.equal(0); // creationTreeHeight should not get reset on clear
-    expect(walletDetailsClear.treeScannedHeights.length).to.equal(0);
+    const walletDetailsCleared = await wallet.getWalletDetails(chain);
+    expect(walletDetailsCleared.creationTree).to.equal(0); // creationTree should not get reset on clear
+    expect(walletDetailsCleared.creationTreeHeight).to.equal(0); // creationTreeHeight should not get reset on clear
+    expect(walletDetailsCleared.treeScannedHeights.length).to.equal(0);
   });
 
   it('[HH] Should deposit, withdraw and update balance, and pull formatted spend/receive transaction history', async function run() {
