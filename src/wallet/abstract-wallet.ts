@@ -766,19 +766,18 @@ abstract class AbstractWallet extends EventEmitter {
       if (
         this.creationBlockNumbers &&
         this.creationBlockNumbers[chain.type] != null &&
-        this.creationBlockNumbers[chain.type][chain.id] != null
+        this.creationBlockNumbers[chain.type][chain.id] != null &&
+        (walletDetails.creationTree == null || walletDetails.creationTreeHeight == null)
       ) {
-        if (walletDetails.creationTree == null || walletDetails.creationTreeHeight == null) {
-          const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
-          const creationTreeInfo = await AbstractWallet.getCreationTreeHeight(
-            merkletree,
-            latestTree,
-            creationBlockNumber,
-          );
-          if (creationTreeInfo != null) {
-            walletDetails.creationTree = creationTreeInfo.creationTree;
-            walletDetails.creationTreeHeight = creationTreeInfo.creationTreeHeight;
-          }
+        const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
+        const creationTreeInfo = await AbstractWallet.getCreationTreeHeight(
+          merkletree,
+          latestTree,
+          creationBlockNumber,
+        );
+        if (creationTreeInfo != null) {
+          walletDetails.creationTree = creationTreeInfo.creationTree;
+          walletDetails.creationTreeHeight = creationTreeInfo.creationTreeHeight;
         }
       }
 
