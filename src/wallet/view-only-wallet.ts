@@ -54,7 +54,10 @@ class ViewOnlyWallet extends AbstractWallet {
     const id = ViewOnlyWallet.generateID(shareableViewingKey);
 
     // Write encrypted shareableViewingKey to DB
-    await AbstractWallet.write(db, id, encryptionKey, { shareableViewingKey });
+    await AbstractWallet.write(db, id, encryptionKey, {
+      shareableViewingKey,
+      creationBlockNumbers,
+    });
 
     return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers);
   }
@@ -70,10 +73,9 @@ class ViewOnlyWallet extends AbstractWallet {
     db: Database,
     encryptionKey: BytesData,
     id: string,
-    creationBlockNumbers: Optional<number[][]>,
   ): Promise<AbstractWallet> {
     // Get encrypted shareableViewingKey from DB
-    const { shareableViewingKey } = (await AbstractWallet.read(
+    const { shareableViewingKey, creationBlockNumbers } = (await AbstractWallet.read(
       db,
       id,
       encryptionKey,

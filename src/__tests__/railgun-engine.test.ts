@@ -108,11 +108,7 @@ describe('RailgunEngine', function test() {
     }
 
     engine.unloadWallet(wallet.id);
-    await engine.loadExistingWallet(
-      testEncryptionKey,
-      wallet.id,
-      undefined, // creationBlockNumbers
-    );
+    await engine.loadExistingWallet(testEncryptionKey, wallet.id);
     expect(engine.wallets[wallet.id].id).to.equal(wallet.id);
   });
 

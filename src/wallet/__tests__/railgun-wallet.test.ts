@@ -51,12 +51,7 @@ describe('Wallet', () => {
   });
 
   it('Should load existing wallet', async () => {
-    const wallet2 = await RailgunWallet.loadExisting(
-      db,
-      testEncryptionKey,
-      wallet.id,
-      undefined, // creationBlockNumbers
-    );
+    const wallet2 = await RailgunWallet.loadExisting(db, testEncryptionKey, wallet.id);
     expect(wallet2.id).to.equal(wallet.id);
   });
 
@@ -65,7 +60,6 @@ describe('Wallet', () => {
       db,
       testEncryptionKey,
       viewOnlyWallet.id,
-      undefined, // creationBlockNumbers
     );
     expect(viewOnlyWallet2.id).to.equal(viewOnlyWallet.id);
   });

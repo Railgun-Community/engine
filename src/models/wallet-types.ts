@@ -26,9 +26,16 @@ export type AddressKeys = {
   viewingPublicKey: Uint8Array;
 };
 
-export type WalletData = { mnemonic: string; index: number };
+export type WalletData = {
+  mnemonic: string;
+  index: number;
+  creationBlockNumbers: Optional<number[][]>;
+};
 
-export type ViewOnlyWalletData = { shareableViewingKey: string };
+export type ViewOnlyWalletData = {
+  shareableViewingKey: string;
+  creationBlockNumbers: Optional<number[][]>;
+};
 
 export type ShareableViewingKeyData = {
   vpriv: string; // viewingPrivateKey

@@ -86,7 +86,7 @@ class RailgunWallet extends AbstractWallet {
     const id = RailgunWallet.generateID(mnemonic, index);
 
     // Write encrypted mnemonic to DB
-    await AbstractWallet.write(db, id, encryptionKey, { mnemonic, index });
+    await AbstractWallet.write(db, id, encryptionKey, { mnemonic, index, creationBlockNumbers });
 
     return this.createWallet(id, db, mnemonic, index, creationBlockNumbers);
   }
@@ -102,10 +102,13 @@ class RailgunWallet extends AbstractWallet {
     db: Database,
     encryptionKey: BytesData,
     id: string,
-    creationBlockNumbers: Optional<number[][]>,
   ): Promise<RailgunWallet> {
     // Get encrypted mnemonic and index from DB
-    const { mnemonic, index } = (await AbstractWallet.read(db, id, encryptionKey)) as WalletData;
+    const { mnemonic, index, creationBlockNumbers } = (await AbstractWallet.read(
+      db,
+      id,
+      encryptionKey,
+    )) as WalletData;
     if (!mnemonic) {
       throw new Error('Incorrect wallet type.');
     }
