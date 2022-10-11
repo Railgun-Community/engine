@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import { poseidon } from 'circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
@@ -789,7 +790,6 @@ abstract class AbstractWallet extends EventEmitter {
         }
 
         // Create sparse array of tree
-        // eslint-disable-next-line no-await-in-loop
         const treeHeight = await merkletree.getTreeLength(tree);
         const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
@@ -799,18 +799,15 @@ abstract class AbstractWallet extends EventEmitter {
         }
 
         // Wait until all leaves are fetched
-        // eslint-disable-next-line no-await-in-loop
         const leaves = await Promise.all(fetcher);
 
         // Start scanning primary and change
-        // eslint-disable-next-line no-await-in-loop
         await this.scanLeaves(leaves, tree, chain, startScanHeight, treeHeight);
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[tree] = leaves.length;
 
         // Write new wallet details to db
-        // eslint-disable-next-line no-await-in-loop
         await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
       }
 
@@ -841,33 +838,28 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Loop through each tree and search commitments for creation tree height that matches block number
     for (let tree = 0; tree <= latestTree; tree += 1) {
-      // Create sparse array of tree
-      // eslint-disable-next-line no-await-in-loop
       const treeHeight = await merkletree.getTreeLength(tree);
       const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
-      // Fetch each leaf we need to search
       for (let index = 0; index < treeHeight; index += 1) {
         fetcher[index] = merkletree.getCommitment(tree, index);
       }
 
-      // Wait until all leaves are fetched
-      // eslint-disable-next-line no-await-in-loop
       const leaves = await Promise.all(fetcher);
 
-      // TODO: Binary search all commitments until we find the closest index >= creationBlockNumber
-      // Search through leaves for matching blockNumber
-      if (leaves) {
-        const creationBlockIndex = leaves.findIndex(
+      // Search through leaves (descending) for first blockNumber before creation.
+      // TODO: Use binary search to optimize.
+      const creationBlockIndex = leaves
+        .reverse()
+        .findIndex(
           (commitment) =>
             commitment &&
-            commitment.blockNumber !== undefined &&
-            commitment.blockNumber >= creationBlockNumber,
+            commitment.blockNumber != null &&
+            commitment.blockNumber <= creationBlockNumber,
         );
 
-        if (creationBlockIndex > -1) {
-          return creationBlockIndex;
-        }
+      if (creationBlockIndex > -1) {
+        return creationBlockIndex;
       }
     }
 
@@ -888,7 +880,6 @@ abstract class AbstractWallet extends EventEmitter {
     // Clear namespace and then resave the walletDetails
     const namespace = this.getWalletDetailsPath(chain);
     await this.db.clearNamespace(namespace);
-    // eslint-disable-next-line no-await-in-loop
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
   }
 
