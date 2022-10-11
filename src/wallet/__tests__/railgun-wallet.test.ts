@@ -182,10 +182,12 @@ describe('Wallet', () => {
   it('Should get empty wallet details', async () => {
     expect(await wallet.getWalletDetails(chain)).to.deep.equal({
       treeScannedHeights: [],
+      creationTree: undefined,
       creationTreeHeight: undefined,
     });
     expect(await viewOnlyWallet.getWalletDetails(chain)).to.deep.equal({
       treeScannedHeights: [],
+      creationTree: undefined,
       creationTreeHeight: undefined,
     });
   });

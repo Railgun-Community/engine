@@ -857,18 +857,16 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // Search through leaves (descending) for first blockNumber before creation.
-      const creationBlockIndexReversed = binarySearchForUpperBoundIndex(
-        leaves.reverse(),
+      const creationBlockIndex = binarySearchForUpperBoundIndex(
+        leaves,
         (commitment) =>
           commitment != null &&
           commitment.blockNumber != null &&
           commitment.blockNumber <= creationBlockNumber,
       );
 
-      if (creationBlockIndexReversed > -1) {
-        // creationBlockIndexReversed is the "descending index" because of reversed array.
-        const creationTreeHeight = leaves.length - 1 - creationBlockIndexReversed;
-        return { creationTree: tree, creationTreeHeight };
+      if (creationBlockIndex > -1) {
+        return { creationTree: tree, creationTreeHeight: creationBlockIndex };
       }
     }
 
