@@ -374,17 +374,17 @@ abstract class AbstractWallet extends EventEmitter {
     leaves: Optional<Commitment>[],
     tree: number,
     chain: Chain,
-    scannedHeight: number,
+    startScanHeight: number,
     treeHeight: number,
   ): Promise<void> {
     EngineDebug.log(
-      `wallet:scanLeaves tree:${tree} chain:${chain.type}:${chain.id} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
+      `wallet:scanLeaves tree:${tree} chain:${chain.type}:${chain.id} leaves:${leaves.length}, startScanHeight:${startScanHeight}`,
     );
     const vpk = this.getViewingKeyPair().privateKey;
 
     const leafSyncPromises: Promise<ScannedDBCommitment[]>[] = [];
 
-    for (let position = scannedHeight; position < treeHeight; position += 1) {
+    for (let position = startScanHeight; position < treeHeight; position += 1) {
       const leaf = leaves[position];
       if (leaf == null) {
         continue;
