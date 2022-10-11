@@ -378,7 +378,7 @@ abstract class AbstractWallet extends EventEmitter {
     treeHeight: number,
   ): Promise<void> {
     EngineDebug.log(
-      `wallet:scanLeaves tree:${tree} chain:${chain} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
+      `wallet:scanLeaves tree:${tree} chain:${chain.type}:${chain.id} leaves:${leaves.length}, scannedHeight:${scannedHeight}`,
     );
     const vpk = this.getViewingKeyPair().privateKey;
 
@@ -815,7 +815,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // Emit scanned event for this chain
-      EngineDebug.log(`wallet: scanned ${chain}`);
+      EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
       this.emit(EngineEvent.WalletScanComplete, { chain } as ScannedEventData);
     } catch (err) {
       if (err instanceof Error) {
