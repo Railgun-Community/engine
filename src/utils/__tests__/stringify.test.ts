@@ -1,7 +1,6 @@
-/* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { stringifySafe } from '../../utils/stringify';
+import { stringifySafe } from '../stringify';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

@@ -1,7 +1,6 @@
-/* globals describe it */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import WalletInfo from '../../wallet/wallet-info';
+import WalletInfo from '../wallet-info';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

@@ -1,11 +1,10 @@
-/* globals describe it */
 import * as curve25519 from '@noble/ed25519';
 import { randomBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { hexlify, randomHex } from '../../utils/bytes';
-import { encryptJSONDataWithSharedKey, tryDecryptJSONDataWithSharedKey } from '../../utils/ecies';
-import { getSharedSymmetricKey } from '../../utils/keys-utils';
+import { hexlify, randomHex } from '../bytes';
+import { getSharedSymmetricKey } from '../keys-utils';
+import { encryptJSONDataWithSharedKey, tryDecryptJSONDataWithSharedKey } from '../ecies';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

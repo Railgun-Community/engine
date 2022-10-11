@@ -1,4 +1,3 @@
-/* globals describe it */
 import BN from 'bn.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -17,7 +16,7 @@ import {
   reverseBytes,
   toUTF8String,
   trim,
-} from '../../utils/bytes';
+} from '../bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

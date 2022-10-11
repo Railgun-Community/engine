@@ -53,6 +53,7 @@ import { packPoint, unpackPoint } from '../key-derivation/babyjubjub';
 import { Chain } from '../models/engine-types';
 import { getChainFullNetworkID } from '../chain/chain';
 import { Note } from '../note/note';
+import { binarySearchForUpperBoundIndex } from '../utils/search';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -846,20 +847,25 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       const leaves = await Promise.all(fetcher);
+      if (!leaves.length) {
+        return undefined;
+      }
+
+      const leavesReversed = leaves.reverse();
 
       // Search through leaves (descending) for first blockNumber before creation.
-      // TODO: Use binary search to optimize.
-      const creationBlockIndex = leaves
-        .reverse()
-        .findIndex(
-          (commitment) =>
-            commitment &&
-            commitment.blockNumber != null &&
-            commitment.blockNumber <= creationBlockNumber,
-        );
+      const creationBlockIndexReversed = binarySearchForUpperBoundIndex(
+        leavesReversed,
+        (commitment) =>
+          commitment != null &&
+          commitment.blockNumber != null &&
+          commitment.blockNumber <= creationBlockNumber,
+      );
 
-      if (creationBlockIndex > -1) {
-        return creationBlockIndex;
+      if (creationBlockIndexReversed > -1) {
+        // creationBlockIndexReversed is the "descending index" because of reversed array.
+        const creationTreeHeight = leaves.length - creationBlockIndexReversed;
+        return creationTreeHeight;
       }
     }
 
