@@ -33,7 +33,7 @@ import { RailgunLogic } from '../../typechain-types';
 import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
 
 const SCAN_CHUNKS = 499;
-const MAX_SCAN_RETRIES = 30;
+const MAX_SCAN_RETRIES = 90;
 const EVENTS_SCAN_TIMEOUT = 2500;
 
 class RailgunProxyContract extends EventEmitter {
