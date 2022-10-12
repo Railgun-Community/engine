@@ -127,14 +127,14 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-await-in-loop
       const latestEvent = await merkletree.getCommitment(latestTree, latestEventIndex);
       if (latestEvent) {
-        // eslint-disable-next-line no-await-in-loop
-        const txReceipt = await provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
-        if (txReceipt) {
-          startScanningBlock = txReceipt.blockNumber;
+        if (latestEvent.blockNumber) {
+          startScanningBlock = latestEvent.blockNumber;
         } else {
-          EngineDebug.log(
-            `Could not find tx receipt for latest event: ${latestEvent.txid}. Trying prior index.`,
-          );
+          // eslint-disable-next-line no-await-in-loop
+          const txReceipt = await provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
+          if (txReceipt) {
+            startScanningBlock = txReceipt.blockNumber;
+          }
         }
       } else {
         EngineDebug.log(
