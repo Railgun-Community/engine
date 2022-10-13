@@ -139,23 +139,11 @@ class Database {
    * @param namespace - namespace to delete
    * @returns complete
    */
-  clearNamespace(namespace: BytesData[]): Promise<void> {
-    return new Promise((resolve) => {
-      const deleteOperations: AbstractBatch[] = [];
-
-      // Create read stream for namespace*
-      this.streamNamespace(namespace)
-        .on('data', (key: string) => {
-          // Push key to batch delete array
-          deleteOperations.push({
-            type: 'del',
-            key,
-          });
-        })
-        .on('end', () => {
-          // Run batch delete and resolve
-          this.batch(deleteOperations).then(resolve);
-        });
+  async clearNamespace(namespace: BytesData[]): Promise<void> {
+    const pathkey = Database.pathToKey(namespace);
+    await this.level.clear({
+      gte: `${pathkey}`,
+      lte: `${pathkey}~`,
     });
   }
 
