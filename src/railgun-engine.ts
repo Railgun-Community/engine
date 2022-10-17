@@ -367,6 +367,7 @@ class RailgunEngine extends EventEmitter {
     this.proxyContracts[chain.type][chain.id] = new RailgunProxyContract(
       proxyContractAddress,
       provider,
+      chain,
     );
 
     // Create relay adapt contract instance

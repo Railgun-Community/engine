@@ -31,6 +31,7 @@ import {
 } from './events';
 import { RailgunLogic } from '../../typechain-types';
 import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
+import { Chain } from '../../models';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
@@ -41,15 +42,18 @@ class RailgunProxyContract extends EventEmitter {
 
   readonly address: string;
 
+  private readonly chain: Chain;
+
   /**
    * Connect to Railgun instance on network
    * @param proxyContractAddress - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(proxyContractAddress: string, provider: Provider) {
+  constructor(proxyContractAddress: string, provider: Provider, chain: Chain) {
     super();
     this.address = proxyContractAddress;
     this.contract = new Contract(proxyContractAddress, ABIRailgunLogic, provider) as RailgunLogic;
+    this.chain = chain;
   }
 
   /**
@@ -186,12 +190,16 @@ class RailgunProxyContract extends EventEmitter {
       if (retryCount < MAX_SCAN_RETRIES) {
         const retry = retryCount + 1;
         EngineDebug.log(
-          `Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
+          `[Chain ${this.chain.type}:${
+            this.chain.id
+          }]: Scan query error at block ${startBlock}. Retrying ${MAX_SCAN_RETRIES - retry} times.`,
         );
         EngineDebug.error(err);
         return this.scanEvents(eventFilter, startBlock, endBlock, retry);
       }
-      EngineDebug.log(`Scan failed at block ${startBlock}. No longer retrying.`);
+      EngineDebug.log(
+        `[Chain ${this.chain.type}:${this.chain.id}]: Scan failed at block ${startBlock}. No longer retrying.`,
+      );
       EngineDebug.error(err);
       throw err;
     }
@@ -215,12 +223,16 @@ class RailgunProxyContract extends EventEmitter {
     const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
     const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
 
-    EngineDebug.log(`Scanning historical events from block ${currentStartBlock} to ${latestBlock}`);
+    EngineDebug.log(
+      `[Chain ${this.chain.type}:${this.chain.id}]: Scanning historical events from block ${currentStartBlock} to ${latestBlock}`,
+    );
 
     while (currentStartBlock < latestBlock) {
       // Process chunks of blocks at a time
       if ((currentStartBlock - startBlock) % 10000 === 0) {
-        EngineDebug.log(`Scanning next 10,000 events [${currentStartBlock}]...`);
+        EngineDebug.log(
+          `[Chain ${this.chain.type}:${this.chain.id}]: Scanning next 10,000 events [${currentStartBlock}]...`,
+        );
       }
       const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
       const [eventsNullifier, eventsGeneratedCommitment, eventsEncryptedCommitment] =
@@ -244,7 +256,7 @@ class RailgunProxyContract extends EventEmitter {
       currentStartBlock += SCAN_CHUNKS + 1;
     }
 
-    EngineDebug.log('Finished historical event scan');
+    EngineDebug.log(`[Chain ${this.chain.type}:${this.chain.id}]: Finished historical event scan`);
   }
 
   /**
