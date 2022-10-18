@@ -18,6 +18,7 @@ import {
 import { nToHex, ByteLength, randomHex } from '../bytes';
 import { MEMO_SENDER_RANDOM_NULL } from '../../models/transaction-constants';
 import { getNoteBlindingKeysLegacy, unblindNoteKeyLegacy } from '../keys-utils-legacy';
+import EngineDebug from '../../debugger/debugger';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -33,6 +34,8 @@ describe('Test keys-utils', () => {
     publicSpendingKey = getPublicSpendingKey(privateSpendingKey);
     privateViewingKey = randomBytes(32);
     publicViewingKey = await getPublicViewingKey(privateViewingKey);
+
+    EngineDebug.init(console);
   });
 
   it('Should return a random scalar', () => {
