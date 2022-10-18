@@ -2,6 +2,7 @@ import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from 
 import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { bytesToN, hexlify, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
 import { sha256, sha512 } from './hash';
+import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
 
@@ -77,7 +78,7 @@ function adjustBytes25519(bytes: Uint8Array, endian: 'be' | 'le'): Uint8Array {
   return adjustedBytes;
 }
 
-async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array) {
+async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array): Promise<bigint> {
   // Private key should be 32 bytes
   if (privateKey.length !== 32) throw new Error('Expected 32 bytes');
 
@@ -183,17 +184,20 @@ async function getSharedSymmetricKey(
   blindedPublicKeyPairB: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
   try {
-    // Create curve point instance from ephemeral key class
-    const publicKeyPoint = Point.fromHex(bytesToHex(blindedPublicKeyPairB));
+    await initCurve25519Promise;
 
     // Retrieve private scalar from private key
-    const scalar = await getPrivateScalarFromPrivateKey(privateKeyPairA);
+    const scalar: bigint = await getPrivateScalarFromPrivateKey(privateKeyPairA);
 
-    // Multiply ephemeral key by private scalar to get shared key preimage
-    const keyPreimage = publicKeyPoint.multiply(scalar).toRawBytes();
+    // Multiply ephemeral key by private scalar to get shared key
+    const keyPreimage: Uint8Array = scalarMultiplyWasmFallbackToJavascript(
+      blindedPublicKeyPairB,
+      scalar,
+    );
 
     // SHA256 hash to get the final key
-    return hexStringToBytes(sha256(keyPreimage));
+    const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    return hashed;
   } catch (err) {
     return undefined;
   }
