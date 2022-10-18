@@ -1,5 +1,5 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
-import * as curve25519wasm from '@railgun-community/curve25519-scalarmult-wasm';
+import initCurve25519wasm, { scalarmult } from '@railgun-community/curve25519-scalarmult-wasm';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex, nToBytes } from './bytes';
 import { sha256 } from './hash';
@@ -159,13 +159,13 @@ async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   ephemeralKey: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
-  if ((curve25519wasm as any).init) await (curve25519wasm as any).init();
+  if (typeof initCurve25519wasm === 'function') await initCurve25519wasm();
   try {
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKey);
 
     // Multiply ephemeral key by private scalar to get shared key
-    const symmetricKey = curve25519wasm.scalarmult(ephemeralKey, scalar);
+    const symmetricKey = scalarmult(ephemeralKey, scalar);
     return symmetricKey;
   } catch (err) {
     return undefined;
