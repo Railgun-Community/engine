@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
 import {
   getNoteBlindingKeys,
+  getPrivateScalarFromPrivateKey,
   getPublicSpendingKey,
   getPublicViewingKey,
   getRandomScalar,
@@ -15,9 +16,12 @@ import {
   verifyED25519,
   verifyEDDSA,
 } from '../keys-utils';
-import { nToHex, ByteLength, randomHex } from '../bytes';
+import { nToHex, ByteLength, randomHex, hexStringToBytes } from '../bytes';
 import { MEMO_SENDER_RANDOM_NULL } from '../../models/transaction-constants';
 import { getNoteBlindingKeysLegacy, unblindNoteKeyLegacy } from '../keys-utils-legacy';
+import EngineDebug from '../../debugger/debugger';
+import { sha256 } from '../hash';
+import { initCurve25519Promise, scalarMultiplyJavascript } from '../scalar-multiply';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -27,18 +31,64 @@ let publicSpendingKey: [bigint, bigint];
 let privateViewingKey: Uint8Array;
 let publicViewingKey: Uint8Array;
 
+// For test comparison with live WASM implementation.
+async function getSharedSymmetricKeyJavascript(
+  privateKeyPairA: Uint8Array,
+  blindedPublicKeyPairB: Uint8Array,
+) {
+  try {
+    // Retrieve private scalar from private key
+    const scalar: bigint = await getPrivateScalarFromPrivateKey(privateKeyPairA);
+
+    // Multiply ephemeral key by private scalar to get shared key
+    const keyPreimage: Uint8Array = scalarMultiplyJavascript(blindedPublicKeyPairB, scalar);
+
+    // SHA256 hash to get the final key
+    const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    return hashed;
+  } catch (err) {
+    return undefined;
+  }
+}
+
 describe('Test keys-utils', () => {
   before(async () => {
     privateSpendingKey = randomBytes(32);
     publicSpendingKey = getPublicSpendingKey(privateSpendingKey);
     privateViewingKey = randomBytes(32);
     publicViewingKey = await getPublicViewingKey(privateViewingKey);
+
+    EngineDebug.init(console);
   });
 
   it('Should return a random scalar', () => {
     const randomScalar = getRandomScalar();
     expect(randomScalar).to.be.a('bigint');
     expect(nToHex(randomScalar, ByteLength.UINT_256).length).to.equal(64);
+  });
+
+  it('Should get expected symmetric keys from WASM and Javascript implementations', async () => {
+    await expect(initCurve25519Promise).to.not.be.rejected;
+
+    const privateKeyPairA = hexStringToBytes(
+      '0123456789012345678901234567890123456789012345678901234567891234',
+    );
+    const blindedPublicKeyPairB = hexStringToBytes(
+      '0987654321098765432109876543210987654321098765432109876543210987',
+    );
+    const symmetricKeyWasm = await getSharedSymmetricKey(privateKeyPairA, blindedPublicKeyPairB);
+    expect(symmetricKeyWasm).not.equal(undefined);
+    expect(bytesToHex(symmetricKeyWasm as Uint8Array)).to.equal(
+      'fbb71adfede43b8a756939500c810d85b16cfbead66d126065639c0cec1fea56',
+    );
+
+    const symmetricKeyJavascript = await getSharedSymmetricKeyJavascript(
+      privateKeyPairA,
+      blindedPublicKeyPairB,
+    );
+    expect(bytesToHex(symmetricKeyWasm as Uint8Array)).to.equal(
+      bytesToHex(symmetricKeyJavascript as Uint8Array),
+    );
   });
 
   it('Should create and verify EDDSA signatures', () => {
