@@ -42,6 +42,7 @@
     "buffer-xor": "^2.0.2",
     "chai-as-promised": "^7.1.1",
     "circomlibjs": "hsg88/circomlibjs#ffjavascrip.0.1.0",
+    "curve25519-scalarmult-wasm": "*",
     "encoding-down": "^7.1.0",
     "ethereum-cryptography": "^1.1.2",
     "ethers": "^5.7.1",
