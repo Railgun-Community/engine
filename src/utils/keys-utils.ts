@@ -1,5 +1,5 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
-import * as curve25519wasm from 'curve25519-scalarmult-wasm';
+import * as curve25519wasm from '@railgun-community/curve25519-scalarmult-wasm';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex, nToBytes } from './bytes';
 import { sha256 } from './hash';
