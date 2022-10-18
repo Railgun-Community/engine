@@ -1,6 +1,7 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
+import * as curve25519wasm from 'curve25519-scalarmult-wasm';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
-import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex } from './bytes';
+import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex, nToBytes } from './bytes';
 import { sha256 } from './hash';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
@@ -86,7 +87,8 @@ async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array) {
   // Convert head to scalar
   const scalar = BigInt(`0x${utilsEd25519.bytesToHex(head.reverse())}`) % CURVE.l;
 
-  return scalar > 0n ? scalar : CURVE.l;
+  const bigint = scalar > 0n ? scalar : CURVE.l;
+  return nToBytes(bigint, ByteLength.UINT_256);
 }
 
 function getCommitmentBlindingKey(random: string, senderBlindingKey: string): bigint {
@@ -157,16 +159,14 @@ async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   ephemeralKey: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
+  if ((curve25519wasm as any).init) await (curve25519wasm as any).init();
   try {
-    // Create curve point instance from ephemeral key class
-    const pk = Point.fromHex(bytesToHex(ephemeralKey));
-
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKey);
 
     // Multiply ephemeral key by private scalar to get shared key
-    const symmetricKey = pk.multiply(scalar);
-    return symmetricKey.toRawBytes();
+    const symmetricKey = curve25519wasm.scalarmult(ephemeralKey, scalar);
+    return symmetricKey;
   } catch (err) {
     return undefined;
   }
