@@ -1,26 +1,29 @@
+/* eslint-disable prefer-template */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BigNumber, ethers, PopulatedTransaction } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
+import { bytesToHex } from 'ethereum-cryptography/utils';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
 import { abi as erc20Abi } from '../../../test/erc20-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
-import { ERC20Deposit } from '../../../note/erc20-deposit';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { OutputType, TokenType } from '../../../models/formatted-types';
-import { ByteLength, nToHex, randomHex } from '../../../utils/bytes';
+import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
 import { ERC20 } from '../../../typechain-types';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
-import { ERC20WithdrawNote } from '../../../note/erc20-withdraw';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunProxyContract } from '../../railgun-proxy/railgun-proxy';
 import { RelayAdaptContract } from '../relay-adapt';
-import { Note } from '../../../note/note';
+import { ShieldNote } from '../../../note/shield-note';
+import { TransactNote } from '../../../note/transact-note';
+import { UnshieldNote } from '../../../note/unshield-note';
+import { TransactionStruct } from '../../../models';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -39,12 +42,12 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const WETH_TOKEN_ADDRESS = config.contracts.weth9;
-const RANDOM = randomHex(16);
+const SHIELD_RANDOM = randomHex(16);
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
 
-let testDepositBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
+let testShieldBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Relay Adapt', function test() {
   this.timeout(30000);
@@ -81,157 +84,170 @@ describe('Relay Adapt', function test() {
     etherswallet = new ethers.Wallet(privateKey, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
-    testDepositBaseToken = async (
+    testShieldBaseToken = async (
       value: bigint = 10000n,
     ): Promise<[TransactionReceipt, unknown]> => {
-      // Create deposit
-      const deposit = new ERC20Deposit(wallet.masterPublicKey, RANDOM, value, WETH_TOKEN_ADDRESS);
-      const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
-      const depositInput = deposit.serialize(viewingPrivateKey);
+      // Create shield
+      const shield = new ShieldNote(
+        wallet.masterPublicKey,
+        SHIELD_RANDOM,
+        value,
+        WETH_TOKEN_ADDRESS,
+      );
+      const shieldPrivateKey = hexToBytes(randomHex(32));
+      const shieldRequest = await shield.serialize(
+        shieldPrivateKey,
+        wallet.getViewingKeyPair().pubkey,
+      );
 
-      const depositTx = await relayAdaptContract.populateDepositBaseToken(depositInput);
+      const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
 
-      // Send deposit on chain
-      const tx = await etherswallet.sendTransaction(depositTx);
-      return Promise.all([tx.wait(), awaitScan(wallet, chain)]);
+      // Send shield on chain
+      const awaiterShield = awaitScan(wallet, chain);
+      const tx = await etherswallet.sendTransaction(shieldTx);
+      return Promise.all([tx.wait(), awaiterShield]);
     };
   });
 
-  it('[HH] Should wrap and deposit base token', async function run() {
+  it('[HH] Should wrap and shield base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
     const { masterPublicKey } = wallet;
-    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
-    // Create deposit
-    const deposit = new ERC20Deposit(masterPublicKey, RANDOM, 10000n, WETH_TOKEN_ADDRESS);
-    const depositInput = deposit.serialize(viewingPrivateKey);
-
-    const depositTx = await relayAdaptContract.populateDepositBaseToken(depositInput);
-
-    const awaiterDeposit = awaitScan(wallet, chain);
-
-    // Send deposit on chain
-    const txResponse = await etherswallet.sendTransaction(depositTx);
-
-    const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(
-        proxyContract.contract.filters.GeneratedCommitmentBatch(),
-        resolve,
-      ),
+    // Create shield
+    const shield = new ShieldNote(masterPublicKey, SHIELD_RANDOM, 10000n, WETH_TOKEN_ADDRESS);
+    const shieldPrivateKey = hexToBytes(randomHex(32));
+    const shieldRequest = await shield.serialize(
+      shieldPrivateKey,
+      wallet.getViewingKeyPair().pubkey,
     );
 
-    await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
-    await expect(awaiterDeposit).to.be.fulfilled;
+    const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
+
+    const awaiterShield = awaitScan(wallet, chain);
+
+    // Send shield on chain
+    const txResponse = await etherswallet.sendTransaction(shieldTx);
+
+    const receiveShieldEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Shield(), resolve),
+    );
+
+    await Promise.all([txResponse.wait(), receiveShieldEvent]);
+    await expect(awaiterShield).to.be.fulfilled;
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
   });
 
-  it('[HH] Should return gas estimate for withdraw base token', async function run() {
+  it('[HH] Should return gas estimate for unshield base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
-    await testDepositBaseToken();
-    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
-
-    await testDepositBaseToken();
-    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(19950n);
+    await testShieldBaseToken(100000000n);
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(99750000n);
 
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderBlindingKey = randomHex(15);
-    const relayerFee = Note.create(
+    const senderRandom = randomHex(15);
+    const relayerFee = TransactNote.create(
+      wallet2.addressKeys,
       wallet.addressKeys,
       randomHex(16),
-      0n,
+      1000n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
+      senderRandom,
       OutputType.RelayerFee,
       undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
 
-    const withdrawNote = new ERC20WithdrawNote(
+    const unshieldValue = 99000000n;
+
+    const unshieldNote = new UnshieldNote(
       relayAdaptContract.address,
-      19900n,
+      unshieldValue,
       WETH_TOKEN_ADDRESS,
       TokenType.ERC20,
     );
-    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+    transactionBatch.setUnshield(relayAdaptContract.address, unshieldNote.value);
 
-    const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+    const dummyTransactions = await transactionBatch.generateDummyTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
     );
 
-    const random = '0x1234567890abcdef';
+    const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
 
-    const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
+    const relayTransactionGasEstimate = await relayAdaptContract.populateUnshieldBaseToken(
       dummyTransactions,
       etherswallet.address,
       random,
     );
 
-    relayTransaction.from = DEAD_ADDRESS;
+    relayTransactionGasEstimate.from = DEAD_ADDRESS;
 
-    const gasEstimate = await provider.estimateGas(relayTransaction);
+    const gasEstimate = await provider.estimateGas(relayTransactionGasEstimate);
     expect(gasEstimate.toNumber()).to.be.greaterThan(0);
   });
 
-  it('[HH] Should execute relay adapt transaction for withdraw base token', async function run() {
+  it('[HH] Should execute relay adapt transaction for unshield base token', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
-    await testDepositBaseToken();
+    await testShieldBaseToken();
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
-    // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderBlindingKey = randomHex(15);
-    const relayerFee = Note.create(
+    const senderRandom = randomHex(15);
+    const relayerFee = TransactNote.create(
       wallet2.addressKeys,
+      wallet.addressKeys,
       randomHex(16),
       100n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
+      senderRandom,
       OutputType.RelayerFee,
       undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(
+
+    const unshieldValue = 300n;
+
+    const unshieldNote = new UnshieldNote(
       relayAdaptContract.address,
-      300n,
+      unshieldValue,
       WETH_TOKEN_ADDRESS,
       TokenType.ERC20,
     );
-    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+    transactionBatch.setUnshield(relayAdaptContract.address, unshieldNote.value);
 
     // 2. Create dummy transactions from batch.
-    const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+    const dummyTransactions = await transactionBatch.generateDummyTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
     );
 
     // 3. Generate relay adapt params from dummy transactions.
-    const random = '0x1234567890abcdef';
-    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsWithdrawBaseToken(
+    const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
+    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsUnshieldBaseToken(
       dummyTransactions,
       etherswallet.address,
       random,
     );
     expect(relayAdaptParams).to.equal(
-      '0xc7a1f7e2d973734f2597a74ca33214f4c5aef0677fcaa6656091c2c45484d4fa',
+      '0x8a6f1a81105234382720c9783320cabd2f1e8788a11b61e34beefab48f4e2102',
     );
 
     // 4. Create real transactions with relay adapt params.
@@ -239,7 +255,7 @@ describe('Relay Adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateSerializedTransactions(
+    const transactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -252,8 +268,8 @@ describe('Relay Adapt', function test() {
 
     // const preEthBalance = await etherswallet.getBalance();
 
-    // 5: Generate final relay transaction for withdraw base token.
-    const relayTransaction = await relayAdaptContract.populateWithdrawBaseToken(
+    // 5: Generate final relay transaction for unshield base token.
+    const relayTransaction = await relayAdaptContract.populateUnshieldBaseToken(
       transactions,
       etherswallet.address,
       random,
@@ -262,20 +278,27 @@ describe('Relay Adapt', function test() {
     // 6: Send relay transaction.
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
-    const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
+    const receiveTransactEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+    );
+    const receiveUnshieldEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Unshield(), resolve),
     );
 
     const awaiterScan = awaitScan(wallet, chain);
 
-    const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
-    await expect(awaiterScan).to.be.fulfilled; // Withdraw
+    const [txReceipt] = await Promise.all([
+      txResponse.wait(),
+      receiveTransactEvent,
+      receiveUnshieldEvent,
+    ]);
+    await expect(awaiterScan).to.be.fulfilled; // Unshield
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(
-      BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* withdraw amount */),
+      BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* unshield amount */),
     );
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
+    const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
     // TODO: Fix this assertion. How much gas is used?
@@ -285,28 +308,28 @@ describe('Relay Adapt', function test() {
     // );
   });
 
-  it('[HH] Should deposit all leftover WETH in relay adapt contract', async function run() {
+  it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
-    await testDepositBaseToken();
+    await testShieldBaseToken();
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
-    // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    // const relayerFee = Note.create(wallet2.addressKeys, randomHex(16), 300n, WETH_TOKEN_ADDRESS);
+    // const relayerFee = TransactNote.create(wallet2.addressKeys, randomHex(16), 300n, WETH_TOKEN_ADDRESS);
     // transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(
+    const unshieldNote = new UnshieldNote(
       relayAdaptContract.address,
       1000n,
       WETH_TOKEN_ADDRESS,
       TokenType.ERC20,
     );
-    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+    transactionBatch.setUnshield(relayAdaptContract.address, unshieldNote.value);
 
-    const serializedTxs = await transactionBatch.generateSerializedTransactions(
+    const serializedTxs = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -314,7 +337,7 @@ describe('Relay Adapt', function test() {
     );
     const transact = await proxyContract.transact(serializedTxs);
 
-    // Withdraw to relay adapt.
+    // Unshield to relay adapt.
     const txTransact = await etherswallet.sendTransaction(transact);
     await Promise.all([txTransact.wait(), awaitScan(wallet, chain)]);
 
@@ -329,8 +352,8 @@ describe('Relay Adapt', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(998n);
 
-    // Value 0n doesn't matter - all WETH should be deposited anyway.
-    await testDepositBaseToken(0n);
+    // Value 0n doesn't matter - all WETH should be shielded anyway.
+    await testShieldBaseToken(0n);
 
     relayAdaptAddressBalance = await wethTokenContract.balanceOf(relayAdaptContract.address);
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
@@ -342,33 +365,34 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    await testDepositBaseToken();
+    await testShieldBaseToken();
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
 
-    // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderBlindingKey = randomHex(15);
-    const relayerFee = Note.create(
+    const senderRandom = randomHex(15);
+    const relayerFee = TransactNote.create(
       wallet2.addressKeys,
+      wallet.addressKeys,
       randomHex(16),
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
+      senderRandom,
       OutputType.RelayerFee,
       undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(
+    const unshieldNote = new UnshieldNote(
       relayAdaptContract.address,
       1000n,
       WETH_TOKEN_ADDRESS,
       TokenType.ERC20,
     );
-    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+    transactionBatch.setUnshield(relayAdaptContract.address, unshieldNote.value);
 
     // 2. Create dummy transactions from batch.
-    const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+    const dummyTransactions = await transactionBatch.generateDummyTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -387,21 +411,21 @@ describe('Relay Adapt', function test() {
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
 
-    // 4. Create deposit inputs.
-    const depositRandom = '0x10203040506070809000102030405060';
-    const depositTokens: string[] = [WETH_TOKEN_ADDRESS];
-    const relayDepositInputs = RelayAdaptHelper.generateRelayDepositInputs(
+    // 4. Create shield inputs.
+    const shieldRandom = '0x10203040506070809000102030405060';
+    const shieldTokens: string[] = [WETH_TOKEN_ADDRESS];
+    const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
-      depositRandom,
-      depositTokens,
+      shieldRandom,
+      shieldTokens,
     );
 
     // 5. Generate relay adapt params from dummy transactions.
-    const random = '0x102030405060708090AABBCCDDEEFF00';
+    const random = randomHex(31);
     const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
 
@@ -409,7 +433,7 @@ describe('Relay Adapt', function test() {
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
@@ -422,7 +446,7 @@ describe('Relay Adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateSerializedTransactions(
+    const transactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -437,7 +461,7 @@ describe('Relay Adapt', function test() {
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
@@ -453,14 +477,14 @@ describe('Relay Adapt', function test() {
     // 9. Send transaction.
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
-    const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
+    const receiveTransactEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
     );
 
-    // 2 scans: Withdraw and Deposit
+    // 2 scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
-    const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
+    const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
     await expect(scansAwaiter).to.be.fulfilled;
 
     // Dead address should have 990n WETH.
@@ -472,14 +496,14 @@ describe('Relay Adapt', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
+    const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
     const expectedPrivateWethBalance = BigInt(
-      9975 /* original deposit */ -
+      9975 /* original shield */ -
         300 /* relayer fee */ -
-        1000 /* withdraw */ +
-        8 /* re-deposit (1000 withdraw amount - 2 withdraw fee - 990 send amount - 0 re-deposit fee) */,
+        1000 /* unshield */ +
+        8 /* re-shield (1000 unshield amount - 2 unshield fee - 990 send amount - 0 re-shield fee) */,
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
@@ -496,33 +520,34 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    await testDepositBaseToken(100000n);
+    await testShieldBaseToken(100000n);
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(99750n);
 
-    // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderBlindingKey = randomHex(15);
-    const relayerFee = Note.create(
+    const senderRandom = randomHex(15);
+    const relayerFee = TransactNote.create(
       wallet2.addressKeys,
+      wallet.addressKeys,
       randomHex(16),
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
+      senderRandom,
       OutputType.RelayerFee,
       undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(
+    const unshieldNote = new UnshieldNote(
       relayAdaptContract.address,
       10000n,
       WETH_TOKEN_ADDRESS,
       TokenType.ERC20,
     );
-    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+    transactionBatch.setUnshield(relayAdaptContract.address, unshieldNote.value);
 
     // 2. Create dummy transactions from batch.
-    const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+    const dummyTransactions = await transactionBatch.generateDummyTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -536,26 +561,26 @@ describe('Relay Adapt', function test() {
       etherswallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
-    const sendAmount = 20000n; // More than is available (after 0.25% withdraw fee).
+    const sendAmount = 20000n; // More than is available (after 0.25% unshield fee).
     const crossContractCalls: PopulatedTransaction[] = [
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
 
-    // 4. Create deposit inputs.
-    const depositRandom = '10203040506070809000102030405060';
-    const depositTokens: string[] = [WETH_TOKEN_ADDRESS];
-    const relayDepositInputs = RelayAdaptHelper.generateRelayDepositInputs(
+    // 4. Create shield inputs.
+    const shieldRandom = '10203040506070809000102030405060';
+    const shieldTokens: string[] = [WETH_TOKEN_ADDRESS];
+    const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
-      depositRandom,
-      depositTokens,
+      shieldRandom,
+      shieldTokens,
     );
 
     // 5. Generate relay adapt params from dummy transactions.
-    const random = '0x1234567890abcdef';
+    const random = randomHex(31);
     const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
 
@@ -564,7 +589,7 @@ describe('Relay Adapt', function test() {
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
@@ -577,7 +602,7 @@ describe('Relay Adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateSerializedTransactions(
+    const transactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -592,7 +617,7 @@ describe('Relay Adapt', function test() {
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
 
@@ -602,14 +627,21 @@ describe('Relay Adapt', function test() {
     // 9. Send transaction.
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
-    const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
+    const receiveTransactEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+    );
+    const receiveUnshieldEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Unshield(), resolve),
     );
 
-    // 2 scans: Withdraw and Deposit
+    // 2 scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
-    const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
+    const [txReceipt] = await Promise.all([
+      txResponse.wait(),
+      receiveTransactEvent,
+      receiveUnshieldEvent,
+    ]);
     await expect(scansAwaiter).to.be.fulfilled;
 
     // Dead address should have 0 WETH.
@@ -621,16 +653,16 @@ describe('Relay Adapt', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
+    const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     const expectedPrivateWethBalance = BigInt(
       99750 /* original */ -
         300 /* relayer fee */ -
-        10000 /* withdraw amount */ -
+        10000 /* unshield amount */ -
         0 /* failed cross contract send: no change */ +
-        9975 /* re-deposit amount */ -
-        24 /* deposit fee */,
+        9975 /* re-shield amount */ -
+        24 /* shield fee */,
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
@@ -641,39 +673,40 @@ describe('Relay Adapt', function test() {
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
-  it('[HH] Should revert send for failing re-deposit', async function run() {
+  it('[HH] Should revert send for failing re-shield', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
-    await testDepositBaseToken(100000n);
+    await testShieldBaseToken(100000n);
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(99750n);
 
-    // 1. Generate transaction batch to withdraw necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderBlindingKey = randomHex(15);
-    const relayerFee = Note.create(
+    const senderRandom = randomHex(15);
+    const relayerFee = TransactNote.create(
       wallet2.addressKeys,
+      wallet.addressKeys,
       randomHex(16),
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
+      senderRandom,
       OutputType.RelayerFee,
       undefined, // memoText
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
-    const withdrawNote = new ERC20WithdrawNote(
+    const unshieldNote = new UnshieldNote(
       relayAdaptContract.address,
       10000n,
       WETH_TOKEN_ADDRESS,
       TokenType.ERC20,
     );
-    transactionBatch.setWithdraw(relayAdaptContract.address, withdrawNote.value);
+    transactionBatch.setUnshield(relayAdaptContract.address, unshieldNote.value);
 
     // 2. Create dummy transactions from batch.
-    const dummyTransactions = await transactionBatch.generateDummySerializedTransactions(
+    const dummyTransactions = await transactionBatch.generateDummyTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -687,26 +720,26 @@ describe('Relay Adapt', function test() {
       etherswallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
-    const sendAmount = 20000n; // More than is available (after 0.25% withdraw fee).
+    const sendAmount = 20000n; // More than is available (after 0.25% unshield fee).
     const crossContractCalls: PopulatedTransaction[] = [
       await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
     ];
 
-    // 4. Create deposit inputs.
-    const depositRandom = '10203040506070809000102030405060';
-    const depositTokens: string[] = [WETH_TOKEN_ADDRESS];
-    const relayDepositInputs = RelayAdaptHelper.generateRelayDepositInputs(
+    // 4. Create shield inputs.
+    const shieldRandom = '10203040506070809000102030405060';
+    const shieldTokens: string[] = [WETH_TOKEN_ADDRESS];
+    const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
-      depositRandom,
-      depositTokens,
+      shieldRandom,
+      shieldTokens,
     );
 
     // 5. Generate relay adapt params from dummy transactions.
-    const random = '0x1234567890abcdef';
+    const random = randomHex(31);
     const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
 
@@ -715,7 +748,7 @@ describe('Relay Adapt', function test() {
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
@@ -728,7 +761,7 @@ describe('Relay Adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateSerializedTransactions(
+    const transactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -743,7 +776,7 @@ describe('Relay Adapt', function test() {
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldInputs,
       random,
     );
 
@@ -756,14 +789,14 @@ describe('Relay Adapt', function test() {
     // 9. Send transaction.
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
-    const receiveCommitmentBatch = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
+    const receiveTransactEvent = new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
     );
 
-    // 2 scans: Withdraw and Deposit
+    // 2 scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
-    const [txReceipt] = await Promise.all([txResponse.wait(), receiveCommitmentBatch]);
+    const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
     await expect(scansAwaiter).to.be.fulfilled;
 
     // Dead address should have 0 WETH.
@@ -775,19 +808,21 @@ describe('Relay Adapt', function test() {
     );
     expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
 
-    const callResultError = RelayAdaptContract.getCallResultError(txReceipt.logs);
+    const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     // TODO: These are the incorrect assertions, if the tx is fully reverted.
-    // For now, it is partially reverted. Withdraw/deposit fees are still charged.
+    // For now, it is partially reverted. Unshield/shield fees are still charged.
     // This caps the loss of funds at 0.5% + Relayer fee.
 
     const expectedProxyBalance = BigInt(
-      99750 /* original */ - 25 /* withdraw fee */ - 24 /* re-deposit fee */,
+      99750 /* original */ - 25 /* unshield fee */ - 24 /* re-shield fee */,
     );
     const expectedWalletBalance = BigInt(expectedProxyBalance - 300n /* relayer fee */);
 
-    const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(config.contracts.treasury);
+    const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(
+      config.contracts.treasuryProxy,
+    );
     expect(treasuryBalance.toBigInt()).to.equal(299n);
 
     const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
@@ -802,7 +837,7 @@ describe('Relay Adapt', function test() {
 
     // const expectedPrivateWethBalance = BigInt(99750 /* original */);
 
-    // const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(config.contracts.treasury);
+    // const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(config.contracts.treasuryProxy);
     // expect(treasuryBalance.toBigInt()).to.equal(250n);
 
     // const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
@@ -812,49 +847,101 @@ describe('Relay Adapt', function test() {
     // expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
-  it('Should generate relay deposit notes and inputs', () => {
-    const depositTokens: string[] = [config.contracts.weth9, config.contracts.rail];
+  it('Should generate relay shield notes and inputs', async () => {
+    const shieldTokens: string[] = [config.contracts.weth9, config.contracts.rail];
 
     const random = '10203040506070809000102030405060';
-    const relayDepositInputs = RelayAdaptHelper.generateRelayDepositInputs(
+    const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
       random,
-      depositTokens,
+      shieldTokens,
     );
 
-    expect(relayDepositInputs.length).to.equal(2);
+    expect(relayShieldInputs.length).to.equal(2);
     expect(
-      relayDepositInputs.map((depositInput) => depositInput.preImage.token.tokenAddress),
-    ).to.deep.equal(depositTokens);
-    relayDepositInputs.forEach((relayDepositInput) => {
-      expect(relayDepositInput.preImage.npk).to.equal(
+      relayShieldInputs.map((shieldInput) => shieldInput.preimage.token.tokenAddress),
+    ).to.deep.equal(shieldTokens);
+    relayShieldInputs.forEach((relayShieldInput) => {
+      expect(relayShieldInput.preimage.npk).to.equal(
         nToHex(
           3348140451435708797167073859596593490034226162440317170509481065740328487080n,
           ByteLength.UINT_256,
           true,
         ),
       );
-      expect(relayDepositInput.preImage.token.tokenType).to.equal(
-        '0x0000000000000000000000000000000000000000',
-      );
+      expect(relayShieldInput.preimage.token.tokenType).to.equal(0);
     });
   });
 
-  it('Should parse relay adapt error messages', async () => {
+  it.skip('Should parse relay adapt error messages - legacy', async () => {
     const polygonProvider = new JsonRpcProvider('https://polygon-rpc.com');
     const txReceipt: TransactionReceipt = await polygonProvider.getTransactionReceipt(
       '0x56c3b9bfb573e6f49f21b8e09282edd01a93bbb965b1f4debbf7316ea3d878dd',
     );
-    expect(RelayAdaptContract.getCallResultError(txReceipt.logs)).to.equal(
+    expect(RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs)).to.equal(
       'Unknown Relay Adapt error.',
     );
 
     const txReceipt2: TransactionReceipt = await polygonProvider.getTransactionReceipt(
       '0xeeaf0c55b4c34516402ce1c0d1eb4e3d2664b11204f2fc9988ec57ae7a1220ff',
     );
-    expect(RelayAdaptContract.getCallResultError(txReceipt2.logs)).to.equal(
+    expect(RelayAdaptContract.getRelayAdaptCallError(txReceipt2.logs)).to.equal(
       'ERC20: transfer amount exceeds allowance',
     );
+  });
+
+  it('Should calculate relay adapt params', () => {
+    const nullifiers = [
+      new Uint8Array([
+        42, 178, 205, 78, 49, 222, 35, 76, 140, 83, 19, 50, 218, 74, 38, 161, 4, 32, 213, 247, 186,
+        238, 81, 137, 50, 61, 32, 21, 178, 16, 168, 32,
+      ]),
+      new Uint8Array([
+        5, 228, 162, 212, 44, 195, 165, 245, 46, 252, 85, 67, 78, 165, 80, 86, 216, 220, 217, 118,
+        198, 92, 41, 84, 51, 159, 175, 75, 194, 103, 163, 115,
+      ]),
+    ].map((n) => '0x' + bytesToHex(n));
+
+    const random = bytesToHex(
+      new Uint8Array([
+        134, 114, 120, 89, 227, 254, 124, 13, 129, 226, 125, 250, 250, 240, 217, 194, 183, 180, 136,
+        153, 29, 44, 89, 196, 146, 178, 37, 250, 159, 195, 7,
+      ]),
+    );
+
+    const relayAdaptParams = RelayAdaptHelper.getRelayAdaptParams(
+      [{ nullifiers } as unknown as TransactionStruct],
+      random,
+      false,
+      [
+        {
+          to: '0x8f86403A4DE0BB5791fa46B8e795C547942fE4Cf',
+          data:
+            '0x' +
+            bytesToHex(
+              new Uint8Array([
+                210, 140, 37, 212, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 104, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              ]),
+            ),
+          value: BigNumber.from(0n),
+        },
+      ],
+      BigNumber.from(10000000n),
+    );
+
+    const expectedParamsHex =
+      '0x' +
+      bytesToHex(
+        new Uint8Array([
+          53, 54, 66, 65, 188, 134, 60, 165, 0, 101, 8, 125, 85, 49, 151, 206, 203, 156, 192, 199,
+          6, 178, 94, 150, 14, 31, 101, 68, 83, 251, 241, 35,
+        ]),
+      );
+
+    expect(relayAdaptParams).to.equal(expectedParamsHex);
   });
 
   afterEach(async () => {

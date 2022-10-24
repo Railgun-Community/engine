@@ -1,14 +1,6 @@
 import { Ciphertext, EncryptedData } from '../models/formatted-types';
 import { ByteLength, chunk, combine, formatToByteLength } from './bytes';
 
-export const ciphertextToEncryptedRandomData = (ciphertext: Ciphertext): EncryptedData => {
-  const ivTag =
-    formatToByteLength(ciphertext.iv, ByteLength.UINT_128, true) +
-    formatToByteLength(ciphertext.tag, ByteLength.UINT_128, false);
-  const data = formatToByteLength(ciphertext.data[0], ByteLength.UINT_128, true);
-  return [ivTag, data];
-};
-
 export const ciphertextToEncryptedJSONData = (ciphertext: Ciphertext): EncryptedData => {
   const ivTag =
     formatToByteLength(ciphertext.iv, ByteLength.UINT_128, true) +

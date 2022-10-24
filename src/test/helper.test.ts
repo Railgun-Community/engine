@@ -11,6 +11,7 @@ import {
   EngineEvent,
   QuickSync,
   ScannedEventData,
+  UnshieldStoredEvent,
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
@@ -43,6 +44,7 @@ export const mockQuickSync: QuickSync = (
 ): Promise<AccumulatedEvents> =>
   Promise.resolve({
     commitmentEvents: [] as CommitmentEvent[],
+    unshieldEvents: [] as UnshieldStoredEvent[],
     nullifierEvents: [] as Nullifier[],
   });
 

@@ -1,4 +1,4 @@
-import ABIRailgunLogic from './RailgunLogic.json';
+import ABIRailgunSmartWallet from './RailgunSmartWallet.json';
 import ABIRelayAdapt from './RelayAdapt.json';
 
-export { ABIRailgunLogic, ABIRelayAdapt };
+export { ABIRailgunSmartWallet, ABIRelayAdapt };

@@ -18,6 +18,7 @@ import {
   MerkletreeHistoryScanEventData,
   MerkletreeHistoryScanUpdateData,
   QuickSync,
+  UnshieldStoredEvent,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
@@ -44,6 +45,8 @@ class RailgunEngine extends EventEmitter {
 
   static walletSource: Optional<string>;
 
+  readonly engineV3StartBlockNumbers: number[][];
+
   /**
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
@@ -58,8 +61,13 @@ class RailgunEngine extends EventEmitter {
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
     engineDebugger?: EngineDebugger,
+    engineV3StartBlockNumbers?: number[][],
   ) {
     super();
+
+    // Temporary. Will be a constant after full upgrades.
+    this.engineV3StartBlockNumbers = engineV3StartBlockNumbers || [];
+
     WalletInfo.setWalletSource(walletSource);
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
@@ -69,7 +77,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  static setEngineDebugger = (engineDebugger: EngineDebugger) => {
+  static setEngineDebugger = (engineDebugger: EngineDebugger): void => {
     EngineDebug.init(engineDebugger);
   };
 
@@ -86,7 +94,7 @@ class RailgunEngine extends EventEmitter {
     startingIndex: number,
     leaves: Commitment[],
     shouldUpdateTrees: boolean,
-  ) {
+  ): Promise<void> {
     if (!leaves.length) {
       return;
     }
@@ -109,12 +117,26 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id for nullifiers
    * @param nullifiers - transaction info to nullify commitment
    */
-  async nullifierListener(chain: Chain, nullifiers: Nullifier[]) {
+  async nullifierListener(chain: Chain, nullifiers: Nullifier[]): Promise<void> {
     if (!nullifiers.length) {
       return;
     }
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
     await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
+  }
+
+  /**
+   * Handle new unshield events
+   * @param chain - chain type/id
+   * @param unshields - unshield events
+   */
+  async unshieldListener(chain: Chain, unshields: UnshieldStoredEvent[]): Promise<void> {
+    EngineDebug.log(
+      `engine.unshieldListener[${chain.type}:${chain.id}] ${JSON.stringify(
+        unshields.map((unshield) => unshield.txid),
+      )}`,
+    );
+    await this.merkletrees[chain.type][chain.id].erc20.addUnshieldEvents(unshields);
   }
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
@@ -182,12 +204,15 @@ class RailgunEngine extends EventEmitter {
       this.emitScanUpdateEvent(chain, endProgress * 0.1); // 5% / 50%
 
       // Fetch events
-      const { commitmentEvents, nullifierEvents } = await this.quickSync(
+      const { commitmentEvents, unshieldEvents, nullifierEvents } = await this.quickSync(
         chain,
         startScanningBlockQuickSync,
       );
 
       this.emitScanUpdateEvent(chain, endProgress * 0.2); // 10% / 50%
+
+      // Pass unshield events to listener
+      await this.unshieldListener(chain, unshieldEvents);
 
       // Pass nullifier events to listener
       await this.nullifierListener(chain, nullifierEvents);
@@ -236,6 +261,16 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.MerkletreeHistoryScanUpdate, updateData);
   }
 
+  private getEngineV3StartBlockNumber(chain: Chain) {
+    if (
+      this.engineV3StartBlockNumbers[chain.type] &&
+      this.engineV3StartBlockNumbers[chain.type][chain.id]
+    ) {
+      return this.engineV3StartBlockNumbers[chain.type][chain.id];
+    }
+    return 0;
+  }
+
   /**
    * Scan contract history and sync
    * @param chain - chain type/id to scan
@@ -282,11 +317,14 @@ class RailgunEngine extends EventEmitter {
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
     EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
+    const engineV3StartBlockNumber = this.getEngineV3StartBlockNumber(chain);
+
     try {
       // Run slow scan
       await proxyContract.getHistoricalEvents(
         startScanningBlockSlowScan,
         latestBlock,
+        engineV3StartBlockNumber,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.commitmentListener(
             chain,
@@ -298,6 +336,9 @@ class RailgunEngine extends EventEmitter {
         },
         async (nullifiers: Nullifier[]) => {
           await this.nullifierListener(chain, nullifiers);
+        },
+        async (unshields: UnshieldStoredEvent[]) => {
+          await this.unshieldListener(chain, unshields);
         },
         async (syncedBlock: number) => {
           const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
@@ -422,11 +463,12 @@ class RailgunEngine extends EventEmitter {
     }
     this.deploymentBlocks[chain.type][chain.id] = deploymentBlock;
 
-    // Load merkle tree to wallets
+    // Load erc20 merkletrees to wallets
     Object.values(this.wallets).forEach((wallet) => {
-      wallet.loadTree(this.merkletrees[chain.type][chain.id].erc20);
+      wallet.loadERC20Merkletree(this.merkletrees[chain.type][chain.id].erc20);
     });
 
+    // Setup listeners
     const eventsListener = async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
       await this.commitmentListener(
         chain,
@@ -440,9 +482,14 @@ class RailgunEngine extends EventEmitter {
     const nullifierListener = async (nullifiers: Nullifier[]) => {
       await this.nullifierListener(chain, nullifiers);
     };
-
-    // Setup listeners
-    this.proxyContracts[chain.type][chain.id].treeUpdates(eventsListener, nullifierListener);
+    const unshieldListener = async (unshields: UnshieldStoredEvent[]) => {
+      await this.unshieldListener(chain, unshields);
+    };
+    this.proxyContracts[chain.type][chain.id].treeUpdates(
+      eventsListener,
+      nullifierListener,
+      unshieldListener,
+    );
 
     await this.scanHistory(chain);
   }
@@ -456,9 +503,9 @@ class RailgunEngine extends EventEmitter {
       // Unload listeners
       this.proxyContracts[chain.type][chain.id].unload();
 
-      // Unlaod tree from wallets
+      // Unlaod erc20 merkletrees from wallets
       Object.values(this.wallets).forEach((wallet) => {
-        wallet.unloadTree(chain);
+        wallet.unloadERC20Merkletree(chain);
       });
 
       // Delete contract and merkle tree objects
@@ -554,10 +601,10 @@ class RailgunEngine extends EventEmitter {
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
 
-    // Load merkle trees for wallet
+    // Load erc20 merkletrees for wallet
     this.merkletrees.forEach((merkletreesForChainType) => {
       merkletreesForChainType.forEach((merkletree) => {
-        wallet.loadTree(merkletree.erc20);
+        wallet.loadERC20Merkletree(merkletree.erc20);
       });
     });
   }

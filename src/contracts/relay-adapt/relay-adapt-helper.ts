@@ -1,101 +1,101 @@
 import { ethers, PopulatedTransaction, BigNumber } from 'ethers';
-import { DepositInput, SerializedTransaction } from '../../models/formatted-types';
-import { formatToByteLength, ByteLength } from '../../utils/bytes';
+import { randomHex, hexToBytes } from '../../utils/bytes';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
-import { RelayAdapt } from '../../typechain-types/contracts/adapt/relay/Relay.sol/RelayAdapt';
-import { ERC20Deposit } from '../../note/erc20-deposit';
+import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
+import { ShieldNote } from '../../note/shield-note';
+import {
+  ShieldRequestStruct,
+  TransactionStruct,
+} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 
 class RelayAdaptHelper {
-  static generateRelayDepositInputs(
+  static generateRelayShieldRequests(
     wallet: RailgunWallet,
     random: string,
-    depositTokens: string[],
-  ) {
-    const relayDeposits = RelayAdaptHelper.createRelayDeposits(
+    shieldTokens: string[],
+  ): Promise<ShieldRequestStruct[]> {
+    const relayShields = RelayAdaptHelper.createRelayShields(
       wallet.masterPublicKey,
       random,
-      depositTokens,
+      shieldTokens,
     );
-    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
-    return RelayAdaptHelper.createRelayDepositInputs(viewingPrivateKey, relayDeposits);
+    return Promise.all(
+      relayShields.map((shield) => {
+        // Random private key for Relay Adapt shield.
+        const shieldPrivateKey = hexToBytes(randomHex(32));
+        return shield.serialize(shieldPrivateKey, wallet.addressKeys.viewingPublicKey);
+      }),
+    );
   }
 
-  private static createRelayDeposits(
+  private static createRelayShields(
     masterPublicKey: bigint,
     random: string,
     tokens: string[],
-  ): ERC20Deposit[] {
+  ): ShieldNote[] {
     return tokens.map((token) => {
-      return new ERC20Deposit(masterPublicKey, random, 0n, token);
+      return new ShieldNote(masterPublicKey, random, 0n, token);
     });
   }
 
-  private static createRelayDepositInputs(
-    viewingPrivateKey: Uint8Array,
-    relayDeposits: ERC20Deposit[],
-  ): DepositInput[] {
-    return relayDeposits.map((deposit) => {
-      return deposit.serialize(viewingPrivateKey);
-    });
-  }
-
-  static validateDepositInputs(depositInputs: DepositInput[]) {
-    const { preImage } = depositInputs[0];
-    depositInputs.forEach((depositInput) => {
-      if (depositInput.preImage.npk !== preImage.npk) {
-        throw new Error('Relay deposits must all contain the same npk/random.');
+  static validateShieldRequests(shieldRequests: ShieldRequestStruct[]) {
+    const { preimage } = shieldRequests[0];
+    shieldRequests.forEach((shieldInput) => {
+      if (shieldInput.preimage.npk !== preimage.npk) {
+        throw new Error('Relay shields must all contain the same npk/random.');
       }
     });
   }
 
   /**
-   * Calculate hash of adapt params.
-   *
-   * @param {SerializedTransaction[]} serializedTransactions - serialized transactions
-   * @param {string} additionalData - additional byte data to add to adapt params
-   * @returns {string} adapt params
+   * Format action data field for relay call.
    */
-  private static getAdaptParamsHash(
-    serializedTransactions: SerializedTransaction[],
-    additionalData: string,
-  ): string {
-    const firstNullifiers = serializedTransactions.map((tx) => tx.nullifiers[0]);
-
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    return ethers.utils.keccak256(
-      abiCoder.encode(
-        ['uint256[]', 'uint256', 'bytes'],
-        [firstNullifiers, serializedTransactions.length, additionalData],
-      ),
-    );
-  }
-
-  /**
-   * Get relay adapt params field.
-   * Hashes transaction data and params to ensure that transaction is not modified by MITM.
-   *
-   * @param {SerializedTransaction[]} serializedTransactions - serialized transactions
-   * @param {string} random - random value
-   * @param {boolean} requireSuccess - require success on calls
-   * @param {object[]} calls - calls list
-   * @returns {string} adapt params
-   */
-  static getRelayAdaptParams(
-    serializedTransactions: SerializedTransaction[],
+  static getActionData(
     random: string,
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
-    minimumGas: BigNumber = BigNumber.from(1),
+    minGasLimit: BigNumber,
+  ): RelayAdapt.ActionDataStruct {
+    const formattedRandom = RelayAdaptHelper.formatRandom(random);
+    return {
+      random: formattedRandom,
+      requireSuccess,
+      minGasLimit,
+      calls: RelayAdaptHelper.formatCalls(calls),
+    };
+  }
+
+  /**
+   * Get relay adapt params hash.
+   * Hashes transaction data and params to ensure that transaction is not modified by MITM.
+   *
+   * @param transactions - serialized transactions
+   * @param random - random value
+   * @param requireSuccess - require success on calls
+   * @param calls - calls list
+   * @returns adapt params
+   */
+  static getRelayAdaptParams(
+    transactions: TransactionStruct[],
+    random: string,
+    requireSuccess: boolean,
+    calls: PopulatedTransaction[],
+    minGasLimit = BigNumber.from(0),
   ): string {
-    const formattedRandom = this.formatRandom(random);
-    const minGas = this.formatMinimumGas(minimumGas);
+    const nullifiers = transactions.map((transaction) => transaction.nullifiers);
+    const actionData = RelayAdaptHelper.getActionData(random, requireSuccess, calls, minGasLimit);
+
     const abiCoder = ethers.utils.defaultAbiCoder;
-    const additionalData = abiCoder.encode(
-      ['uint256', 'bool', 'uint256', 'tuple(address to, bytes data, uint256 value)[] calls'],
-      [formattedRandom, requireSuccess, minGas, this.formatCalls(calls)],
+    const preimage = abiCoder.encode(
+      [
+        'bytes32[][] nullifiers',
+        'uint256 transactionsLength',
+        'tuple(bytes31 random, bool requireSuccess, uint256 minGasLimit, tuple(address to, bytes data, uint256 value)[] calls) actionData',
+      ],
+      [nullifiers, transactions.length, actionData],
     );
 
-    return RelayAdaptHelper.getAdaptParamsHash(serializedTransactions, additionalData);
+    return ethers.utils.keccak256(hexToBytes(preimage));
   }
 
   /**
@@ -108,16 +108,15 @@ class RelayAdaptHelper {
     return calls.map((call) => ({
       to: call.to || '',
       data: call.data || '',
-      value: call.value || BigNumber.from(0),
+      value: call.value || 0n,
     }));
   }
 
-  static formatRandom(random: string): string {
-    return formatToByteLength(random, ByteLength.UINT_256, true);
-  }
-
-  static formatMinimumGas(minimumGas: BigNumber): string {
-    return formatToByteLength(minimumGas.toHexString(), ByteLength.UINT_256, true);
+  static formatRandom(random: string): Uint8Array {
+    if (random.length !== 62) {
+      throw new Error('Relay Adapt random parameter must be a hex string of length 62 (31 bytes).');
+    }
+    return hexToBytes(random);
   }
 }
 

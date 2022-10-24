@@ -5,5 +5,6 @@ import type * as poseidonSol from "./Poseidon.sol";
 export type { poseidonSol };
 export type { Commitments } from "./Commitments";
 export type { RailgunLogic } from "./RailgunLogic";
-export type { TokenBlacklist } from "./TokenBlacklist";
+export type { RailgunSmartWallet } from "./RailgunSmartWallet";
+export type { TokenBlocklist } from "./TokenBlocklist";
 export type { Verifier } from "./Verifier";

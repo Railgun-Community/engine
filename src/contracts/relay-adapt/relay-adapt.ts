@@ -2,26 +2,18 @@ import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { Result } from 'ethers/lib/utils';
 import { ABIRelayAdapt } from '../../abi/abi';
+import { TokenData, TokenType, TransactionReceiptLog } from '../../models/formatted-types';
+import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
 import {
-  DepositInput,
-  SerializedTransaction,
-  TokenData,
-  TokenType,
-  TransactionReceiptLog,
-} from '../../models/formatted-types';
-import { RelayAdapt } from '../../typechain-types/contracts/adapt/relay/Relay.sol/RelayAdapt';
-import { randomHex as bytesRandom } from '../../utils/bytes';
+  ShieldRequestStruct,
+  TransactionStruct,
+} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 
 enum RelayAdaptEvent {
-  CallResult = 'CallResult',
+  CallError = 'CallError',
 }
-
-type CallResult = {
-  success: boolean;
-  returnData: string;
-};
 
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
@@ -44,34 +36,31 @@ class RelayAdaptContract {
     this.contract = new Contract(relayAdaptContractAddress, ABIRelayAdapt, provider) as RelayAdapt;
   }
 
-  async populateDepositBaseToken(depositInput: DepositInput): Promise<PopulatedTransaction> {
+  async populateShieldBaseToken(shieldRequest: ShieldRequestStruct): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await Promise.all([
-      this.contract.populateTransaction.wrapAllBase(),
-      this.populateRelayDeposits([depositInput]),
+      this.contract.populateTransaction.wrapBase(shieldRequest.preimage.value),
+      this.populateRelayShields([shieldRequest]),
     ]);
 
-    // Empty transactions array for deposit.
-    const transactions: SerializedTransaction[] = [];
-    const random = bytesRandom(16);
     const requireSuccess = true;
 
-    return this.populateRelay(transactions, random, requireSuccess, orderedCalls, {
-      value: depositInput.preImage.value,
+    return this.populateRelayMulticall(requireSuccess, orderedCalls, {
+      value: shieldRequest.preimage.value,
     });
   }
 
   /**
    * @returns Populated transaction
    */
-  private populateRelayDeposits(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
-    const tokens: TokenData[] = depositInputs.map((depositInput) => depositInput.preImage.token);
-    RelayAdaptHelper.validateDepositInputs(depositInputs);
-    const { encryptedRandom, preImage } = depositInputs[0];
-    return this.contract.populateTransaction.deposit(tokens, encryptedRandom, preImage.npk);
+  private populateRelayShields(
+    shieldRequests: ShieldRequestStruct[],
+  ): Promise<PopulatedTransaction> {
+    RelayAdaptHelper.validateShieldRequests(shieldRequests);
+    return this.contract.populateTransaction.shield(shieldRequests);
   }
 
-  private async getOrderedCallsForWithdrawBaseToken(
-    withdrawAddress: string,
+  private async getOrderedCallsForUnshieldBaseToken(
+    unshieldAddress: string,
   ): Promise<PopulatedTransaction[]> {
     const baseTokenData: TokenData = {
       tokenAddress: ZERO_ADDRESS,
@@ -79,19 +68,28 @@ class RelayAdaptContract {
       tokenSubID: ZERO_ADDRESS,
     };
 
+    // Automatically unwraps and unshields all tokens.
+    const value = 0n;
+
+    const baseTokenTransfer: RelayAdapt.TokenTransferStruct = {
+      token: baseTokenData,
+      to: unshieldAddress,
+      value,
+    };
+
     return Promise.all([
-      this.contract.populateTransaction.unwrapAllBase(),
-      this.populateRelaySend([baseTokenData], withdrawAddress),
+      this.contract.populateTransaction.unwrapBase(value),
+      this.populateRelayTransfers([baseTokenTransfer]),
     ]);
   }
 
-  async getRelayAdaptParamsWithdrawBaseToken(
-    dummyTransactions: SerializedTransaction[],
-    withdrawAddress: string,
+  async getRelayAdaptParamsUnshieldBaseToken(
+    dummyTransactions: TransactionStruct[],
+    unshieldAddress: string,
     random: string,
   ): Promise<string> {
-    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForWithdrawBaseToken(
-      withdrawAddress,
+    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
+      unshieldAddress,
     );
 
     const requireSuccess = true;
@@ -103,56 +101,55 @@ class RelayAdaptContract {
     );
   }
 
-  async populateWithdrawBaseToken(
-    transactions: SerializedTransaction[],
-    withdrawAddress: string,
-    random: string,
+  async populateUnshieldBaseToken(
+    transactions: TransactionStruct[],
+    unshieldAddress: string,
+    random31Bytes: string,
   ): Promise<PopulatedTransaction> {
-    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForWithdrawBaseToken(
-      withdrawAddress,
+    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
+      unshieldAddress,
     );
 
     const requireSuccess = true;
-    return this.populateRelay(transactions, random, requireSuccess, orderedCalls, {});
+    return this.populateRelay(transactions, random31Bytes, requireSuccess, orderedCalls, {});
   }
 
   /**
    * @returns Populated transaction
    */
-  private populateRelaySend(
-    tokenData: TokenData[],
-    toAddress: string,
+  private populateRelayTransfers(
+    transfersData: RelayAdapt.TokenTransferStruct[],
   ): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.send(tokenData, toAddress);
+    return this.contract.populateTransaction.transfer(transfersData);
   }
 
   private async getOrderedCallsForCrossContractCalls(
     crossContractCalls: PopulatedTransaction[],
-    relayDepositInputs: DepositInput[],
+    relayShieldRequests: ShieldRequestStruct[],
   ): Promise<PopulatedTransaction[]> {
     const orderedCallPromises: PopulatedTransaction[] = [...crossContractCalls];
-    if (relayDepositInputs.length) {
-      orderedCallPromises.push(await this.populateRelayDeposits(relayDepositInputs));
+    if (relayShieldRequests.length) {
+      orderedCallPromises.push(await this.populateRelayShields(relayShieldRequests));
     }
     return orderedCallPromises;
   }
 
   async getRelayAdaptParamsCrossContractCalls(
-    dummyWithdrawTransactions: SerializedTransaction[],
+    dummyUnshieldTransactions: TransactionStruct[],
     crossContractCalls: PopulatedTransaction[],
-    relayDepositInputs: DepositInput[],
+    relayShieldRequests: ShieldRequestStruct[],
     random: string,
   ): Promise<string> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldRequests,
     );
 
-    // If the cross contract call fails, the Relayer Fee and Deposits will continue to process.
+    // If the cross contract call fails, the Relayer Fee and Shields will continue to process.
     const requireSuccess = false;
 
     return RelayAdaptHelper.getRelayAdaptParams(
-      dummyWithdrawTransactions,
+      dummyUnshieldTransactions,
       random,
       requireSuccess,
       orderedCalls,
@@ -161,22 +158,22 @@ class RelayAdaptContract {
   }
 
   async populateCrossContractCalls(
-    withdrawTransactions: SerializedTransaction[],
+    unshieldTransactions: TransactionStruct[],
     crossContractCalls: PopulatedTransaction[],
-    relayDepositInputs: DepositInput[],
-    random: string,
+    relayShieldRequests: ShieldRequestStruct[],
+    random31Bytes: string,
   ): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
-      relayDepositInputs,
+      relayShieldRequests,
     );
 
-    // If the cross contract call fails, the Relayer Fee and Deposits will continue to process.
+    // If the cross contract call fails, the Relayer Fee and Shields will continue to process.
     const requireSuccess = false;
 
     const populatedTransaction = await this.populateRelay(
-      withdrawTransactions,
-      random,
+      unshieldTransactions,
+      random31Bytes,
       requireSuccess,
       orderedCalls,
       {},
@@ -190,83 +187,87 @@ class RelayAdaptContract {
   }
 
   /**
-   * Generates Relay call given a list of serialized transactions.
+   * Generates Relay multicall given a list of ordered calls.
    * @returns populated transaction
    */
-  private async populateRelay(
-    serializedTransactions: SerializedTransaction[],
-    random: string,
+  private async populateRelayMulticall(
     requireSuccess: boolean,
     calls: PopulatedTransaction[],
     overrides: CallOverrides,
-    minimumGas: BigNumber = BigNumber.from(1),
   ): Promise<PopulatedTransaction> {
-    const formattedRandom = RelayAdaptHelper.formatRandom(random);
-    const minGas = RelayAdaptHelper.formatMinimumGas(minimumGas);
-    const populatedTransaction = await this.contract.populateTransaction.relay(
-      serializedTransactions,
-      formattedRandom,
+    const populatedTransaction = await this.contract.populateTransaction.multicall(
       requireSuccess,
-      minGas,
       RelayAdaptHelper.formatCalls(calls),
       overrides,
     );
     return populatedTransaction;
   }
 
-  static getCallResultError(receiptLogs: TransactionReceiptLog[]): Optional<string> {
+  /**
+   * Generates Relay multicall given a list of transactions and ordered calls.
+   * @returns populated transaction
+   */
+  private async populateRelay(
+    transactions: TransactionStruct[],
+    random31Bytes: string,
+    requireSuccess: boolean,
+    calls: PopulatedTransaction[],
+    overrides: CallOverrides,
+    minimumGasLimit = BigNumber.from(0),
+  ): Promise<PopulatedTransaction> {
+    const actionData: RelayAdapt.ActionDataStruct = RelayAdaptHelper.getActionData(
+      random31Bytes,
+      requireSuccess,
+      calls,
+      minimumGasLimit,
+    );
+    const populatedTransaction = await this.contract.populateTransaction.relay(
+      transactions,
+      actionData,
+      overrides,
+    );
+    return populatedTransaction;
+  }
+
+  static getRelayAdaptCallError(receiptLogs: TransactionReceiptLog[]): Optional<string> {
     const iface = new ethers.utils.Interface(ABIRelayAdapt);
-    const topic = iface.getEventTopic(RelayAdaptEvent.CallResult);
-    const results: CallResult[] = [];
+    const topic = iface.getEventTopic(RelayAdaptEvent.CallError);
 
     try {
       // eslint-disable-next-line no-restricted-syntax
       for (const log of receiptLogs) {
         if (log.topics[0] === topic) {
-          const parsed = this.customRelayAdaptParse(log);
-          results.push(...parsed);
+          const parsedError = this.customRelayAdaptErrorParse(log);
+          if (parsedError) {
+            return parsedError;
+          }
         }
       }
     } catch (err) {
       throw new Error('Relay Adapt parsing error.');
     }
-    if (!results.length) {
-      throw new Error('CallResult events not found.');
-    }
-
-    const firstErrorResult = results.find((r) => !r.success);
-    if (firstErrorResult) {
-      return firstErrorResult.returnData;
-    }
     return undefined;
   }
 
-  private static customRelayAdaptParse(log: TransactionReceiptLog): CallResult[] {
+  private static customRelayAdaptErrorParse(log: TransactionReceiptLog): Optional<string> {
     // Force parse as bytes
     const decoded: Result = ethers.utils.defaultAbiCoder.decode(
-      ['tuple(bool success, bytes returnData)[]'],
+      ['tuple(uint256 callIndex, bytes revertReason)'],
       log.data,
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const decodedCallResults: CallResult[] = decoded[0];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const revertReasonBytes: string = decoded[0][1];
 
     // Map function to try parsing bytes as string
-    return decodedCallResults.map((callResult: CallResult) => {
-      // Decode and strip non-printable-chars
-      const returnData = this.parseCallResultError(callResult.returnData);
-
-      return {
-        success: callResult.success,
-        returnData,
-      };
-    });
+    const parsedError = this.parseCallResultError(revertReasonBytes);
+    return parsedError;
   }
 
-  private static parseCallResultError(returnData: string): string {
+  private static parseCallResultError(revertReason: string): string {
     const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
-    if (returnData.match(RETURN_DATA_STRING_PREFIX)) {
-      const strippedReturnValue = returnData.replace(RETURN_DATA_STRING_PREFIX, '0x');
+    if (revertReason.match(RETURN_DATA_STRING_PREFIX)) {
+      const strippedReturnValue = revertReason.replace(RETURN_DATA_STRING_PREFIX, '0x');
       const result = ethers.utils.defaultAbiCoder.decode(['string'], strippedReturnValue);
       return result[0];
     }

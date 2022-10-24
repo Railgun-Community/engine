@@ -3,42 +3,53 @@ import { BigNumber, Contract, Event, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
 import EngineDebug from '../../debugger/debugger';
 import {
-  CommitmentPreimage,
-  DepositInput,
-  SerializedTransaction,
-} from '../../models/formatted-types';
-import {
-  CommitmentBatchEventArgs,
-  CommitmentCiphertextArgs,
-  CommitmentPreimageArgs,
-  EncryptedDataArgs,
   EventsListener,
   EventsNullifierListener,
-  GeneratedCommitmentBatchEventArgs,
+  EventsUnshieldListener,
   EngineEvent,
-  NullifierEventArgs,
 } from '../../models/event-types';
-import { hexlify } from '../../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
-import { ABIRailgunLogic } from '../../abi/abi';
+import { ABIRailgunSmartWallet } from '../../abi/abi';
 import {
-  formatCommitmentBatchEvent,
-  formatGeneratedCommitmentBatchEvent,
-  formatNullifierEvents,
-  processCommitmentBatchEvents,
-  processGeneratedCommitmentEvents,
-  processNullifierEvents,
+  formatNullifiedEvents,
+  formatShieldEvent,
+  formatTransactEvent,
+  formatUnshieldEvent,
+  processNullifiedEvents,
+  processShieldEvents,
+  processTransactEvents,
+  processUnshieldEvents,
 } from './events';
-import { RailgunLogic } from '../../typechain-types';
+import {
+  processLegacyCommitmentBatchEvents,
+  processLegacyGeneratedCommitmentEvents,
+  processLegacyNullifierEvents,
+} from './legacy-events/legacy-events';
+import { RailgunSmartWallet } from '../../typechain-types';
 import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
 import { Chain } from '../../models';
+import { LegacyRailgunLogic } from './legacy-events/RailgunLogic_LegacyEvents';
+import {
+  CommitmentCiphertextStructOutput,
+  CommitmentPreimageStruct,
+  CommitmentPreimageStructOutput,
+  NullifiedEventObject,
+  ShieldCiphertextStructOutput,
+  ShieldEventObject,
+  ShieldRequestStruct,
+  TokenDataStructOutput,
+  TransactEventObject,
+  TransactionStruct,
+  UnshieldEventObject,
+} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
 const EVENTS_SCAN_TIMEOUT = 2500;
 
 class RailgunProxyContract extends EventEmitter {
-  readonly contract: RailgunLogic;
+  readonly contract: RailgunSmartWallet;
 
   readonly address: string;
 
@@ -52,7 +63,11 @@ class RailgunProxyContract extends EventEmitter {
   constructor(proxyContractAddress: string, provider: Provider, chain: Chain) {
     super();
     this.address = proxyContractAddress;
-    this.contract = new Contract(proxyContractAddress, ABIRailgunLogic, provider) as RailgunLogic;
+    this.contract = new Contract(
+      proxyContractAddress,
+      ABIRailgunSmartWallet,
+      provider,
+    ) as RailgunSmartWallet;
     this.chain = chain;
   }
 
@@ -61,27 +76,27 @@ class RailgunProxyContract extends EventEmitter {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return hexlify((await this.contract.merkleRoot()).toHexString());
+    return hexlify(await this.contract.merkleRoot());
   }
 
   /**
    * Gets transaction fees
-   * Deposit and withdraw fees are in basis points, nft is in wei
+   * Shield and unshield fees are in basis points, NFT is in wei.
    */
   async fees(): Promise<{
-    deposit: string;
-    withdraw: string;
+    shield: string;
+    unshield: string;
     nft: string;
   }> {
-    const [depositFee, withdrawFee, nftFee] = await Promise.all([
-      this.contract.depositFee(),
-      this.contract.withdrawFee(),
+    const [shieldFee, unshieldFee, nftFee] = await Promise.all([
+      this.contract.shieldFee(),
+      this.contract.unshieldFee(),
       this.contract.nftFee(),
     ]);
 
     return {
-      deposit: depositFee.toHexString(),
-      withdraw: withdrawFee.toHexString(),
+      shield: shieldFee.toHexString(),
+      unshield: unshieldFee.toHexString(),
       nft: nftFee.toHexString(),
     };
   }
@@ -103,19 +118,24 @@ class RailgunProxyContract extends EventEmitter {
 
   /**
    * Listens for tree update events
-   * @param eventsListener - listener callback
+   * @param commitmentListener - listener callback
    * @param eventsNullifierListener - nullifier listener callback
+   * @param eventsUnshieldListener - unshield listener callback
    */
-  treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
+  treeUpdates(
+    commitmentListener: EventsListener,
+    eventsNullifierListener: EventsNullifierListener,
+    eventsUnshieldListener: EventsUnshieldListener,
+  ) {
     // listen for nullifiers first so balances aren't "double" before they process
     this.contract.on(
-      this.contract.filters['Nullifiers(uint256,uint256[])'](),
-      async (treeNumber: BigNumber, nullifier: BigNumber[], event: Event) => {
-        const args: NullifierEventArgs = {
+      this.contract.filters.Nullified(),
+      async (treeNumber: number, nullifier: string[], event: Event) => {
+        const args: NullifiedEventObject = {
           treeNumber,
           nullifier,
         };
-        const formattedEventArgs = formatNullifierEvents(
+        const formattedEventArgs = formatNullifiedEvents(
           args,
           event.transactionHash,
           event.blockNumber,
@@ -127,44 +147,63 @@ class RailgunProxyContract extends EventEmitter {
     );
 
     this.contract.on(
-      this.contract.filters.GeneratedCommitmentBatch(),
+      this.contract.filters.Shield(),
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
-        commitments: CommitmentPreimageArgs[],
-        encryptedRandom: EncryptedDataArgs[],
+        commitments: CommitmentPreimageStructOutput[],
+        shieldCiphertext: ShieldCiphertextStructOutput[],
         event: Event,
       ) => {
-        const args: GeneratedCommitmentBatchEventArgs = {
+        const args: ShieldEventObject = {
           treeNumber,
           startPosition,
           commitments,
-          encryptedRandom,
+          shieldCiphertext,
         };
-        await eventsListener(
-          formatGeneratedCommitmentBatchEvent(args, event.transactionHash, event.blockNumber),
-        );
+        await commitmentListener(formatShieldEvent(args, event.transactionHash, event.blockNumber));
       },
     );
 
     this.contract.on(
-      this.contract.filters.CommitmentBatch(),
+      this.contract.filters.Transact(),
       async (
         treeNumber: BigNumber,
         startPosition: BigNumber,
-        hash: BigNumber[],
-        ciphertext: CommitmentCiphertextArgs[],
+        hash: string[],
+        ciphertext: CommitmentCiphertextStructOutput[],
         event: Event,
       ) => {
-        const args: CommitmentBatchEventArgs = {
+        const args: TransactEventObject = {
           treeNumber,
           startPosition,
           hash,
           ciphertext,
         };
-        await eventsListener(
-          formatCommitmentBatchEvent(args, event.transactionHash, event.blockNumber),
+        await commitmentListener(
+          formatTransactEvent(args, event.transactionHash, event.blockNumber),
         );
+      },
+    );
+
+    this.contract.on(
+      this.contract.filters.Unshield(),
+      async (
+        to: string,
+        token: TokenDataStructOutput,
+        amount: BigNumber,
+        fee: BigNumber,
+        event: Event,
+      ) => {
+        const args: UnshieldEventObject = {
+          to,
+          token,
+          amount,
+          fee,
+        };
+        await eventsUnshieldListener([
+          formatUnshieldEvent(args, event.transactionHash, event.blockNumber),
+        ]);
       },
     );
   }
@@ -208,20 +247,32 @@ class RailgunProxyContract extends EventEmitter {
   /**
    * Gets historical events from block
    * @param startBlock - block to scan from
-   * @param listener - listener to call with events
+   * @param latestBlock - block to scan to
    */
   async getHistoricalEvents(
     startBlock: number,
     latestBlock: number,
+    engineV3StartBlockNumber: number,
     eventsListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
+    eventsUnshieldListener: EventsUnshieldListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     let currentStartBlock = startBlock;
 
-    const eventFilterNullifier = this.contract.filters.Nullifiers();
-    const eventFilterGeneratedCommitmentBatch = this.contract.filters.GeneratedCommitmentBatch();
-    const eventFilterEncryptedCommitmentBatch = this.contract.filters.CommitmentBatch();
+    const eventFilterNullified = this.contract.filters.Nullified();
+    const eventFilterShield = this.contract.filters.Shield();
+    const eventFilterTransact = this.contract.filters.Transact();
+    const eventFilterUnshield = this.contract.filters.Unshield();
+
+    // This type includes legacy event types and filters, from before the v3 update.
+    // We need to scan prior commitments from these past events, before engineV3StartBlockNumber.
+    const legacyEventsContract = this.contract as unknown as LegacyRailgunLogic;
+    const legacyEventFilterNullifiers = legacyEventsContract.filters.Nullifiers();
+    const legacyEventFilterGeneratedCommitmentBatch =
+      legacyEventsContract.filters.GeneratedCommitmentBatch();
+    const legacyEventFilterEncryptedCommitmentBatch =
+      legacyEventsContract.filters.CommitmentBatch();
 
     EngineDebug.log(
       `[Chain ${this.chain.type}:${this.chain.id}]: Scanning historical events from block ${currentStartBlock} to ${latestBlock}`,
@@ -235,20 +286,58 @@ class RailgunProxyContract extends EventEmitter {
         );
       }
       const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
-      const [eventsNullifier, eventsGeneratedCommitment, eventsEncryptedCommitment] =
+
+      const withinLegacyEventRange = startBlock <= engineV3StartBlockNumber;
+      const withinNewEventRange = endBlock >= engineV3StartBlockNumber;
+      if (withinLegacyEventRange && withinNewEventRange) {
+        EngineDebug.log(
+          `[Chain ${this.chain.type}:${this.chain.id}]: Changing from legacy events to new events...`,
+        );
+      }
+
+      if (withinNewEventRange) {
+        // Standard Events.
+        const [eventsNullifiers, eventsShield, eventsTransact, eventsUnshield] =
+          // eslint-disable-next-line no-await-in-loop
+          await Promise.all([
+            this.scanEvents(eventFilterNullified, currentStartBlock, endBlock),
+            this.scanEvents(eventFilterShield, currentStartBlock, endBlock),
+            this.scanEvents(eventFilterTransact, currentStartBlock, endBlock),
+            this.scanEvents(eventFilterUnshield, currentStartBlock, endBlock),
+          ]);
+
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
-          this.scanEvents(eventFilterNullifier, currentStartBlock, endBlock),
-          this.scanEvents(eventFilterGeneratedCommitmentBatch, currentStartBlock, endBlock),
-          this.scanEvents(eventFilterEncryptedCommitmentBatch, currentStartBlock, endBlock),
+          processNullifiedEvents(eventsNullifierListener, eventsNullifiers),
+          processShieldEvents(eventsListener, eventsShield),
+          processTransactEvents(eventsListener, eventsTransact),
+          processUnshieldEvents(eventsUnshieldListener, eventsUnshield),
+        ]);
+      }
+
+      if (withinLegacyEventRange) {
+        // Legacy Events.
+        const [
+          legacyEventsNullifiers,
+          legacyEventsGeneratedCommitmentBatch,
+          legacyEventsEncryptedCommitmentBatch,
+          // eslint-disable-next-line no-await-in-loop
+        ] = await Promise.all([
+          this.scanEvents(legacyEventFilterNullifiers, currentStartBlock, endBlock),
+          this.scanEvents(legacyEventFilterGeneratedCommitmentBatch, currentStartBlock, endBlock),
+          this.scanEvents(legacyEventFilterEncryptedCommitmentBatch, currentStartBlock, endBlock),
         ]);
 
-      // eslint-disable-next-line no-await-in-loop
-      await Promise.all([
-        processNullifierEvents(eventsNullifierListener, eventsNullifier),
-        processGeneratedCommitmentEvents(eventsListener, eventsGeneratedCommitment),
-        processCommitmentBatchEvents(eventsListener, eventsEncryptedCommitment),
-      ]);
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all([
+          processLegacyNullifierEvents(eventsNullifierListener, legacyEventsNullifiers),
+          processLegacyGeneratedCommitmentEvents(
+            eventsListener,
+            legacyEventsGeneratedCommitmentBatch,
+          ),
+          processLegacyCommitmentBatchEvents(eventsListener, legacyEventsEncryptedCommitmentBatch),
+        ]);
+      }
 
       // eslint-disable-next-line no-await-in-loop
       await setLastSyncedBlock(endBlock);
@@ -260,14 +349,12 @@ class RailgunProxyContract extends EventEmitter {
   }
 
   /**
-   * GenerateDeposit populated transaction
-   * @param {DepositInput[]} depositInputs - array of preImage and encryptedRandom for each deposit note
+   * GenerateShield populated transaction
+   * @param {ShieldInput[]} shieldInputs - array of preImage and encryptedRandom for each shield note
    * @returns Populated transaction
    */
-  generateDeposit(depositInputs: DepositInput[]): Promise<PopulatedTransaction> {
-    const preImages = depositInputs.map((depositInput) => depositInput.preImage);
-    const encryptedRandoms = depositInputs.map((depositInput) => depositInput.encryptedRandom);
-    return this.contract.populateTransaction.generateDeposit(preImages, encryptedRandoms);
+  generateShield(shieldRequests: ShieldRequestStruct[]): Promise<PopulatedTransaction> {
+    return this.contract.populateTransaction.shield(shieldRequests);
   }
 
   /**
@@ -275,13 +362,15 @@ class RailgunProxyContract extends EventEmitter {
    * @param transactions - serialized railgun transaction
    * @returns - populated ETH transaction
    */
-  transact(transactions: SerializedTransaction[]): Promise<PopulatedTransaction> {
+  transact(transactions: TransactionStruct[]): Promise<PopulatedTransaction> {
     return this.contract.populateTransaction.transact(transactions);
   }
 
-  async hashCommitment(commitment: CommitmentPreimage): Promise<string> {
-    const hash: BigNumber = await this.contract.hashCommitment(commitment);
-    return hash.toHexString();
+  async hashCommitment(commitment: CommitmentPreimageStruct): Promise<string> {
+    return this.contract.hashCommitment({
+      ...commitment,
+      npk: formatToByteLength(await commitment.npk, ByteLength.UINT_256, true),
+    });
   }
 
   /**

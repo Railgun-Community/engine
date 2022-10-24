@@ -4,5 +4,6 @@
 export * as poseidonSol from "./Poseidon.sol";
 export { Commitments__factory } from "./Commitments__factory";
 export { RailgunLogic__factory } from "./RailgunLogic__factory";
-export { TokenBlacklist__factory } from "./TokenBlacklist__factory";
+export { RailgunSmartWallet__factory } from "./RailgunSmartWallet__factory";
+export { TokenBlocklist__factory } from "./TokenBlocklist__factory";
 export { Verifier__factory } from "./Verifier__factory";

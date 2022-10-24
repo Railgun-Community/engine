@@ -3,6 +3,7 @@
 /* eslint-disable */
 export { CommitmentsStub__factory } from "./CommitmentsStub__factory";
 export { RailgunLogicStub__factory } from "./RailgunLogicStub__factory";
+export { RailgunSmartWalletStub__factory } from "./RailgunSmartWalletStub__factory";
 export { SnarkStub__factory } from "./SnarkStub__factory";
-export { TokenBlacklistStub__factory } from "./TokenBlacklistStub__factory";
+export { TokenBlocklistStub__factory } from "./TokenBlocklistStub__factory";
 export { VerifierStub__factory } from "./VerifierStub__factory";

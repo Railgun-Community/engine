@@ -2,13 +2,13 @@
   {
     "inputs": [
       {
-        "internalType": "contract RailgunLogic",
+        "internalType": "contract RailgunSmartWallet",
         "name": "_railgun",
         "type": "address"
       },
       {
         "internalType": "contract IWBase",
-        "name": "_wbase",
+        "name": "_wBase",
         "type": "address"
       }
     ],
@@ -16,82 +16,39 @@
     "type": "constructor"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "callIndex",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "revertReason",
+        "type": "bytes"
+      }
+    ],
+    "name": "CallFailed",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
-        "components": [
-          {
-            "internalType": "bool",
-            "name": "success",
-            "type": "bool"
-          },
-          {
-            "internalType": "string",
-            "name": "returnData",
-            "type": "string"
-          }
-        ],
         "indexed": false,
-        "internalType": "struct RelayAdapt.Result[]",
-        "name": "callResults",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "CallResult",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "VERIFICATION_BYPASS",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "enum TokenType",
-            "name": "tokenType",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenSubID",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct TokenData[]",
-        "name": "_deposits",
-        "type": "tuple[]"
-      },
-      {
-        "internalType": "uint256[2]",
-        "name": "_encryptedRandom",
-        "type": "uint256[2]"
-      },
-      {
         "internalType": "uint256",
-        "name": "_npk",
+        "name": "callIndex",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "revertReason",
+        "type": "bytes"
       }
     ],
-    "name": "deposit",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "name": "CallError",
+    "type": "event"
   },
   {
     "inputs": [
@@ -156,19 +113,19 @@
             "type": "tuple"
           },
           {
-            "internalType": "uint256",
+            "internalType": "bytes32",
             "name": "merkleRoot",
-            "type": "uint256"
+            "type": "bytes32"
           },
           {
-            "internalType": "uint256[]",
+            "internalType": "bytes32[]",
             "name": "nullifiers",
-            "type": "uint256[]"
+            "type": "bytes32[]"
           },
           {
-            "internalType": "uint256[]",
+            "internalType": "bytes32[]",
             "name": "commitments",
-            "type": "uint256[]"
+            "type": "bytes32[]"
           },
           {
             "components": [
@@ -178,9 +135,19 @@
                 "type": "uint16"
               },
               {
-                "internalType": "enum WithdrawType",
-                "name": "withdraw",
+                "internalType": "uint72",
+                "name": "minGasPrice",
+                "type": "uint72"
+              },
+              {
+                "internalType": "enum UnshieldType",
+                "name": "unshield",
                 "type": "uint8"
+              },
+              {
+                "internalType": "uint64",
+                "name": "chainID",
+                "type": "uint64"
               },
               {
                 "internalType": "address",
@@ -195,19 +162,29 @@
               {
                 "components": [
                   {
-                    "internalType": "uint256[4]",
+                    "internalType": "bytes32[4]",
                     "name": "ciphertext",
-                    "type": "uint256[4]"
+                    "type": "bytes32[4]"
                   },
                   {
-                    "internalType": "uint256[2]",
-                    "name": "ephemeralKeys",
-                    "type": "uint256[2]"
+                    "internalType": "bytes32",
+                    "name": "blindedSenderViewingKey",
+                    "type": "bytes32"
                   },
                   {
-                    "internalType": "uint256[]",
+                    "internalType": "bytes32",
+                    "name": "blindedReceiverViewingKey",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "bytes",
+                    "name": "annotationData",
+                    "type": "bytes"
+                  },
+                  {
+                    "internalType": "bytes",
                     "name": "memo",
-                    "type": "uint256[]"
+                    "type": "bytes"
                   }
                 ],
                 "internalType": "struct CommitmentCiphertext[]",
@@ -222,9 +199,9 @@
           {
             "components": [
               {
-                "internalType": "uint256",
+                "internalType": "bytes32",
                 "name": "npk",
-                "type": "uint256"
+                "type": "bytes32"
               },
               {
                 "components": [
@@ -255,13 +232,8 @@
               }
             ],
             "internalType": "struct CommitmentPreimage",
-            "name": "withdrawPreimage",
+            "name": "unshieldPreimage",
             "type": "tuple"
-          },
-          {
-            "internalType": "address",
-            "name": "overrideOutput",
-            "type": "address"
           }
         ],
         "internalType": "struct Transaction[]",
@@ -269,9 +241,48 @@
         "type": "tuple[]"
       },
       {
-        "internalType": "bytes",
-        "name": "_additionalData",
-        "type": "bytes"
+        "components": [
+          {
+            "internalType": "bytes31",
+            "name": "random",
+            "type": "bytes31"
+          },
+          {
+            "internalType": "bool",
+            "name": "requireSuccess",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "minGasLimit",
+            "type": "uint256"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+              },
+              {
+                "internalType": "bytes",
+                "name": "data",
+                "type": "bytes"
+              },
+              {
+                "internalType": "uint256",
+                "name": "value",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct RelayAdapt.Call[]",
+            "name": "calls",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct RelayAdapt.ActionData",
+        "name": "_actionData",
+        "type": "tuple"
       }
     ],
     "name": "getAdaptParams",
@@ -288,192 +299,9 @@
   {
     "inputs": [
       {
-        "components": [
-          {
-            "components": [
-              {
-                "components": [
-                  {
-                    "internalType": "uint256",
-                    "name": "x",
-                    "type": "uint256"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "y",
-                    "type": "uint256"
-                  }
-                ],
-                "internalType": "struct G1Point",
-                "name": "a",
-                "type": "tuple"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "uint256[2]",
-                    "name": "x",
-                    "type": "uint256[2]"
-                  },
-                  {
-                    "internalType": "uint256[2]",
-                    "name": "y",
-                    "type": "uint256[2]"
-                  }
-                ],
-                "internalType": "struct G2Point",
-                "name": "b",
-                "type": "tuple"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "uint256",
-                    "name": "x",
-                    "type": "uint256"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "y",
-                    "type": "uint256"
-                  }
-                ],
-                "internalType": "struct G1Point",
-                "name": "c",
-                "type": "tuple"
-              }
-            ],
-            "internalType": "struct SnarkProof",
-            "name": "proof",
-            "type": "tuple"
-          },
-          {
-            "internalType": "uint256",
-            "name": "merkleRoot",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256[]",
-            "name": "nullifiers",
-            "type": "uint256[]"
-          },
-          {
-            "internalType": "uint256[]",
-            "name": "commitments",
-            "type": "uint256[]"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint16",
-                "name": "treeNumber",
-                "type": "uint16"
-              },
-              {
-                "internalType": "enum WithdrawType",
-                "name": "withdraw",
-                "type": "uint8"
-              },
-              {
-                "internalType": "address",
-                "name": "adaptContract",
-                "type": "address"
-              },
-              {
-                "internalType": "bytes32",
-                "name": "adaptParams",
-                "type": "bytes32"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "uint256[4]",
-                    "name": "ciphertext",
-                    "type": "uint256[4]"
-                  },
-                  {
-                    "internalType": "uint256[2]",
-                    "name": "ephemeralKeys",
-                    "type": "uint256[2]"
-                  },
-                  {
-                    "internalType": "uint256[]",
-                    "name": "memo",
-                    "type": "uint256[]"
-                  }
-                ],
-                "internalType": "struct CommitmentCiphertext[]",
-                "name": "commitmentCiphertext",
-                "type": "tuple[]"
-              }
-            ],
-            "internalType": "struct BoundParams",
-            "name": "boundParams",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint256",
-                "name": "npk",
-                "type": "uint256"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "enum TokenType",
-                    "name": "tokenType",
-                    "type": "uint8"
-                  },
-                  {
-                    "internalType": "address",
-                    "name": "tokenAddress",
-                    "type": "address"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "tokenSubID",
-                    "type": "uint256"
-                  }
-                ],
-                "internalType": "struct TokenData",
-                "name": "token",
-                "type": "tuple"
-              },
-              {
-                "internalType": "uint120",
-                "name": "value",
-                "type": "uint120"
-              }
-            ],
-            "internalType": "struct CommitmentPreimage",
-            "name": "withdrawPreimage",
-            "type": "tuple"
-          },
-          {
-            "internalType": "address",
-            "name": "overrideOutput",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct Transaction[]",
-        "name": "_transactions",
-        "type": "tuple[]"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_random",
-        "type": "uint256"
-      },
-      {
         "internalType": "bool",
         "name": "_requireSuccess",
         "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_minGas",
-        "type": "uint256"
       },
       {
         "components": [
@@ -498,15 +326,9 @@
         "type": "tuple[]"
       }
     ],
-    "name": "getRelayAdaptParams",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "pure",
+    "name": "multicall",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -514,7 +336,7 @@
     "name": "railgun",
     "outputs": [
       {
-        "internalType": "contract RailgunLogic",
+        "internalType": "contract RailgunSmartWallet",
         "name": "",
         "type": "address"
       }
@@ -585,19 +407,19 @@
             "type": "tuple"
           },
           {
-            "internalType": "uint256",
+            "internalType": "bytes32",
             "name": "merkleRoot",
-            "type": "uint256"
+            "type": "bytes32"
           },
           {
-            "internalType": "uint256[]",
+            "internalType": "bytes32[]",
             "name": "nullifiers",
-            "type": "uint256[]"
+            "type": "bytes32[]"
           },
           {
-            "internalType": "uint256[]",
+            "internalType": "bytes32[]",
             "name": "commitments",
-            "type": "uint256[]"
+            "type": "bytes32[]"
           },
           {
             "components": [
@@ -607,9 +429,19 @@
                 "type": "uint16"
               },
               {
-                "internalType": "enum WithdrawType",
-                "name": "withdraw",
+                "internalType": "uint72",
+                "name": "minGasPrice",
+                "type": "uint72"
+              },
+              {
+                "internalType": "enum UnshieldType",
+                "name": "unshield",
                 "type": "uint8"
+              },
+              {
+                "internalType": "uint64",
+                "name": "chainID",
+                "type": "uint64"
               },
               {
                 "internalType": "address",
@@ -624,19 +456,29 @@
               {
                 "components": [
                   {
-                    "internalType": "uint256[4]",
+                    "internalType": "bytes32[4]",
                     "name": "ciphertext",
-                    "type": "uint256[4]"
+                    "type": "bytes32[4]"
                   },
                   {
-                    "internalType": "uint256[2]",
-                    "name": "ephemeralKeys",
-                    "type": "uint256[2]"
+                    "internalType": "bytes32",
+                    "name": "blindedSenderViewingKey",
+                    "type": "bytes32"
                   },
                   {
-                    "internalType": "uint256[]",
+                    "internalType": "bytes32",
+                    "name": "blindedReceiverViewingKey",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "bytes",
+                    "name": "annotationData",
+                    "type": "bytes"
+                  },
+                  {
+                    "internalType": "bytes",
                     "name": "memo",
-                    "type": "uint256[]"
+                    "type": "bytes"
                   }
                 ],
                 "internalType": "struct CommitmentCiphertext[]",
@@ -651,9 +493,9 @@
           {
             "components": [
               {
-                "internalType": "uint256",
+                "internalType": "bytes32",
                 "name": "npk",
-                "type": "uint256"
+                "type": "bytes32"
               },
               {
                 "components": [
@@ -684,13 +526,8 @@
               }
             ],
             "internalType": "struct CommitmentPreimage",
-            "name": "withdrawPreimage",
+            "name": "unshieldPreimage",
             "type": "tuple"
-          },
-          {
-            "internalType": "address",
-            "name": "overrideOutput",
-            "type": "address"
           }
         ],
         "internalType": "struct Transaction[]",
@@ -698,227 +535,48 @@
         "type": "tuple[]"
       },
       {
-        "internalType": "bytes",
-        "name": "_additionalData",
-        "type": "bytes"
-      }
-    ],
-    "name": "railgunBatch",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "components": [
           {
-            "components": [
-              {
-                "components": [
-                  {
-                    "internalType": "uint256",
-                    "name": "x",
-                    "type": "uint256"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "y",
-                    "type": "uint256"
-                  }
-                ],
-                "internalType": "struct G1Point",
-                "name": "a",
-                "type": "tuple"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "uint256[2]",
-                    "name": "x",
-                    "type": "uint256[2]"
-                  },
-                  {
-                    "internalType": "uint256[2]",
-                    "name": "y",
-                    "type": "uint256[2]"
-                  }
-                ],
-                "internalType": "struct G2Point",
-                "name": "b",
-                "type": "tuple"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "uint256",
-                    "name": "x",
-                    "type": "uint256"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "y",
-                    "type": "uint256"
-                  }
-                ],
-                "internalType": "struct G1Point",
-                "name": "c",
-                "type": "tuple"
-              }
-            ],
-            "internalType": "struct SnarkProof",
-            "name": "proof",
-            "type": "tuple"
+            "internalType": "bytes31",
+            "name": "random",
+            "type": "bytes31"
+          },
+          {
+            "internalType": "bool",
+            "name": "requireSuccess",
+            "type": "bool"
           },
           {
             "internalType": "uint256",
-            "name": "merkleRoot",
+            "name": "minGasLimit",
             "type": "uint256"
-          },
-          {
-            "internalType": "uint256[]",
-            "name": "nullifiers",
-            "type": "uint256[]"
-          },
-          {
-            "internalType": "uint256[]",
-            "name": "commitments",
-            "type": "uint256[]"
           },
           {
             "components": [
               {
-                "internalType": "uint16",
-                "name": "treeNumber",
-                "type": "uint16"
-              },
-              {
-                "internalType": "enum WithdrawType",
-                "name": "withdraw",
-                "type": "uint8"
-              },
-              {
                 "internalType": "address",
-                "name": "adaptContract",
+                "name": "to",
                 "type": "address"
               },
               {
-                "internalType": "bytes32",
-                "name": "adaptParams",
-                "type": "bytes32"
+                "internalType": "bytes",
+                "name": "data",
+                "type": "bytes"
               },
-              {
-                "components": [
-                  {
-                    "internalType": "uint256[4]",
-                    "name": "ciphertext",
-                    "type": "uint256[4]"
-                  },
-                  {
-                    "internalType": "uint256[2]",
-                    "name": "ephemeralKeys",
-                    "type": "uint256[2]"
-                  },
-                  {
-                    "internalType": "uint256[]",
-                    "name": "memo",
-                    "type": "uint256[]"
-                  }
-                ],
-                "internalType": "struct CommitmentCiphertext[]",
-                "name": "commitmentCiphertext",
-                "type": "tuple[]"
-              }
-            ],
-            "internalType": "struct BoundParams",
-            "name": "boundParams",
-            "type": "tuple"
-          },
-          {
-            "components": [
               {
                 "internalType": "uint256",
-                "name": "npk",
-                "type": "uint256"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "enum TokenType",
-                    "name": "tokenType",
-                    "type": "uint8"
-                  },
-                  {
-                    "internalType": "address",
-                    "name": "tokenAddress",
-                    "type": "address"
-                  },
-                  {
-                    "internalType": "uint256",
-                    "name": "tokenSubID",
-                    "type": "uint256"
-                  }
-                ],
-                "internalType": "struct TokenData",
-                "name": "token",
-                "type": "tuple"
-              },
-              {
-                "internalType": "uint120",
                 "name": "value",
-                "type": "uint120"
+                "type": "uint256"
               }
             ],
-            "internalType": "struct CommitmentPreimage",
-            "name": "withdrawPreimage",
-            "type": "tuple"
-          },
-          {
-            "internalType": "address",
-            "name": "overrideOutput",
-            "type": "address"
+            "internalType": "struct RelayAdapt.Call[]",
+            "name": "calls",
+            "type": "tuple[]"
           }
         ],
-        "internalType": "struct Transaction[]",
-        "name": "_transactions",
-        "type": "tuple[]"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_random",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "_requireSuccess",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_minGas",
-        "type": "uint256"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "to",
-            "type": "address"
-          },
-          {
-            "internalType": "bytes",
-            "name": "data",
-            "type": "bytes"
-          },
-          {
-            "internalType": "uint256",
-            "name": "value",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct RelayAdapt.Call[]",
-        "name": "_calls",
-        "type": "tuple[]"
+        "internalType": "struct RelayAdapt.ActionData",
+        "name": "_actionData",
+        "type": "tuple"
       }
     ],
     "name": "relay",
@@ -931,46 +589,135 @@
       {
         "components": [
           {
-            "internalType": "enum TokenType",
-            "name": "tokenType",
-            "type": "uint8"
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "npk",
+                "type": "bytes32"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "enum TokenType",
+                    "name": "tokenType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "tokenAddress",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "tokenSubID",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct TokenData",
+                "name": "token",
+                "type": "tuple"
+              },
+              {
+                "internalType": "uint120",
+                "name": "value",
+                "type": "uint120"
+              }
+            ],
+            "internalType": "struct CommitmentPreimage",
+            "name": "preimage",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32[3]",
+                "name": "encryptedBundle",
+                "type": "bytes32[3]"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "shieldKey",
+                "type": "bytes32"
+              }
+            ],
+            "internalType": "struct ShieldCiphertext",
+            "name": "ciphertext",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct ShieldRequest[]",
+        "name": "_shieldRequests",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "shield",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "enum TokenType",
+                "name": "tokenType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "address",
+                "name": "tokenAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenSubID",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct TokenData",
+            "name": "token",
+            "type": "tuple"
           },
           {
             "internalType": "address",
-            "name": "tokenAddress",
+            "name": "to",
             "type": "address"
           },
           {
             "internalType": "uint256",
-            "name": "tokenSubID",
+            "name": "value",
             "type": "uint256"
           }
         ],
-        "internalType": "struct TokenData[]",
-        "name": "_tokens",
+        "internalType": "struct RelayAdapt.TokenTransfer[]",
+        "name": "_transfers",
         "type": "tuple[]"
-      },
-      {
-        "internalType": "address",
-        "name": "_to",
-        "type": "address"
       }
     ],
-    "name": "send",
+    "name": "transfer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "unwrapBase",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "unwrapAllBase",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "wbase",
+    "name": "wBase",
     "outputs": [
       {
         "internalType": "contract IWBase",
@@ -982,8 +729,14 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "wrapAllBase",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "wrapBase",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
