@@ -10,6 +10,7 @@ export enum ByteLength {
   UINT_128 = 16,
   Address = 20,
   UINT_192 = 24,
+  UINT_248 = 31,
   UINT_256 = 32,
 }
 
@@ -336,6 +337,16 @@ export function nToHex(n: bigint, byteLength: ByteLength, prefix: boolean = fals
  */
 export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
   return hexToBytes(nToHex(n, byteLength));
+}
+
+/**
+ * Convert Uint8Array to bigint
+ * @param {Uint8Array} bytes
+ * @returns {bigint}
+ */
+export function bytesToN(bytes: Uint8Array): bigint {
+  const prefix = true;
+  return BigInt(hexlify(bytes, prefix));
 }
 
 /**

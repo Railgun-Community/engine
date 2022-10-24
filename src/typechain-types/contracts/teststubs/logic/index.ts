@@ -3,6 +3,7 @@
 /* eslint-disable */
 export type { CommitmentsStub } from "./CommitmentsStub";
 export type { RailgunLogicStub } from "./RailgunLogicStub";
+export type { RailgunSmartWalletStub } from "./RailgunSmartWalletStub";
 export type { SnarkStub } from "./SnarkStub";
-export type { TokenBlacklistStub } from "./TokenBlacklistStub";
+export type { TokenBlocklistStub } from "./TokenBlocklistStub";
 export type { VerifierStub } from "./VerifierStub";

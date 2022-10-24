@@ -36,6 +36,6 @@ export const extractSpendingSolutionGroupsData = (
     utxoTxids: spendingSolutionGroup.utxos.map((utxo) => utxo.txid),
     utxoValues: spendingSolutionGroup.utxos.map((utxo) => utxo.note.value),
     outputValues: spendingSolutionGroup.outputs.map((note) => note.value),
-    outputAddressDatas: spendingSolutionGroup.outputs.map((note) => note.addressData),
+    outputAddressDatas: spendingSolutionGroup.outputs.map((note) => note.receiverAddressData),
   }));
 };

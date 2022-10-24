@@ -3,7 +3,7 @@ import { minBigInt } from '../utils/bigint';
 import { TreeBalance } from '../models/wallet-types';
 import { VALID_NULLIFIER_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
-import { Note } from '../note/note';
+import { TransactNote } from '../note/transact-note';
 
 type SolutionSpendingGroupGenerator = (
   tree: number,
@@ -67,8 +67,8 @@ const createSpendingSolutionsForValue = (
 
 export const createSpendingSolutionGroupsForOutput = (
   treeSortedBalances: TreeBalance[],
-  output: Note,
-  remainingOutputs: Note[],
+  output: TransactNote,
+  remainingOutputs: TransactNote[],
   excludedUTXOIDs: string[],
 ): SpendingSolutionGroup[] => {
   const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
@@ -82,7 +82,7 @@ export const createSpendingSolutionGroupsForOutput = (
       spendingTree: tree,
       utxos,
       outputs: [solutionOutput],
-      withdrawValue: BigInt(0),
+      unshieldValue: BigInt(0),
     };
   };
 
@@ -105,9 +105,9 @@ export const createSpendingSolutionGroupsForOutput = (
   );
 };
 
-export const createSpendingSolutionGroupsForWithdraw = (
+export const createSpendingSolutionGroupsForUnshield = (
   treeSortedBalances: TreeBalance[],
-  withdrawValue: bigint,
+  unshieldValue: bigint,
   excludedUTXOIDs: string[],
 ): SpendingSolutionGroup[] => {
   const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
@@ -119,13 +119,13 @@ export const createSpendingSolutionGroupsForWithdraw = (
       spendingTree: tree,
       utxos,
       outputs: [],
-      withdrawValue: solutionValue,
+      unshieldValue: solutionValue,
     };
   };
 
   return createSpendingSolutionsForValue(
     treeSortedBalances,
-    withdrawValue,
+    unshieldValue,
     excludedUTXOIDs,
     spendingSolutionGroupGenerator,
   );

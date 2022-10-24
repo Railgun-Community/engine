@@ -4,11 +4,11 @@ import { ByteLength, formatToByteLength, HashZero, trim } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup, TXO } from '../models/txo-types';
-import { TokenType, BigIntish, SerializedTransaction, AdaptID } from '../models/formatted-types';
+import { TokenType, AdaptID } from '../models/formatted-types';
 import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
-  createSpendingSolutionGroupsForWithdraw,
+  createSpendingSolutionGroupsForUnshield,
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isValidFor3Outputs } from '../solutions/nullifiers';
@@ -20,8 +20,9 @@ import {
 import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
-import { Note } from '../note/note';
+import { TransactNote } from '../note/transact-note';
 import { TreeBalance } from '../models';
+import { TransactionStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 
 class TransactionBatch {
   private adaptID: AdaptID = {
@@ -33,15 +34,17 @@ class TransactionBatch {
 
   private tokenAddress: string;
 
-  private outputs: Note[] = [];
+  private outputs: TransactNote[] = [];
 
   private tokenType: TokenType;
 
-  private withdrawAddress: Optional<string>;
+  private unshieldAddress: Optional<string>;
 
-  private withdrawTotal: bigint = BigInt(0);
+  private unshieldTotal: bigint = BigInt(0);
 
   private allowOverride: Optional<boolean>;
+
+  private overallBatchMinGasPrice: bigint;
 
   /**
    * Create ERC20Transaction Object
@@ -49,13 +52,19 @@ class TransactionBatch {
    * @param tokenType - enum of token type
    * @param chain - chain type/id of network
    */
-  constructor(tokenAddress: string, tokenType: TokenType, chain: Chain) {
+  constructor(
+    tokenAddress: string,
+    tokenType: TokenType,
+    chain: Chain,
+    overallBatchMinGasPrice: bigint = 0n,
+  ) {
     this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
     this.tokenType = tokenType;
     this.chain = chain;
+    this.overallBatchMinGasPrice = overallBatchMinGasPrice;
   }
 
-  addOutput(output: Note) {
+  addOutput(output: TransactNote) {
     this.outputs.push(output);
   }
 
@@ -63,19 +72,19 @@ class TransactionBatch {
     this.outputs = [];
   }
 
-  setWithdraw(withdrawAddress: string, value: BigIntish, allowOverride?: boolean) {
-    if (this.withdrawAddress != null) {
-      throw new Error('You may only call .withdraw once for a given transaction batch.');
+  setUnshield(unshieldAddress: string, value: string | bigint, allowOverride?: boolean) {
+    if (this.unshieldAddress != null) {
+      throw new Error('You may only call .unshield once for a given transaction batch.');
     }
 
-    this.withdrawAddress = withdrawAddress;
-    this.withdrawTotal = BigInt(value);
+    this.unshieldAddress = unshieldAddress;
+    this.unshieldTotal = BigInt(value);
     this.allowOverride = allowOverride;
   }
 
-  resetWithdraw() {
-    this.withdrawAddress = undefined;
-    this.withdrawTotal = BigInt(0);
+  resetUnshield() {
+    this.unshieldAddress = undefined;
+    this.unshieldTotal = BigInt(0);
     this.allowOverride = undefined;
   }
 
@@ -93,7 +102,7 @@ class TransactionBatch {
     const outputTotal = this.outputs.reduce((left, right) => left + right.value, BigInt(0));
 
     // Calculate total required to be supplied by UTXOs
-    const totalRequired = outputTotal + this.withdrawTotal;
+    const totalRequired = outputTotal + this.unshieldTotal;
 
     // Check if output token fields match tokenID for this transaction
     this.outputs.forEach((output, index) => {
@@ -145,15 +154,15 @@ class TransactionBatch {
       if (amount < totalRequired) {
         throw new Error('Could not find UTXOs to satisfy required amount.');
       }
-      if (!isValidFor3Outputs(utxos.length) && this.outputs.length > 0 && this.withdrawTotal > 0) {
-        // Cannot have 3 outputs. Can't include withdraw in note.
-        throw new Error('Requires 3 outputs, given a withdraw and at least one standard output.');
+      if (!isValidFor3Outputs(utxos.length) && this.outputs.length > 0 && this.unshieldTotal > 0) {
+        // Cannot have 3 outputs. Can't include unshield in note.
+        throw new Error('Requires 3 outputs, given a unshield and at least one standard output.');
       }
 
       const spendingSolutionGroup: SpendingSolutionGroup = {
         utxos,
         spendingTree,
-        withdrawValue: this.withdrawTotal,
+        unshieldValue: this.unshieldTotal,
         outputs: this.outputs,
       };
 
@@ -224,18 +233,18 @@ class TransactionBatch {
       throw consolidateBalanceError();
     }
 
-    if (this.withdrawTotal > 0) {
-      const withdrawSpendingSolutionGroups = createSpendingSolutionGroupsForWithdraw(
+    if (this.unshieldTotal > 0) {
+      const unshieldSpendingSolutionGroups = createSpendingSolutionGroupsForUnshield(
         treeSortedBalances,
-        this.withdrawTotal,
+        this.unshieldTotal,
         excludedUTXOIDs,
       );
 
-      if (!withdrawSpendingSolutionGroups.length) {
+      if (!unshieldSpendingSolutionGroups.length) {
         throw consolidateBalanceError();
       }
 
-      spendingSolutionGroups.push(...withdrawSpendingSolutionGroups);
+      spendingSolutionGroups.push(...unshieldSpendingSolutionGroups);
     }
 
     return spendingSolutionGroups;
@@ -248,12 +257,12 @@ class TransactionBatch {
    * @param encryptionKey - encryption key for wallet
    * @returns serialized transaction
    */
-  async generateSerializedTransactions(
+  async generateTransactions(
     prover: Prover,
     wallet: RailgunWallet,
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
-  ): Promise<SerializedTransaction[]> {
+  ): Promise<TransactionStruct[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
     EngineDebug.log('Actual spending solution groups:');
     EngineDebug.log(
@@ -272,14 +281,20 @@ class TransactionBatch {
       progressCallback(averageProgress);
     };
 
-    const proofPromises: Promise<SerializedTransaction>[] = spendingSolutionGroups.map(
+    const proofPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
       (spendingSolutionGroup, index) => {
         const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
         const individualProgressCallback = (progress: number) => {
           individualProgressAmounts[index] = progress;
           updateProgressCallback();
         };
-        return transaction.prove(prover, wallet, encryptionKey, individualProgressCallback);
+        return transaction.prove(
+          prover,
+          wallet,
+          encryptionKey,
+          this.overallBatchMinGasPrice,
+          individualProgressCallback,
+        );
       },
     );
     return Promise.all(proofPromises);
@@ -291,11 +306,11 @@ class TransactionBatch {
    * @param encryptionKey - encryption key for wallet
    * @returns serialized transaction
    */
-  async generateDummySerializedTransactions(
+  async generateDummyTransactions(
     prover: Prover,
     wallet: RailgunWallet,
     encryptionKey: string,
-  ): Promise<SerializedTransaction[]> {
+  ): Promise<TransactionStruct[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
     EngineDebug.log(`Dummy spending solution groups: token ${this.tokenAddress}`);
     EngineDebug.log(
@@ -306,10 +321,10 @@ class TransactionBatch {
       ),
     );
 
-    const proofPromises: Promise<SerializedTransaction>[] = spendingSolutionGroups.map(
+    const proofPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
       (spendingSolutionGroup) => {
         const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-        return transaction.dummyProve(prover, wallet, encryptionKey);
+        return transaction.dummyProve(prover, wallet, encryptionKey, this.overallBatchMinGasPrice);
       },
     );
     return Promise.all(proofPromises);
@@ -318,7 +333,7 @@ class TransactionBatch {
   generateTransactionForSpendingSolutionGroup(
     spendingSolutionGroup: SpendingSolutionGroup,
   ): Transaction {
-    const { spendingTree, utxos, outputs, withdrawValue } = spendingSolutionGroup;
+    const { spendingTree, utxos, outputs, unshieldValue } = spendingSolutionGroup;
     const transaction = new Transaction(
       this.tokenAddress,
       this.tokenType,
@@ -328,8 +343,8 @@ class TransactionBatch {
       this.adaptID,
     );
     transaction.setOutputs(outputs);
-    if (this.withdrawAddress && withdrawValue > 0) {
-      transaction.withdraw(this.withdrawAddress, withdrawValue, this.allowOverride);
+    if (this.unshieldAddress && unshieldValue > 0) {
+      transaction.unshield(this.unshieldAddress, unshieldValue, this.allowOverride);
     }
     return transaction;
   }

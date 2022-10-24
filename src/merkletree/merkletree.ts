@@ -13,6 +13,7 @@ import {
   nToHex,
   hexToBigInt,
   arrayify,
+  padToLength,
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
 import { BytesData, Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
@@ -20,6 +21,7 @@ import { Chain } from '../models/engine-types';
 import { getChainFullNetworkID } from '../chain/chain';
 import { SNARK_PRIME } from '../utils/constants';
 import { keccak256 } from '../utils/hash';
+import { UnshieldStoredEvent } from '../models';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
@@ -232,7 +234,24 @@ class MerkleTree {
   }
 
   /**
-   * Gets if a nullifier has been seen
+   * Construct DB path from unshield transaction
+   * @param txid - unshield txid to get path for
+   * @returns database path
+   */
+  getUnshieldEventsDBPath(txid: string, tokenAddress?: string): string[] {
+    const path = [
+      ...this.getChainDBPrefix(),
+      hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
+      hexlify(txid),
+    ];
+    if (tokenAddress != null) {
+      path.push(hexlify(padToLength(tokenAddress, 32)));
+    }
+    return path.map((element) => element.padStart(64, '0'));
+  }
+
+  /**
+   * Gets nullifier by its id
    * @param {string} nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else undefined
    */
@@ -268,6 +287,24 @@ class MerkleTree {
   }
 
   /**
+   * Adds unshield event to database
+   * @param unshield - unshield to add to db
+   */
+  async addUnshieldEvent(unshield: UnshieldStoredEvent): Promise<void> {
+    // Build write batch for nullifiers
+    const writeBatch: PutBatch[] = [
+      {
+        type: 'put',
+        key: this.getUnshieldEventsDBPath(unshield.txid, unshield.tokenAddress).join(':'),
+        value: unshield,
+      },
+    ];
+
+    // Write to DB
+    return this.db.batch(writeBatch, 'json');
+  }
+
+  /**
    * Gets Commitment from tree
    * @param tree - tree to get commitment from
    * @param index - index of commitment
@@ -275,6 +312,24 @@ class MerkleTree {
    */
   getCommitment(tree: number, index: number): Promise<Optional<Commitment>> {
     return this.db.get(this.getCommitmentDBPath(tree, index), 'json');
+  }
+
+  /**
+   * Gets Unshield event
+   * @param txid - txid of commitment
+   * @returns commitment
+   */
+  async getUnshieldEvents(txid: string): Promise<UnshieldStoredEvent[]> {
+    const namespace = this.getUnshieldEventsDBPath(txid);
+    const keys: string[] = await this.db.getNamespaceKeys(namespace);
+    const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
+
+    return Promise.all(
+      keySplits.map(async (keySplit) => {
+        const unshieldEvent = (await this.db.get(keySplit, 'json')) as UnshieldStoredEvent;
+        return unshieldEvent;
+      }),
+    );
   }
 
   /**

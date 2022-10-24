@@ -12,66 +12,91 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from 'ethers';
-import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
-import type { Listener, Provider } from '@ethersproject/providers';
+} from "ethers";
+import type {
+  FunctionFragment,
+  Result,
+  EventFragment,
+} from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from '../../common';
+} from "../../common";
 
 export interface DistributorInterface extends utils.Interface {
   functions: {
-    'createVestLock(address,uint256)': FunctionFragment;
-    'owner()': FunctionFragment;
-    'renounceOwnership()': FunctionFragment;
-    'staking()': FunctionFragment;
-    'transferOwnership(address)': FunctionFragment;
-    'vestLockImplementation()': FunctionFragment;
-    'vestLocks(address)': FunctionFragment;
+    "createVestLock(address,uint256)": FunctionFragment;
+    "owner()": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
+    "staking()": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
+    "vestLockImplementation()": FunctionFragment;
+    "vestLocks(address)": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | 'createVestLock'
-      | 'owner'
-      | 'renounceOwnership'
-      | 'staking'
-      | 'transferOwnership'
-      | 'vestLockImplementation'
-      | 'vestLocks',
+      | "createVestLock"
+      | "owner"
+      | "renounceOwnership"
+      | "staking"
+      | "transferOwnership"
+      | "vestLockImplementation"
+      | "vestLocks"
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: 'createVestLock',
-    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>],
+    functionFragment: "createVestLock",
+    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
   ): string;
-  encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'staking', values?: undefined): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: 'transferOwnership',
-    values: [PromiseOrValue<string>],
+    functionFragment: "renounceOwnership",
+    values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: 'vestLockImplementation', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'vestLocks', values: [PromiseOrValue<string>]): string;
+  encodeFunctionData(functionFragment: "staking", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "vestLockImplementation",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "vestLocks",
+    values: [PromiseOrValue<string>]
+  ): string;
 
-  decodeFunctionResult(functionFragment: 'createVestLock', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'staking', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'vestLockImplementation', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'vestLocks', data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "createVestLock",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "staking", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "vestLockImplementation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "vestLocks", data: BytesLike): Result;
 
   events: {
-    'OwnershipTransferred(address,address)': EventFragment;
+    "OwnershipTransferred(address,address)": EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
 }
 
 export interface OwnershipTransferredEventObject {
@@ -83,7 +108,8 @@ export type OwnershipTransferredEvent = TypedEvent<
   OwnershipTransferredEventObject
 >;
 
-export type OwnershipTransferredEventFilter = TypedEventFilter<OwnershipTransferredEvent>;
+export type OwnershipTransferredEventFilter =
+  TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface Distributor extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -94,15 +120,17 @@ export interface Distributor extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | Optional<number>,
-    toBlock?: string | Optional<number>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>,
+    eventFilter?: TypedEventFilter<TEvent>
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -113,55 +141,61 @@ export interface Distributor extends BaseContract {
     createVestLock(
       _beneficiary: PromiseOrValue<string>,
       _releaseTime: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     staking(overrides?: CallOverrides): Promise<[string]>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     vestLockImplementation(overrides?: CallOverrides): Promise<[string]>;
 
-    vestLocks(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<[string]>;
+    vestLocks(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
   };
 
   createVestLock(
     _beneficiary: PromiseOrValue<string>,
     _releaseTime: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> },
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
   renounceOwnership(
-    overrides?: Overrides & { from?: PromiseOrValue<string> },
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   staking(overrides?: CallOverrides): Promise<string>;
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> },
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   vestLockImplementation(overrides?: CallOverrides): Promise<string>;
 
-  vestLocks(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<string>;
+  vestLocks(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   callStatic: {
     createVestLock(
       _beneficiary: PromiseOrValue<string>,
       _releaseTime: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<void>;
 
     owner(overrides?: CallOverrides): Promise<string>;
@@ -170,21 +204,27 @@ export interface Distributor extends BaseContract {
 
     staking(overrides?: CallOverrides): Promise<string>;
 
-    transferOwnership(newOwner: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
+    transferOwnership(
+      newOwner: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     vestLockImplementation(overrides?: CallOverrides): Promise<string>;
 
-    vestLocks(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<string>;
+    vestLocks(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<string>;
   };
 
   filters: {
-    'OwnershipTransferred(address,address)'(
+    "OwnershipTransferred(address,address)"(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
     ): OwnershipTransferredEventFilter;
     OwnershipTransferred(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null,
+      newOwner?: PromiseOrValue<string> | null
     ): OwnershipTransferredEventFilter;
   };
 
@@ -192,52 +232,57 @@ export interface Distributor extends BaseContract {
     createVestLock(
       _beneficiary: PromiseOrValue<string>,
       _releaseTime: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     staking(overrides?: CallOverrides): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     vestLockImplementation(overrides?: CallOverrides): Promise<BigNumber>;
 
-    vestLocks(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<BigNumber>;
+    vestLocks(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
     createVestLock(
       _beneficiary: PromiseOrValue<string>,
       _releaseTime: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     staking(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    vestLockImplementation(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    vestLockImplementation(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
 
     vestLocks(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
 }

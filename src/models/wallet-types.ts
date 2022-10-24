@@ -1,4 +1,5 @@
-import { NoteExtraData } from './formatted-types';
+import { UnshieldStoredEvent } from './event-types';
+import { NoteAnnotationData } from './formatted-types';
 import { TXO } from './txo-types';
 
 export type WalletDetails = {
@@ -46,7 +47,7 @@ export type ShareableViewingKeyData = {
 export type TransactionHistoryTokenAmount = {
   token: string;
   amount: bigint;
-  noteExtraData?: NoteExtraData;
+  noteAnnotationData?: NoteAnnotationData;
   memoText: Optional<string>;
 };
 export type TransactionHistoryTransferTokenAmount = TransactionHistoryTokenAmount & {
@@ -61,6 +62,7 @@ export type TransactionHistoryEntrySpent = {
   transferTokenAmounts: TransactionHistoryTransferTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+  unshieldTokenAmounts: TransactionHistoryTransferTokenAmount[];
   version: number;
 };
 export type TransactionHistoryEntry = TransactionHistoryEntrySpent &
@@ -69,11 +71,12 @@ export type TransactionHistoryEntryPreprocessSpent = {
   txid: string;
   tokenAmounts: TransactionHistoryTokenAmount[];
   version: number;
+  unshieldEvents: UnshieldStoredEvent[];
 };
 export enum TransactionHistoryItemVersion {
-  Unknown = 0, // Receive note only: noteExtraData metadata not possible
-  Legacy = 1, // No noteExtraData on spent notes
-  UpdatedAug2022 = 2, // Adds noteExtraData for spent notes (outputType)
+  Unknown = 0, // Receive note only: noteAnnotationData metadata not possible
+  Legacy = 1, // No noteAnnotationData on spent notes
+  UpdatedAug2022 = 2, // Adds noteAnnotationData for spent notes (outputType)
 }
 
 export enum NoteType {

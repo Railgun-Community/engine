@@ -1,4 +1,4 @@
-export * from './note';
+export * from './transact-note';
 export * from './memo';
-export * from './erc20-deposit';
-export * from './erc20-withdraw';
+export * from './shield-note';
+export * from './unshield-note';

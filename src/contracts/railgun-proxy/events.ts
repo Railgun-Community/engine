@@ -1,87 +1,91 @@
-import type { BigNumber } from 'ethers';
 import {
-  EncryptedCommitment,
-  GeneratedCommitment,
+  CommitmentCiphertext,
+  CommitmentType,
   Nullifier,
-  TokenType,
+  ShieldCommitment,
+  TransactCommitment,
 } from '../../models/formatted-types';
 import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
-import { ERC20WithdrawNote } from '../../note/erc20-withdraw';
 import EngineDebug from '../../debugger/debugger';
 import {
-  CommitmentBatchEvent,
-  GeneratedCommitmentBatchEvent,
   NullifiersEvent,
+  ShieldEvent,
+  TransactEvent,
+  UnshieldEvent,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
 import {
-  CommitmentPreimageArgs,
-  EncryptedDataArgs,
-  GeneratedCommitmentBatchEventArgs,
   CommitmentEvent,
-  CommitmentCiphertextArgs,
-  CommitmentBatchEventArgs,
   EventsListener,
-  NullifierEventArgs,
   EventsNullifierListener,
+  EventsUnshieldListener,
+  UnshieldStoredEvent,
 } from '../../models/event-types';
+import {
+  CommitmentCiphertextStructOutput,
+  CommitmentPreimageStructOutput,
+  NullifiersEventObject,
+  ShieldCiphertextStructOutput,
+  ShieldEventObject,
+  TransactEventObject,
+  UnshieldEventObject,
+} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
+import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
 
 /**
  * Parse event data for database
  */
-export function formatGeneratedCommitmentBatchCommitments(
+export function formatShieldCommitments(
   transactionHash: string,
-  preImages: CommitmentPreimageArgs[],
-  encryptedRandoms: EncryptedDataArgs[],
+  preImages: CommitmentPreimageStructOutput[],
+  shieldCiphertext: ShieldCiphertextStructOutput[],
   blockNumber: number,
-): GeneratedCommitment[] {
-  const randomFormatted = encryptedRandoms.map(
-    (encryptedRandom) =>
-      [
-        formatToByteLength(encryptedRandom[0].toHexString(), ByteLength.UINT_256),
-        formatToByteLength(encryptedRandom[1].toHexString(), ByteLength.UINT_128),
-      ] as [string, string],
-  );
-  const generatedCommitments = preImages.map((item, index) => {
-    // TODO: This event is formatted exactly like a withdraw note, but
-    // we should not use this type here. It is NOT a withdraw note.
-    const note = new ERC20WithdrawNote( // SEE TODO
-      formatToByteLength(item.npk.toHexString(), ByteLength.UINT_256),
-      item.value.toBigInt(),
-      item.token.tokenAddress,
-      TokenType.ERC20,
+): ShieldCommitment[] {
+  const shieldCommitments = preImages.map((commitmentPreImage, index) => {
+    const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
+    const token = serializeTokenData(
+      commitmentPreImage.token.tokenAddress,
+      commitmentPreImage.token.tokenType,
+      commitmentPreImage.token.tokenSubID.toHexString(),
     );
-    return {
-      hash: nToHex(note.hash, ByteLength.UINT_256),
+    const value = commitmentPreImage.value.toBigInt();
+    const preImage = serializePreImage(npk, token, value);
+    const noteHash = getNoteHash(npk, token.tokenAddress, value);
+
+    const commitment: ShieldCommitment = {
+      commitmentType: CommitmentType.ShieldCommitment,
+      hash: nToHex(noteHash, ByteLength.UINT_256),
       txid: transactionHash,
       blockNumber,
-      preImage: note.serialize(false),
-      encryptedRandom: randomFormatted[index],
+      preImage,
+      encryptedBundle: shieldCiphertext[index].encryptedBundle,
+      shieldKey: shieldCiphertext[index].shieldKey,
     };
+    return commitment;
   });
-  return generatedCommitments;
+  return shieldCommitments;
 }
 
-export function formatGeneratedCommitmentBatchEvent(
-  commitmentBatchArgs: GeneratedCommitmentBatchEventArgs,
+export function formatShieldEvent(
+  shieldEventArgs: ShieldEventObject,
   transactionHash: string,
   blockNumber: number,
 ): CommitmentEvent {
-  const { treeNumber, startPosition, commitments, encryptedRandom } = commitmentBatchArgs;
+  const { treeNumber, startPosition, commitments, shieldCiphertext } = shieldEventArgs;
   if (
     treeNumber == null ||
     startPosition == null ||
     commitments == null ||
-    encryptedRandom == null
+    shieldCiphertext == null
   ) {
-    const err = new Error('Invalid GeneratedCommitmentBatchEventArgs');
+    const err = new Error('Invalid ShieldEventArgs');
     EngineDebug.error(err);
     throw err;
   }
 
-  const formattedCommitments = formatGeneratedCommitmentBatchCommitments(
+  const formattedCommitments = formatShieldCommitments(
     transactionHash,
     commitments,
-    encryptedRandom,
+    shieldCiphertext,
     blockNumber,
   );
   return {
@@ -93,53 +97,58 @@ export function formatGeneratedCommitmentBatchEvent(
   };
 }
 
-export function formatCommitmentBatchCommitments(
-  transactionHash: string,
-  hash: BigNumber[],
-  commitments: CommitmentCiphertextArgs[],
-  blockNumber: number,
-): EncryptedCommitment[] {
-  return commitments.map((commitment, index) => {
-    const { ephemeralKeys, memo } = commitment;
-    const ciphertext = commitment.ciphertext.map(
-      (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256), // 32 bytes each.
-    );
-    const ivTag = ciphertext[0];
+function formatCommitmentCiphertext(
+  commitment: CommitmentCiphertextStructOutput,
+): CommitmentCiphertext {
+  const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } = commitment;
+  const ciphertext = commitment.ciphertext.map(
+    (el) => formatToByteLength(el, ByteLength.UINT_256), // 32 bytes each.
+  );
+  const ivTag = ciphertext[0];
 
+  return {
+    ciphertext: {
+      iv: ivTag.substring(0, 32),
+      tag: ivTag.substring(32),
+      data: ciphertext.slice(1),
+    },
+    blindedSenderViewingKey: formatToByteLength(blindedSenderViewingKey, ByteLength.UINT_256), // 32 bytes each.
+    blindedReceiverViewingKey: formatToByteLength(blindedReceiverViewingKey, ByteLength.UINT_256), // 32 bytes each.
+    annotationData,
+    memo,
+  };
+}
+
+export function formatTransactCommitments(
+  transactionHash: string,
+  hash: string[],
+  commitments: CommitmentCiphertextStructOutput[],
+  blockNumber: number,
+): TransactCommitment[] {
+  return commitments.map((commitment, index) => {
     return {
-      hash: formatToByteLength(hash[index].toHexString(), ByteLength.UINT_256),
+      commitmentType: CommitmentType.TransactCommitment,
+      hash: formatToByteLength(hash[index], ByteLength.UINT_256),
       txid: transactionHash,
       blockNumber,
-      ciphertext: {
-        ciphertext: {
-          iv: ivTag.substring(0, 32),
-          tag: ivTag.substring(32),
-          data: ciphertext.slice(1),
-        },
-        ephemeralKeys: ephemeralKeys.map(
-          (key) => formatToByteLength(key.toHexString(), ByteLength.UINT_256), // 32 bytes each.
-        ),
-        memo: memo.map(
-          (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256), // 32 bytes each.
-        ),
-      },
+      ciphertext: formatCommitmentCiphertext(commitment),
     };
   });
 }
 
-export function formatCommitmentBatchEvent(
-  commitmentBatchArgs: CommitmentBatchEventArgs,
+export function formatTransactEvent(
+  transactEventArgs: TransactEventObject,
   transactionHash: string,
   blockNumber: number,
 ): CommitmentEvent {
-  const { treeNumber, startPosition, hash, ciphertext } = commitmentBatchArgs;
+  const { treeNumber, startPosition, hash, ciphertext } = transactEventArgs;
   if (treeNumber == null || startPosition == null || hash == null || ciphertext == null) {
-    const err = new Error('Invalid CommitmentBatchEventArgs');
+    const err = new Error('Invalid TransactEventObject');
     EngineDebug.error(err);
     throw err;
   }
 
-  const formattedCommitments = formatCommitmentBatchCommitments(
+  const formattedCommitments = formatTransactCommitments(
     transactionHash,
     hash,
     ciphertext,
@@ -154,45 +163,74 @@ export function formatCommitmentBatchEvent(
   };
 }
 
-export async function processGeneratedCommitmentEvents(
-  eventsListener: EventsListener,
-  events: GeneratedCommitmentBatchEvent[],
-) {
-  const filtered = events.filter((event) => event.args);
-  await Promise.all(
-    filtered.map(async (event) => {
-      const { args, transactionHash, blockNumber } = event;
-      return eventsListener(
-        formatGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
-      );
-    }),
-  );
+export function formatUnshieldEvent(
+  unshieldEventArgs: UnshieldEventObject,
+  transactionHash: string,
+  blockNumber: number,
+): UnshieldStoredEvent {
+  const { to, token, amount, fee } = unshieldEventArgs;
+  return {
+    txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+    toAddress: to,
+    tokenType: token.tokenType,
+    tokenAddress: token.tokenAddress,
+    tokenSubID: token.tokenSubID.toHexString(),
+    amount: amount.toHexString(),
+    fee: fee.toHexString(),
+    blockNumber,
+  };
 }
 
-export async function processCommitmentBatchEvents(
+export async function processShieldEvents(
   eventsListener: EventsListener,
-  events: CommitmentBatchEvent[],
+  events: ShieldEvent[],
 ): Promise<void> {
   const filtered = events.filter((event) => event.args);
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
-      return eventsListener(formatCommitmentBatchEvent(args, transactionHash, blockNumber));
+      return eventsListener(formatShieldEvent(args, transactionHash, blockNumber));
+    }),
+  );
+}
+
+export async function processTransactEvents(
+  eventsListener: EventsListener,
+  events: TransactEvent[],
+): Promise<void> {
+  const filtered = events.filter((event) => event.args);
+  await Promise.all(
+    filtered.map(async (event) => {
+      const { args, transactionHash, blockNumber } = event;
+      return eventsListener(formatTransactEvent(args, transactionHash, blockNumber));
+    }),
+  );
+}
+
+export async function processUnshieldEvents(
+  eventsUnshieldListener: EventsUnshieldListener,
+  events: UnshieldEvent[],
+): Promise<void> {
+  const filtered = events.filter((event) => event.args);
+  await Promise.all(
+    filtered.map(async (event) => {
+      const { args, transactionHash, blockNumber } = event;
+      return eventsUnshieldListener(formatUnshieldEvent(args, transactionHash, blockNumber));
     }),
   );
 }
 
 export function formatNullifierEvents(
-  nullifierEventArgs: NullifierEventArgs,
+  nullifierEventArgs: NullifiersEventObject,
   transactionHash: string,
   blockNumber: number,
 ): Nullifier[] {
   const nullifiers: Nullifier[] = [];
 
-  nullifierEventArgs.nullifier.forEach((nullifier: BigNumber) => {
+  nullifierEventArgs.nullifier.forEach((nullifier: string) => {
     nullifiers.push({
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-      nullifier: formatToByteLength(nullifier.toHexString(), ByteLength.UINT_256),
+      nullifier: formatToByteLength(nullifier, ByteLength.UINT_256),
       treeNumber: nullifierEventArgs.treeNumber.toNumber(),
       blockNumber,
     });
@@ -204,7 +242,7 @@ export function formatNullifierEvents(
 export async function processNullifierEvents(
   eventsNullifierListener: EventsNullifierListener,
   events: NullifiersEvent[],
-) {
+): Promise<void> {
   const nullifiers: Nullifier[] = [];
 
   const filtered = events.filter((event) => event.args);

@@ -1,12 +1,6 @@
 import BN from 'bn.js';
-import { BigNumberish } from 'ethers';
-import { SnarkProof } from './prover-types';
 
 export type BytesData = ArrayLike<number> | string | BN;
-
-export type BigIntish = string | number | bigint | boolean;
-
-export type Hex = Uint8Array | string;
 
 export type AdaptID = {
   contract: string;
@@ -24,24 +18,10 @@ export type CTRCiphertext = {
   data: string[];
 };
 
-export type OutputCommitmentCiphertext = {
-  ciphertext: [BigNumberish, BigNumberish, BigNumberish, BigNumberish]; // uint256[4]
-  ephemeralKeys: [BigNumberish, BigNumberish]; // uint256[2]
-  memo: BigNumberish[]; // bytes32[]
-};
-
-export type BoundParams = {
-  treeNumber: BigNumberish;
-  withdraw: BigNumberish;
-  adaptContract: string;
-  adaptParams: string;
-  commitmentCiphertext: OutputCommitmentCiphertext[];
-};
-
 export enum TokenType {
-  ERC20 = '0x0000000000000000000000000000000000000000',
-  ERC721 = '0x0000000000000000000000000000000000000001',
-  ERC1155 = '0x0000000000000000000000000000000000000002',
+  ERC20 = 0,
+  ERC721 = 1,
+  ERC1155 = 2,
 }
 
 export type TransactionReceiptLog = {
@@ -57,37 +37,41 @@ export type TokenData = {
 
 export type EncryptedData = [string, string];
 
+export enum CommitmentType {
+  ShieldCommitment = 'ShieldCommitment',
+  TransactCommitment = 'TransactCommitment',
+  LegacyEncryptedCommitment = 'LegacyEncryptedCommitment',
+  LegacyGeneratedCommitment = 'LegacyGeneratedCommitment',
+}
+
 export enum OutputType {
   Transfer = 0,
   RelayerFee = 1,
   Change = 2,
 }
 
-export type NoteExtraData = {
+export type NoteAnnotationData = {
   outputType: OutputType; // Chunk 0: Byte 1 (1)
-  senderBlindingKey: string; // Chunk 0: Bytes 2-16 (15)
+  senderRandom: string; // Chunk 0: Bytes 2-16 (15)
   walletSource: Optional<string>; // Chunk 1: Bytes 22-32 (11) - can be extended left if needed
 };
 
-export type EncryptedNoteExtraData = string[];
+export type EncryptedNoteAnnotationData = string;
 
-export type CommitmentPreimage = {
-  npk: string;
-  token: TokenData;
-  value: BigNumberish;
-};
-
-export type SerializedTransaction = {
-  proof: SnarkProof;
-  merkleRoot: BigNumberish;
-  nullifiers: BigNumberish[];
-  commitments: BigNumberish[];
-  boundParams: BoundParams;
-  withdrawPreimage: CommitmentPreimage;
-  overrideOutput: string;
-};
-
+// !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type NoteSerialized = {
+  npk: string;
+  value: string;
+  token: string;
+  random: string;
+  annotationData: string;
+  recipientAddress: string;
+  senderAddress: Optional<string>;
+  memoText: Optional<string>;
+};
+
+// !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
+export type LegacyNoteSerialized = {
   npk: string;
   value: string;
   token: string;
@@ -110,42 +94,42 @@ export type PreImage = {
   value: string;
 };
 
-export type DepositInput = {
-  preImage: CommitmentPreimage;
-  encryptedRandom: EncryptedData;
-};
-
-/**
- * Processed from transaction events
- */
-export type GeneratedCommitment = {
-  hash: string;
-  txid: string;
-  preImage: PreImage;
-  encryptedRandom: [string, string];
-  blockNumber: number;
+export type ShieldCiphertext = {
+  encryptedBundle: [string, string, string];
+  shieldKey: string;
 };
 
 export type CommitmentCiphertext = {
-  ciphertext: Ciphertext; // iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
-  ephemeralKeys: string[]; // receiver first, sender second (packed points 32 bytes each)
-  memo: string[]; // bytes32[]
+  ciphertext: Ciphertext;
+  blindedSenderViewingKey: string;
+  blindedReceiverViewingKey: string;
+  annotationData: string;
+  memo: string;
 };
 
-/**
- * Processed from from transfer transactions with data encrypted to ciphertext
- */
-export type EncryptedCommitment = {
+export type ShieldCommitment = {
+  commitmentType: CommitmentType.ShieldCommitment;
+  hash: string;
+  txid: string;
+  preImage: PreImage;
+  encryptedBundle: [string, string, string];
+  shieldKey: string;
+  blockNumber: number;
+};
+
+export type TransactCommitment = {
+  commitmentType: CommitmentType.TransactCommitment;
   hash: string;
   txid: string;
   ciphertext: CommitmentCiphertext;
   blockNumber: number;
 };
 
-/**
- * Stored Commitments are either GeneratedCommitment or EncryptedCommitment
- */
-export type Commitment = GeneratedCommitment | EncryptedCommitment;
+export type Commitment =
+  | ShieldCommitment
+  | TransactCommitment
+  | LegacyGeneratedCommitment
+  | LegacyEncryptedCommitment;
 
 export type Nullifier = {
   nullifier: string;
@@ -154,16 +138,47 @@ export type Nullifier = {
   blockNumber: number;
 };
 
+// !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type StoredReceiveCommitment = {
   spendtxid: string | false;
   txid: string;
   nullifier: string;
-  decrypted: NoteSerialized;
+  decrypted: NoteSerialized | LegacyNoteSerialized;
+  senderAddress: Optional<string>;
 };
 
+// !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type StoredSendCommitment = {
   txid: string;
-  decrypted: NoteSerialized;
-  noteExtraData?: NoteExtraData;
+  decrypted: NoteSerialized | LegacyNoteSerialized;
+  noteExtraData?: NoteAnnotationData;
   recipientAddress: string;
+};
+
+/**
+ * Legacy event types: Pre version 3.
+ * Need to support these for legacy notes.
+ */
+
+export type LegacyGeneratedCommitment = {
+  commitmentType: CommitmentType.LegacyGeneratedCommitment;
+  hash: string;
+  txid: string;
+  preImage: PreImage;
+  encryptedRandom: [string, string];
+  blockNumber: number;
+};
+
+export type LegacyCommitmentCiphertext = {
+  ciphertext: Ciphertext; // iv & tag (16 bytes each), recipient master public key (packedPoint) (uint256), packedField (uint256) {sign, random, amount}, token (uint256)
+  ephemeralKeys: string[]; // receiver first, sender second (packed points 32 bytes each)
+  memo: string[]; // bytes32[]
+};
+
+export type LegacyEncryptedCommitment = {
+  commitmentType: CommitmentType.LegacyEncryptedCommitment;
+  hash: string;
+  txid: string;
+  ciphertext: LegacyCommitmentCiphertext;
+  blockNumber: number;
 };
