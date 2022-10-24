@@ -4,38 +4,41 @@
 import type {
   BaseContract,
   BigNumber,
-  BigNumberish,
   BytesLike,
   CallOverrides,
   PopulatedTransaction,
   Signer,
   utils,
-} from 'ethers';
-import type { FunctionFragment, Result } from '@ethersproject/abi';
-import type { Listener, Provider } from '@ethersproject/providers';
+} from "ethers";
+import type { FunctionFragment, Result } from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from '../../../common';
+} from "../../../common";
 
 export interface PoseidonT4Interface extends utils.Interface {
   functions: {
-    'poseidon(uint256[3])': FunctionFragment;
+    "poseidon(bytes32[3])": FunctionFragment;
   };
 
-  getFunction(nameOrSignatureOrTopic: 'poseidon'): FunctionFragment;
+  getFunction(nameOrSignatureOrTopic: "poseidon"): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: 'poseidon',
+    functionFragment: "poseidon",
     values: [
-      [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
-    ],
+      [
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>
+      ]
+    ]
   ): string;
 
-  decodeFunctionResult(functionFragment: 'poseidon', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "poseidon", data: BytesLike): Result;
 
   events: {};
 }
@@ -49,15 +52,17 @@ export interface PoseidonT4 extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | Optional<number>,
-    toBlock?: string | Optional<number>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>,
+    eventFilter?: TypedEventFilter<TEvent>
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -67,32 +72,32 @@ export interface PoseidonT4 extends BaseContract {
   functions: {
     poseidon(
       input: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>
       ],
-      overrides?: CallOverrides,
-    ): Promise<[BigNumber]>;
+      overrides?: CallOverrides
+    ): Promise<[string]>;
   };
 
   poseidon(
     input: [
-      PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BytesLike>,
+      PromiseOrValue<BytesLike>,
+      PromiseOrValue<BytesLike>
     ],
-    overrides?: CallOverrides,
-  ): Promise<BigNumber>;
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   callStatic: {
     poseidon(
       input: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>
       ],
-      overrides?: CallOverrides,
-    ): Promise<BigNumber>;
+      overrides?: CallOverrides
+    ): Promise<string>;
   };
 
   filters: {};
@@ -100,22 +105,22 @@ export interface PoseidonT4 extends BaseContract {
   estimateGas: {
     poseidon(
       input: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>
       ],
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
     poseidon(
       input: [
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
-        PromiseOrValue<BigNumberish>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>,
+        PromiseOrValue<BytesLike>
       ],
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
 }

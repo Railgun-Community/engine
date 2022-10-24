@@ -3,7 +3,7 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Commitment, OutputType, TokenType } from '../../models/formatted-types';
+import { Commitment, CommitmentType, OutputType, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { TransactionBatch } from '../transaction-batch';
 import { randomHex } from '../../utils/bytes';
@@ -12,7 +12,7 @@ import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
-import { Note } from '../../note/note';
+import { TransactNote } from '../../note/transact-note';
 import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 
@@ -33,10 +33,11 @@ const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const random = randomHex(16);
-type makeNoteFn = (value?: bigint) => Promise<Note>;
+type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
 
-const depositLeaf = (txid: string): Commitment => ({
+const shieldLeaf = (txid: string): Commitment => ({
+  commitmentType: CommitmentType.LegacyGeneratedCommitment,
   txid,
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
   preImage: {
@@ -55,7 +56,7 @@ const depositLeaf = (txid: string): Commitment => ({
   blockNumber: 0,
 });
 
-const depositValue = 9975062344139650872817n;
+const shieldValue = 9975062344139650872817n;
 
 describe('Transaction/Transaction Batch', function run() {
   this.timeout(120000);
@@ -78,27 +79,28 @@ describe('Transaction/Transaction Batch', function run() {
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadTree(merkletree);
-    makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<Note> => {
-      const senderBlindingKey = randomHex(15);
-      return Note.create(
+    makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
+      const senderRandom = randomHex(15);
+      return TransactNote.create(
         address,
+        undefined,
         random,
         value,
         token,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.Transfer,
         undefined, // memoText
       );
     };
     merkletree.validateRoot = () => Promise.resolve(true);
-    await merkletree.queueLeaves(0, 0, [depositLeaf('a')]);
+    await merkletree.queueLeaves(0, 0, [shieldLeaf('a')]);
     await merkletree.queueLeaves(1, 0, [
-      depositLeaf('b'),
-      depositLeaf('c'),
-      depositLeaf('d'),
-      depositLeaf('e'),
-      depositLeaf('f'),
+      shieldLeaf('b'),
+      shieldLeaf('c'),
+      shieldLeaf('d'),
+      shieldLeaf('e'),
+      shieldLeaf('f'),
     ]);
     await wallet.scanBalances(chain);
     expect((await wallet.getWalletDetails(chain)).treeScannedHeights).to.deep.equal([1, 5]);
@@ -109,8 +111,8 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   it('Should validate transaction batch outputs', async () => {
-    transactionBatch.addOutput(await makeNote(depositValue * 6n));
-    const txs = await transactionBatch.generateSerializedTransactions(
+    transactionBatch.addOutput(await makeNote(shieldValue * 6n));
+    const txs = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
@@ -121,20 +123,20 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(await makeNote(depositValue * 6n));
+    transactionBatch.addOutput(await makeNote(shieldValue * 6n));
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    const txs2 = await transactionBatch.generateSerializedTransactions(
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    const txs2 = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
@@ -145,20 +147,20 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
 
     transactionBatch.resetOutputs();
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
   });
 
-  it('Should validate transaction batch outputs w/ withdraws', async () => {
-    transactionBatch.setWithdraw(ethersWallet.address, depositValue * 6n);
-    const txs = await transactionBatch.generateSerializedTransactions(
+  it('Should validate transaction batch outputs w/ unshields', async () => {
+    transactionBatch.setUnshield(ethersWallet.address, shieldValue * 6n);
+    const txs = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
@@ -167,30 +169,30 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs.length).to.equal(4);
     expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
     expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
-    expect(txs.map((tx) => tx.withdrawPreimage.value)).to.deep.equal([
-      depositValue,
-      2n * depositValue,
-      2n * depositValue,
-      depositValue,
+    expect(txs.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([
+      shieldValue,
+      2n * shieldValue,
+      2n * shieldValue,
+      shieldValue,
     ]);
 
     transactionBatch.resetOutputs();
-    transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(await makeNote(depositValue * 6n));
-    transactionBatch.setWithdraw(ethersWallet.address, depositValue * 1n);
+    transactionBatch.resetUnshield();
+    transactionBatch.addOutput(await makeNote(shieldValue * 6n));
+    transactionBatch.setUnshield(ethersWallet.address, shieldValue * 1n);
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Wallet balance too low');
 
     transactionBatch.resetOutputs();
-    transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.addOutput(await makeNote(depositValue));
-    transactionBatch.setWithdraw(ethersWallet.address, depositValue);
-    const txs2 = await transactionBatch.generateSerializedTransactions(
+    transactionBatch.resetUnshield();
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.addOutput(await makeNote(shieldValue));
+    transactionBatch.setUnshield(ethersWallet.address, shieldValue);
+    const txs2 = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
@@ -199,25 +201,25 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
     expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
-    expect(txs2.map((tx) => tx.withdrawPreimage.value)).to.deep.equal([
+    expect(txs2.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([
       0n,
       0n,
       0n,
       0n,
       0n,
-      depositValue,
+      shieldValue,
     ]);
 
     // TODO: Unhandled case.
     // Fix by using change from one note for the next output note... and so on.
     transactionBatch.resetOutputs();
-    transactionBatch.resetWithdraw();
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
-    transactionBatch.addOutput(await makeNote(depositValue + 1n));
-    transactionBatch.setWithdraw(ethersWallet.address, depositValue + 1n);
+    transactionBatch.resetUnshield();
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.setUnshield(ethersWallet.address, shieldValue + 1n);
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );
@@ -225,13 +227,13 @@ describe('Transaction/Transaction Batch', function run() {
     // TODO: Unhandled case: 8x3 circuit.
     // Fix by adding 8x3 circuit, or using change from one note for next output note.
     // Or... fix logic to create a number of 2x2 and 2x3 circuits.
-    await merkletree.queueLeaves(1, 0, [depositLeaf('g'), depositLeaf('h')]);
+    await merkletree.queueLeaves(1, 0, [shieldLeaf('g'), shieldLeaf('h')]);
     transactionBatch.resetOutputs();
-    transactionBatch.resetWithdraw();
+    transactionBatch.resetUnshield();
     transactionBatch.addOutput(await makeNote(0n));
-    transactionBatch.setWithdraw(ethersWallet.address, depositValue * 5n);
+    transactionBatch.setUnshield(ethersWallet.address, shieldValue * 5n);
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
     );

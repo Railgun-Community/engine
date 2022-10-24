@@ -21,6 +21,9 @@ export default class WalletInfo {
   }
 
   static getEncodedWalletSource(): string {
+    if (!this.walletSource) {
+      return '';
+    }
     return this.encodeWalletSource(this.walletSource);
   }
 

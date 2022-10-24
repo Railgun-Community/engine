@@ -1,25 +1,25 @@
-import { Note } from '../note/note';
-import { NoteExtraData } from './formatted-types';
+import { TransactNote } from '../note/transact-note';
+import { NoteAnnotationData } from './formatted-types';
 
 export type TXO = {
   tree: number;
   position: number;
   txid: string;
   spendtxid: string | false;
-  note: Note;
+  note: TransactNote;
 };
 
 export type SentCommitment = {
   tree: number;
   position: number;
   txid: string;
-  note: Note;
-  noteExtraData?: NoteExtraData;
+  note: TransactNote;
+  noteAnnotationData?: NoteAnnotationData;
 };
 
 export type SpendingSolutionGroup = {
   utxos: TXO[];
   spendingTree: number;
-  outputs: Note[];
-  withdrawValue: bigint;
+  outputs: TransactNote[];
+  unshieldValue: bigint;
 };

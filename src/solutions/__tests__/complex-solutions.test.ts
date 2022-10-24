@@ -15,7 +15,7 @@ import { getPublicViewingKey } from '../../utils/keys-utils';
 import { ChainType } from '../../models/engine-types';
 import { AddressData } from '../../key-derivation/bech32';
 import { ViewingKeyPair } from '../../key-derivation/wallet-node';
-import { Note } from '../../note/note';
+import { TransactNote } from '../../note/transact-note';
 import { RailgunEngine } from '../../railgun-engine';
 import { TXO, TreeBalance } from '../../models';
 
@@ -42,15 +42,16 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
     privateKey: privateViewingKey,
     pubkey: publicViewingKey,
   };
-  const senderBlindingKey = randomHex(15);
+  const senderRandom = randomHex(15);
 
-  return Note.create(
+  return TransactNote.create(
     addressData,
+    undefined,
     randomHex(16),
     value,
     TOKEN_ADDRESS,
     viewingKeyPair,
-    senderBlindingKey,
+    senderRandom,
     OutputType.Transfer,
     undefined, // memoText
   );
@@ -221,7 +222,7 @@ describe('Solutions/Complex Solutions', () => {
     const sortedTreeBalances = [treeBalance0, treeBalance1];
 
     // Case 1.
-    const remainingOutputs1: Note[] = [
+    const remainingOutputs1: TransactNote[] = [
       await createMockNote(addressData1, BigInt(80)),
       await createMockNote(addressData2, BigInt(70)),
       await createMockNote(addressData3, BigInt(60)),
@@ -251,7 +252,7 @@ describe('Solutions/Complex Solutions', () => {
     ]);
 
     // Case 2.
-    const remainingOutputs2: Note[] = [
+    const remainingOutputs2: TransactNote[] = [
       await createMockNote(addressData1, BigInt(150)),
       await createMockNote(addressData2, BigInt(70)),
       await createMockNote(addressData3, BigInt(60)),
@@ -281,7 +282,7 @@ describe('Solutions/Complex Solutions', () => {
     ]);
 
     // Case 3.
-    const remainingOutputs3: Note[] = [await createMockNote(addressData1, BigInt(500))];
+    const remainingOutputs3: TransactNote[] = [await createMockNote(addressData1, BigInt(500))];
     expect(() =>
       createSpendingSolutionGroupsForOutput(
         sortedTreeBalances,
@@ -322,7 +323,7 @@ describe('Solutions/Complex Solutions', () => {
 
     // Case 1.
     const transactionBatch1 = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, CHAIN);
-    const outputs1: Note[] = [
+    const outputs1: TransactNote[] = [
       await createMockNote(addressData1, BigInt(80)),
       await createMockNote(addressData2, BigInt(70)),
       await createMockNote(addressData3, BigInt(60)),

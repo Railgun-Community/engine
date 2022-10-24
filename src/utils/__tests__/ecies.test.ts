@@ -3,8 +3,8 @@ import { randomBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { hexlify, randomHex } from '../bytes';
-import { getSharedSymmetricKey } from '../keys-utils';
 import { encryptJSONDataWithSharedKey, tryDecryptJSONDataWithSharedKey } from '../ecies';
+import { getSharedSymmetricKeyLegacy } from '../keys-utils-legacy';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -22,11 +22,11 @@ describe('ecies', () => {
       hex: hexlify(randomHex(), true),
     };
 
-    const sharedKey = await getSharedSymmetricKey(privateKey2, publicKey1);
+    const sharedKey = await getSharedSymmetricKeyLegacy(privateKey2, publicKey1);
     assert(sharedKey != null);
     const encryptedData = encryptJSONDataWithSharedKey(data, sharedKey);
 
-    const sharedKeyAlternate = await getSharedSymmetricKey(privateKey1, publicKey2);
+    const sharedKeyAlternate = await getSharedSymmetricKeyLegacy(privateKey1, publicKey2);
     expect(sharedKeyAlternate).to.deep.equal(sharedKey);
     assert(sharedKeyAlternate != null);
 

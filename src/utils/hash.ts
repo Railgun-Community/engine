@@ -17,6 +17,20 @@ function sha256(preImage: BytesData): string {
 }
 
 /**
+ * Calculates sha512 hash of bytes
+ * @param preImage - bytesdata
+ * @returns hash
+ */
+function sha512(preImage: BytesData): string {
+  // TODO: Remove reliance on ethers utils
+  // Convert to bytes array
+  const preImageFormatted = arrayify(preImage);
+
+  // Hash and return
+  return ethersutils.sha512(preImageFormatted).slice(2);
+}
+
+/**
  * Calculates sha512 hmac
  * @param key - bytesdata
  * @param data - bytesdata
@@ -48,4 +62,4 @@ function keccak256(preImage: BytesData): string {
   return ethersutils.keccak256(preImageFormatted).slice(2);
 }
 
-export { sha256, sha512HMAC, keccak256 };
+export { sha256, sha512, sha512HMAC, keccak256 };

@@ -10,39 +10,44 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from 'ethers';
-import type { FunctionFragment, Result } from '@ethersproject/abi';
-import type { Listener, Provider } from '@ethersproject/providers';
+} from "ethers";
+import type { FunctionFragment, Result } from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from '../../../../common';
+} from "../../../../common";
 
 export interface GovernanceTargetAlphaStubInterface extends utils.Interface {
   functions: {
-    'a()': FunctionFragment;
-    'add(uint256,uint256)': FunctionFragment;
-    'b()': FunctionFragment;
-    'willRevert()': FunctionFragment;
+    "a()": FunctionFragment;
+    "add(uint256,uint256)": FunctionFragment;
+    "b()": FunctionFragment;
+    "willRevert()": FunctionFragment;
   };
 
-  getFunction(nameOrSignatureOrTopic: 'a' | 'add' | 'b' | 'willRevert'): FunctionFragment;
+  getFunction(
+    nameOrSignatureOrTopic: "a" | "add" | "b" | "willRevert"
+  ): FunctionFragment;
 
-  encodeFunctionData(functionFragment: 'a', values?: undefined): string;
+  encodeFunctionData(functionFragment: "a", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: 'add',
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
+    functionFragment: "add",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
-  encodeFunctionData(functionFragment: 'b', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'willRevert', values?: undefined): string;
+  encodeFunctionData(functionFragment: "b", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "willRevert",
+    values?: undefined
+  ): string;
 
-  decodeFunctionResult(functionFragment: 'a', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'add', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'b', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'willRevert', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "a", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "add", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "b", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "willRevert", data: BytesLike): Result;
 
   events: {};
 }
@@ -56,15 +61,17 @@ export interface GovernanceTargetAlphaStub extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | Optional<number>,
-    toBlock?: string | Optional<number>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>,
+    eventFilter?: TypedEventFilter<TEvent>
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -77,12 +84,14 @@ export interface GovernanceTargetAlphaStub extends BaseContract {
     add(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
     b(overrides?: CallOverrides): Promise<[string]>;
 
-    willRevert(overrides?: CallOverrides): Promise<[boolean] & { success: boolean }>;
+    willRevert(
+      overrides?: CallOverrides
+    ): Promise<[boolean] & { success: boolean }>;
   };
 
   a(overrides?: CallOverrides): Promise<string>;
@@ -90,7 +99,7 @@ export interface GovernanceTargetAlphaStub extends BaseContract {
   add(
     _left: PromiseOrValue<BigNumberish>,
     _right: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides,
+    overrides?: CallOverrides
   ): Promise<BigNumber>;
 
   b(overrides?: CallOverrides): Promise<string>;
@@ -103,7 +112,7 @@ export interface GovernanceTargetAlphaStub extends BaseContract {
     add(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     b(overrides?: CallOverrides): Promise<string>;
@@ -119,7 +128,7 @@ export interface GovernanceTargetAlphaStub extends BaseContract {
     add(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     b(overrides?: CallOverrides): Promise<BigNumber>;
@@ -133,7 +142,7 @@ export interface GovernanceTargetAlphaStub extends BaseContract {
     add(
       _left: PromiseOrValue<BigNumberish>,
       _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     b(overrides?: CallOverrides): Promise<PopulatedTransaction>;

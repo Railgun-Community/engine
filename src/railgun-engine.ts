@@ -44,6 +44,8 @@ class RailgunEngine extends EventEmitter {
 
   static walletSource: Optional<string>;
 
+  readonly engineV3StartBlockNumbers: number[][];
+
   /**
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
@@ -58,8 +60,13 @@ class RailgunEngine extends EventEmitter {
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
     engineDebugger?: EngineDebugger,
+    engineV3StartBlockNumbers?: number[][],
   ) {
     super();
+
+    // Temporary. Will be a constant after full upgrades.
+    this.engineV3StartBlockNumbers = engineV3StartBlockNumbers || [];
+
     WalletInfo.setWalletSource(walletSource);
     this.db = new Database(leveldown);
     this.prover = new Prover(artifactsGetter);
@@ -220,6 +227,16 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.MerkletreeHistoryScanUpdate, updateData);
   }
 
+  private getEngineV3StartBlockNumber(chain: Chain) {
+    if (
+      this.engineV3StartBlockNumbers[chain.type] &&
+      this.engineV3StartBlockNumbers[chain.type][chain.id]
+    ) {
+      return this.engineV3StartBlockNumbers[chain.type][chain.id];
+    }
+    return 0;
+  }
+
   /**
    * Scan contract history and sync
    * @param chain - chain type/id to scan
@@ -260,11 +277,14 @@ class RailgunEngine extends EventEmitter {
     const latestBlock = (await proxyContract.contract.provider.getBlock('latest')).number;
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
 
+    const engineV3StartBlockNumber = this.getEngineV3StartBlockNumber(chain);
+
     try {
       // Run slow scan
       await proxyContract.getHistoricalEvents(
         startScanningBlockSlowScan,
         latestBlock,
+        engineV3StartBlockNumber,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.listener(chain, treeNumber, startPosition, commitments);
         },

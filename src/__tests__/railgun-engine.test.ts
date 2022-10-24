@@ -14,19 +14,24 @@ import {
   getEthersWallet,
   mockQuickSync,
 } from '../test/helper.test';
-import { ERC20Deposit } from '../note/erc20-deposit';
+import { ShieldNote } from '../note/shield-note';
 import { MerkleTree } from '../merkletree/merkletree';
-import { formatToByteLength, hexToBigInt, randomHex } from '../utils/bytes';
+import { formatToByteLength, hexToBigInt, hexToBytes, randomHex } from '../utils/bytes';
 import { RailgunProxyContract } from '../contracts/railgun-proxy/railgun-proxy';
 import { ZERO_ADDRESS } from '../utils/constants';
-import { GeneratedCommitment, OutputType, TokenType } from '../models/formatted-types';
+import {
+  CommitmentType,
+  LegacyGeneratedCommitment,
+  OutputType,
+  TokenType,
+} from '../models/formatted-types';
 import { TransactionBatch } from '../transaction/transaction-batch';
 import { Groth16 } from '../prover/prover';
 import { ERC20 } from '../typechain-types';
 import { promiseTimeout } from '../utils/promises';
 import { Chain, ChainType } from '../models/engine-types';
-import { Note } from '../note/note';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../models/transaction-constants';
+import { TransactNote } from '../note/transact-note';
+import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 
 chai.use(chaiAsPromised);
 
@@ -45,19 +50,20 @@ let proxyContract: RailgunProxyContract;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-const makeTestDeposit = async (address: string, value: bigint) => {
+const makeTestShield = async (address: string, value: bigint) => {
   const mpk = RailgunEngine.decodeAddress(address).masterPublicKey;
-  const vpk = wallet.getViewingKeyPair().privateKey;
+  const receiverViewingPublicKey = wallet.getViewingKeyPair().pubkey;
   const random = randomHex(16);
-  const deposit = new ERC20Deposit(mpk, random, value, token.address);
+  const shield = new ShieldNote(mpk, random, value, token.address);
 
-  const depositInput = deposit.serialize(vpk);
+  const shieldPrivateKey = hexToBytes(randomHex(32));
+  const shieldInput = await shield.serialize(shieldPrivateKey, receiverViewingPublicKey);
 
-  // Create deposit
-  const depositTx = await proxyContract.generateDeposit([depositInput]);
+  // Create shield
+  const shieldTx = await proxyContract.generateShield([shieldInput]);
 
-  // Send deposit on chain
-  await etherswallet.sendTransaction(depositTx);
+  // Send shield on chain
+  await etherswallet.sendTransaction(shieldTx);
   await expect(awaitScan(wallet, chain)).to.be.fulfilled;
 };
 
@@ -112,13 +118,14 @@ describe('RailgunEngine', function test() {
     expect(engine.wallets[wallet.id].id).to.equal(wallet.id);
   });
 
-  it('[HH] Should show balance after deposit and rescan', async function run() {
+  it('[HH] Should show balance after shield and rescan', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
     }
 
-    const commitment: GeneratedCommitment = {
+    const commitment: LegacyGeneratedCommitment = {
+      commitmentType: CommitmentType.LegacyGeneratedCommitment,
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
       preImage: {
@@ -154,7 +161,7 @@ describe('RailgunEngine', function test() {
     expect(balanceClear).to.equal(undefined);
   });
 
-  it('[HH] With a creation block number provided, should show balance after deposit and rescan', async function run() {
+  it('[HH] With a creation block number provided, should show balance after shield and rescan', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -166,7 +173,8 @@ describe('RailgunEngine', function test() {
     creationBlockNumbers[chain.type][chain.id] = 0;
     wallet.setCreationBlockNumbers(creationBlockNumbers);
 
-    const commitment: GeneratedCommitment = {
+    const commitment: LegacyGeneratedCommitment = {
+      commitmentType: CommitmentType.LegacyGeneratedCommitment,
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
       preImage: {
@@ -211,7 +219,7 @@ describe('RailgunEngine', function test() {
     expect(walletDetailsCleared.treeScannedHeights.length).to.equal(0);
   });
 
-  it('[HH] Should deposit, withdraw and update balance, and pull formatted spend/receive transaction history', async function run() {
+  it('[HH] Should shield, unshield and update balance, and pull formatted spend/receive transaction history', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -221,35 +229,36 @@ describe('RailgunEngine', function test() {
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
-    await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
+    await makeTestShield(address, BigInt(110000) * DECIMALS_18);
 
     const balance = await wallet.getBalance(chain, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
     const transactionBatch = new TransactionBatch(config.contracts.rail, TokenType.ERC20, chain);
-    transactionBatch.setWithdraw(
+    transactionBatch.setUnshield(
       etherswallet.address,
       BigInt(300) * DECIMALS_18,
       true, // allowOverride
     );
 
-    // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
-    const senderBlindingKey = randomHex(15);
+    // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
+    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
         wallet2.addressKeys,
+        wallet.addressKeys,
         randomHex(16),
         1n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.RelayerFee,
         undefined, // memoText
       ),
     );
 
-    const serializedTransactions = await transactionBatch.generateSerializedTransactions(
+    const serializedTransactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -264,7 +273,7 @@ describe('RailgunEngine', function test() {
       promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
     ]);
 
-    // BALANCE = deposited amount - 300(decimals) - 1
+    // BALANCE = shielded amount - 300(decimals) - 1
     const newBalance = await wallet.getBalance(chain, tokenAddress);
     expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
 
@@ -289,7 +298,7 @@ describe('RailgunEngine', function test() {
     expect(history[0].relayerFeeTokenAmount).eq(undefined);
     expect(history[0].changeTokenAmounts).deep.eq([]);
 
-    // Check second output: Withdraw (relayer fee + change).
+    // Check second output: Unshield (relayer fee + change).
     // NOTE: No receive token amounts should be logged by history.
     expect(history[1].receiveTokenAmounts).deep.eq(
       [],
@@ -299,9 +308,9 @@ describe('RailgunEngine', function test() {
     expect(history[1].relayerFeeTokenAmount).deep.eq({
       token: tokenFormatted,
       amount: BigInt(1),
-      noteExtraData: {
+      noteAnnotationData: {
         outputType: OutputType.RelayerFee,
-        senderBlindingKey,
+        senderRandom,
         walletSource: 'test wallet',
       },
       memoText: undefined,
@@ -310,9 +319,9 @@ describe('RailgunEngine', function test() {
       {
         token: tokenFormatted,
         amount: BigInt('109424999999999999999999'),
-        noteExtraData: {
+        noteAnnotationData: {
           outputType: OutputType.Change,
-          senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
+          senderRandom: MEMO_SENDER_RANDOM_NULL,
           walletSource: 'test wallet',
         },
         memoText: undefined,
@@ -320,7 +329,7 @@ describe('RailgunEngine', function test() {
     ]);
   }).timeout(90000);
 
-  it('[HH] Should deposit, transfer and update balance, and pull formatted spend/receive transaction history', async function run() {
+  it('[HH] Should shield, transfer and update balance, and pull formatted spend/receive transaction history', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -330,7 +339,7 @@ describe('RailgunEngine', function test() {
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
-    await makeTestDeposit(address, BigInt(110000) * DECIMALS_18);
+    await makeTestShield(address, BigInt(110000) * DECIMALS_18);
 
     const balance = await wallet.getBalance(chain, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
@@ -342,15 +351,16 @@ describe('RailgunEngine', function test() {
       'A really long memo with emojis 😐 👩🏾‍🔧 and other text, in order to test a major memo for a real live production use case.';
 
     // Add output for Transfer
-    const senderBlindingKey = randomHex(15);
+    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
         wallet2.addressKeys,
+        wallet.addressKeys,
         randomHex(16),
         10n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.Transfer,
         memoText,
       ),
@@ -358,22 +368,23 @@ describe('RailgunEngine', function test() {
 
     const relayerMemoText = 'A short memo with only 32 chars.';
 
-    // Add output for mock Relayer (artifacts require 2+ outputs, including withdraw)
-    const senderBlindingKey2 = randomHex(15);
+    // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
+    const senderRandom2 = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
         wallet2.addressKeys,
+        wallet.addressKeys,
         randomHex(16),
         1n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        senderBlindingKey2,
+        senderRandom2,
         OutputType.RelayerFee,
         relayerMemoText, // memoText
       ),
     );
 
-    const serializedTransactions = await transactionBatch.generateSerializedTransactions(
+    const serializedTransactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -388,7 +399,7 @@ describe('RailgunEngine', function test() {
       promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
     ]);
 
-    // BALANCE = deposited amount - 300(decimals) - 1
+    // BALANCE = shielded amount - 300(decimals) - 1
     const newBalance = await wallet.getBalance(chain, tokenAddress);
     expect(newBalance).to.equal(109724999999999999999989n, 'Failed to receive expected balance');
 
@@ -413,7 +424,7 @@ describe('RailgunEngine', function test() {
     expect(history[0].relayerFeeTokenAmount).eq(undefined);
     expect(history[0].changeTokenAmounts).deep.eq([]);
 
-    // Check second output: Withdraw (relayer fee + change).
+    // Check second output: Unshield (relayer fee + change).
     // NOTE: No receive token amounts should be logged by history.
     expect(history[1].receiveTokenAmounts).deep.eq(
       [],
@@ -423,9 +434,9 @@ describe('RailgunEngine', function test() {
       {
         token: tokenFormatted,
         amount: BigInt(10),
-        noteExtraData: {
+        noteAnnotationData: {
           outputType: OutputType.Transfer,
-          senderBlindingKey,
+          senderRandom,
           walletSource: 'test wallet',
         },
         recipientAddress: wallet2.getAddress(),
@@ -435,9 +446,9 @@ describe('RailgunEngine', function test() {
     expect(history[1].relayerFeeTokenAmount).deep.eq({
       token: tokenFormatted,
       amount: BigInt(1),
-      noteExtraData: {
+      noteAnnotationData: {
         outputType: OutputType.RelayerFee,
-        senderBlindingKey: senderBlindingKey2,
+        senderRandom: senderRandom2,
         walletSource: 'test wallet',
       },
       memoText: relayerMemoText,
@@ -446,9 +457,9 @@ describe('RailgunEngine', function test() {
       {
         token: tokenFormatted,
         amount: BigInt('109724999999999999999989'),
-        noteExtraData: {
+        noteAnnotationData: {
           outputType: OutputType.Change,
-          senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
+          senderRandom: MEMO_SENDER_RANDOM_NULL,
           walletSource: 'test wallet',
         },
         memoText: undefined,

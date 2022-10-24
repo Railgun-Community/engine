@@ -12,76 +12,138 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from 'ethers';
-import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
-import type { Listener, Provider } from '@ethersproject/providers';
+} from "ethers";
+import type {
+  FunctionFragment,
+  Result,
+  EventFragment,
+} from "@ethersproject/abi";
+import type { Listener, Provider } from "@ethersproject/providers";
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from '../../../common';
+} from "../../../common";
 
 export interface CommitmentsStubInterface extends utils.Interface {
   functions: {
-    'ZERO_VALUE()': FunctionFragment;
-    'hashLeftRight(uint256,uint256)': FunctionFragment;
-    'insertLeavesStub(uint256[])': FunctionFragment;
-    'merkleRoot()': FunctionFragment;
-    'nullifiers(uint256,uint256)': FunctionFragment;
-    'rootHistory(uint256,uint256)': FunctionFragment;
-    'treeNumber()': FunctionFragment;
-    'zeros(uint256)': FunctionFragment;
+    "ZERO_VALUE()": FunctionFragment;
+    "doubleInit()": FunctionFragment;
+    "getInsertionTreeNumberAndStartingIndex(uint256)": FunctionFragment;
+    "hashLeftRight(bytes32,bytes32)": FunctionFragment;
+    "insertLeavesStub(bytes32[])": FunctionFragment;
+    "merkleRoot()": FunctionFragment;
+    "nextLeafIndex()": FunctionFragment;
+    "nullifiers(uint256,bytes32)": FunctionFragment;
+    "rootHistory(uint256,bytes32)": FunctionFragment;
+    "setNextLeafIndex(uint256)": FunctionFragment;
+    "treeNumber()": FunctionFragment;
+    "zeros(uint256)": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | 'ZERO_VALUE'
-      | 'hashLeftRight'
-      | 'insertLeavesStub'
-      | 'merkleRoot'
-      | 'nullifiers'
-      | 'rootHistory'
-      | 'treeNumber'
-      | 'zeros',
+      | "ZERO_VALUE"
+      | "doubleInit"
+      | "getInsertionTreeNumberAndStartingIndex"
+      | "hashLeftRight"
+      | "insertLeavesStub"
+      | "merkleRoot"
+      | "nextLeafIndex"
+      | "nullifiers"
+      | "rootHistory"
+      | "setNextLeafIndex"
+      | "treeNumber"
+      | "zeros"
   ): FunctionFragment;
 
-  encodeFunctionData(functionFragment: 'ZERO_VALUE', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: 'hashLeftRight',
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
+    functionFragment: "ZERO_VALUE",
+    values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: 'insertLeavesStub',
-    values: [PromiseOrValue<BigNumberish>[]],
-  ): string;
-  encodeFunctionData(functionFragment: 'merkleRoot', values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: 'nullifiers',
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
+    functionFragment: "doubleInit",
+    values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: 'rootHistory',
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
+    functionFragment: "getInsertionTreeNumberAndStartingIndex",
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
-  encodeFunctionData(functionFragment: 'treeNumber', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'zeros', values: [PromiseOrValue<BigNumberish>]): string;
+  encodeFunctionData(
+    functionFragment: "hashLeftRight",
+    values: [PromiseOrValue<BytesLike>, PromiseOrValue<BytesLike>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "insertLeavesStub",
+    values: [PromiseOrValue<BytesLike>[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "merkleRoot",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nextLeafIndex",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nullifiers",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BytesLike>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "rootHistory",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BytesLike>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setNextLeafIndex",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "treeNumber",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "zeros",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
 
-  decodeFunctionResult(functionFragment: 'ZERO_VALUE', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'hashLeftRight', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'insertLeavesStub', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'merkleRoot', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'nullifiers', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'rootHistory', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'treeNumber', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'zeros', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "ZERO_VALUE", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "doubleInit", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getInsertionTreeNumberAndStartingIndex",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "hashLeftRight",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "insertLeavesStub",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "nextLeafIndex",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "nullifiers", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "rootHistory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setNextLeafIndex",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "treeNumber", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "zeros", data: BytesLike): Result;
 
   events: {
-    'Initialized(uint8)': EventFragment;
+    "Initialized(uint8)": EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: 'Initialized'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
 }
 
 export interface InitializedEventObject {
@@ -100,15 +162,17 @@ export interface CommitmentsStub extends BaseContract {
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
-    fromBlockOrBlockhash?: string | Optional<number>,
-    toBlock?: string | Optional<number>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>,
+    eventFilter?: TypedEventFilter<TEvent>
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
+  removeAllListeners<TEvent extends TypedEvent>(
+    eventFilter: TypedEventFilter<TEvent>
+  ): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -116,173 +180,263 @@ export interface CommitmentsStub extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    ZERO_VALUE(overrides?: CallOverrides): Promise<[BigNumber]>;
+    ZERO_VALUE(overrides?: CallOverrides): Promise<[string]>;
 
-    hashLeftRight(
-      _left: PromiseOrValue<BigNumberish>,
-      _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
-    ): Promise<[BigNumber]>;
-
-    insertLeavesStub(
-      _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+    doubleInit(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    merkleRoot(overrides?: CallOverrides): Promise<[BigNumber]>;
+    getInsertionTreeNumberAndStartingIndex(
+      _newCommitments: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>;
+
+    hashLeftRight(
+      _left: PromiseOrValue<BytesLike>,
+      _right: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
+
+    insertLeavesStub(
+      _leafHashes: PromiseOrValue<BytesLike>[],
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    merkleRoot(overrides?: CallOverrides): Promise<[string]>;
+
+    nextLeafIndex(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<[boolean]>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<[boolean]>;
+
+    setNextLeafIndex(
+      _index: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
     treeNumber(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<[BigNumber]>;
+    zeros(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
   };
 
-  ZERO_VALUE(overrides?: CallOverrides): Promise<BigNumber>;
+  ZERO_VALUE(overrides?: CallOverrides): Promise<string>;
 
-  hashLeftRight(
-    _left: PromiseOrValue<BigNumberish>,
-    _right: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides,
-  ): Promise<BigNumber>;
-
-  insertLeavesStub(
-    _leafHashes: PromiseOrValue<BigNumberish>[],
-    overrides?: Overrides & { from?: PromiseOrValue<string> },
+  doubleInit(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
+  getInsertionTreeNumberAndStartingIndex(
+    _newCommitments: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber]>;
+
+  hashLeftRight(
+    _left: PromiseOrValue<BytesLike>,
+    _right: PromiseOrValue<BytesLike>,
+    overrides?: CallOverrides
+  ): Promise<string>;
+
+  insertLeavesStub(
+    _leafHashes: PromiseOrValue<BytesLike>[],
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  merkleRoot(overrides?: CallOverrides): Promise<string>;
+
+  nextLeafIndex(overrides?: CallOverrides): Promise<BigNumber>;
 
   nullifiers(
     arg0: PromiseOrValue<BigNumberish>,
-    arg1: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides,
+    arg1: PromiseOrValue<BytesLike>,
+    overrides?: CallOverrides
   ): Promise<boolean>;
 
   rootHistory(
     arg0: PromiseOrValue<BigNumberish>,
-    arg1: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides,
+    arg1: PromiseOrValue<BytesLike>,
+    overrides?: CallOverrides
   ): Promise<boolean>;
+
+  setNextLeafIndex(
+    _index: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
 
   treeNumber(overrides?: CallOverrides): Promise<BigNumber>;
 
-  zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
+  zeros(
+    arg0: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   callStatic: {
-    ZERO_VALUE(overrides?: CallOverrides): Promise<BigNumber>;
+    ZERO_VALUE(overrides?: CallOverrides): Promise<string>;
+
+    doubleInit(overrides?: CallOverrides): Promise<void>;
+
+    getInsertionTreeNumberAndStartingIndex(
+      _newCommitments: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>;
 
     hashLeftRight(
-      _left: PromiseOrValue<BigNumberish>,
-      _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
-    ): Promise<BigNumber>;
+      _left: PromiseOrValue<BytesLike>,
+      _right: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<string>;
 
     insertLeavesStub(
-      _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides,
+      _leafHashes: PromiseOrValue<BytesLike>[],
+      overrides?: CallOverrides
     ): Promise<void>;
 
-    merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
+    merkleRoot(overrides?: CallOverrides): Promise<string>;
+
+    nextLeafIndex(overrides?: CallOverrides): Promise<BigNumber>;
 
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<boolean>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<boolean>;
+
+    setNextLeafIndex(
+      _index: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     treeNumber(overrides?: CallOverrides): Promise<BigNumber>;
 
-    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
+    zeros(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<string>;
   };
 
   filters: {
-    'Initialized(uint8)'(version?: null): InitializedEventFilter;
+    "Initialized(uint8)"(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
   };
 
   estimateGas: {
     ZERO_VALUE(overrides?: CallOverrides): Promise<BigNumber>;
 
+    doubleInit(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    getInsertionTreeNumberAndStartingIndex(
+      _newCommitments: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     hashLeftRight(
-      _left: PromiseOrValue<BigNumberish>,
-      _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      _left: PromiseOrValue<BytesLike>,
+      _right: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     insertLeavesStub(
-      _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      _leafHashes: PromiseOrValue<BytesLike>[],
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     merkleRoot(overrides?: CallOverrides): Promise<BigNumber>;
 
+    nextLeafIndex(overrides?: CallOverrides): Promise<BigNumber>;
+
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    setNextLeafIndex(
+      _index: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     treeNumber(overrides?: CallOverrides): Promise<BigNumber>;
 
-    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
+    zeros(
+      arg0: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
     ZERO_VALUE(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    doubleInit(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    getInsertionTreeNumberAndStartingIndex(
+      _newCommitments: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     hashLeftRight(
-      _left: PromiseOrValue<BigNumberish>,
-      _right: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      _left: PromiseOrValue<BytesLike>,
+      _right: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     insertLeavesStub(
-      _leafHashes: PromiseOrValue<BigNumberish>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> },
+      _leafHashes: PromiseOrValue<BytesLike>[],
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     merkleRoot(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    nextLeafIndex(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
-      arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      arg1: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    setNextLeafIndex(
+      _index: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     treeNumber(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     zeros(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
 }

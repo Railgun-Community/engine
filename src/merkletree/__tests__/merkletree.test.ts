@@ -3,7 +3,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { BN } from 'bn.js';
 import { ZERO_ADDRESS } from '../../utils/constants';
-import { Commitment, TokenType } from '../../models/formatted-types';
+import { Commitment, CommitmentType, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { MerkleTree, TreePurpose, MERKLE_ZERO_VALUE } from '../merkletree';
@@ -184,42 +184,49 @@ describe('MerkleTree', () => {
     };
     await merkletree.queueLeaves(0, 5, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: 'ab2f9d1ebd74c3e1f1ccee452a80ae27a94f14a542a4fd8b0c9ad9a1b7f9ffe5',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '8902638fe6fc05e4f1cd7c06940d6217591a0ccb003ed45198782fbff38e9f2d',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '19889087c2ff4c4a164060a832a3ba11cce0c2e2dbd42da10c57101efb966fcd',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '9f5e8310e384c6a0840699951d67810c6d90fd3f265bda66e9385fcb7142373d',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '4c71361b89e9b6b55b094a0f0de4451d8306786b2626d67b3810c9b61fbf45b6',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: 'b2eabd832f0bb9d8b42399a56821a565eec64669d7a55b828c8af2a541b044d6',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '817e6732d170352ea6517c9640757570d4ea71c660603f9d7a060b2f2eb27be6',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
@@ -234,6 +241,7 @@ describe('MerkleTree', () => {
 
     await merkletree.queueLeaves(0, 3, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
@@ -248,18 +256,21 @@ describe('MerkleTree', () => {
 
     await merkletree.queueLeaves(0, 0, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '01',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '02',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '03',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
@@ -276,6 +287,7 @@ describe('MerkleTree', () => {
     await Promise.all([
       merkletree.queueLeaves(0, 4, [
         {
+          commitmentType: CommitmentType.LegacyEncryptedCommitment,
           hash: '05',
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           ciphertext,
@@ -284,6 +296,7 @@ describe('MerkleTree', () => {
       ]),
       merkletree.queueLeaves(0, 4, [
         {
+          commitmentType: CommitmentType.LegacyEncryptedCommitment,
           hash: '05',
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           ciphertext,
@@ -294,6 +307,7 @@ describe('MerkleTree', () => {
 
     await merkletree.queueLeaves(0, 4, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '05',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
@@ -311,6 +325,7 @@ describe('MerkleTree', () => {
     // Insert leaves
     await merkletree.queueLeaves(0, 0, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '02',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext: {
@@ -325,6 +340,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyGeneratedCommitment,
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         preImage: {
@@ -342,6 +358,7 @@ describe('MerkleTree', () => {
     ]);
 
     expect(await merkletree.getCommitment(0, 0)).to.deep.equal({
+      commitmentType: CommitmentType.LegacyEncryptedCommitment,
       hash: '02',
       txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       ciphertext: {
@@ -353,12 +370,13 @@ describe('MerkleTree', () => {
     });
 
     expect(await merkletree.getCommitment(0, 1)).to.deep.equal({
+      commitmentType: CommitmentType.LegacyGeneratedCommitment,
       hash: '04',
       txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
       preImage: {
         npk: '00',
         value: '02',
-        token: { tokenAddress: '0x03', tokenType: ZERO_ADDRESS, tokenSubID: ZERO_ADDRESS },
+        token: { tokenAddress: '0x03', tokenType: 0, tokenSubID: ZERO_ADDRESS },
       },
       encryptedRandom: ['01', '01'],
       blockNumber: 0,
@@ -374,36 +392,42 @@ describe('MerkleTree', () => {
     // Insert leaves
     await merkletree.queueLeaves(0, 0, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '02',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '08',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '10',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '20',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '40',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
@@ -447,6 +471,7 @@ describe('MerkleTree', () => {
       1,
       0,
       Array.from(Array(600).keys()).map((el) => ({
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: new BN(el, 10).toString(16),
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext: {
@@ -511,36 +536,42 @@ describe('MerkleTree', () => {
     };
     const leaves: Commitment[] = [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '02',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '08',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '10',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '20',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
       },
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '40',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
@@ -567,6 +598,7 @@ describe('MerkleTree', () => {
 
     await merkletree.queueLeaves(0, 0, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '02',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext: {
@@ -582,6 +614,7 @@ describe('MerkleTree', () => {
 
     await merkletree.queueLeaves(1, 0, [
       {
+        commitmentType: CommitmentType.LegacyEncryptedCommitment,
         hash: '02',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext: {

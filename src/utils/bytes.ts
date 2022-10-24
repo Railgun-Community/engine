@@ -339,6 +339,16 @@ export function nToBytes(n: bigint, byteLength: ByteLength): Uint8Array {
 }
 
 /**
+ * Convert Uint8Array to bigint
+ * @param {Uint8Array} bytes
+ * @returns {bigint}
+ */
+export function bytesToN(bytes: Uint8Array): bigint {
+  const prefix = true;
+  return BigInt(hexlify(bytes, prefix));
+}
+
+/**
  * Convert hex string to Uint8Array. Handles prefixed or non-prefixed.
  * @param {bigint} value
  * @returns {Uint8Array}

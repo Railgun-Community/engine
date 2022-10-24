@@ -1,6 +1,7 @@
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber } from 'ethers';
 import { BytesData, Commitment, Nullifier } from './formatted-types';
 import { Chain } from './engine-types';
+import { CommitmentCiphertextStructOutput } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 
 export enum EngineEvent {
   WalletScanComplete = 'scanned',
@@ -23,51 +24,11 @@ export type CommitmentEvent = {
   blockNumber: number;
 };
 
-export type CommitmentCiphertextArgs = {
-  ciphertext: [BigNumber, BigNumber, BigNumber, BigNumber];
-  ephemeralKeys: [BigNumber, BigNumber];
-  memo: BigNumber[];
-};
-
-export type CommitmentTokenData = {
-  tokenType: BigNumberish;
-  tokenAddress: string;
-  tokenSubID: BigNumberish;
-};
-
-export type EncryptedDataArgs = [BigNumber, BigNumber];
-
-export type CommitmentPreimageArgs = {
-  npk: BigNumber;
-  token: CommitmentTokenData;
-  value: BigNumber;
-};
-
-export type EventTokenData = { tokenType: BigNumber; tokenAddress: string; tokenSubID: BigNumber };
-
-/**
- * event.args of GeneratedCommitmentBatch Event
- */
-export type GeneratedCommitmentBatchEventArgs = {
+export type UnshieldEventArgs = {
   treeNumber: BigNumber;
   startPosition: BigNumber;
-  commitments: CommitmentPreimageArgs[];
-  encryptedRandom: EncryptedDataArgs[];
-};
-
-/**
- * event.args of CommitmentBatch Event
- */
-export type CommitmentBatchEventArgs = {
-  treeNumber: BigNumber;
-  startPosition: BigNumber;
-  hash: BigNumber[];
-  ciphertext: CommitmentCiphertextArgs[];
-};
-
-export type NullifierEventArgs = {
-  treeNumber: BigNumber;
-  nullifier: BigNumber[];
+  hash: string[];
+  ciphertext: CommitmentCiphertextStructOutput[];
 };
 
 export type AccumulatedEvents = {

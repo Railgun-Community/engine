@@ -1,3 +1,4 @@
+/// <reference types="../../../types/global" />
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ethers } from 'ethers';
@@ -7,12 +8,10 @@ import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { abi as erc20Abi } from '../../../test/erc20-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
-import { hexlify, randomHex } from '../../../utils/bytes';
+import { combine, hexlify, hexToBytes, randomHex } from '../../../utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../../test/helper.test';
-import { ERC20Deposit } from '../../../note/erc20-deposit';
-import { ERC20WithdrawNote } from '../../../note/erc20-withdraw';
 import {
-  EncryptedCommitment,
+  LegacyEncryptedCommitment,
   Nullifier,
   OutputType,
   TokenType,
@@ -31,8 +30,10 @@ import { promiseTimeout } from '../../../utils/promises';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunProxyContract } from '../railgun-proxy';
-import { Note } from '../../../note/note';
-import { MEMO_SENDER_BLINDING_KEY_NULL } from '../../../models/transaction-constants';
+import { MEMO_SENDER_RANDOM_NULL } from '../../../models/transaction-constants';
+import { ShieldNote } from '../../../note/shield-note';
+import { TransactNote } from '../../../note/transact-note';
+import { UnshieldNote } from '../../../note/unshield-note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -55,7 +56,7 @@ const TOKEN_ADDRESS = config.contracts.rail;
 const RANDOM = randomHex(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
-let testDeposit: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
+let testShield: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Railgun Proxy', function runTests() {
   this.timeout(60000);
@@ -100,19 +101,23 @@ describe('Railgun Proxy', function runTests() {
       undefined, // creationBlockNumbers
     );
 
-    // fn to create deposit tx for tests
+    // fn to create shield tx for tests
     // tx should be complete and balances updated after await
-    testDeposit = async (
+    testShield = async (
       value: bigint = BigInt(110000) * DECIMALS_18,
     ): Promise<[TransactionReceipt, unknown]> => {
-      // Create deposit
-      const deposit = new ERC20Deposit(wallet.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
-      const depositInput = deposit.serialize(wallet.getViewingKeyPair().privateKey);
+      // Create shield
+      const shield = new ShieldNote(wallet.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
+      const shieldPrivateKey = hexToBytes(randomHex(32));
+      const shieldInput = await shield.serialize(
+        shieldPrivateKey,
+        wallet.getViewingKeyPair().pubkey,
+      );
 
-      const depositTx = await proxyContract.generateDeposit([depositInput]);
+      const shieldTx = await proxyContract.generateShield([shieldInput]);
 
-      // Send deposit on chain
-      const tx = await etherswallet.sendTransaction(depositTx);
+      // Send shield on chain
+      const tx = await etherswallet.sendTransaction(shieldTx);
       return Promise.all([tx.wait(), awaitScan(wallet, chain)]);
     };
   });
@@ -133,29 +138,26 @@ describe('Railgun Proxy', function runTests() {
       this.skip();
       return;
     }
-    await testDeposit();
+    await testShield();
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderBlindingKey = randomHex(15);
+    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
         wallet2.addressKeys,
+        wallet.addressKeys,
         RANDOM,
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.Transfer,
         undefined, // memoText
       ),
     );
     const tx = await proxyContract.transact(
-      await transactionBatch.generateDummySerializedTransactions(
-        engine.prover,
-        wallet,
-        testEncryptionKey,
-      ),
+      await transactionBatch.generateDummyTransactions(engine.prover, wallet, testEncryptionKey),
     );
 
     tx.from = '0x000000000000000000000000000000000000dEaD';
@@ -189,12 +191,12 @@ describe('Railgun Proxy', function runTests() {
     }
     const fees = await proxyContract.fees();
     expect(fees).to.be.an('object');
-    expect(fees.deposit).to.be.a('string');
-    expect(fees.withdraw).to.be.a('string');
+    expect(fees.shield).to.be.a('string');
+    expect(fees.unshield).to.be.a('string');
     expect(fees.nft).to.be.a('string');
   });
 
-  it('[HH] Should find deposit and transact as historical events and nullifiers', async function run() {
+  it('[HH] Should find shield and transact as historical events and nullifiers', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -221,22 +223,26 @@ describe('Railgun Proxy', function runTests() {
     };
     proxyContract.on(EngineEvent.ContractNullifierReceived, nullifiersListener2);
 
-    const [txResponse] = await testDeposit();
+    const [txResponse] = await testShield();
 
     // Listeners should have been updated automatically by contract events.
 
-    expect(resultEvent).to.be.an('object', 'No event in history for deposit');
+    expect(resultEvent).to.be.an('object', 'No event in history for shield');
     expect((resultEvent as CommitmentEvent).txid).to.equal(hexlify(txResponse.transactionHash));
     expect(resultNullifiers.length).to.equal(0);
 
     resultEvent = undefined;
     resultNullifiers = [];
 
+    // Cannot test legacy events.
+    const engineV3StartBlockNumber = 0;
+
     let latestBlock = (await provider.getBlock('latest')).number;
 
     await proxyContract.getHistoricalEvents(
       startingBlock,
       latestBlock,
+      engineV3StartBlockNumber,
       eventsListener,
       nullifiersListener,
       async () => {},
@@ -244,7 +250,7 @@ describe('Railgun Proxy', function runTests() {
 
     // Listeners should have been updated by historical event scan.
 
-    expect(resultEvent).to.be.an('object', 'No event in history for deposit');
+    expect(resultEvent).to.be.an('object', 'No event in history for shield');
     expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
       hexlify(txResponse.transactionHash),
     );
@@ -254,21 +260,22 @@ describe('Railgun Proxy', function runTests() {
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderBlindingKey = randomHex(15);
+    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
         wallet2.addressKeys,
+        wallet.addressKeys,
         RANDOM,
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.RelayerFee,
         undefined, // memoText
       ),
     );
-    transactionBatch.setWithdraw(etherswallet.address, 100n);
-    const serializedTxs = await transactionBatch.generateSerializedTransactions(
+    transactionBatch.setUnshield(etherswallet.address, 100n);
+    const serializedTxs = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       testEncryptionKey,
@@ -303,6 +310,7 @@ describe('Railgun Proxy', function runTests() {
     await proxyContract.getHistoricalEvents(
       startingBlock,
       latestBlock,
+      engineV3StartBlockNumber,
       eventsListener,
       nullifiersListener,
       async () => {},
@@ -322,7 +330,7 @@ describe('Railgun Proxy', function runTests() {
       return;
     }
 
-    await testDeposit();
+    await testShield();
 
     const tree = 0;
 
@@ -351,18 +359,13 @@ describe('Railgun Proxy', function runTests() {
       this.skip();
       return;
     }
-    const withdraw = new ERC20WithdrawNote(
-      etherswallet.address,
-      100n,
-      token.address,
-      TokenType.ERC20,
-    );
-    const contractHash = await proxyContract.hashCommitment(withdraw.preImage);
+    const unshield = new UnshieldNote(etherswallet.address, 100n, token.address, TokenType.ERC20);
+    const contractHash = await proxyContract.hashCommitment(unshield.preImage);
 
-    expect(hexlify(contractHash)).to.equal(withdraw.hashHex);
+    expect(hexlify(contractHash)).to.equal(unshield.hashHex);
   });
 
-  it('[HH] Should deposit', async function run() {
+  it('[HH] Should shield', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -377,39 +380,34 @@ describe('Railgun Proxy', function runTests() {
     );
     const merkleRootBefore = await proxyContract.merkleRoot();
 
-    const { masterPublicKey } = wallet;
-    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
+    // Create shield
+    const shield = new ShieldNote(wallet.masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
+    const shieldPrivateKey = hexToBytes(randomHex(32));
+    const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
-    // Create deposit
-    const deposit = new ERC20Deposit(masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
-    const depositInput = deposit.serialize(viewingPrivateKey);
+    const shieldTx = await proxyContract.generateShield([shieldInput]);
 
-    const depositTx = await proxyContract.generateDeposit([depositInput]);
+    const awaiterShield = awaitScan(wallet, chain);
 
-    const awaiterDeposit = awaitScan(wallet, chain);
-
-    // Send deposit on chain
-    await (await etherswallet.sendTransaction(depositTx)).wait();
+    // Send shield on chain
+    await (await etherswallet.sendTransaction(shieldTx)).wait();
 
     // Wait for events to fire
     await new Promise((resolve) =>
-      proxyContract.contract.once(
-        proxyContract.contract.filters.GeneratedCommitmentBatch(),
-        resolve,
-      ),
+      proxyContract.contract.once(proxyContract.contract.filters.Shield(), resolve),
     );
 
-    await expect(awaiterDeposit).to.be.fulfilled;
+    await expect(awaiterShield).to.be.fulfilled;
 
     // Check result
     expect(result.treeNumber).to.equal(0);
     expect(result.startPosition).to.equal(0);
     expect(result.commitments.length).to.equal(1);
 
-    const merkleRootAfterDeposit = await proxyContract.merkleRoot();
+    const merkleRootAfterShield = await proxyContract.merkleRoot();
 
     // Check merkle root changed
-    expect(merkleRootAfterDeposit).not.to.equal(merkleRootBefore);
+    expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
   });
 
   it('[HH] Should create serialized transactions and parse tree updates', async function run() {
@@ -418,8 +416,8 @@ describe('Railgun Proxy', function runTests() {
       return;
     }
 
-    await testDeposit(1000n);
-    const merkleRootAfterDeposit = await proxyContract.merkleRoot();
+    await testShield(1000n);
+    const merkleRootAfterShield = await proxyContract.merkleRoot();
 
     let result!: CommitmentEvent;
     proxyContract.treeUpdates(
@@ -431,24 +429,25 @@ describe('Railgun Proxy', function runTests() {
     // Create transaction
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderBlindingKey = randomHex(15);
+    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
+        wallet2.addressKeys,
         wallet.addressKeys,
         RANDOM,
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.RelayerFee,
         undefined, // memoText
       ),
     );
-    transactionBatch.setWithdraw(etherswallet.address, 100n);
+    transactionBatch.setUnshield(etherswallet.address, 100n);
 
     // Create transact
     const transact = await proxyContract.transact(
-      await transactionBatch.generateSerializedTransactions(
+      await transactionBatch.generateTransactions(
         engine.prover,
         wallet,
         testEncryptionKey,
@@ -461,37 +460,41 @@ describe('Railgun Proxy', function runTests() {
 
     // Wait for events to fire
     await new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.CommitmentBatch(), resolve),
+      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
     );
 
     // Check merkle root changed
     const merkleRootAfterTransact = await proxyContract.merkleRoot();
-    expect(merkleRootAfterTransact).to.not.equal(merkleRootAfterDeposit);
+    expect(merkleRootAfterTransact).to.not.equal(merkleRootAfterShield);
 
     // Check result
     expect(result.treeNumber).to.equal(0);
     expect(result.startPosition).to.equal(1);
     expect(result.commitments.length).to.equal(2);
-    expect((result.commitments as EncryptedCommitment[])[0].ciphertext.memo.length).to.equal(2);
-    expect((result.commitments as EncryptedCommitment[])[1].ciphertext.memo.length).to.equal(2);
+    expect((result.commitments as LegacyEncryptedCommitment[])[0].ciphertext.memo.length).to.equal(
+      2,
+    );
+    expect((result.commitments as LegacyEncryptedCommitment[])[1].ciphertext.memo.length).to.equal(
+      2,
+    );
     expect(
-      Memo.decryptNoteExtraData(
-        (result.commitments as EncryptedCommitment[])[0].ciphertext.memo,
+      Memo.decryptNoteAnnotationData(
+        combine((result.commitments as LegacyEncryptedCommitment[])[0].ciphertext.memo),
         wallet.getViewingKeyPair().privateKey,
       ),
     ).to.deep.equal({
       outputType: OutputType.RelayerFee,
-      senderBlindingKey,
+      senderRandom,
       walletSource: 'test proxy',
     });
     expect(
-      Memo.decryptNoteExtraData(
-        (result.commitments as EncryptedCommitment[])[1].ciphertext.memo,
+      Memo.decryptNoteAnnotationData(
+        combine((result.commitments as LegacyEncryptedCommitment[])[1].ciphertext.memo),
         wallet.getViewingKeyPair().privateKey,
       ),
     ).to.deep.equal({
       outputType: OutputType.Change,
-      senderBlindingKey: MEMO_SENDER_BLINDING_KEY_NULL,
+      senderRandom: MEMO_SENDER_RANDOM_NULL,
       walletSource: 'test proxy',
     });
   }).timeout(120000);

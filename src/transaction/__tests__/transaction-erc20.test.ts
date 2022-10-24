@@ -4,20 +4,21 @@ import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
+import { BigNumber } from 'ethers';
 import {
-  BoundParams,
-  Commitment,
-  NoteExtraData,
+  Ciphertext,
+  CommitmentType,
+  LegacyGeneratedCommitment,
+  NoteAnnotationData,
   OutputType,
   TokenType,
 } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Memo } from '../../note/memo';
-import { hashBoundParams } from '../transaction';
 import { TransactionBatch } from '../transaction-batch';
-import { formatToByteLength, randomHex } from '../../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../../utils/bytes';
 import {
-  getEphemeralKeys,
+  getNoteBlindingKeys,
   getSharedSymmetricKey,
   signEDDSA,
   verifyEDDSA,
@@ -26,10 +27,15 @@ import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
-import { Note } from '../../note/note';
+import { TransactNote } from '../../note/transact-note';
 import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
+import { hashBoundParams } from '../bound-params';
+import { BoundParamsStruct } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
+import { MEMO_SENDER_RANDOM_NULL } from '../../models';
+import WalletInfo from '../../wallet/wallet-info';
+import { aes } from '../../utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -48,7 +54,7 @@ const testEncryptionKey = config.encryptionKey;
 
 const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const random = randomHex(16);
-type makeNoteFn = (value?: bigint) => Promise<Note>;
+type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
 
 // const keypairs = [
@@ -78,7 +84,8 @@ let makeNote: makeNoteFn;
 //   },
 // ];
 
-const depositLeaf: Commitment = {
+const shieldLeaf: LegacyGeneratedCommitment = {
+  commitmentType: CommitmentType.LegacyGeneratedCommitment,
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
   txid: '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
   preImage: {
@@ -113,6 +120,7 @@ describe('Transaction/ERC20', function test() {
       0,
       undefined, // creationBlockNumbers
     );
+    WalletInfo.setWalletSource('erc20 Wallet');
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
@@ -121,21 +129,22 @@ describe('Transaction/ERC20', function test() {
     makeNote = async (
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
-    ): Promise<Note> => {
-      const senderBlindingKey = randomHex(15);
-      return Note.create(
+    ): Promise<TransactNote> => {
+      const senderRandom = randomHex(15);
+      return TransactNote.create(
         address,
+        undefined,
         random,
         value,
         token,
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         outputType,
         undefined, // memoText
       );
     };
     merkletree.validateRoot = () => Promise.resolve(true);
-    await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
+    await merkletree.queueLeaves(0, 0, [shieldLeaf]); // start with a shield
     await wallet.scanBalances(chain);
   });
 
@@ -144,21 +153,83 @@ describe('Transaction/ERC20', function test() {
   });
 
   it('Should hash bound parameters', async () => {
-    const params: BoundParams = {
+    const params: BoundParamsStruct = {
       treeNumber: BigInt(0),
-      withdraw: BigInt(0),
+      unshield: BigInt(0),
       adaptContract: formatToByteLength('00', 20, true),
-      adaptParams: formatToByteLength('00', 32, true), //
+      adaptParams: formatToByteLength('00', 32, true),
+      chainID: chain.id,
       commitmentCiphertext: [
         {
-          ciphertext: [0n, BigInt(0), BigInt(0), BigInt(0)],
-          ephemeralKeys: [0n, BigInt(0)],
-          memo: [],
+          ciphertext: [
+            formatToByteLength('00', ByteLength.UINT_256, true),
+            formatToByteLength('00', ByteLength.UINT_256, true),
+            formatToByteLength('00', ByteLength.UINT_256, true),
+            formatToByteLength('00', ByteLength.UINT_256, true),
+          ],
+          memo: hexlify('00', true),
+          blindedReceiverViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
+          blindedSenderViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
+          annotationData: hexlify('00', true),
         },
       ],
+      minGasPrice: BigNumber.from(3000),
     };
     const hashed = hashBoundParams(params);
     assert.typeOf(hashed, 'bigint');
+    expect(hashed).to.equal(
+      20561861130625894750380756135125425251339500836757502821769938510395517567284n,
+    );
+  });
+
+  it('Should encode and decode masterPublicKey', () => {
+    const senderMasterPublicKey = address.masterPublicKey;
+
+    const encodedMasterPublicKeyNoSenderRandom = TransactNote.getEncodedMasterPublicKey(
+      MEMO_SENDER_RANDOM_NULL,
+      1000000000n,
+      senderMasterPublicKey,
+    );
+    const encodedMasterPublicKeyNullSenderRandom = TransactNote.getEncodedMasterPublicKey(
+      MEMO_SENDER_RANDOM_NULL,
+      1000000000n,
+      senderMasterPublicKey,
+    );
+    const senderRandom = randomHex(15);
+    const encodedMasterPublicKeyWithSenderRandom = TransactNote.getEncodedMasterPublicKey(
+      senderRandom,
+      1000000000n,
+      senderMasterPublicKey,
+    );
+    expect(encodedMasterPublicKeyNoSenderRandom).to.equal(encodedMasterPublicKeyNullSenderRandom);
+    expect(encodedMasterPublicKeyNoSenderRandom).to.not.equal(
+      encodedMasterPublicKeyWithSenderRandom,
+    );
+
+    expect(1000000000n).to.equal(
+      TransactNote.getDecodedMasterPublicKey(
+        senderMasterPublicKey,
+        encodedMasterPublicKeyNoSenderRandom,
+        undefined,
+        false,
+      ),
+    );
+    expect(1000000000n).to.equal(
+      TransactNote.getDecodedMasterPublicKey(
+        senderMasterPublicKey,
+        encodedMasterPublicKeyNullSenderRandom,
+        MEMO_SENDER_RANDOM_NULL,
+        false,
+      ),
+    );
+    expect(1000000000n).to.equal(
+      TransactNote.getDecodedMasterPublicKey(
+        senderMasterPublicKey,
+        encodedMasterPublicKeyWithSenderRandom,
+        senderRandom,
+        false,
+      ),
+    );
   });
 
   it('Should generate ciphertext decryptable by sender and recipient - with memo', async () => {
@@ -173,68 +244,100 @@ describe('Transaction/ERC20', function test() {
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
 
-    const senderBlindingKey = randomHex(15);
-    const noteExtraData: NoteExtraData = {
+    const senderRandom = randomHex(15);
+    const noteAnnotationData: NoteAnnotationData = {
       outputType: OutputType.RelayerFee,
-      senderBlindingKey,
-      walletSource: 'memo wallet',
+      senderRandom,
+      walletSource: 'erc20 wallet',
     };
 
     const memoText = 'Some Memo Text';
 
-    const note = Note.create(
+    const note = TransactNote.create(
       wallet2.addressKeys,
+      wallet.addressKeys,
       random,
       100n,
       token,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
-      noteExtraData.outputType,
+      senderRandom,
+      noteAnnotationData.outputType,
       memoText,
     );
 
-    assert.isTrue(note.viewingPublicKey === receiver.pubkey);
-    const ephemeralKeys = await getEphemeralKeys(
+    assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
+    const blindingKeys = getNoteBlindingKeys(
       sender.pubkey,
-      note.viewingPublicKey,
+      note.receiverAddressData.viewingPublicKey,
       note.random,
-      senderBlindingKey,
+      senderRandom,
     );
 
-    const ephemeralKeyReceiver = ephemeralKeys[0];
-    const ephemeralKeySender = ephemeralKeys[1];
-
-    const senderShared = await getSharedSymmetricKey(sender.privateKey, ephemeralKeySender);
-    const receiverShared = await getSharedSymmetricKey(receiver.privateKey, ephemeralKeyReceiver);
+    const senderShared = await getSharedSymmetricKey(
+      sender.privateKey,
+      blindingKeys.blindedReceiverViewingKey,
+    );
+    const receiverShared = await getSharedSymmetricKey(
+      receiver.privateKey,
+      blindingKeys.blindedSenderViewingKey,
+    );
     assert(senderShared != null);
     assert(receiverShared != null);
     expect(senderShared).to.deep.equal(receiverShared);
 
-    const { noteCiphertext, noteMemo } = note.encrypt(senderShared);
+    const { noteCiphertext, noteMemo } = note.encrypt(
+      senderShared,
+      wallet.addressKeys.masterPublicKey,
+      senderRandom,
+    );
 
-    const senderDecrypted = Note.decrypt(
+    // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+    const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
+    const fullCiphertext: Ciphertext = {
+      ...noteCiphertext,
+      data: ciphertextDataWithMemoText,
+    };
+    const decryptedValues = aes.gcm
+      .decrypt(fullCiphertext, senderShared)
+      .map((value) => hexlify(value));
+    const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+    expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
+
+    const senderDecrypted = TransactNote.decrypt(
+      wallet.addressKeys,
       noteCiphertext,
       senderShared,
       noteMemo,
-      ephemeralKeySender,
-      senderBlindingKey,
+      note.annotationData,
+      blindingKeys.blindedReceiverViewingKey,
+      blindingKeys.blindedSenderViewingKey,
+      senderRandom,
+      true, // isSentNote
+      false, // isLegacyDecryption
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
-    expect(senderDecrypted.addressData.viewingPublicKey).to.deep.equal(receiver.pubkey);
-    expect(Memo.decryptNoteExtraData(senderDecrypted.memoField, sender.privateKey)).to.deep.equal(
-      noteExtraData,
-    );
+    expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
+    expect(senderDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
+    expect(
+      Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
+    ).to.deep.equal(noteAnnotationData);
     expect(senderDecrypted.memoText).to.equal(memoText);
 
-    const receiverDecrypted = Note.decrypt(
+    const receiverDecrypted = TransactNote.decrypt(
+      wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
       noteMemo,
-      undefined,
-      undefined,
+      note.annotationData,
+      blindingKeys.blindedReceiverViewingKey,
+      blindingKeys.blindedSenderViewingKey,
+      undefined, // senderRandom
+      false, // isSentNote
+      false, // isLegacyDecryption
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
-    expect(receiverDecrypted.addressData.viewingPublicKey).to.deep.equal(new Uint8Array());
+    expect(receiverDecrypted.senderAddressData).to.equal(undefined);
+    expect(receiverDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
     expect(receiverDecrypted.memoText).to.equal(memoText);
   });
 
@@ -250,68 +353,209 @@ describe('Transaction/ERC20', function test() {
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
 
-    const senderBlindingKey = randomHex(15);
-    const noteExtraData: NoteExtraData = {
+    const senderRandom = randomHex(15);
+    const noteAnnotationData: NoteAnnotationData = {
       outputType: OutputType.RelayerFee,
-      senderBlindingKey,
-      walletSource: 'memo wallet',
+      senderRandom,
+      walletSource: 'erc20 wallet',
     };
 
     const memoText = undefined;
 
-    const note = Note.create(
+    const note = TransactNote.create(
       wallet2.addressKeys,
+      wallet.addressKeys,
       random,
       100n,
       token,
       wallet.getViewingKeyPair(),
-      senderBlindingKey,
-      noteExtraData.outputType,
+      senderRandom,
+      noteAnnotationData.outputType,
       memoText,
     );
 
-    assert.isTrue(note.viewingPublicKey === receiver.pubkey);
-    const ephemeralKeys = await getEphemeralKeys(
+    assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
+    const blindingKeys = getNoteBlindingKeys(
       sender.pubkey,
-      note.viewingPublicKey,
+      note.receiverAddressData.viewingPublicKey,
       note.random,
-      senderBlindingKey,
+      senderRandom,
     );
 
-    const ephemeralKeyReceiver = ephemeralKeys[0];
-    const ephemeralKeySender = ephemeralKeys[1];
-
-    const senderShared = await getSharedSymmetricKey(sender.privateKey, ephemeralKeySender);
-    const receiverShared = await getSharedSymmetricKey(receiver.privateKey, ephemeralKeyReceiver);
+    const senderShared = await getSharedSymmetricKey(
+      sender.privateKey,
+      blindingKeys.blindedReceiverViewingKey,
+    );
+    const receiverShared = await getSharedSymmetricKey(
+      receiver.privateKey,
+      blindingKeys.blindedSenderViewingKey,
+    );
     assert(senderShared != null);
     assert(receiverShared != null);
     expect(senderShared).to.deep.equal(receiverShared);
 
-    const { noteCiphertext, noteMemo } = note.encrypt(senderShared);
+    const { noteCiphertext, noteMemo } = note.encrypt(
+      senderShared,
+      address.masterPublicKey,
+      senderRandom,
+    );
 
-    const senderDecrypted = Note.decrypt(
+    // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+    const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
+    const fullCiphertext: Ciphertext = {
+      ...noteCiphertext,
+      data: ciphertextDataWithMemoText,
+    };
+    const decryptedValues = aes.gcm
+      .decrypt(fullCiphertext, senderShared)
+      .map((value) => hexlify(value));
+    const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+    expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
+
+    const senderDecrypted = TransactNote.decrypt(
+      wallet.addressKeys,
       noteCiphertext,
       senderShared,
       noteMemo,
-      ephemeralKeySender,
-      senderBlindingKey,
+      note.annotationData,
+      blindingKeys.blindedReceiverViewingKey,
+      blindingKeys.blindedSenderViewingKey,
+      senderRandom,
+      true, // isSentNote
+      false, // isLegacyDecryption
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
-    expect(senderDecrypted.addressData.viewingPublicKey).to.deep.equal(receiver.pubkey);
-    expect(Memo.decryptNoteExtraData(senderDecrypted.memoField, sender.privateKey)).to.deep.equal(
-      noteExtraData,
-    );
+    expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
+    expect(senderDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
+    expect(
+      Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
+    ).to.deep.equal(noteAnnotationData);
     expect(senderDecrypted.memoText).to.equal(memoText);
 
-    const receiverDecrypted = Note.decrypt(
+    const receiverDecrypted = TransactNote.decrypt(
+      wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
       noteMemo,
-      undefined,
-      undefined,
+      note.annotationData,
+      blindingKeys.blindedReceiverViewingKey,
+      blindingKeys.blindedSenderViewingKey,
+      undefined, // senderRandom
+      false, // isSentNote
+      false, // isLegacyDecryption
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
-    expect(receiverDecrypted.addressData.viewingPublicKey).to.deep.equal(new Uint8Array());
+    expect(receiverDecrypted.senderAddressData).to.equal(undefined);
+    expect(receiverDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
+    expect(receiverDecrypted.memoText).to.equal(memoText);
+  });
+
+  it('Should generate ciphertext decryptable by sender and recipient - no senderRandom', async () => {
+    const wallet2 = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      1,
+      undefined, // creationBlockNumbers
+    );
+
+    const sender = wallet.getViewingKeyPair();
+    const receiver = wallet2.getViewingKeyPair();
+
+    const senderRandom = MEMO_SENDER_RANDOM_NULL;
+    const noteAnnotationData: NoteAnnotationData = {
+      outputType: OutputType.RelayerFee,
+      senderRandom,
+      walletSource: 'erc20 wallet',
+    };
+
+    const memoText = undefined;
+
+    const note = TransactNote.create(
+      wallet2.addressKeys,
+      wallet.addressKeys,
+      random,
+      100n,
+      token,
+      wallet.getViewingKeyPair(),
+      senderRandom,
+      noteAnnotationData.outputType,
+      memoText,
+    );
+
+    assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
+    const blindingKeys = getNoteBlindingKeys(
+      sender.pubkey,
+      note.receiverAddressData.viewingPublicKey,
+      note.random,
+      senderRandom,
+    );
+
+    const senderShared = await getSharedSymmetricKey(
+      sender.privateKey,
+      blindingKeys.blindedReceiverViewingKey,
+    );
+    const receiverShared = await getSharedSymmetricKey(
+      receiver.privateKey,
+      blindingKeys.blindedSenderViewingKey,
+    );
+    assert(senderShared != null);
+    assert(receiverShared != null);
+    expect(senderShared).to.deep.equal(receiverShared);
+
+    const { noteCiphertext, noteMemo } = note.encrypt(
+      senderShared,
+      address.masterPublicKey,
+      senderRandom,
+    );
+
+    // Make sure masterPublicKey is encoded as encodedMasterPublicKey.
+    const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
+    const fullCiphertext: Ciphertext = {
+      ...noteCiphertext,
+      data: ciphertextDataWithMemoText,
+    };
+    const decryptedValues = aes.gcm
+      .decrypt(fullCiphertext, senderShared)
+      .map((value) => hexlify(value));
+    const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+    expect(note.receiverAddressData.masterPublicKey).to.not.equal(encodedMasterPublicKey);
+
+    const senderDecrypted = TransactNote.decrypt(
+      wallet.addressKeys,
+      noteCiphertext,
+      senderShared,
+      noteMemo,
+      note.annotationData,
+      blindingKeys.blindedReceiverViewingKey,
+      blindingKeys.blindedSenderViewingKey,
+      senderRandom,
+      true, // isSentNote
+      false, // isLegacyDecryption
+    );
+    expect(senderDecrypted.hash).to.equal(note.hash);
+    expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
+    expect(senderDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
+    expect(
+      Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
+    ).to.deep.equal(noteAnnotationData);
+    expect(senderDecrypted.memoText).to.equal(memoText);
+
+    const receiverDecrypted = TransactNote.decrypt(
+      wallet2.addressKeys,
+      noteCiphertext,
+      receiverShared,
+      noteMemo,
+      note.annotationData,
+      blindingKeys.blindedReceiverViewingKey,
+      blindingKeys.blindedSenderViewingKey,
+      undefined, // senderRandom
+      false, // isSentNote
+      false, // isLegacyDecryption
+    );
+    expect(receiverDecrypted.hash).to.equal(note.hash);
+    expect(receiverDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
+    expect(receiverDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
     expect(receiverDecrypted.memoText).to.equal(memoText);
   });
 
@@ -325,7 +569,10 @@ describe('Transaction/ERC20', function test() {
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
     );
-    const { inputs, publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
+    const { inputs, publicInputs } = await transaction.generateProverInputs(
+      wallet,
+      testEncryptionKey,
+    );
     const { signature } = inputs;
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
     const msg: bigint = poseidon(Object.values(publicInputs).flatMap((x) => x));
@@ -346,7 +593,7 @@ describe('Transaction/ERC20', function test() {
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
     );
-    const { publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
+    const { publicInputs } = await transaction.generateProverInputs(wallet, testEncryptionKey);
     const { nullifiers, commitmentsOut } = publicInputs;
     expect(nullifiers.length).to.equal(1);
     expect(commitmentsOut.length).to.equal(2);
@@ -354,19 +601,20 @@ describe('Transaction/ERC20', function test() {
     transactionBatch.addOutput(await makeNote());
     transactionBatch.addOutput(await makeNote());
     await expect(
-      transactionBatch.generateSerializedTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith('Too many transaction outputs');
 
     transactionBatch.resetOutputs();
-    const senderBlindingKey = randomHex(15);
+    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
-      Note.create(
+      TransactNote.create(
         address,
+        undefined,
         random,
         6500000000000n,
         '000925cdf66ddf5b88016df1fe915e68eff8f192',
         wallet.getViewingKeyPair(),
-        senderBlindingKey,
+        senderRandom,
         OutputType.RelayerFee,
         undefined, // memoText
       ),
@@ -390,7 +638,7 @@ describe('Transaction/ERC20', function test() {
 
     const transaction2 = new TransactionBatch('ff', TokenType.ERC20, chain);
 
-    transaction2.setWithdraw(ethersWallet.address, 12n);
+    transaction2.setUnshield(ethersWallet.address, 12n);
 
     await expect(
       transaction2.generateValidSpendingSolutionGroups(wallet),
@@ -399,9 +647,9 @@ describe('Transaction/ERC20', function test() {
     );
   });
 
-  it('Should generate validated inputs for transaction batch - withdraw', async () => {
+  it('Should generate validated inputs for transaction batch - unshield', async () => {
     transactionBatch.addOutput(await makeNote());
-    transactionBatch.setWithdraw(ethersWallet.address, 2n, true);
+    transactionBatch.setUnshield(ethersWallet.address, 2n, true);
     const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
       wallet,
     );
@@ -410,7 +658,11 @@ describe('Transaction/ERC20', function test() {
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
     );
-    const { publicInputs } = await transaction.generateInputs(wallet, testEncryptionKey);
+    const { publicInputs } = await transaction.generateProverInputs(
+      wallet,
+      testEncryptionKey,
+      0n, // overallBatchMinGasPrice
+    );
     const { nullifiers, commitmentsOut } = publicInputs;
     expect(nullifiers.length).to.equal(1);
     expect(commitmentsOut.length).to.equal(3);
@@ -418,7 +670,7 @@ describe('Transaction/ERC20', function test() {
 
   it('Should create transaction proofs and serialized transactions', async () => {
     transactionBatch.addOutput(await makeNote(1n));
-    const txs = await transactionBatch.generateSerializedTransactions(
+    const txs = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
@@ -431,7 +683,7 @@ describe('Transaction/ERC20', function test() {
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(1715000000000n));
 
-    const txs2 = await transactionBatch.generateSerializedTransactions(
+    const txs2 = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
@@ -444,24 +696,15 @@ describe('Transaction/ERC20', function test() {
   it('Should test transaction proof progress callback final value', async () => {
     transactionBatch.addOutput(await makeNote(1n));
     let loadProgress = 0;
-    await transactionBatch.generateSerializedTransactions(
-      prover,
-      wallet,
-      testEncryptionKey,
-      (progress) => {
-        loadProgress = progress;
-      },
-    );
+    await transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, (progress) => {
+      loadProgress = progress;
+    });
     expect(loadProgress).to.equal(100);
   });
 
   it('Should create dummy transaction proofs', async () => {
     transactionBatch.addOutput(await makeNote());
-    const txs = await transactionBatch.generateDummySerializedTransactions(
-      prover,
-      wallet,
-      testEncryptionKey,
-    );
+    const txs = await transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey);
     expect(txs.length).to.equal(1);
     expect(txs[0].nullifiers.length).to.equal(1);
     expect(txs[0].commitments.length).to.equal(2);
@@ -473,7 +716,7 @@ describe('Transaction/ERC20', function test() {
   //   const walletlocal = await Wallet.fromMnemonic(dblocal, testEncryptionKey, testMnemonic);
   //   const proverlocal = new Prover(artifactsGetter);
 
-  //   const note = Note.create(
+  //   const note = TransactNote.create(
   //     '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   //     '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
   //     new BN('11000000000000000000000000', 10),
@@ -500,7 +743,7 @@ describe('Transaction/ERC20', function test() {
   //   const transactionlocal = new ERC20Transaction('5FbDB2315678afecb367f032d93F642f64180aa3', 1);
 
   //   transactionlocal.outputs = [
-  //     Note.create(
+  //     TransactNote.create(
   //       '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   //       '0x1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
   //       'ffff',

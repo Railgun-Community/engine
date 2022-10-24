@@ -1,45 +1,33 @@
-import { defaultAbiCoder } from 'ethers/lib/utils';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover, ProverProgressCallback } from '../prover/prover';
-import { SNARK_PRIME_BIGINT, ZERO_ADDRESS } from '../utils/constants';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../utils/bytes';
 import {
-  AdaptID,
-  BoundParams,
-  CommitmentPreimage,
-  OutputCommitmentCiphertext,
-  OutputType,
-  SerializedTransaction,
-  TokenType,
-} from '../models/formatted-types';
+  ByteLength,
+  formatToByteLength,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+  randomHex,
+} from '../utils/bytes';
+import { AdaptID, OutputType, TokenType } from '../models/formatted-types';
 import {
   DEFAULT_TOKEN_SUB_ID,
-  MEMO_SENDER_BLINDING_KEY_NULL,
-  WithdrawFlag,
+  MEMO_SENDER_RANDOM_NULL,
+  UnshieldFlag,
 } from '../models/transaction-constants';
-import { getEphemeralKeys, getSharedSymmetricKey } from '../utils/keys-utils';
-import { ERC20WithdrawNote } from '../note/erc20-withdraw';
+import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
+import { UnshieldNote } from '../note/unshield-note';
 import { TXO } from '../models/txo-types';
 import { Memo } from '../note/memo';
 import { Chain } from '../models/engine-types';
-import { Note } from '../note/note';
-import { keccak256 } from '../utils/hash';
+import { TransactNote } from '../note/transact-note';
 import { PrivateInputs, Proof, PublicInputs } from '../models/prover-types';
-
-const abiCoder = defaultAbiCoder;
-
-export function hashBoundParams(boundParams: BoundParams) {
-  const hashed = keccak256(
-    abiCoder.encode(
-      [
-        'tuple(uint16 treeNumber, uint8 withdraw, address adaptContract, bytes32 adaptParams, tuple(uint256[4] ciphertext, uint256[2] ephemeralKeys, uint256[] memo)[] commitmentCiphertext) _boundParams',
-      ],
-      [boundParams],
-    ),
-  );
-
-  return hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
-}
+import {
+  BoundParamsStruct,
+  CommitmentCiphertextStruct,
+  CommitmentPreimageStruct,
+  TransactionStruct,
+} from '../typechain-types/contracts/logic/RailgunSmartWallet';
+import { hashBoundParams } from './bound-params';
 
 class Transaction {
   private adaptID: AdaptID;
@@ -48,15 +36,15 @@ class Transaction {
 
   private tokenAddress: string;
 
-  private outputs: Note[] = [];
+  private outputs: TransactNote[] = [];
 
-  private withdrawNote: ERC20WithdrawNote = ERC20WithdrawNote.empty();
+  private unshieldNote: UnshieldNote = UnshieldNote.empty();
 
-  private withdrawFlag: bigint = WithdrawFlag.NO_WITHDRAW;
+  private unshieldFlag: bigint = UnshieldFlag.NO_UNSHIELD;
 
   private tokenType: TokenType;
 
-  private tokenSubID: bigint = DEFAULT_TOKEN_SUB_ID;
+  private tokenSubID: bigint;
 
   private spendingTree: number;
 
@@ -77,6 +65,7 @@ class Transaction {
     spendingTree: number,
     utxos: TXO[],
     adaptID: AdaptID,
+    tokenSubID: bigint = DEFAULT_TOKEN_SUB_ID,
   ) {
     this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
     this.tokenType = tokenType;
@@ -84,45 +73,41 @@ class Transaction {
     this.spendingTree = spendingTree;
     this.utxos = utxos;
     this.adaptID = adaptID;
+    this.tokenSubID = tokenSubID;
   }
 
-  setOutputs(outputs: Note[]) {
+  setOutputs(outputs: TransactNote[]) {
     if (this.outputs.length > 2) {
       throw new Error('Can not add more than 2 outputs.');
     }
     this.outputs = outputs;
   }
 
-  withdraw(withdrawAddress: string, value: bigint, allowOverride?: boolean) {
-    if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW) {
-      throw new Error('You may only call .withdraw once for a given transaction.');
+  unshield(unshieldAddress: string, value: bigint, allowOverride?: boolean) {
+    if (this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD) {
+      throw new Error('You may only call .unshield once for a given transaction.');
     }
 
-    this.withdrawNote = new ERC20WithdrawNote(
-      withdrawAddress,
-      value,
-      this.tokenAddress,
-      this.tokenType,
-    );
-    this.withdrawFlag = allowOverride ? WithdrawFlag.OVERRIDE : WithdrawFlag.WITHDRAW;
+    this.unshieldNote = new UnshieldNote(unshieldAddress, value, this.tokenAddress, this.tokenType);
+    this.unshieldFlag = allowOverride ? UnshieldFlag.OVERRIDE : UnshieldFlag.UNSHIELD;
   }
 
-  get withdrawValue() {
-    return this.withdrawNote ? this.withdrawNote.value : BigInt(0);
+  get unshieldValue() {
+    return this.unshieldNote ? this.unshieldNote.value : BigInt(0);
   }
 
   /**
-   * Generates inputs for prover
    * @param wallet - wallet to spend from
    * @param encryptionKey - encryption key of wallet
    */
-  async generateInputs(
+  async generateProverInputs(
     wallet: RailgunWallet,
     encryptionKey: string,
+    overallBatchMinGasPrice = 0n,
   ): Promise<{
     inputs: PrivateInputs;
     publicInputs: PublicInputs;
-    boundParams: BoundParams;
+    boundParams: BoundParamsStruct;
   }> {
     const merkletree = wallet.merkletrees[this.chain.type][this.chain.id];
     const merkleRoot = await merkletree.getRoot(this.spendingTree); // TODO: Is this correct tree?
@@ -145,7 +130,7 @@ class Transaction {
       const utxo = utxos[i];
 
       // Push spending key and nullifier
-      nullifiers.push(Note.getNullifier(nullifyingKey, utxo.position));
+      nullifiers.push(TransactNote.getNullifier(nullifyingKey, utxo.position));
 
       // Push path elements
       // eslint-disable-next-line no-await-in-loop
@@ -160,81 +145,101 @@ class Transaction {
     const totalIn = utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
     const totalOut =
-      this.outputs.reduce((left, right) => left + right.value, BigInt(0)) + this.withdrawValue;
+      this.outputs.reduce((left, right) => left + right.value, BigInt(0)) + this.unshieldValue;
 
     const change = totalIn - totalOut;
     if (change < 0) {
       throw new Error('Negative change value - transaction not possible.');
     }
 
-    const allOutputs: (Note | ERC20WithdrawNote)[] = [...this.outputs];
+    const allOutputs: (TransactNote | UnshieldNote)[] = [...this.outputs];
 
     // Create change output
-    const changeSenderBlindingKey = MEMO_SENDER_BLINDING_KEY_NULL; // Not need for change output.
+    const changeSenderRandom = MEMO_SENDER_RANDOM_NULL; // Not needed for change output.
     allOutputs.push(
-      Note.create(
-        wallet.addressKeys,
+      TransactNote.create(
+        wallet.addressKeys, // Receiver
+        wallet.addressKeys, // Sender
         randomHex(16),
         change,
         this.tokenAddress,
         senderViewingKeys,
-        changeSenderBlindingKey,
+        changeSenderRandom,
         OutputType.Change,
         undefined, // memoText
       ),
     );
 
-    // Push withdraw output if withdraw is requested
-    if (this.withdrawFlag !== WithdrawFlag.NO_WITHDRAW && this.withdrawNote) {
-      allOutputs.push(this.withdrawNote);
+    // Push unshield output if unshield is requested
+    if (this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && this.unshieldNote) {
+      allOutputs.push(this.unshieldNote);
     }
 
-    const onlyInternalOutputs = allOutputs.filter((note) => note instanceof Note) as Note[];
+    const onlyInternalOutputs = allOutputs.filter(
+      (note) => note instanceof TransactNote,
+    ) as TransactNote[];
 
     const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
 
-    const notesEphemeralKeys = await Promise.all(
+    const noteBlindedKeys = await Promise.all(
       onlyInternalOutputs.map((note) => {
-        const senderBlindingKey = Memo.decryptSenderBlindingKey(note.memoField, viewingPrivateKey);
-        return getEphemeralKeys(
+        const senderRandom = Memo.decryptSenderRandom(note.annotationData, viewingPrivateKey);
+        return getNoteBlindingKeys(
           senderViewingKeys.pubkey,
-          note.viewingPublicKey,
+          note.receiverAddressData.viewingPublicKey,
           note.random,
-          senderBlindingKey,
+          senderRandom,
         );
       }),
     );
 
-    // calculate symmetric key using sender privateKey and recipient ephemeral key
+    // Calculate shared keys using sender privateKey and recipient blinding key.
     const sharedKeys = await Promise.all(
-      notesEphemeralKeys.map((ephemeralKeys) =>
-        getSharedSymmetricKey(senderViewingKeys.privateKey, ephemeralKeys[1]),
+      noteBlindedKeys.map(({ blindedReceiverViewingKey }) =>
+        getSharedSymmetricKey(senderViewingKeys.privateKey, blindedReceiverViewingKey),
       ),
     );
 
-    const commitmentCiphertext: OutputCommitmentCiphertext[] = onlyInternalOutputs.map(
+    const commitmentCiphertext: CommitmentCiphertextStruct[] = onlyInternalOutputs.map(
       (note, index) => {
         const sharedKey = sharedKeys[index];
         if (!sharedKey) {
           throw new Error('Shared symmetric key is not defined.');
         }
 
-        const { noteCiphertext, noteMemo } = note.encrypt(sharedKey);
+        const senderRandom = Memo.decryptSenderRandom(note.annotationData, viewingPrivateKey);
+        const { noteCiphertext, noteMemo } = note.encrypt(
+          sharedKey,
+          wallet.addressKeys.masterPublicKey,
+          senderRandom,
+        );
+        if (noteCiphertext.data.length !== 3) {
+          throw new Error('Note ciphertext data must have length 3.');
+        }
+        const ciphertext: [string, string, string, string] = [
+          hexlify(`${noteCiphertext.iv}${noteCiphertext.tag}`, true),
+          hexlify(noteCiphertext.data[0], true),
+          hexlify(noteCiphertext.data[1], true),
+          hexlify(noteCiphertext.data[2], true),
+        ];
         return {
-          ciphertext: [`${noteCiphertext.iv}${noteCiphertext.tag}`, ...noteCiphertext.data].map(
-            (el) => hexToBigInt(el as string),
-          ) as [bigint, bigint, bigint, bigint],
-          ephemeralKeys: notesEphemeralKeys[index].map((el) => hexToBigInt(hexlify(el))) as [
-            bigint,
-            bigint,
-          ],
-          memo: noteMemo.map((el) => hexToBigInt(el)),
+          ciphertext,
+          blindedSenderViewingKey: hexlify(noteBlindedKeys[index].blindedSenderViewingKey, true),
+          blindedReceiverViewingKey: hexlify(
+            noteBlindedKeys[index].blindedReceiverViewingKey,
+            true,
+          ),
+          memo: hexlify(noteMemo, true),
+          annotationData: hexlify(note.annotationData, true),
         };
       },
     );
-    const boundParams: BoundParams = {
-      treeNumber: BigInt(this.spendingTree),
-      withdraw: this.withdrawFlag,
+
+    const boundParams: BoundParamsStruct = {
+      treeNumber: this.spendingTree,
+      minGasPrice: overallBatchMinGasPrice,
+      unshield: this.unshieldFlag,
+      chainID: this.chain.id,
       adaptContract: this.adaptID.contract,
       adaptParams: this.adaptID.parameters,
       commitmentCiphertext,
@@ -249,7 +254,7 @@ class Transaction {
       commitmentsOut,
     };
 
-    const signature = Note.sign(publicInputs, spendingKey.privateKey);
+    const signature = TransactNote.sign(publicInputs, spendingKey.privateKey);
 
     // Format inputs
     const inputs: PrivateInputs = {
@@ -283,22 +288,24 @@ class Transaction {
     prover: Prover,
     wallet: RailgunWallet,
     encryptionKey: string,
+    overallBatchMinGasPrice: bigint,
     progressCallback: ProverProgressCallback,
-  ): Promise<SerializedTransaction> {
+  ): Promise<TransactionStruct> {
     // Get inputs
-    const { inputs, publicInputs, boundParams } = await this.generateInputs(wallet, encryptionKey);
+    const { inputs, publicInputs, boundParams } = await this.generateProverInputs(
+      wallet,
+      encryptionKey,
+      overallBatchMinGasPrice,
+    );
 
     // Calculate proof
     const { proof } = await prover.prove(publicInputs, inputs, progressCallback);
 
-    const overrideWithdrawAddress = ZERO_ADDRESS;
-
-    return Transaction.generateSerializedTransaction(
+    return Transaction.generateTransaction(
       proof,
       publicInputs,
       boundParams,
-      overrideWithdrawAddress,
-      this.withdrawNote.preImage,
+      this.unshieldNote.preImage,
     );
   }
 
@@ -312,39 +319,39 @@ class Transaction {
     prover: Prover,
     wallet: RailgunWallet,
     encryptionKey: string,
-  ): Promise<SerializedTransaction> {
+    overallBatchMinGasPrice: bigint,
+  ): Promise<TransactionStruct> {
     // Get inputs
-    const { publicInputs, boundParams } = await this.generateInputs(wallet, encryptionKey);
+    const { publicInputs, boundParams } = await this.generateProverInputs(
+      wallet,
+      encryptionKey,
+      overallBatchMinGasPrice,
+    );
 
     const dummyProof: Proof = await prover.dummyProve(publicInputs);
 
-    const overrideWithdrawAddress = ZERO_ADDRESS;
-
-    return Transaction.generateSerializedTransaction(
+    return Transaction.generateTransaction(
       dummyProof,
       publicInputs,
       boundParams,
-      overrideWithdrawAddress,
-      this.withdrawNote.preImage,
+      this.unshieldNote.preImage,
     );
   }
 
-  static generateSerializedTransaction(
+  static generateTransaction(
     proof: Proof,
     publicInputs: PublicInputs,
-    boundParams: BoundParams,
-    overrideWithdrawAddress: string,
-    withdrawPreimage: CommitmentPreimage,
-  ): SerializedTransaction {
+    boundParams: BoundParamsStruct,
+    unshieldPreimage: CommitmentPreimageStruct,
+  ): TransactionStruct {
     const formatted = Prover.formatProof(proof);
     return {
       proof: formatted,
-      merkleRoot: publicInputs.merkleRoot,
-      nullifiers: publicInputs.nullifiers,
+      merkleRoot: nToHex(publicInputs.merkleRoot, ByteLength.UINT_256),
+      nullifiers: publicInputs.nullifiers.map((n) => nToHex(n, ByteLength.UINT_256)),
       boundParams,
-      commitments: publicInputs.commitmentsOut,
-      withdrawPreimage,
-      overrideOutput: overrideWithdrawAddress,
+      commitments: publicInputs.commitmentsOut.map((n) => nToHex(n, ByteLength.UINT_256)),
+      unshieldPreimage,
     };
   }
 }
