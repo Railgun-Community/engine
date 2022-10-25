@@ -4,6 +4,9 @@ import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex, nToBytes } from './bytes';
 import { sha256 } from './hash';
 
+const curve25519WasmReady =
+  typeof initCurve25519wasm === 'function' ? initCurve25519wasm() : Promise.resolve();
+
 const { bytesToHex, randomBytes } = utilsEd25519;
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
@@ -159,7 +162,7 @@ async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   ephemeralKey: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
-  if (typeof initCurve25519wasm === 'function') await initCurve25519wasm();
+  await curve25519WasmReady;
   try {
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKey);
