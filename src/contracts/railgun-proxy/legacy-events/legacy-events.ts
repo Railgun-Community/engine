@@ -46,7 +46,7 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
       commitmentPreImage.token.tokenSubID.toHexString(),
     );
     const value = commitmentPreImage.value.toBigInt();
-    const preImage = serializePreImage(npk, token, commitmentPreImage.value.toBigInt());
+    const preImage = serializePreImage(npk, token, value);
     const noteHash = getNoteHash(npk, token.tokenAddress, value);
 
     return {
