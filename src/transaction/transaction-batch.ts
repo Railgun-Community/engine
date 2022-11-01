@@ -72,7 +72,7 @@ class TransactionBatch {
     this.outputs = [];
   }
 
-  setUnshield(unshieldAddress: string, value: bigint, allowOverride?: boolean) {
+  setUnshield(unshieldAddress: string, value: string | bigint, allowOverride?: boolean) {
     if (this.unshieldAddress != null) {
       throw new Error('You may only call .unshield once for a given transaction batch.');
     }
