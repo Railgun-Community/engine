@@ -70,7 +70,7 @@ class RelayAdaptContract {
 
   private async getOrderedCallsForUnshieldBaseToken(
     unshieldAddress: string,
-    value: bigint,
+    value: string,
   ): Promise<PopulatedTransaction[]> {
     const baseTokenData: TokenData = {
       tokenAddress: ZERO_ADDRESS,
@@ -93,7 +93,7 @@ class RelayAdaptContract {
     dummyTransactions: TransactionStruct[],
     unshieldAddress: string,
     random: string,
-    value: bigint,
+    value: string,
   ): Promise<string> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
@@ -113,7 +113,7 @@ class RelayAdaptContract {
     transactions: TransactionStruct[],
     unshieldAddress: string,
     random: string,
-    value: bigint,
+    value: string,
   ): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,

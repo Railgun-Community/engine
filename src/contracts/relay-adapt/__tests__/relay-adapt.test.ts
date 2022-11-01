@@ -183,7 +183,7 @@ describe('Relay Adapt', function test() {
       dummyTransactions,
       etherswallet.address,
       random,
-      unshieldValue,
+      BigNumber.from(unshieldValue).toHexString(),
     );
 
     relayTransaction.from = DEAD_ADDRESS;
@@ -240,7 +240,7 @@ describe('Relay Adapt', function test() {
       dummyTransactions,
       etherswallet.address,
       random,
-      unshieldValue,
+      BigNumber.from(unshieldValue).toHexString(),
     );
     expect(relayAdaptParams).to.equal(
       '0xc7a1f7e2d973734f2597a74ca33214f4c5aef0677fcaa6656091c2c45484d4fa',
@@ -269,7 +269,7 @@ describe('Relay Adapt', function test() {
       transactions,
       etherswallet.address,
       random,
-      unshieldValue,
+      BigNumber.from(unshieldValue).toHexString(),
     );
 
     // 6: Send relay transaction.
