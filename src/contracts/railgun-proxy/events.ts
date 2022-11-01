@@ -11,8 +11,15 @@ import {
   NullifiersEvent,
   ShieldEvent,
   TransactEvent,
+  UnshieldEvent,
 } from '../../typechain-types/contracts/logic/RailgunLogic';
-import { CommitmentEvent, EventsListener, EventsNullifierListener } from '../../models/event-types';
+import {
+  CommitmentEvent,
+  EventsListener,
+  EventsNullifierListener,
+  EventsUnshieldListener,
+  UnshieldStoredEvent,
+} from '../../models/event-types';
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
@@ -20,6 +27,7 @@ import {
   ShieldCiphertextStructOutput,
   ShieldEventObject,
   TransactEventObject,
+  UnshieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
 
@@ -155,6 +163,24 @@ export function formatTransactEvent(
   };
 }
 
+export function formatUnshieldEvent(
+  unshieldEventArgs: UnshieldEventObject,
+  transactionHash: string,
+  blockNumber: number,
+): UnshieldStoredEvent {
+  const { to, token, amount, fee } = unshieldEventArgs;
+  return {
+    txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+    toAddress: to,
+    tokenType: token.tokenType,
+    tokenAddress: token.tokenAddress,
+    tokenSubID: token.tokenSubID.toHexString(),
+    amount: amount.toHexString(),
+    fee: fee.toHexString(),
+    blockNumber,
+  };
+}
+
 export async function processShieldEvents(
   eventsListener: EventsListener,
   events: ShieldEvent[],
@@ -177,6 +203,19 @@ export async function processTransactEvents(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
       return eventsListener(formatTransactEvent(args, transactionHash, blockNumber));
+    }),
+  );
+}
+
+export async function processUnshieldEvents(
+  eventsUnshieldListener: EventsUnshieldListener,
+  events: UnshieldEvent[],
+): Promise<void> {
+  const filtered = events.filter((event) => event.args);
+  await Promise.all(
+    filtered.map(async (event) => {
+      const { args, transactionHash, blockNumber } = event;
+      return eventsUnshieldListener(formatUnshieldEvent(args, transactionHash, blockNumber));
     }),
   );
 }

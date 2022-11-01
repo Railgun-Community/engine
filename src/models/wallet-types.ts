@@ -1,3 +1,4 @@
+import { UnshieldStoredEvent } from './event-types';
 import { NoteAnnotationData } from './formatted-types';
 import { TXO } from './txo-types';
 
@@ -61,6 +62,7 @@ export type TransactionHistoryEntrySpent = {
   transferTokenAmounts: TransactionHistoryTransferTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+  unshieldTokenAmounts: TransactionHistoryTransferTokenAmount[];
   version: number;
 };
 export type TransactionHistoryEntry = TransactionHistoryEntrySpent &
@@ -69,6 +71,7 @@ export type TransactionHistoryEntryPreprocessSpent = {
   txid: string;
   tokenAmounts: TransactionHistoryTokenAmount[];
   version: number;
+  unshieldEvents: UnshieldStoredEvent[];
 };
 export enum TransactionHistoryItemVersion {
   Unknown = 0, // Receive note only: noteAnnotationData metadata not possible

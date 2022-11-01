@@ -2,7 +2,12 @@ import type { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, Contract, Event, PopulatedTransaction } from 'ethers';
 import EventEmitter from 'events';
 import EngineDebug from '../../debugger/debugger';
-import { EventsListener, EventsNullifierListener, EngineEvent } from '../../models/event-types';
+import {
+  EventsListener,
+  EventsNullifierListener,
+  EventsUnshieldListener,
+  EngineEvent,
+} from '../../models/event-types';
 import { hexlify } from '../../utils/bytes';
 import { promiseTimeout } from '../../utils/promises';
 import { ABIRailgunSmartWallet } from '../../abi/abi';
@@ -10,9 +15,11 @@ import {
   formatNullifierEvents,
   formatShieldEvent,
   formatTransactEvent,
+  formatUnshieldEvent,
   processNullifierEvents,
   processShieldEvents,
   processTransactEvents,
+  processUnshieldEvents,
 } from './events';
 import {
   processLegacyCommitmentBatchEvents,
@@ -114,7 +121,11 @@ class RailgunProxyContract extends EventEmitter {
    * @param eventsListener - listener callback
    * @param eventsNullifierListener - nullifier listener callback
    */
-  treeUpdates(eventsListener: EventsListener, eventsNullifierListener: EventsNullifierListener) {
+  treeUpdates(
+    eventsListener: EventsListener,
+    eventsNullifierListener: EventsNullifierListener,
+    eventsUnshieldListener: EventsUnshieldListener,
+  ) {
     // listen for nullifiers first so balances aren't "double" before they process
     this.contract.on(
       this.contract.filters.Nullifiers(),
@@ -187,8 +198,9 @@ class RailgunProxyContract extends EventEmitter {
           amount,
           fee,
         };
-        // TODO-V3
-        // await eventsListener(formatUnshieldEvent(args, event.transactionHash, event.blockNumber));
+        await eventsUnshieldListener(
+          formatUnshieldEvent(args, event.transactionHash, event.blockNumber),
+        );
       },
     );
   }
@@ -240,6 +252,7 @@ class RailgunProxyContract extends EventEmitter {
     engineV3StartBlockNumber: number,
     eventsListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
+    eventsUnshieldListener: EventsUnshieldListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     let currentStartBlock = startBlock;
@@ -295,9 +308,7 @@ class RailgunProxyContract extends EventEmitter {
           processNullifierEvents(eventsNullifierListener, eventsNullifiers),
           processShieldEvents(eventsListener, eventsShield),
           processTransactEvents(eventsListener, eventsTransact),
-
-          // TODO-V3
-          // processUnshieldEvents(eventsListener, eventsUnshield),
+          processUnshieldEvents(eventsUnshieldListener, eventsUnshield),
         ]);
       }
 

@@ -593,6 +593,45 @@ describe('MerkleTree', () => {
     expect(await merkletree.getStoredNullifier('00')).to.equal('01');
   }).timeout(1000);
 
+  it('Should store and retrieve unshield events', async () => {
+    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([]);
+    const unshieldA1 = {
+      txid: '0',
+      toAddress: '123',
+      tokenType: 1,
+      tokenAddress: '0x4567',
+      tokenSubID: '0x00',
+      amount: '0x1234567890',
+      fee: '0x7890',
+      blockNumber: 0,
+    };
+    const unshieldA2 = {
+      txid: '0',
+      toAddress: '123',
+      tokenType: 1,
+      tokenAddress: '0x1234',
+      tokenSubID: '0x00',
+      amount: '0x123456',
+      fee: '0x7890',
+      blockNumber: 0,
+    };
+    const unshieldB1 = {
+      txid: '1',
+      toAddress: '123',
+      tokenType: 1,
+      tokenAddress: '0x1234',
+      tokenSubID: '0x00',
+      amount: '0x654321',
+      fee: '0x7890',
+      blockNumber: 0,
+    };
+    await merkletree.addUnshieldEvent(unshieldA1);
+    await merkletree.addUnshieldEvent(unshieldA2);
+    await merkletree.addUnshieldEvent(unshieldB1);
+    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA2, unshieldA1]);
+    expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldB1]);
+  });
+
   it('Should return latest tree', async () => {
     expect(await merkletree.latestTree()).to.equal(0);
 

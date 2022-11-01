@@ -41,7 +41,7 @@ describe('Wallet', () => {
       0,
       undefined, // creationBlockNumbers
     );
-    wallet.loadTree(merkletree);
+    wallet.loadERC20Merkletree(merkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
@@ -270,7 +270,7 @@ describe('Wallet', () => {
 
   afterEach(() => {
     // Clean up database
-    wallet.unloadTree(merkletree.chain);
+    wallet.unloadERC20Merkletree(merkletree.chain);
     db.close();
   });
 });

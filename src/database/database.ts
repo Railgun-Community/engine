@@ -135,6 +135,26 @@ class Database {
   }
 
   /**
+   * Gets all keys in namespace
+   * @param namespace - namespace to stream from
+   * @returns list of keys
+   */
+  getNamespaceKeys(namespace: string[]): Promise<string[]> {
+    return new Promise((resolve) => {
+      const keyList: string[] = [];
+
+      // Stream list of keys and resolve on end
+      this.streamNamespace(namespace)
+        .on('data', (key: string) => {
+          keyList.push(key);
+        })
+        .on('end', () => {
+          resolve(keyList);
+        });
+    });
+  }
+
+  /**
    * Delete all keys in namespace
    * @param namespace - namespace to delete
    * @returns complete

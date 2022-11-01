@@ -1,7 +1,5 @@
-import { BigNumber } from 'ethers';
-import { BytesData, Commitment, Nullifier } from './formatted-types';
+import { Commitment, Nullifier } from './formatted-types';
 import { Chain } from './engine-types';
-import { CommitmentCiphertextStructOutput } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 
 export enum EngineEvent {
   WalletScanComplete = 'scanned',
@@ -15,20 +13,25 @@ export enum EngineEvent {
 export type QuickSync = (chain: Chain, startingBlock: number) => Promise<AccumulatedEvents>;
 export type EventsListener = (event: CommitmentEvent) => Promise<void>;
 export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
+export type EventsUnshieldListener = (event: UnshieldStoredEvent) => Promise<void>;
 
 export type CommitmentEvent = {
-  txid: BytesData;
+  txid: string;
   treeNumber: number;
   startPosition: number;
   commitments: Commitment[];
   blockNumber: number;
 };
 
-export type UnshieldEventArgs = {
-  treeNumber: BigNumber;
-  startPosition: BigNumber;
-  hash: string[];
-  ciphertext: CommitmentCiphertextStructOutput[];
+export type UnshieldStoredEvent = {
+  txid: string;
+  toAddress: string;
+  tokenType: number;
+  tokenAddress: string;
+  tokenSubID: string;
+  amount: string;
+  fee: string;
+  blockNumber: number;
 };
 
 export type AccumulatedEvents = {

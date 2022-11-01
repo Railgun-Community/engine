@@ -125,7 +125,7 @@ describe('Transaction/ERC20', function test() {
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
-    wallet.loadTree(merkletree);
+    wallet.loadERC20Merkletree(merkletree);
     makeNote = async (
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
@@ -758,7 +758,7 @@ describe('Transaction/ERC20', function test() {
 
   this.afterAll(() => {
     // Clean up database
-    wallet.unloadTree(merkletree.chain);
+    wallet.unloadERC20Merkletree(merkletree.chain);
     db.close();
   });
 });

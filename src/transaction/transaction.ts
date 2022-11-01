@@ -109,7 +109,7 @@ class Transaction {
     publicInputs: PublicInputs;
     boundParams: BoundParamsStruct;
   }> {
-    const merkletree = wallet.merkletrees[this.chain.type][this.chain.id];
+    const merkletree = wallet.erc20Merkletrees[this.chain.type][this.chain.id];
     const merkleRoot = await merkletree.getRoot(this.spendingTree); // TODO: Is this correct tree?
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();

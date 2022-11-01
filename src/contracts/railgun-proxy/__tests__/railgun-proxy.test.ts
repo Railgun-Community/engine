@@ -21,6 +21,7 @@ import {
   CommitmentEvent,
   EngineEvent,
   MerkletreeHistoryScanEventData,
+  UnshieldStoredEvent,
 } from '../../../models/event-types';
 import { Memo } from '../../../note/memo';
 import { ViewOnlyWallet } from '../../../wallet/view-only-wallet';
@@ -196,7 +197,7 @@ describe('Railgun Proxy', function runTests() {
     expect(fees.nft).to.be.a('string');
   });
 
-  it('[HH] Should find shield and transact as historical events and nullifiers', async function run() {
+  it('[HH] Should find shield, transact and unshield as historical events', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -210,11 +211,15 @@ describe('Railgun Proxy', function runTests() {
     const nullifiersListener = async (nullifiers: Nullifier[]) => {
       resultNullifiers.push(...nullifiers);
     };
+    let resultUnshields: UnshieldStoredEvent[] = [];
+    const unshieldListener = async (unshield: UnshieldStoredEvent) => {
+      resultUnshields.push(unshield);
+    };
 
     let startingBlock = await provider.getBlockNumber();
 
     // Add a secondary listener.
-    proxyContract.treeUpdates(eventsListener, nullifiersListener);
+    proxyContract.treeUpdates(eventsListener, nullifiersListener, unshieldListener);
 
     // Subscribe to Nullified event
     const resultNullifiers2: Nullifier[] = [];
@@ -233,6 +238,7 @@ describe('Railgun Proxy', function runTests() {
 
     resultEvent = undefined;
     resultNullifiers = [];
+    resultUnshields = [];
 
     // Cannot test legacy events.
     const engineV3StartBlockNumber = 0;
@@ -245,6 +251,7 @@ describe('Railgun Proxy', function runTests() {
       engineV3StartBlockNumber,
       eventsListener,
       nullifiersListener,
+      unshieldListener,
       async () => {},
     );
 
@@ -255,6 +262,7 @@ describe('Railgun Proxy', function runTests() {
       hexlify(txResponse.transactionHash),
     );
     expect(resultNullifiers.length).to.equal(0);
+    expect(resultUnshields.length).to.equal(0);
 
     startingBlock = await provider.getBlockNumber();
 
@@ -296,11 +304,12 @@ describe('Railgun Proxy', function runTests() {
 
     // Event should have been scanned by automatic contract events:
 
-    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
-      hexlify(txResponseTransact.transactionHash),
-    );
-    expect(resultNullifiers[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
-    expect(resultNullifiers2[0].txid).to.equal(hexlify(txResponseTransact.transactionHash));
+    const txid = hexlify(txResponseTransact.transactionHash);
+    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
+    expect(resultNullifiers[0].txid).to.equal(txid);
+    expect(resultNullifiers2[0].txid).to.equal(txid);
+    expect(resultUnshields.length).to.equal(1);
+    expect(resultUnshields[0].txid).to.equal(txid);
 
     resultEvent = undefined;
     resultNullifiers = [];
@@ -313,6 +322,7 @@ describe('Railgun Proxy', function runTests() {
       engineV3StartBlockNumber,
       eventsListener,
       nullifiersListener,
+      unshieldListener,
       async () => {},
     );
 
@@ -377,6 +387,7 @@ describe('Railgun Proxy', function runTests() {
         result = commitmentEvent;
       },
       async () => {},
+      async () => {},
     );
     const merkleRootBefore = await proxyContract.merkleRoot();
 
@@ -424,6 +435,7 @@ describe('Railgun Proxy', function runTests() {
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
+      async () => {},
       async () => {},
     );
     // Create transaction

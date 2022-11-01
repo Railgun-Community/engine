@@ -18,6 +18,7 @@ import {
   MerkletreeHistoryScanEventData,
   MerkletreeHistoryScanUpdateData,
   QuickSync,
+  UnshieldStoredEvent,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
@@ -76,7 +77,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  static setEngineDebugger = (engineDebugger: EngineDebugger) => {
+  static setEngineDebugger = (engineDebugger: EngineDebugger): void => {
     EngineDebug.init(engineDebugger);
   };
 
@@ -87,7 +88,12 @@ class RailgunEngine extends EventEmitter {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitment data from events
    */
-  async listener(chain: Chain, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
+  async listener(
+    chain: Chain,
+    treeNumber: number,
+    startingIndex: number,
+    leaves: Commitment[],
+  ): Promise<void> {
     if (leaves.length) {
       EngineDebug.log(
         `engine.listener[${chain.type}:${chain.id}]: ${leaves.length} queued at ${startingIndex}`,
@@ -106,11 +112,21 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id for nullifiers
    * @param nullifiers - transaction info to nullify commitment
    */
-  async nullifierListener(chain: Chain, nullifiers: Nullifier[]) {
+  async nullifierListener(chain: Chain, nullifiers: Nullifier[]): Promise<void> {
     if (nullifiers.length) {
       EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
       await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
     }
+  }
+
+  /**
+   * Handle new unshield events
+   * @param chain - chain type/id
+   * @param unshield - unshield info
+   */
+  async unshieldListener(chain: Chain, unshield: UnshieldStoredEvent): Promise<void> {
+    EngineDebug.log(`engine.unshieldListener[${chain.type}:${chain.id}] ${unshield.txid}`);
+    await this.merkletrees[chain.type][chain.id].erc20.addUnshieldEvent(unshield);
   }
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
@@ -291,6 +307,9 @@ class RailgunEngine extends EventEmitter {
         async (nullifiers: Nullifier[]) => {
           await this.nullifierListener(chain, nullifiers);
         },
+        async (unshield: UnshieldStoredEvent) => {
+          await this.unshieldListener(chain, unshield);
+        },
         async (syncedBlock: number) => {
           const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
           const scanUpdateData: MerkletreeHistoryScanUpdateData = {
@@ -414,11 +433,12 @@ class RailgunEngine extends EventEmitter {
     }
     this.deploymentBlocks[chain.type][chain.id] = deploymentBlock;
 
-    // Load merkle tree to wallets
+    // Load erc20 merkletrees to wallets
     Object.values(this.wallets).forEach((wallet) => {
-      wallet.loadTree(this.merkletrees[chain.type][chain.id].erc20);
+      wallet.loadERC20Merkletree(this.merkletrees[chain.type][chain.id].erc20);
     });
 
+    // Setup listeners
     const eventsListener = async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
       await this.listener(chain, treeNumber, startPosition, commitments);
       await this.scanAllWallets(chain);
@@ -426,9 +446,14 @@ class RailgunEngine extends EventEmitter {
     const nullifierListener = async (nullifiers: Nullifier[]) => {
       await this.nullifierListener(chain, nullifiers);
     };
-
-    // Setup listeners
-    this.proxyContracts[chain.type][chain.id].treeUpdates(eventsListener, nullifierListener);
+    const unshieldListener = async (unshield: UnshieldStoredEvent) => {
+      await this.unshieldListener(chain, unshield);
+    };
+    this.proxyContracts[chain.type][chain.id].treeUpdates(
+      eventsListener,
+      nullifierListener,
+      unshieldListener,
+    );
 
     await this.scanHistory(chain);
   }
@@ -442,9 +467,9 @@ class RailgunEngine extends EventEmitter {
       // Unload listeners
       this.proxyContracts[chain.type][chain.id].unload();
 
-      // Unlaod tree from wallets
+      // Unlaod erc20 merkletrees from wallets
       Object.values(this.wallets).forEach((wallet) => {
-        wallet.unloadTree(chain);
+        wallet.unloadERC20Merkletree(chain);
       });
 
       // Delete contract and merkle tree objects
@@ -529,10 +554,10 @@ class RailgunEngine extends EventEmitter {
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
 
-    // Load merkle trees for wallet
+    // Load erc20 merkletrees for wallet
     this.merkletrees.forEach((merkletreesForChainType) => {
       merkletreesForChainType.forEach((merkletree) => {
-        wallet.loadTree(merkletree.erc20);
+        wallet.loadERC20Merkletree(merkletree.erc20);
       });
     });
   }

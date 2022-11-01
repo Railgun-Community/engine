@@ -80,7 +80,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly nullifyingKey: bigint;
 
-  readonly merkletrees: MerkleTree[][] = [];
+  readonly erc20Merkletrees: MerkleTree[][] = [];
 
   private creationBlockNumbers: Optional<number[][]>;
 
@@ -111,19 +111,19 @@ abstract class AbstractWallet extends EventEmitter {
    * Loads merkle tree into wallet
    * @param merkletree - merkletree to load
    */
-  loadTree(merkletree: MerkleTree) {
-    if (!this.merkletrees[merkletree.chain.type]) {
-      this.merkletrees[merkletree.chain.type] = [];
+  loadERC20Merkletree(merkletree: MerkleTree) {
+    if (!this.erc20Merkletrees[merkletree.chain.type]) {
+      this.erc20Merkletrees[merkletree.chain.type] = [];
     }
-    this.merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
+    this.erc20Merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
   }
 
   /**
    * Unload merkle tree by chain
    * @param chain - chain type/id of tree to unload
    */
-  unloadTree(chain: Chain) {
-    delete this.merkletrees[chain.type][chain.id];
+  unloadERC20Merkletree(chain: Chain) {
+    delete this.erc20Merkletrees[chain.type][chain.id];
   }
 
   /**
@@ -524,22 +524,6 @@ abstract class AbstractWallet extends EventEmitter {
     await this.db.batch(writeBatch);
   }
 
-  private async streamKeys(namespace: string[]): Promise<string[]> {
-    return new Promise((resolve) => {
-      const keyList: string[] = [];
-
-      // Stream list of keys and resolve on end
-      this.db
-        .streamNamespace(namespace)
-        .on('data', (key: string) => {
-          keyList.push(key);
-        })
-        .on('end', () => {
-          resolve(keyList);
-        });
-    });
-  }
-
   /**
    * Get TXOs list of a chain
    * @param chain - chain type/id to get UTXOs for
@@ -550,19 +534,17 @@ abstract class AbstractWallet extends EventEmitter {
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletDBPrefix(chain);
-    const keys: string[] = await this.streamKeys(namespace);
+    const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.erc20Merkletrees[chain.type][chain.id];
 
     // Calculate UTXOs
     return Promise.all(
       keySplits.map(async (keySplit) => {
         // Decode UTXO
         const data = (await this.db.get(keySplit)) as BytesData;
-        const txo: StoredReceiveCommitment = msgpack.decode(
-          arrayify(data),
-        ) as StoredReceiveCommitment;
+        const txo = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
 
         // If this UTXO hasn't already been marked as spent, check if it has
         if (!txo.spendtxid) {
@@ -609,7 +591,7 @@ abstract class AbstractWallet extends EventEmitter {
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletSentCommitmentDBPrefix(chain);
-    const keys: string[] = await this.streamKeys(namespace);
+    const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
     // Calculate spent commitments
@@ -641,14 +623,14 @@ abstract class AbstractWallet extends EventEmitter {
    */
   async getTransactionHistory(chain: Chain): Promise<TransactionHistoryEntry[]> {
     const receiveHistory = await this.getTransactionReceiveHistory(chain);
-    const sendHistory = await this.getTransactionSpendHistory(chain);
+    const spendHistory = await this.getTransactionSpendHistory(chain);
 
-    const history: TransactionHistoryEntry[] = sendHistory.map((sendItem) => ({
+    const history: TransactionHistoryEntry[] = spendHistory.map((sendItem) => ({
       ...sendItem,
       receiveTokenAmounts: [],
     }));
 
-    // Merge "sent" history with "receive" history items.
+    // Merge "spent" history with "receive" history items.
     // We have to remove all "receive" items that are change outputs.
     receiveHistory.forEach((receiveItem) => {
       let alreadyExistsInHistory = false;
@@ -675,6 +657,7 @@ abstract class AbstractWallet extends EventEmitter {
           ...receiveItem,
           transferTokenAmounts: [],
           changeTokenAmounts: [],
+          unshieldTokenAmounts: [],
           version: TransactionHistoryItemVersion.Unknown,
         });
       }
@@ -718,42 +701,51 @@ abstract class AbstractWallet extends EventEmitter {
     const sentCommitments = await this.getSentCommitments(chain);
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    sentCommitments.forEach(({ txid, note, noteAnnotationData }) => {
-      if (note.value === 0n) {
-        return;
-      }
-      if (!txidTransactionMap[txid]) {
-        txidTransactionMap[txid] = {
-          txid,
-          tokenAmounts: [],
-          version:
-            noteAnnotationData == null
-              ? TransactionHistoryItemVersion.Legacy
-              : TransactionHistoryItemVersion.UpdatedAug2022,
+    await Promise.all(
+      sentCommitments.map(async ({ txid, note, noteAnnotationData }) => {
+        if (note.value === 0n) {
+          return;
+        }
+        if (!txidTransactionMap[txid]) {
+          txidTransactionMap[txid] = {
+            txid,
+            tokenAmounts: [],
+            unshieldEvents: [],
+            version:
+              noteAnnotationData == null
+                ? TransactionHistoryItemVersion.Legacy
+                : TransactionHistoryItemVersion.UpdatedAug2022,
+          };
+        }
+
+        // Get possible unshield event for this transaction.
+        txidTransactionMap[txid].unshieldEvents = await this.erc20Merkletrees[chain.type][
+          chain.id
+        ].getUnshieldEvents(txid);
+
+        const token = formatToByteLength(note.token, 32, false);
+        const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
+          token,
+          amount: note.value,
+          noteAnnotationData,
+          memoText: note.memoText,
         };
-      }
-      const token = formatToByteLength(note.token, 32, false);
-      const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
-        token,
-        amount: note.value,
-        noteAnnotationData,
-        memoText: note.memoText,
-      };
-      const isTransfer =
-        !noteAnnotationData || noteAnnotationData.outputType === OutputType.Transfer;
-      if (isTransfer) {
-        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
-          note.receiverAddressData,
-        );
-      }
-      txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
-    });
+        const isTransfer =
+          !noteAnnotationData || noteAnnotationData.outputType === OutputType.Transfer;
+        if (isTransfer) {
+          (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
+            note.receiverAddressData,
+          );
+        }
+        txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
+      }),
+    );
 
     const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =
       Object.values(txidTransactionMap);
 
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
-      ({ txid, tokenAmounts, version }) => {
+      ({ txid, tokenAmounts, unshieldEvents, version }) => {
         const transferTokenAmounts: TransactionHistoryTransferTokenAmount[] = [];
         let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
@@ -777,11 +769,21 @@ abstract class AbstractWallet extends EventEmitter {
           }
         });
 
+        const unshieldTokenAmounts: TransactionHistoryTransferTokenAmount[] = unshieldEvents.map(
+          (unshieldEvent) => ({
+            token: formatToByteLength(unshieldEvent.tokenAddress, 32, false),
+            amount: BigInt(unshieldEvent.amount),
+            memoText: '',
+            recipientAddress: unshieldEvent.toAddress,
+          }),
+        );
+
         const historyEntry: TransactionHistoryEntrySpent = {
           txid,
           transferTokenAmounts,
           relayerFeeTokenAmount,
           changeTokenAmounts,
+          unshieldTokenAmounts,
           version,
         };
         return historyEntry;
@@ -871,7 +873,7 @@ abstract class AbstractWallet extends EventEmitter {
   async scanBalances(chain: Chain) {
     EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.erc20Merkletrees[chain.type][chain.id];
 
     try {
       // Fetch wallet details and latest tree.
