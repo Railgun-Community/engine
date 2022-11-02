@@ -588,6 +588,12 @@ describe('MerkleTree', () => {
     await merkletree.updateTrees();
 
     expect(await merkletree.latestTree()).to.equal(0);
+    const expectedMetadata1: MerkletreesMetadata = {
+      trees: {
+        0: { scannedHeight: 1 },
+      },
+    };
+    expect(await merkletree.getMerkletreesMetadata()).to.deep.equal(expectedMetadata1);
 
     await merkletree.queueLeaves(1, 0, [
       {
@@ -606,6 +612,13 @@ describe('MerkleTree', () => {
     expect(await merkletree.latestTree()).to.equal(1);
     expect(await merkletree.getTreeLength(0)).to.equal(1);
     expect(await merkletree.getTreeLength(1)).to.equal(1);
+    const expectedMetadata2: MerkletreesMetadata = {
+      trees: {
+        0: { scannedHeight: 1 },
+        1: { scannedHeight: 1 },
+      },
+    };
+    expect(await merkletree.getMerkletreesMetadata()).to.deep.equal(expectedMetadata2);
   }).timeout(1000);
 
   it('Should store and retrieve trees metadata', async () => {
