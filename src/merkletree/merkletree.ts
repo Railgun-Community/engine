@@ -444,7 +444,7 @@ class MerkleTree {
         ),
         true,
       );
-      throw INVALID_MERKLE_ROOT_ERROR_MESSAGE;
+      throw new Error(INVALID_MERKLE_ROOT_ERROR_MESSAGE);
     }
 
     // If new root is valid, write to DB.
