@@ -435,7 +435,9 @@ class MerkleTree {
       level += 1;
     }
 
-    if (!(await this.validateRoot(tree, nodeWriteGroup[this.depth][0]))) {
+    const rootNode = nodeWriteGroup[this.depth][0];
+    const validRoot = await this.validateRoot(tree, rootNode);
+    if (!validRoot) {
       EngineDebug.error(
         new Error(
           `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
