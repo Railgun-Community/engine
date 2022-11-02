@@ -207,13 +207,12 @@ class RailgunEngine extends EventEmitter {
           );
         }),
       );
-      await merkletree.updateTrees();
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
         this.emitScanUpdateEvent(chain, endProgress * 0.5); // 25% / 50%
-        await merkletree.waitForTreesToFullyUpdate();
-        this.emitScanUpdateEvent(chain, endProgress * 0.8); // 40% / 50%
+        await merkletree.updateTrees();
+        this.emitScanUpdateEvent(chain, endProgress * 0.7); // 35% / 50%
         await this.scanAllWallets(chain);
       }
     } catch (err) {

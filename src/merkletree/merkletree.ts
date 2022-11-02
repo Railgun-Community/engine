@@ -14,7 +14,6 @@ import {
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
 import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
-import { waitForPassCondition } from '../utils/promises';
 import { Chain } from '../models/engine-types';
 import { getChainFullNetworkID } from '../chain/chain';
 import { SNARK_PRIME } from '../utils/constants';
@@ -66,7 +65,7 @@ class MerkleTree {
 
   private treeLengths: number[] = [];
 
-  // tree[startingIndex[leaves]]
+  // {tree: {startingIndex: [leaves]}}
   private writeQueue: Commitment[][][] = [];
 
   // Check function to test if merkle root is valid
@@ -74,9 +73,9 @@ class MerkleTree {
 
   public trees: bigint[][];
 
-  private treeUpdateLock = false;
-
   public isScanning = false;
+
+  private processingWriteQueueTrees: { [tree: number]: boolean } = {};
 
   /**
    * Create MerkleTree controller from database
@@ -463,11 +462,20 @@ class MerkleTree {
       }
     });
 
+    if (this.processingWriteQueueTrees[treeIndex]) {
+      EngineDebug.log(
+        '[processWriteQueueForTree] Already processing writeQueue. Killing re-process.',
+      );
+      return;
+    }
+
     while (this.writeQueue[treeIndex]) {
       // Process leaves as a group until we hit an invalid merkleroot.
       // Then, process each single item.
       // This optimizes for fewer `validateRoot` calls, while still protecting
       // users against invalid roots and broken trees.
+
+      this.processingWriteQueueTrees[treeIndex] = true;
 
       currentTreeLength = await this.getTreeLength(treeIndex);
 
@@ -509,11 +517,14 @@ class MerkleTree {
         }
       }
 
+      // Delete queue for entire tree if necessary.
       const noElementsInTreeWriteQueue = treeWriteQueue.reduce((x) => x + 1, 0) === 0;
       if (noElementsInTreeWriteQueue) {
         delete this.writeQueue[treeIndex];
       }
     }
+
+    this.processingWriteQueueTrees[treeIndex] = false;
   }
 
   private static nextProcessingGroupSize(processingGroupSize: CommitmentProcessingGroupSize) {
@@ -584,28 +595,8 @@ class MerkleTree {
   }
 
   async updateTrees(): Promise<void> {
-    if (this.treeUpdateLock) {
-      EngineDebug.log(`Merkletree update lock is set. Killing secondary update.`);
-      return;
-    }
-    this.treeUpdateLock = true;
-
     const treeIndices: number[] = this.treeIndicesFromWriteQueue();
     await Promise.all(treeIndices.map((treeIndex) => this.processWriteQueueForTree(treeIndex)));
-
-    this.treeUpdateLock = false;
-  }
-
-  async waitForTreesToFullyUpdate(): Promise<void> {
-    await this.updateTrees();
-    if (!this.treeUpdateLock) {
-      EngineDebug.log(`Merkletree update lock unset: not waiting for trees to update.`);
-      return;
-    }
-
-    const delayInMS = 100;
-    const allowedAttempts = 10 * 60 * 10; // Wait for 10 minutes.
-    await waitForPassCondition(() => this.treeUpdateLock === false, delayInMS, allowedAttempts);
   }
 
   /**
