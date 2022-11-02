@@ -158,7 +158,7 @@ describe('MerkleTree', () => {
       );
 
       expect(
-        merkletreeVectorTest.getNodeDBPath(vector.treeNumber, vector.level, vector.index),
+        merkletreeVectorTest.getNodeHashDBPath(vector.treeNumber, vector.level, vector.index),
       ).to.deep.equal(vector.result);
     });
   });

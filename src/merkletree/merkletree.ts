@@ -117,7 +117,7 @@ class MerkleTree {
    */
   async getMerkleProof(tree: number, index: number): Promise<MerkleProof> {
     // Fetch leaf
-    const leaf = await this.getNode(tree, 0, index);
+    const leaf = await this.getNodeHash(tree, 0, index);
 
     // Get indexes of path elements to fetch
     const elementsIndexes: number[] = [index ^ 1];
@@ -130,7 +130,7 @@ class MerkleTree {
 
     // Fetch path elements
     const elements = await Promise.all(
-      elementsIndexes.map((elementIndex, level) => this.getNode(tree, level, elementIndex)),
+      elementsIndexes.map((elementIndex, level) => this.getNodeHash(tree, level, elementIndex)),
     );
 
     // Convert index to bytes data, the binary representation is the indices of the merkle path
@@ -187,7 +187,7 @@ class MerkleTree {
    * @param index - node index
    * @returns database path
    */
-  getNodeDBPath(tree: number, level: number, index: number): string[] {
+  getNodeHashDBPath(tree: number, level: number, index: number): string[] {
     return [...this.getTreeDBPrefix(tree), hexlify(new BN(level)), hexlify(new BN(index))].map(
       (el) => formatToByteLength(el, ByteLength.UINT_256),
     );
@@ -274,9 +274,9 @@ class MerkleTree {
    * @param index - index of node
    * @returns node
    */
-  async getNode(tree: number, level: number, index: number): Promise<string> {
+  async getNodeHash(tree: number, level: number, index: number): Promise<string> {
     try {
-      const node = (await this.db.get(this.getNodeDBPath(tree, level, index))) as string;
+      const node = (await this.db.get(this.getNodeHashDBPath(tree, level, index))) as string;
       return node;
     } catch {
       return this.zeros[level];
@@ -311,7 +311,7 @@ class MerkleTree {
    * @returns tree root
    */
   getRoot(tree: number): Promise<string> {
-    return this.getNode(tree, this.depth, 0);
+    return this.getNodeHash(tree, this.depth, 0);
   }
 
   /**
@@ -320,7 +320,7 @@ class MerkleTree {
    */
   private async writeTreeToDB(
     tree: number,
-    nodeWriteGroup: string[][],
+    hashWriteGroup: string[][],
     commitmentWriteGroup: Commitment[],
   ): Promise<void> {
     // Build write batch operation
@@ -328,16 +328,16 @@ class MerkleTree {
     const commitmentWriteBatch: PutBatch[] = [];
 
     // Get new leaves
-    const newTreeLength = nodeWriteGroup[0].length;
+    const newTreeLength = hashWriteGroup[0].length;
 
     // Loop through each level
-    nodeWriteGroup.forEach((levelNodes, level) => {
+    hashWriteGroup.forEach((levelNodes, level) => {
       // Loop through each index
       levelNodes.forEach((node, index) => {
         // Push to node writeBatch array
         nodeWriteBatch.push({
           type: 'put',
-          key: this.getNodeDBPath(tree, level, index).join(':'),
+          key: this.getNodeHashDBPath(tree, level, index).join(':'),
           value: node,
         });
       });
@@ -383,17 +383,17 @@ class MerkleTree {
     // Store next level index for when we begin updating the next level up
     let nextLevelStartIndex = startIndex;
 
-    const nodeWriteGroup: string[][] = [];
+    const hashWriteGroup: string[][] = [];
     const commitmentWriteGroup: Commitment[] = [];
 
-    nodeWriteGroup[level] = [];
+    hashWriteGroup[level] = [];
 
     EngineDebug.log(`insertLeaves: startIndex ${startIndex}, group length ${leaves.length}`);
 
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
       // Set writecache value
-      nodeWriteGroup[level][index] = leaf.hash;
+      hashWriteGroup[level][index] = leaf.hash;
 
       commitmentWriteGroup[index] = leaf;
 
@@ -407,22 +407,22 @@ class MerkleTree {
       index = nextLevelStartIndex;
 
       // Ensure writecache array exists for next level
-      nodeWriteGroup[level] = nodeWriteGroup[level] || [];
-      nodeWriteGroup[level + 1] = nodeWriteGroup[level + 1] || [];
+      hashWriteGroup[level] = hashWriteGroup[level] || [];
+      hashWriteGroup[level + 1] = hashWriteGroup[level + 1] || [];
 
       // Loop through every pair
       for (index; index <= endIndex + 1; index += 2) {
         if (index % 2 === 0) {
           // Left
-          nodeWriteGroup[level + 1][index >> 1] = MerkleTree.hashLeftRight(
-            nodeWriteGroup[level][index] || (await this.getNode(tree, level, index)),
-            nodeWriteGroup[level][index + 1] || (await this.getNode(tree, level, index + 1)),
+          hashWriteGroup[level + 1][index >> 1] = MerkleTree.hashLeftRight(
+            hashWriteGroup[level][index] || (await this.getNodeHash(tree, level, index)),
+            hashWriteGroup[level][index + 1] || (await this.getNodeHash(tree, level, index + 1)),
           );
         } else {
           // Right
-          nodeWriteGroup[level + 1][index >> 1] = MerkleTree.hashLeftRight(
-            nodeWriteGroup[level][index - 1] || (await this.getNode(tree, level, index - 1)),
-            nodeWriteGroup[level][index] || (await this.getNode(tree, level, index)),
+          hashWriteGroup[level + 1][index >> 1] = MerkleTree.hashLeftRight(
+            hashWriteGroup[level][index - 1] || (await this.getNodeHash(tree, level, index - 1)),
+            hashWriteGroup[level][index] || (await this.getNodeHash(tree, level, index)),
           );
         }
       }
@@ -435,7 +435,7 @@ class MerkleTree {
       level += 1;
     }
 
-    const rootNode = nodeWriteGroup[this.depth][0];
+    const rootNode = hashWriteGroup[this.depth][0];
     const validRoot = await this.validateRoot(tree, rootNode);
     if (!validRoot) {
       throw new Error(
@@ -444,7 +444,7 @@ class MerkleTree {
     }
 
     // If new root is valid, write to DB.
-    await this.writeTreeToDB(tree, nodeWriteGroup, commitmentWriteGroup);
+    await this.writeTreeToDB(tree, hashWriteGroup, commitmentWriteGroup);
   }
 
   private async processWriteQueueForTree(treeIndex: number): Promise<void> {
