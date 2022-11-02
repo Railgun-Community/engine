@@ -45,10 +45,11 @@ const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle 
 // Optimization: process leaves for a many commitment groups before checking merkleroot against contract.
 // If merkleroot is invalid, scan leaves as medium batches, and individually as a final backup.
 enum CommitmentProcessingGroupSize {
-  // XXLarge = 8000,
-  // XLarge = 1600,
-  Large = 500,
-  Medium = 100,
+  // XXXLarge = 8000,
+  // XXLarge = 1600,
+  // XLarge = 500,
+  Large = 200,
+  Medium = 50,
   Small = 1,
 }
 
