@@ -827,8 +827,8 @@ abstract class AbstractWallet extends EventEmitter {
         await this.scanLeaves(leaves, treeIndex, chain, startScanHeight, treeHeight, () => {
           // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
           if (progressCallback) {
-            // Throttle progressCallback at most every 100ms.
-            if (Date.now() - timeSinceLastProgressCallback > 100) {
+            // Throttle progressCallback, at most every 500ms.
+            if (Date.now() - timeSinceLastProgressCallback > 500) {
               // 100ms since last progressCallback call.
               timeSinceLastProgressCallback = Date.now();
               const finishedTreeCount = treeIndex - startScanTree;
