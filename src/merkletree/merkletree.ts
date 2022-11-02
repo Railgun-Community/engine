@@ -40,14 +40,14 @@ export const MERKLE_ZERO_VALUE: string = formatToByteLength(
   ByteLength.UINT_256,
 );
 
-const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
+const INVALID_MERKLE_ROOT_ERROR_MESSAGE_PREFIX = 'Cannot insert leaves. Invalid merkle root.';
 
 // Optimization: process leaves for a many commitment groups before checking merkleroot against contract.
 // If merkleroot is invalid, scan leaves as medium batches, and individually as a final backup.
 enum CommitmentProcessingGroupSize {
-  // XXXLarge = 8000,
-  // XXLarge = 1600,
-  // XLarge = 500,
+  XXXLarge = 8000,
+  XXLarge = 1600,
+  XLarge = 500,
   Large = 200,
   Medium = 50,
   Small = 1,
@@ -388,7 +388,7 @@ class MerkleTree {
 
     nodeWriteGroup[level] = [];
 
-    EngineDebug.log(`insertLeaves: startIndex ${startIndex}, length ${leaves.length}`);
+    EngineDebug.log(`insertLeaves: startIndex ${startIndex}, group length ${leaves.length}`);
 
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
@@ -436,7 +436,12 @@ class MerkleTree {
     }
 
     if (!(await this.validateRoot(tree, nodeWriteGroup[this.depth][0]))) {
-      EngineDebug.error(new Error(INVALID_MERKLE_ROOT_ERROR_MESSAGE), true);
+      EngineDebug.error(
+        new Error(
+          `${INVALID_MERKLE_ROOT_ERROR_MESSAGE_PREFIX} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
+        ),
+        true,
+      );
       return;
     }
 
@@ -445,7 +450,7 @@ class MerkleTree {
   }
 
   private async processWriteQueueForTree(treeIndex: number): Promise<void> {
-    let processingGroupSize = CommitmentProcessingGroupSize.Large;
+    let processingGroupSize = CommitmentProcessingGroupSize.XXXLarge;
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
     const treeWriteQueue = this.writeQueue[treeIndex];
@@ -471,6 +476,7 @@ class MerkleTree {
           processingGroupSize,
         );
         if (!processedAny) {
+          EngineDebug.log('No more events to process.');
           break;
         }
       } catch (err) {
@@ -478,25 +484,17 @@ class MerkleTree {
           return;
         }
         EngineDebug.error(err);
-        if (err.message === INVALID_MERKLE_ROOT_ERROR_MESSAGE) {
-          switch (processingGroupSize) {
-            case CommitmentProcessingGroupSize.Large:
-              // Invalid merkleroot (large group scan).
-              // Process with smaller group.
-              processingGroupSize = CommitmentProcessingGroupSize.Medium;
-              break;
-            case CommitmentProcessingGroupSize.Medium:
-              // Invalid merkleroot (medium group scan).
-              // Process by individual items.
-              processingGroupSize = CommitmentProcessingGroupSize.Small;
-              break;
-            case CommitmentProcessingGroupSize.Small:
-              // Invalid merkleroot (single scan).
-              // Break out from scan.
-              return;
+        if (err.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE_PREFIX)) {
+          const nextProcessingGroupSize = MerkleTree.nextProcessingGroupSize(processingGroupSize);
+          if (nextProcessingGroupSize) {
+            processingGroupSize = nextProcessingGroupSize;
+          } else {
+            EngineDebug.log('Unable to process more events. Invalid merkleroot found.');
+            break;
           }
         } else {
           // Unknown error.
+          EngineDebug.log('Unable to process more events. Unknown error.');
           break;
         }
       }
@@ -508,6 +506,30 @@ class MerkleTree {
     }
   }
 
+  private static nextProcessingGroupSize(processingGroupSize: CommitmentProcessingGroupSize) {
+    switch (processingGroupSize) {
+      case CommitmentProcessingGroupSize.XXXLarge:
+        // Process with smaller group.
+        return CommitmentProcessingGroupSize.XXLarge;
+      case CommitmentProcessingGroupSize.XXLarge:
+        // Process with smaller group.
+        return CommitmentProcessingGroupSize.XLarge;
+      case CommitmentProcessingGroupSize.XLarge:
+        // Process with smaller group.
+        return CommitmentProcessingGroupSize.Large;
+      case CommitmentProcessingGroupSize.Large:
+        // Process with smaller group.
+        return CommitmentProcessingGroupSize.Medium;
+      case CommitmentProcessingGroupSize.Medium:
+        // Process by individual items.
+        return CommitmentProcessingGroupSize.Small;
+      case CommitmentProcessingGroupSize.Small:
+        // Break out from scan.
+        return undefined;
+    }
+    return undefined;
+  }
+
   private async processWriteQueue(
     treeIndex: number,
     currentTreeLength: number,
@@ -516,6 +538,7 @@ class MerkleTree {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
     if (!nextCommitmentGroup) {
+      EngineDebug.log(`No commitment group for index ${currentTreeLength}`);
       return false;
     }
 

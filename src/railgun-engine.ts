@@ -173,6 +173,7 @@ class RailgunEngine extends EventEmitter {
       const merkletree = this.merkletrees[chain.type][chain.id].erc20;
 
       const startScanningBlockQuickSync = await this.getStartScanningBlock(chain);
+      EngineDebug.log(`Start scanning block for QuickSync: ${startScanningBlockQuickSync}`);
 
       this.emitScanUpdateEvent(chain, endProgress * 0.1); // 5% / 50%
 
