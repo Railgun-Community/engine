@@ -46,10 +46,11 @@ const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle 
 enum CommitmentProcessingGroupSize {
   XXXLarge = 8000,
   XXLarge = 1600,
-  XLarge = 500,
+  XLarge = 800,
   Large = 200,
-  Medium = 50,
-  Small = 1,
+  Medium = 40,
+  Small = 10,
+  Single = 1,
 }
 
 class MerkleTree {
@@ -155,7 +156,7 @@ class MerkleTree {
    * @returns hash
    */
   static hashLeftRight(left: string, right: string): string {
-    return nToHex(poseidon([hexToBigInt(left), hexToBigInt(right)]), 32);
+    return nToHex(poseidon([hexToBigInt(left), hexToBigInt(right)]), ByteLength.UINT_256);
   }
 
   /**
@@ -392,7 +393,7 @@ class MerkleTree {
     // Push values to leaves of write index
     leaves.forEach((leaf) => {
       // Set writecache value
-      nodeWriteGroup[level][index] = hexlify(leaf.hash);
+      nodeWriteGroup[level][index] = leaf.hash;
 
       commitmentWriteGroup[index] = leaf;
 
@@ -539,9 +540,12 @@ class MerkleTree {
         // Process with smaller group.
         return CommitmentProcessingGroupSize.Medium;
       case CommitmentProcessingGroupSize.Medium:
-        // Process by individual items.
+        // Process with smaller group.
         return CommitmentProcessingGroupSize.Small;
       case CommitmentProcessingGroupSize.Small:
+        // Process by individual items.
+        return CommitmentProcessingGroupSize.Single;
+      case CommitmentProcessingGroupSize.Single:
         // Break out from scan.
         return undefined;
     }
