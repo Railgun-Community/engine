@@ -199,7 +199,7 @@ describe('RailgunEngine', function test() {
     expect(walletDetails.creationTree).to.equal(0);
     expect(walletDetails.creationTreeHeight).to.equal(0);
 
-    await wallet.fullRescanBalances(chain);
+    await wallet.fullRescanBalances(chain, undefined);
     const balanceRescan = await wallet.getBalance(chain, tokenAddress);
     expect(balanceRescan).to.equal(value);
 
