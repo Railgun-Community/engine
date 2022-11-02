@@ -437,13 +437,9 @@ class MerkleTree {
     const rootNode = nodeWriteGroup[this.depth][0];
     const validRoot = await this.validateRoot(tree, rootNode);
     if (!validRoot) {
-      EngineDebug.error(
-        new Error(
-          `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
-        ),
-        true,
+      throw new Error(
+        `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
       );
-      throw new Error(INVALID_MERKLE_ROOT_ERROR_MESSAGE);
     }
 
     // If new root is valid, write to DB.
@@ -494,8 +490,9 @@ class MerkleTree {
           EngineDebug.log('[processWriteQueueForTree] Unknown error found.');
           return;
         }
-        EngineDebug.error(err);
-        if (err.message === INVALID_MERKLE_ROOT_ERROR_MESSAGE) {
+        const ignoreInTests = true;
+        EngineDebug.error(err, ignoreInTests);
+        if (err.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE)) {
           const nextProcessingGroupSize = MerkleTree.nextProcessingGroupSize(processingGroupSize);
           if (nextProcessingGroupSize) {
             EngineDebug.log(
