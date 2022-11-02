@@ -192,7 +192,7 @@ class RailgunEngine extends EventEmitter {
       // Pass nullifier events to listener
       await this.nullifierListener(chain, nullifierEvents);
 
-      this.emitScanUpdateEvent(chain, endProgress * 0.3); // 15% / 50%
+      this.emitScanUpdateEvent(chain, endProgress * 0.24); // 12% / 50%
 
       // Pass events to commitments listener and wait for resolution
       await Promise.all(
@@ -210,14 +210,14 @@ class RailgunEngine extends EventEmitter {
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
-        this.emitScanUpdateEvent(chain, endProgress * 0.4); // 20% / 50%
+        this.emitScanUpdateEvent(chain, endProgress * 0.3); // 15% / 50%
         await merkletree.updateTrees();
-        const preScanProgressMultiplier = 0.5;
-        this.emitScanUpdateEvent(chain, endProgress * preScanProgressMultiplier); // 25% / 50%
+        const preScanProgressMultiplier = 0.4;
+        this.emitScanUpdateEvent(chain, endProgress * preScanProgressMultiplier); // 20% / 50%
         await this.scanAllWallets(chain, (progress: number) => {
           const overallProgress =
             progress * (endProgress - preScanProgressMultiplier) + preScanProgressMultiplier;
-          this.emitScanUpdateEvent(chain, overallProgress); // 25 - 50% / 50%
+          this.emitScanUpdateEvent(chain, overallProgress); // 20 - 50% / 50%
         });
       }
     } catch (err) {
