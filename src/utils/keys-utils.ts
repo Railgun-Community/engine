@@ -1,6 +1,6 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
-import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex, nToBytes } from './bytes';
+import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex } from './bytes';
 import { sha256 } from './hash';
 import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
