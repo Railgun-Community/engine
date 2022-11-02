@@ -476,7 +476,7 @@ class MerkleTree {
           processingGroupSize,
         );
         if (!processedAny) {
-          EngineDebug.log('No more events to process.');
+          EngineDebug.log('[processWriteQueueForTree] No more events to process.');
           break;
         }
       } catch (err) {
@@ -489,12 +489,16 @@ class MerkleTree {
           if (nextProcessingGroupSize) {
             processingGroupSize = nextProcessingGroupSize;
           } else {
-            EngineDebug.log('Unable to process more events. Invalid merkleroot found.');
+            EngineDebug.log(
+              '[processWriteQueueForTree] Unable to process more events. Invalid merkleroot found.',
+            );
             break;
           }
         } else {
           // Unknown error.
-          EngineDebug.log('Unable to process more events. Unknown error.');
+          EngineDebug.log(
+            '[processWriteQueueForTree] Unable to process more events. Unknown error.',
+          );
           break;
         }
       }
@@ -538,7 +542,7 @@ class MerkleTree {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
     if (!nextCommitmentGroup) {
-      EngineDebug.log(`No commitment group for index ${currentTreeLength}`);
+      EngineDebug.log(`[processWriteQueue] No commitment group for index ${currentTreeLength}`);
       return false;
     }
 
