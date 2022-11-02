@@ -371,7 +371,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param {Commitment[]} leaves - commitments from events to attempt parsing
    * @param {number} tree - tree number we're scanning
    * @param {number} chain - chain type/id we're scanning
-   * @param {number} scannedHeight - starting position
+   * @param {number} startScanHeight - starting position
    */
   async scanLeaves(
     leaves: Optional<Commitment>[],
@@ -379,6 +379,7 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     startScanHeight: number,
     treeHeight: number,
+    scanTicker: () => void,
   ): Promise<void> {
     EngineDebug.log(
       `wallet:scanLeaves tree:${tree} chain:${chain.type}:${chain.id} leaves:${leaves.length}, startScanHeight:${startScanHeight}`,
@@ -390,11 +391,22 @@ abstract class AbstractWallet extends EventEmitter {
     for (let position = startScanHeight; position < treeHeight; position += 1) {
       const leaf = leaves[position];
       if (leaf == null) {
+        scanTicker();
         continue;
       }
-      leafSyncPromises.push(
-        this.createScannedDBCommitments(leaf, vpk, tree, chain, position, leaves.length),
-      );
+      const scanPromiseWithTicker = async () => {
+        const scanned = await this.createScannedDBCommitments(
+          leaf,
+          vpk,
+          tree,
+          chain,
+          position,
+          leaves.length,
+        );
+        scanTicker();
+        return scanned;
+      };
+      leafSyncPromises.push(scanPromiseWithTicker());
     }
 
     const writeBatch: ScannedDBCommitment[] = (await Promise.all(leafSyncPromises)).flat();
@@ -746,7 +758,7 @@ abstract class AbstractWallet extends EventEmitter {
    * Scans for new balances
    * @param chain - chain data to scan
    */
-  async scanBalances(chain: Chain) {
+  async scanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
     const merkletree = this.merkletrees[chain.type][chain.id];
@@ -783,33 +795,47 @@ abstract class AbstractWallet extends EventEmitter {
 
       const startScanTree = walletDetails.creationTree || 0;
 
+      const treesToScan = latestTree - startScanTree + 1;
+
       // Loop through each tree and scan
-      for (let tree = startScanTree; tree <= latestTree; tree += 1) {
+      for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
         // Get scanned height
-        let startScanHeight = walletDetails.treeScannedHeights[tree];
+        let startScanHeight = walletDetails.treeScannedHeights[treeIndex];
 
         // If creationTreeHeight exists, check if it is higher than default startScanHeight and start there if needed
-        if (tree === walletDetails.creationTree && walletDetails.creationTreeHeight) {
+        if (treeIndex === walletDetails.creationTree && walletDetails.creationTreeHeight) {
           startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
         }
 
         // Create sparse array of tree
-        const treeHeight = await merkletree.getTreeLength(tree);
+        const treeHeight = await merkletree.getTreeLength(treeIndex);
         const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
         // Fetch each leaf we need to scan
         for (let index = startScanHeight; index < treeHeight; index += 1) {
-          fetcher[index] = merkletree.getCommitment(tree, index);
+          fetcher[index] = merkletree.getCommitment(treeIndex, index);
         }
 
         // Wait until all leaves are fetched
         const leaves = await Promise.all(fetcher);
 
+        const leavesToScan = treeHeight - startScanHeight;
+        let finishedLeafCount = 0;
+
         // Start scanning primary and change
-        await this.scanLeaves(leaves, tree, chain, startScanHeight, treeHeight);
+        await this.scanLeaves(leaves, treeIndex, chain, startScanHeight, treeHeight, () => {
+          if (progressCallback) {
+            // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
+            const finishedTreeCount = treeIndex - startScanTree;
+            const finishedTreesProgress = finishedTreeCount / treesToScan;
+            finishedLeafCount += 1;
+            const newTreeProgress = finishedLeafCount / leavesToScan / treesToScan;
+            progressCallback(finishedTreesProgress + newTreeProgress);
+          }
+        });
 
         // Commit new scanned height
-        walletDetails.treeScannedHeights[tree] = leaves.length;
+        walletDetails.treeScannedHeights[treeIndex] = leaves.length;
 
         // Write new wallet details to db
         await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
@@ -895,7 +921,7 @@ abstract class AbstractWallet extends EventEmitter {
    */
   async fullRescanBalances(chain: Chain) {
     await this.clearScannedBalances(chain);
-    return this.scanBalances(chain);
+    return this.scanBalances(chain, undefined);
   }
 
   static dbPath(id: string): BytesData[] {

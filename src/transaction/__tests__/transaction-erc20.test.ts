@@ -137,7 +137,12 @@ describe('Transaction/ERC20', function test() {
     merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
     await merkletree.updateTrees();
-    await wallet.scanBalances(chain);
+
+    let scanProgress = 0;
+    await wallet.scanBalances(chain, (progress: number) => {
+      scanProgress = progress;
+    });
+    expect(scanProgress).to.equal(1);
   });
 
   beforeEach(async () => {

@@ -101,7 +101,7 @@ describe('Transaction/Transaction Batch', function run() {
       depositLeaf('f'),
     ]);
     await merkletree.updateTrees();
-    await wallet.scanBalances(chain);
+    await wallet.scanBalances(chain, undefined);
     expect((await wallet.getWalletDetails(chain)).treeScannedHeights).to.deep.equal([1, 5]);
   });
 

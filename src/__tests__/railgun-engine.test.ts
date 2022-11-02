@@ -141,7 +141,7 @@ describe('RailgunEngine', function test() {
     await merkleTree.queueLeaves(0, 0, [commitment]);
     await merkleTree.updateTrees();
 
-    await wallet.scanBalances(chain);
+    await wallet.scanBalances(chain, undefined);
     const balance = await wallet.getBalance(chain, tokenAddress);
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
@@ -190,7 +190,7 @@ describe('RailgunEngine', function test() {
     await merkleTree.queueLeaves(0, 0, [commitment]);
     await merkleTree.updateTrees();
 
-    await wallet.scanBalances(chain);
+    await wallet.scanBalances(chain, undefined);
     const balance = await wallet.getBalance(chain, tokenAddress);
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);

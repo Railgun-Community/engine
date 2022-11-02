@@ -210,10 +210,15 @@ class RailgunEngine extends EventEmitter {
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
-        this.emitScanUpdateEvent(chain, endProgress * 0.5); // 25% / 50%
+        this.emitScanUpdateEvent(chain, endProgress * 0.4); // 20% / 50%
         await merkletree.updateTrees();
-        this.emitScanUpdateEvent(chain, endProgress * 0.7); // 35% / 50%
-        await this.scanAllWallets(chain);
+        const preScanProgressMultiplier = 0.5;
+        this.emitScanUpdateEvent(chain, endProgress * preScanProgressMultiplier); // 25% / 50%
+        await this.scanAllWallets(chain, (progress: number) => {
+          const overallProgress =
+            progress * (endProgress - preScanProgressMultiplier) + preScanProgressMultiplier;
+          this.emitScanUpdateEvent(chain, overallProgress); // 25 - 50% / 50%
+        });
       }
     } catch (err) {
       if (!(err instanceof Error)) {
@@ -308,7 +313,7 @@ class RailgunEngine extends EventEmitter {
       );
 
       // Final scan after all leaves added.
-      await this.scanAllWallets(chain);
+      await this.scanAllWallets(chain, undefined);
       const scanCompleteData: MerkletreeHistoryScanEventData = { chain };
       this.emit(EngineEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       merkletree.isScanning = false;
@@ -318,7 +323,7 @@ class RailgunEngine extends EventEmitter {
       }
       EngineDebug.log(`Scan incomplete for chain ${chain.type}:${chain.id}`);
       EngineDebug.error(err);
-      await this.scanAllWallets(chain);
+      await this.scanAllWallets(chain, undefined);
       const scanIncompleteData: MerkletreeHistoryScanEventData = { chain };
       this.emit(EngineEvent.MerkletreeHistoryScanIncomplete, scanIncompleteData);
       merkletree.isScanning = false;
@@ -430,7 +435,7 @@ class RailgunEngine extends EventEmitter {
         commitments,
         true, // shouldUpdateTrees
       );
-      await this.scanAllWallets(chain);
+      await this.scanAllWallets(chain, undefined);
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {
       await this.nullifierListener(chain, nullifiers);
@@ -490,8 +495,22 @@ class RailgunEngine extends EventEmitter {
       .catch(() => Promise.resolve(undefined));
   }
 
-  private async scanAllWallets(chain: Chain) {
-    await Promise.all(this.allWallets().map((wallet) => wallet.scanBalances(chain)));
+  private async scanAllWallets(
+    chain: Chain,
+    progressCallback: Optional<(progress: number) => void>,
+  ) {
+    const wallets = this.allWallets();
+    // eslint-disable-next-line no-restricted-syntax
+    for (let i = 0; i < wallets.length; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await wallets[i].scanBalances(chain, (walletProgress: number) => {
+        if (progressCallback) {
+          const finishedWalletsProgress = i / wallets.length;
+          const newWalletProgress = walletProgress / wallets.length;
+          progressCallback(finishedWalletsProgress + newWalletProgress);
+        }
+      });
+    }
   }
 
   private allWallets(): AbstractWallet[] {
