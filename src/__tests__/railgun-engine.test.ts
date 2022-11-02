@@ -146,7 +146,7 @@ describe('RailgunEngine', function test() {
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
-    await wallet.fullRescanBalances(chain);
+    await wallet.fullRescanBalances(chain, undefined);
     const balanceRescan = await wallet.getBalance(chain, tokenAddress);
     expect(balanceRescan).to.equal(value);
 

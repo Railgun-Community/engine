@@ -919,9 +919,9 @@ abstract class AbstractWallet extends EventEmitter {
    * Clears stored balances and re-scans fully.
    * @param chain - chain type/id to rescan
    */
-  async fullRescanBalances(chain: Chain) {
+  async fullRescanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     await this.clearScannedBalances(chain);
-    return this.scanBalances(chain, undefined);
+    return this.scanBalances(chain, progressCallback);
   }
 
   static dbPath(id: string): BytesData[] {
