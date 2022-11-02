@@ -481,12 +481,16 @@ class MerkleTree {
         }
       } catch (err) {
         if (!(err instanceof Error)) {
+          EngineDebug.log('[processWriteQueueForTree] Unknown error found.');
           return;
         }
         EngineDebug.error(err);
         if (err.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE_PREFIX)) {
           const nextProcessingGroupSize = MerkleTree.nextProcessingGroupSize(processingGroupSize);
           if (nextProcessingGroupSize) {
+            EngineDebug.log(
+              `[processWriteQueueForTree] Invalid merkleroot found. Processing with group size ${nextProcessingGroupSize}.`,
+            );
             processingGroupSize = nextProcessingGroupSize;
           } else {
             EngineDebug.log(
