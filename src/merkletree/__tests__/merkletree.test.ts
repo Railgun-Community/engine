@@ -6,7 +6,7 @@ import { ZERO_ADDRESS } from '../../utils/constants';
 import { Commitment, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { MerkleTree, TreePurpose, MERKLE_ZERO_VALUE } from '../merkletree';
+import { MerkleTree, TreePurpose, MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../merkletree';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -603,6 +603,24 @@ describe('MerkleTree', () => {
     ]);
     await merkletree.updateTrees();
 
+    expect(await merkletree.latestTree()).to.equal(1);
+    expect(await merkletree.getTreeLength(0)).to.equal(1);
+    expect(await merkletree.getTreeLength(1)).to.equal(1);
+  }).timeout(1000);
+
+  it('Should store and retrieve trees metadata', async () => {
+    expect(await merkletree.getMerkletreesMetadata()).to.equal(undefined);
+
+    const newMetadata: MerkletreesMetadata = {
+      trees: {
+        0: { scannedHeight: 127 },
+        1: { scannedHeight: 333 },
+        2: { scannedHeight: 0 },
+      },
+    };
+    await merkletree.storeMerkletreesMetadata(newMetadata);
+
+    expect(await merkletree.getMerkletreesMetadata()).to.deep.equal(newMetadata);
     expect(await merkletree.latestTree()).to.equal(1);
   }).timeout(1000);
 

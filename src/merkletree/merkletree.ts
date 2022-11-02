@@ -2,6 +2,7 @@
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import { poseidon } from 'circomlibjs';
+import msgpack from 'msgpack-lite';
 import type { Database } from '../database/database';
 import {
   fromUTF8String,
@@ -11,9 +12,10 @@ import {
   ByteLength,
   nToHex,
   hexToBigInt,
+  arrayify,
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
-import { Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
+import { BytesData, Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
 import { Chain } from '../models/engine-types';
 import { getChainFullNetworkID } from '../chain/chain';
 import { SNARK_PRIME } from '../utils/constants';
@@ -30,6 +32,13 @@ const depths = {
 
 // Declare purposes
 export type TreePurpose = keyof typeof depths;
+
+type TreeMetadata = {
+  scannedHeight: number;
+};
+export type MerkletreesMetadata = {
+  trees: { [tree: number]: TreeMetadata };
+};
 
 // Calculate tree zero value
 export const MERKLE_ZERO_VALUE: string = formatToByteLength(
@@ -81,8 +90,9 @@ class MerkleTree {
   /**
    * Create MerkleTree controller from database
    * @param db - database object to use
-   * @param chainID - Chain ID to use
+   * @param chain - Chain type/id
    * @param purpose - purpose of merkle tree
+   * @param validateRoot - root validator callback
    * @param depth - merkle tree depth
    */
   constructor(
@@ -181,7 +191,7 @@ class MerkleTree {
   }
 
   /**
-   * Construct DB path from tree number, level, and index
+   * Construct node hash DB path from tree number, level, and index
    * @param tree - tree number
    * @param level - merkle tree level
    * @param index - node index
@@ -194,7 +204,7 @@ class MerkleTree {
   }
 
   /**
-   * Construct DB path from tree number, and index
+   * Construct commitments DB path from tree number, and index
    * @param tree - tree number
    * @param index - commitment index
    * @returns database path
@@ -284,16 +294,51 @@ class MerkleTree {
   }
 
   /**
+   * Gets merkletrees metadata
+   * @returns metadata
+   */
+  async getMerkletreesMetadata(): Promise<Optional<MerkletreesMetadata>> {
+    try {
+      const metadata = msgpack.decode(
+        arrayify((await this.db.get(this.getChainDBPrefix())) as BytesData),
+      ) as MerkletreesMetadata;
+      return metadata;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Stores merkletrees metadata
+   */
+  async storeMerkletreesMetadata(metadata: MerkletreesMetadata): Promise<void> {
+    await this.db.put(this.getChainDBPrefix(), msgpack.encode(metadata));
+  }
+
+  /**
    * Gets length of tree
    * @param tree - tree to get length of
    * @returns tree length
    */
   async getTreeLength(tree: number): Promise<number> {
-    this.treeLengths[tree] = this.treeLengths[tree] || (await this.getTreeLengthFromDB(tree));
+    if (this.treeLengths[tree]) {
+      return this.treeLengths[tree];
+    }
+
+    const storedMetadata = await this.getMerkletreesMetadata();
+    if (storedMetadata && storedMetadata.trees[tree]) {
+      this.treeLengths[tree] = storedMetadata.trees[tree].scannedHeight;
+      return this.treeLengths[tree];
+    }
+
+    this.treeLengths[tree] = await this.getTreeLengthFromDBCount(tree);
     return this.treeLengths[tree];
   }
 
-  private async getTreeLengthFromDB(tree: number): Promise<number> {
+  /**
+   * WARNING: This operation takes a long time.
+   */
+  private async getTreeLengthFromDBCount(tree: number): Promise<number> {
     return this.db.countNamespace([
       ...this.getTreeDBPrefix(tree),
       hexlify(new BN(0).notn(32)), // 2^32-1
@@ -353,8 +398,18 @@ class MerkleTree {
       });
     });
 
+    const merkletreesMetadata = (await this.getMerkletreesMetadata()) || {
+      trees: { [tree]: { scannedHeight: 0 } },
+    };
+    merkletreesMetadata.trees[tree] = merkletreesMetadata.trees[tree] || { scannedHeight: 0 };
+    merkletreesMetadata.trees[tree].scannedHeight = newTreeLength;
+
     // Batch write to DB
-    await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(commitmentWriteBatch, 'json')]);
+    await Promise.all([
+      this.db.batch(nodeWriteBatch),
+      this.db.batch(commitmentWriteBatch, 'json'),
+      this.storeMerkletreesMetadata(merkletreesMetadata),
+    ]);
 
     // Update tree length
     this.treeLengths[tree] = newTreeLength;
