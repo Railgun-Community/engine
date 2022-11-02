@@ -260,6 +260,7 @@ class RailgunEngine extends EventEmitter {
 
     const latestBlock = (await proxyContract.contract.provider.getBlock('latest')).number;
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
+    EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
     try {
       // Run slow scan

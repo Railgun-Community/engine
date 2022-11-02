@@ -567,16 +567,20 @@ class MerkleTree {
     return true;
   }
 
+  private treeIndicesFromWriteQueue(): number[] {
+    return this.writeQueue
+      .map((_tree, treeIndex) => treeIndex)
+      .filter((index) => !Number.isNaN(index));
+  }
+
   async updateTrees(): Promise<void> {
     if (this.treeUpdateLock) {
+      EngineDebug.log(`Merkletree update lock is set. Killing secondary update.`);
       return;
     }
     this.treeUpdateLock = true;
 
-    const treeIndices = this.writeQueue
-      .map((_tree, treeIndex) => treeIndex)
-      .filter((index) => !Number.isNaN(index));
-
+    const treeIndices: number[] = this.treeIndicesFromWriteQueue();
     await Promise.all(treeIndices.map((treeIndex) => this.processWriteQueueForTree(treeIndex)));
 
     this.treeUpdateLock = false;
@@ -585,6 +589,7 @@ class MerkleTree {
   async waitForTreesToFullyUpdate(): Promise<void> {
     await this.updateTrees();
     if (!this.treeUpdateLock) {
+      EngineDebug.log(`Merkletree update lock unset: not waiting for trees to update.`);
       return;
     }
 
