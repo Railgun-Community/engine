@@ -80,17 +80,27 @@ class RailgunEngine extends EventEmitter {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitment data from events
    */
-  async listener(chain: Chain, treeNumber: number, startingIndex: number, leaves: Commitment[]) {
-    if (leaves.length) {
-      EngineDebug.log(
-        `engine.listener[${chain.type}:${chain.id}]: ${leaves.length} queued at ${startingIndex}`,
-      );
-      // Queue leaves to merkle tree
-      await this.merkletrees[chain.type][chain.id].erc20.queueLeaves(
-        treeNumber,
-        startingIndex,
-        leaves,
-      );
+  async commitmentListener(
+    chain: Chain,
+    treeNumber: number,
+    startingIndex: number,
+    leaves: Commitment[],
+    shouldUpdateTrees: boolean,
+  ) {
+    if (!leaves.length) {
+      return;
+    }
+    EngineDebug.log(
+      `[commitmentListener: ${chain.type}:${chain.id}]: ${leaves.length} leaves at ${startingIndex}`,
+    );
+    // Queue leaves to merkle tree
+    await this.merkletrees[chain.type][chain.id].erc20.queueLeaves(
+      treeNumber,
+      startingIndex,
+      leaves,
+    );
+    if (shouldUpdateTrees) {
+      await this.merkletrees[chain.type][chain.id].erc20.updateTrees();
     }
   }
 
@@ -100,10 +110,11 @@ class RailgunEngine extends EventEmitter {
    * @param nullifiers - transaction info to nullify commitment
    */
   async nullifierListener(chain: Chain, nullifiers: Nullifier[]) {
-    if (nullifiers.length) {
-      EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
-      await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
+    if (!nullifiers.length) {
+      return;
     }
+    EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
+    await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
   }
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
@@ -194,9 +205,16 @@ class RailgunEngine extends EventEmitter {
       await Promise.all(
         commitmentEvents.map(async (commitmentEvent) => {
           const { treeNumber, startPosition, commitments } = commitmentEvent;
-          await this.listener(chain, treeNumber, startPosition, commitments);
+          await this.commitmentListener(
+            chain,
+            treeNumber,
+            startPosition,
+            commitments,
+            false, // shouldUpdateTrees - wait until after all commitments added
+          );
         }),
       );
+      await merkletree.updateTrees();
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
@@ -268,7 +286,13 @@ class RailgunEngine extends EventEmitter {
         startScanningBlockSlowScan,
         latestBlock,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
-          await this.listener(chain, treeNumber, startPosition, commitments);
+          await this.commitmentListener(
+            chain,
+            treeNumber,
+            startPosition,
+            commitments,
+            true, // shouldUpdateTrees
+          );
         },
         async (nullifiers: Nullifier[]) => {
           await this.nullifierListener(chain, nullifiers);
@@ -402,7 +426,13 @@ class RailgunEngine extends EventEmitter {
     });
 
     const eventsListener = async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
-      await this.listener(chain, treeNumber, startPosition, commitments);
+      await this.commitmentListener(
+        chain,
+        treeNumber,
+        startPosition,
+        commitments,
+        true, // shouldUpdateTrees
+      );
       await this.scanAllWallets(chain);
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {

@@ -226,6 +226,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     expect(await merkletree.getTreeLength(0)).to.equal(0);
     expect(await merkletree.getRoot(0)).to.equal(
@@ -266,6 +267,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     expect(await merkletree.getTreeLength(0)).to.equal(4);
     expect(await merkletree.getRoot(0)).to.equal(
@@ -291,6 +293,7 @@ describe('MerkleTree', () => {
         },
       ]),
     ]);
+    await merkletree.updateTrees();
 
     await merkletree.queueLeaves(0, 4, [
       {
@@ -300,6 +303,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     expect(await merkletree.getTreeLength(0)).to.equal(12);
     expect(await merkletree.getRoot(0)).to.equal(
@@ -340,6 +344,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     expect(await merkletree.getCommitment(0, 0)).to.deep.equal({
       hash: '02',
@@ -410,6 +415,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     // Get proof
     const proof = await merkletree.getMerkleProof(0, 3);
@@ -457,6 +463,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       })),
     );
+    await merkletree.updateTrees();
 
     // Get proof
     const proof2 = await merkletree.getMerkleProof(1, 34);
@@ -549,6 +556,7 @@ describe('MerkleTree', () => {
     ];
     // Insert leaves
     await merkletreeTest.queueLeaves(0, 0, leaves);
+    await merkletreeTest.updateTrees();
 
     // Batch should have been rejected
     expect(await merkletreeTest.getRoot(0)).to.equal(
@@ -577,6 +585,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     expect(await merkletree.latestTree()).to.equal(0);
 
@@ -592,6 +601,7 @@ describe('MerkleTree', () => {
         blockNumber: 0,
       },
     ]);
+    await merkletree.updateTrees();
 
     expect(await merkletree.latestTree()).to.equal(1);
   }).timeout(1000);

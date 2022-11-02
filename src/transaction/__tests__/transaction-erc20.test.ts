@@ -136,6 +136,7 @@ describe('Transaction/ERC20', function test() {
     };
     merkletree.validateRoot = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [depositLeaf]); // start with a deposit
+    await merkletree.updateTrees();
     await wallet.scanBalances(chain);
   });
 

@@ -100,6 +100,7 @@ describe('Transaction/Transaction Batch', function run() {
       depositLeaf('e'),
       depositLeaf('f'),
     ]);
+    await merkletree.updateTrees();
     await wallet.scanBalances(chain);
     expect((await wallet.getWalletDetails(chain)).treeScannedHeights).to.deep.equal([1, 5]);
   });
@@ -226,6 +227,7 @@ describe('Transaction/Transaction Batch', function run() {
     // Fix by adding 8x3 circuit, or using change from one note for next output note.
     // Or... fix logic to create a number of 2x2 and 2x3 circuits.
     await merkletree.queueLeaves(1, 0, [depositLeaf('g'), depositLeaf('h')]);
+    await merkletree.updateTrees();
     transactionBatch.resetOutputs();
     transactionBatch.resetWithdraw();
     transactionBatch.addOutput(await makeNote(0n));

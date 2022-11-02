@@ -139,6 +139,7 @@ describe('RailgunEngine', function test() {
     // Override root validator
     merkleTree.validateRoot = () => Promise.resolve(true);
     await merkleTree.queueLeaves(0, 0, [commitment]);
+    await merkleTree.updateTrees();
 
     await wallet.scanBalances(chain);
     const balance = await wallet.getBalance(chain, tokenAddress);
@@ -187,6 +188,7 @@ describe('RailgunEngine', function test() {
     // Override root validator
     merkleTree.validateRoot = () => Promise.resolve(true);
     await merkleTree.queueLeaves(0, 0, [commitment]);
+    await merkleTree.updateTrees();
 
     await wallet.scanBalances(chain);
     const balance = await wallet.getBalance(chain, tokenAddress);

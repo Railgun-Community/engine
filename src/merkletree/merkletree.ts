@@ -612,7 +612,7 @@ class MerkleTree {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
-    EngineDebug.log(`queueLeaves: treeLength ${treeLength}, startingIndex ${startingIndex}`);
+    EngineDebug.log(`[queueLeaves] treeLength ${treeLength}, startingIndex ${startingIndex}`);
 
     // Ensure write queue for tree exists
     if (!this.writeQueue[tree]) {
@@ -622,9 +622,6 @@ class MerkleTree {
     if (treeLength <= startingIndex) {
       // If starting index is greater or equal to tree length, insert to queue
       this.writeQueue[tree][startingIndex] = leaves;
-
-      // Process tree updates
-      await this.updateTrees();
     }
   }
 
