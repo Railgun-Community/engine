@@ -165,13 +165,6 @@ class RailgunEngine extends EventEmitter {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chain.type][chain.id];
     }
-
-    const lastSyncedBlock = await this.getLastSyncedBlock(chain);
-    EngineDebug.log(`last synced block: ${startScanningBlock}`);
-    if (lastSyncedBlock && lastSyncedBlock > startScanningBlock) {
-      startScanningBlock = lastSyncedBlock;
-    }
-
     return startScanningBlock;
   }
 
@@ -273,7 +266,12 @@ class RailgunEngine extends EventEmitter {
     this.emitScanUpdateEvent(chain, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid merkletree.
-    const startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
+    let startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
+    const lastSyncedBlock = await this.getLastSyncedBlock(chain);
+    EngineDebug.log(`last synced block: ${lastSyncedBlock}`);
+    if (lastSyncedBlock && lastSyncedBlock > startScanningBlockSlowScan) {
+      startScanningBlockSlowScan = lastSyncedBlock;
+    }
     EngineDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
     const latestBlock = (await proxyContract.contract.provider.getBlock('latest')).number;
