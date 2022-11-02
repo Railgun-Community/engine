@@ -324,7 +324,7 @@ class RailgunEngine extends EventEmitter {
     }
     const merkletree = this.merkletrees[chain.type][chain.id].erc20;
     if (merkletree.isScanning) {
-      EngineDebug.log('Already scanning. Killing full re-scan.');
+      EngineDebug.log('Already scanning. Cannot re-scan.');
       return;
     }
     this.emitScanUpdateEvent(chain, 0.01); // 1%
