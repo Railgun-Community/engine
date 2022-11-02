@@ -44,6 +44,8 @@ class RailgunEngine extends EventEmitter {
 
   static walletSource: Optional<string>;
 
+  static useJavascriptScalarMultiply = false;
+
   /**
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
