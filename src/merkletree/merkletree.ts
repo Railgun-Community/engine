@@ -317,22 +317,36 @@ class MerkleTree {
 
   /**
    * Gets length of tree
-   * @param tree - tree to get length of
+   * @param treeIndex - tree to get length of
    * @returns tree length
    */
-  async getTreeLength(tree: number): Promise<number> {
-    if (this.treeLengths[tree]) {
-      return this.treeLengths[tree];
+  async getTreeLength(treeIndex: number): Promise<number> {
+    if (this.treeLengths[treeIndex]) {
+      return this.treeLengths[treeIndex];
     }
 
     const storedMetadata = await this.getMerkletreesMetadata();
-    if (storedMetadata && storedMetadata.trees[tree]) {
-      this.treeLengths[tree] = storedMetadata.trees[tree].scannedHeight;
-      return this.treeLengths[tree];
+    if (storedMetadata && storedMetadata.trees[treeIndex]) {
+      this.treeLengths[treeIndex] = storedMetadata.trees[treeIndex].scannedHeight;
+      return this.treeLengths[treeIndex];
     }
 
-    this.treeLengths[tree] = await this.getTreeLengthFromDBCount(tree);
-    return this.treeLengths[tree];
+    this.treeLengths[treeIndex] = await this.getTreeLengthFromDBCount(treeIndex);
+    if (this.treeLengths[treeIndex]) {
+      await this.updateStoredTreeLength(treeIndex, this.treeLengths[treeIndex]);
+    }
+    return this.treeLengths[treeIndex];
+  }
+
+  async updateStoredTreeLength(treeIndex: number, treeLength: number): Promise<void> {
+    const merkletreesMetadata = (await this.getMerkletreesMetadata()) || {
+      trees: { [treeIndex]: { scannedHeight: 0 } },
+    };
+    merkletreesMetadata.trees[treeIndex] = merkletreesMetadata.trees[treeIndex] || {
+      scannedHeight: 0,
+    };
+    merkletreesMetadata.trees[treeIndex].scannedHeight = treeLength;
+    await this.storeMerkletreesMetadata(merkletreesMetadata);
   }
 
   /**
@@ -361,10 +375,10 @@ class MerkleTree {
 
   /**
    * Write tree to DB
-   * @param tree - tree to write
+   * @param treeIndex - tree to write
    */
   private async writeTreeToDB(
-    tree: number,
+    treeIndex: number,
     hashWriteGroup: string[][],
     commitmentWriteGroup: Commitment[],
   ): Promise<void> {
@@ -382,7 +396,7 @@ class MerkleTree {
         // Push to node writeBatch array
         nodeWriteBatch.push({
           type: 'put',
-          key: this.getNodeHashDBPath(tree, level, index).join(':'),
+          key: this.getNodeHashDBPath(treeIndex, level, index).join(':'),
           value: node,
         });
       });
@@ -393,26 +407,20 @@ class MerkleTree {
       // Push to commitment writeBatch array
       commitmentWriteBatch.push({
         type: 'put',
-        key: this.getCommitmentDBPath(tree, index).join(':'),
+        key: this.getCommitmentDBPath(treeIndex, index).join(':'),
         value: commitment,
       });
     });
-
-    const merkletreesMetadata = (await this.getMerkletreesMetadata()) || {
-      trees: { [tree]: { scannedHeight: 0 } },
-    };
-    merkletreesMetadata.trees[tree] = merkletreesMetadata.trees[tree] || { scannedHeight: 0 };
-    merkletreesMetadata.trees[tree].scannedHeight = newTreeLength;
 
     // Batch write to DB
     await Promise.all([
       this.db.batch(nodeWriteBatch),
       this.db.batch(commitmentWriteBatch, 'json'),
-      this.storeMerkletreesMetadata(merkletreesMetadata),
+      this.updateStoredTreeLength(treeIndex, newTreeLength),
     ]);
 
     // Update tree length
-    this.treeLengths[tree] = newTreeLength;
+    this.treeLengths[treeIndex] = newTreeLength;
   }
 
   /**
