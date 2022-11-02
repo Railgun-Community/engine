@@ -1,11 +1,8 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
-import initCurve25519wasm, { scalarMultiply } from '@railgun-community/curve25519-scalarmult-wasm';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { ByteLength, hexlify, hexToBigInt, hexToBytes, nToHex, nToBytes } from './bytes';
 import { sha256 } from './hash';
-
-const curve25519WasmReady =
-  typeof initCurve25519wasm === 'function' ? initCurve25519wasm() : Promise.resolve();
+import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
 
@@ -76,7 +73,7 @@ function adjustBytes25519(bytes: Uint8Array): Uint8Array {
   return adjustedBytes;
 }
 
-async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array) {
+async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array): Promise<bigint> {
   // Private key should be 32 bytes
   if (privateKey.length !== 32) throw new Error('Expected 32 bytes');
 
@@ -90,8 +87,7 @@ async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array) {
   // Convert head to scalar
   const scalar = BigInt(`0x${utilsEd25519.bytesToHex(head.reverse())}`) % CURVE.l;
 
-  const bigint = scalar > 0n ? scalar : CURVE.l;
-  return nToBytes(bigint, ByteLength.UINT_256);
+  return scalar > 0n ? scalar : CURVE.l;
 }
 
 function getCommitmentBlindingKey(random: string, senderBlindingKey: string): bigint {
@@ -162,14 +158,14 @@ async function getSharedSymmetricKey(
   privateKey: Uint8Array,
   ephemeralKey: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
-  await curve25519WasmReady;
   try {
+    await initCurve25519Promise;
+
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKey);
 
     // Multiply ephemeral key by private scalar to get shared key
-    const symmetricKey = scalarMultiply(ephemeralKey, scalar);
-    return symmetricKey;
+    return scalarMultiplyWasmFallbackToJavascript(ephemeralKey, scalar);
   } catch (err) {
     return undefined;
   }
