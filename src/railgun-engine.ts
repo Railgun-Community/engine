@@ -495,10 +495,7 @@ class RailgunEngine extends EventEmitter {
       .catch(() => Promise.resolve(undefined));
   }
 
-  private async scanAllWallets(
-    chain: Chain,
-    progressCallback: Optional<(progress: number) => void>,
-  ) {
+  async scanAllWallets(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     const wallets = this.allWallets();
     // eslint-disable-next-line no-restricted-syntax
     for (let i = 0; i < wallets.length; i += 1) {
