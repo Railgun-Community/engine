@@ -35,6 +35,15 @@ export class ShieldNote {
     this.hash = this.getHash();
   }
 
+  /**
+   * Used to generate a shieldPrivateKey by signing this message with public wallet.
+   * After shielding, the shieldPrivateKey can then be used to get the 0zk address of the receiver.
+   */
+  static getShieldPrivateKeySignatureMessage() {
+    // DO NOT MODIFY THIS CONSTANT.
+    return 'RAILGUN_SHIELD';
+  }
+
   get tokenData() {
     return {
       tokenAddress: this.token,
