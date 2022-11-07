@@ -280,18 +280,21 @@ class RailgunProxyContract extends EventEmitter {
 
     while (currentStartBlock < latestBlock) {
       // Process chunks of blocks at a time
-      if ((currentStartBlock - startBlock) % 10000 === 0) {
-        EngineDebug.log(
-          `[Chain ${this.chain.type}:${this.chain.id}]: Scanning next 10,000 events [${currentStartBlock}]...`,
-        );
-      }
-      const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
 
+      const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
       const withinLegacyEventRange = startBlock <= engineV3StartBlockNumber;
       const withinNewEventRange = endBlock >= engineV3StartBlockNumber;
       if (withinLegacyEventRange && withinNewEventRange) {
         EngineDebug.log(
           `[Chain ${this.chain.type}:${this.chain.id}]: Changing from legacy events to new events...`,
+        );
+      }
+
+      if ((currentStartBlock - startBlock) % 10000 === 0) {
+        EngineDebug.log(
+          `[Chain ${this.chain.type}:${this.chain.id}]: Scanning next 10,000 events (${
+            withinLegacyEventRange ? 'v3' : 'legacy'
+          }) [${currentStartBlock}]...`,
         );
       }
 
