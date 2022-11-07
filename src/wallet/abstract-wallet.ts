@@ -340,6 +340,7 @@ abstract class AbstractWallet extends EventEmitter {
             false, // isSentNote
             false, // isLegacyDecryption
           );
+          serializedNoteReceive = noteReceive ? noteReceive.serialize() : undefined;
         }
         if (sharedKeySender) {
           const senderRandom = Memo.decryptSenderRandom(
@@ -385,6 +386,7 @@ abstract class AbstractWallet extends EventEmitter {
           };
 
           noteReceive = TransactNote.deserialize(serialized, viewingPrivateKey);
+          serializedNoteReceive = serialized;
         } catch (err) {
           // Expect error if leaf not addressed to us.
         }
@@ -457,6 +459,10 @@ abstract class AbstractWallet extends EventEmitter {
     }
 
     const scannedCommitments: ScannedDBCommitment[] = [];
+
+    if ((noteReceive && !serializedNoteReceive) || (noteSend && !serializedNoteSend)) {
+      throw new Error('Scan requires a serialized note.');
+    }
 
     if (noteReceive && serializedNoteReceive) {
       const nullifier = TransactNote.getNullifier(this.nullifyingKey, position);
