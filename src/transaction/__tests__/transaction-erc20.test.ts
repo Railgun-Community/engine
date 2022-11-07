@@ -184,7 +184,7 @@ describe('Transaction/ERC20', function test() {
     const hashed = hashBoundParams(params);
     assert.typeOf(hashed, 'bigint');
     expect(hashed).to.equal(
-      20561861130625894750380756135125425251339500836757502821769938510395517567284n,
+      7297316625290769368067090402207718021912518614094704642142032948132837136470n,
     );
   });
 

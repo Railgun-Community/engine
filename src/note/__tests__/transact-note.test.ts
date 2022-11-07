@@ -5,6 +5,7 @@ import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { Ciphertext, LegacyNoteSerialized, OutputType } from '../../models/formatted-types';
 import {
   ByteLength,
+  formatToByteLength,
   hexlify,
   hexStringToBytes,
   hexToBigInt,
@@ -393,6 +394,35 @@ describe('Note/TransactNote', () => {
       expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
       expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
       expect(reserializedContract.annotationData).to.equal('01');
+      expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
+    });
+  });
+
+  it('Should serialize and deserialize notes (legacy)', () => {
+    vectors.forEach((vector) => {
+      const vectorBytes = hexStringToBytes(vector.vpk);
+
+      const note = TransactNote.deserialize(vector.note, vectorBytes);
+      expect(hexlify(note.random)).to.equal(vector.random);
+
+      const hexHash = nToHex(note.hash, ByteLength.UINT_256);
+      expect(hexHash).to.equal(vector.hash);
+
+      const reserialized = note.serializeLegacy(vectorBytes);
+      expect(reserialized.npk).to.equal(vector.note.npk);
+      expect(reserialized.value).to.equal(vector.note.value);
+      expect(reserialized.token).to.equal(vector.note.token);
+      expect(reserialized.memoField).to.deep.equal(
+        vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
+      );
+      expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
+
+      const reserializedContract = note.serializeLegacy(vectorBytes, true);
+      expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
+      expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
+      expect(reserializedContract.memoField).to.deep.equal(
+        vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256, true)),
+      );
       expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
     });
   });

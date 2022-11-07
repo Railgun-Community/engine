@@ -12,6 +12,7 @@ import { PublicInputs } from '../models/prover-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 import {
   ByteLength,
+  chunk,
   combine,
   formatToByteLength,
   hexlify,
@@ -19,7 +20,7 @@ import {
   nToHex,
   randomHex,
 } from '../utils/bytes';
-import { encryptedDataToCiphertext } from '../utils/ciphertext';
+import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { aes } from '../utils/encryption';
 import { signEDDSA, unblindNoteKey } from '../utils/keys-utils';
 import { unblindNoteKeyLegacy } from '../utils/keys-utils-legacy';
@@ -365,7 +366,26 @@ export class TransactNote {
     };
   }
 
-  static isLegacyTransactNote(noteData: NoteSerialized | LegacyNoteSerialized) {
+  serializeLegacy(viewingPrivateKey: Uint8Array, prefix?: boolean): LegacyNoteSerialized {
+    const { npk, token, value, random } = this.formatFields(prefix);
+    const memoField: string[] = chunk(this.annotationData).map((el) =>
+      formatToByteLength(el, ByteLength.UINT_256, prefix),
+    );
+    const randomCiphertext = aes.gcm.encrypt([random], viewingPrivateKey);
+    const [ivTag, data] = ciphertextToEncryptedRandomData(randomCiphertext);
+
+    return {
+      npk,
+      token,
+      value,
+      encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)) as [string, string],
+      memoField,
+      recipientAddress: encodeAddress(this.receiverAddressData),
+      memoText: this.memoText,
+    };
+  }
+
+  static isLegacyTransactNote(noteData: NoteSerialized | LegacyNoteSerialized): boolean {
     return 'encryptedRandom' in noteData;
   }
 

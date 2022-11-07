@@ -307,6 +307,8 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<ScannedDBCommitment[]> {
     let noteReceive: Optional<TransactNote>;
     let noteSend: Optional<TransactNote>;
+    let serializedNoteReceive: Optional<NoteSerialized | LegacyNoteSerialized>;
+    let serializedNoteSend: Optional<NoteSerialized | LegacyNoteSerialized>;
 
     EngineDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
 
@@ -355,6 +357,7 @@ abstract class AbstractWallet extends EventEmitter {
             true, // isSentNote
             false, // isLegacyDecryption
           );
+          serializedNoteSend = noteSend ? noteSend.serialize() : undefined;
         }
         break;
       }
@@ -411,6 +414,9 @@ abstract class AbstractWallet extends EventEmitter {
             false, // isSentNote
             true, // isLegacyDecryption
           );
+          serializedNoteReceive = noteReceive
+            ? noteReceive.serializeLegacy(viewingPrivateKey)
+            : undefined;
         }
         if (sharedKeySender) {
           const senderRandom = Memo.decryptSenderRandom(annotationData, viewingPrivateKey);
@@ -425,6 +431,7 @@ abstract class AbstractWallet extends EventEmitter {
             true, // isSentNote
             true, // isLegacyDecryption
           );
+          serializedNoteSend = noteSend ? noteSend.serializeLegacy(viewingPrivateKey) : undefined;
         }
         break;
       }
@@ -441,6 +448,7 @@ abstract class AbstractWallet extends EventEmitter {
         };
         try {
           noteReceive = TransactNote.deserialize(serialized, viewingPrivateKey);
+          serializedNoteReceive = serialized;
         } catch (err) {
           // Expect error if leaf not addressed to us.
         }
@@ -450,7 +458,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     const scannedCommitments: ScannedDBCommitment[] = [];
 
-    if (noteReceive) {
+    if (noteReceive && serializedNoteReceive) {
       const nullifier = TransactNote.getNullifier(this.nullifyingKey, position);
       const storedCommitment: StoredReceiveCommitment = {
         spendtxid: false,
@@ -469,10 +477,10 @@ abstract class AbstractWallet extends EventEmitter {
       });
     }
 
-    if (noteSend) {
+    if (noteSend && serializedNoteSend) {
       const storedCommitment: StoredSendCommitment = {
         txid: hexlify(leaf.txid),
-        decrypted: noteSend.serialize(),
+        decrypted: serializedNoteSend,
         noteExtraData: Memo.decryptNoteAnnotationData(noteSend.annotationData, viewingPrivateKey),
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
       };
@@ -778,6 +786,8 @@ abstract class AbstractWallet extends EventEmitter {
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
         tokenAmounts.forEach((tokenAmount) => {
+          console.log('tokenAmounts...');
+          console.log(tokenAmount);
           if (!tokenAmount.noteAnnotationData) {
             // Legacy notes without extra data, consider as a simple "transfer".
             transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
@@ -788,6 +798,7 @@ abstract class AbstractWallet extends EventEmitter {
               transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
               break;
             case OutputType.RelayerFee:
+              console.log('RELAYER FEE');
               relayerFeeTokenAmount = tokenAmount;
               break;
             case OutputType.Change:

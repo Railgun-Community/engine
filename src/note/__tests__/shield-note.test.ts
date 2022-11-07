@@ -19,7 +19,7 @@ let vpk: Uint8Array;
 let shield: ShieldNote;
 
 describe('Note/ShieldNote', () => {
-  it.only('Should get expected signature message for shieldPrivateKey', () => {
+  it('Should get expected signature message for shieldPrivateKey', () => {
     expect(ShieldNote.getShieldPrivateKeySignatureMessage()).to.equal('RAILGUN_SHIELD');
   });
 
