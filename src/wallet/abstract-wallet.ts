@@ -792,8 +792,6 @@ abstract class AbstractWallet extends EventEmitter {
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
         tokenAmounts.forEach((tokenAmount) => {
-          console.log('tokenAmounts...');
-          console.log(tokenAmount);
           if (!tokenAmount.noteAnnotationData) {
             // Legacy notes without extra data, consider as a simple "transfer".
             transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
@@ -804,7 +802,6 @@ abstract class AbstractWallet extends EventEmitter {
               transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
               break;
             case OutputType.RelayerFee:
-              console.log('RELAYER FEE');
               relayerFeeTokenAmount = tokenAmount;
               break;
             case OutputType.Change:
