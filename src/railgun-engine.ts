@@ -616,6 +616,9 @@ class RailgunEngine extends EventEmitter {
    * @returns id
    */
   async loadExistingWallet(encryptionKey: string, id: string): Promise<RailgunWallet> {
+    if (this.wallets[id]) {
+      return this.wallets[id] as RailgunWallet;
+    }
     const wallet = await RailgunWallet.loadExisting(this.db, encryptionKey, id);
     this.loadWallet(wallet);
     return wallet;
@@ -628,6 +631,9 @@ class RailgunEngine extends EventEmitter {
    * @returns id
    */
   async loadExistingViewOnlyWallet(encryptionKey: string, id: string): Promise<ViewOnlyWallet> {
+    if (this.wallets[id]) {
+      return this.wallets[id] as ViewOnlyWallet;
+    }
     const wallet = await ViewOnlyWallet.loadExisting(this.db, encryptionKey, id);
     this.loadWallet(wallet);
     return wallet;
