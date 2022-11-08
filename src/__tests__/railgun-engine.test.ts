@@ -245,7 +245,6 @@ describe('RailgunEngine', function test() {
     );
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
-    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         wallet2.addressKeys,
@@ -254,7 +253,7 @@ describe('RailgunEngine', function test() {
         1n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        false, // shouldShowSender
         OutputType.RelayerFee,
         undefined, // memoText
       ),
@@ -294,6 +293,7 @@ describe('RailgunEngine', function test() {
         token: tokenFormatted,
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
+        senderAddress: undefined,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -313,7 +313,8 @@ describe('RailgunEngine', function test() {
       amount: BigInt(1),
       noteAnnotationData: {
         outputType: OutputType.RelayerFee,
-        senderRandom,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        senderRandom: history[1].relayerFeeTokenAmount!.noteAnnotationData!.senderRandom,
         walletSource: 'test wallet',
       },
       memoText: undefined,
@@ -336,6 +337,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('299250000000000000000'), // 300 minus fee
         recipientAddress: etherswallet.address,
         memoText: undefined,
+        senderAddress: undefined,
       },
     ]);
   }).timeout(90000);
@@ -362,7 +364,6 @@ describe('RailgunEngine', function test() {
       'A really long memo with emojis 😐 👩🏾‍🔧 and other text, in order to test a major memo for a real live production use case.';
 
     // Add output for Transfer
-    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         wallet2.addressKeys,
@@ -371,7 +372,7 @@ describe('RailgunEngine', function test() {
         10n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        true, // showSenderAddress
         OutputType.Transfer,
         memoText,
       ),
@@ -380,7 +381,6 @@ describe('RailgunEngine', function test() {
     const relayerMemoText = 'A short memo with only 32 chars.';
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
-    const senderRandom2 = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         wallet2.addressKeys,
@@ -389,7 +389,7 @@ describe('RailgunEngine', function test() {
         1n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        senderRandom2,
+        false, // showSenderAddress
         OutputType.RelayerFee,
         relayerMemoText, // memoText
       ),
@@ -429,6 +429,7 @@ describe('RailgunEngine', function test() {
         token: tokenFormatted,
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
+        senderAddress: undefined,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -448,7 +449,8 @@ describe('RailgunEngine', function test() {
         amount: BigInt(10),
         noteAnnotationData: {
           outputType: OutputType.Transfer,
-          senderRandom,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          senderRandom: history[1].transferTokenAmounts[0].noteAnnotationData!.senderRandom,
           walletSource: 'test wallet',
         },
         recipientAddress: wallet2.getAddress(),
@@ -460,7 +462,8 @@ describe('RailgunEngine', function test() {
       amount: BigInt(1),
       noteAnnotationData: {
         outputType: OutputType.RelayerFee,
-        senderRandom: senderRandom2,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        senderRandom: history[1].relayerFeeTokenAmount!.noteAnnotationData!.senderRandom,
         walletSource: 'test wallet',
       },
       memoText: relayerMemoText,
@@ -486,11 +489,13 @@ describe('RailgunEngine', function test() {
         token: tokenFormatted,
         amount: BigInt(10),
         memoText,
+        senderAddress: wallet.getAddress(),
       },
       {
         token: tokenFormatted,
         amount: BigInt(1),
         memoText: relayerMemoText,
+        senderAddress: undefined,
       },
     ]);
     expect(history2[0].transferTokenAmounts).deep.eq([]);

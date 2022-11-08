@@ -80,7 +80,6 @@ describe('Transaction/Transaction Batch', function run() {
     address = wallet.addressKeys;
     wallet.loadERC20Merkletree(merkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
-      const senderRandom = randomHex(15);
       return TransactNote.create(
         address,
         undefined,
@@ -88,7 +87,7 @@ describe('Transaction/Transaction Batch', function run() {
         value,
         token,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        false, // showSenderAddress
         OutputType.Transfer,
         undefined, // memoText
       );

@@ -718,6 +718,7 @@ abstract class AbstractWallet extends EventEmitter {
         token,
         amount: note.value,
         memoText: note.memoText,
+        senderAddress: note.getSenderAddress(),
       });
     });
 
@@ -816,6 +817,7 @@ abstract class AbstractWallet extends EventEmitter {
             amount: BigInt(unshieldEvent.amount),
             memoText: undefined,
             recipientAddress: unshieldEvent.toAddress,
+            senderAddress: undefined,
           }),
         );
 

@@ -153,7 +153,6 @@ describe('Relay Adapt', function test() {
 
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderRandom = randomHex(15);
     const relayerFee = TransactNote.create(
       wallet2.addressKeys,
       wallet.addressKeys,
@@ -161,7 +160,7 @@ describe('Relay Adapt', function test() {
       1000n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -208,7 +207,6 @@ describe('Relay Adapt', function test() {
 
     // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderRandom = randomHex(15);
     const relayerFee = TransactNote.create(
       wallet2.addressKeys,
       wallet.addressKeys,
@@ -216,7 +214,7 @@ describe('Relay Adapt', function test() {
       100n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -370,7 +368,6 @@ describe('Relay Adapt', function test() {
 
     // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderRandom = randomHex(15);
     const relayerFee = TransactNote.create(
       wallet2.addressKeys,
       wallet.addressKeys,
@@ -378,7 +375,7 @@ describe('Relay Adapt', function test() {
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -525,7 +522,6 @@ describe('Relay Adapt', function test() {
 
     // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderRandom = randomHex(15);
     const relayerFee = TransactNote.create(
       wallet2.addressKeys,
       wallet.addressKeys,
@@ -533,7 +529,7 @@ describe('Relay Adapt', function test() {
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -684,7 +680,6 @@ describe('Relay Adapt', function test() {
 
     // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(WETH_TOKEN_ADDRESS, TokenType.ERC20, chain);
-    const senderRandom = randomHex(15);
     const relayerFee = TransactNote.create(
       wallet2.addressKeys,
       wallet.addressKeys,
@@ -692,7 +687,7 @@ describe('Relay Adapt', function test() {
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       OutputType.RelayerFee,
       undefined, // memoText
     );

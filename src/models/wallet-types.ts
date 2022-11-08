@@ -53,9 +53,12 @@ export type TransactionHistoryTokenAmount = {
 export type TransactionHistoryTransferTokenAmount = TransactionHistoryTokenAmount & {
   recipientAddress: string;
 };
+export type TransactionHistoryReceiveTokenAmount = TransactionHistoryTokenAmount & {
+  senderAddress: Optional<string>;
+};
 export type TransactionHistoryEntryReceived = {
   txid: string;
-  receiveTokenAmounts: TransactionHistoryTokenAmount[];
+  receiveTokenAmounts: TransactionHistoryReceiveTokenAmount[];
 };
 export type TransactionHistoryEntrySpent = {
   txid: string;

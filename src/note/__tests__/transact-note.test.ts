@@ -10,7 +10,6 @@ import {
   hexStringToBytes,
   hexToBigInt,
   nToHex,
-  randomHex,
 } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
 import { TransactNote } from '../transact-note';
@@ -305,7 +304,6 @@ describe('Note/TransactNote', () => {
         privateKey: privateViewingKey,
         pubkey: publicViewingKey,
       };
-      const senderRandom = randomHex(15);
       const note = TransactNote.create(
         address,
         address,
@@ -313,7 +311,7 @@ describe('Note/TransactNote', () => {
         hexToBigInt(vector.note.amount),
         vector.note.token,
         viewingKeyPair,
-        senderRandom,
+        false, // showSenderAddress
         OutputType.RelayerFee,
         'something', // memoText
       );

@@ -42,7 +42,6 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
     privateKey: privateViewingKey,
     pubkey: publicViewingKey,
   };
-  const senderRandom = randomHex(15);
 
   return TransactNote.create(
     addressData,
@@ -51,7 +50,7 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
     value,
     TOKEN_ADDRESS,
     viewingKeyPair,
-    senderRandom,
+    false, // showSenderAddress
     OutputType.Transfer,
     undefined, // memoText
   );

@@ -9,11 +9,7 @@ import {
   randomHex,
 } from '../utils/bytes';
 import { AdaptID, OutputType, TokenType } from '../models/formatted-types';
-import {
-  DEFAULT_TOKEN_SUB_ID,
-  MEMO_SENDER_RANDOM_NULL,
-  UnshieldFlag,
-} from '../models/transaction-constants';
+import { DEFAULT_TOKEN_SUB_ID, UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { UnshieldNote } from '../note/unshield-note';
 import { TXO } from '../models/txo-types';
@@ -156,7 +152,6 @@ class Transaction {
     const allOutputs: (TransactNote | UnshieldNote)[] = [...this.outputs];
 
     // Create change output
-    const changeSenderRandom = MEMO_SENDER_RANDOM_NULL; // Not needed for change output.
     allOutputs.push(
       TransactNote.create(
         wallet.addressKeys, // Receiver
@@ -165,7 +160,7 @@ class Transaction {
         change,
         this.tokenAddress,
         senderViewingKeys,
-        changeSenderRandom,
+        true, // showSenderAddress
         OutputType.Change,
         undefined, // memoText
       ),

@@ -26,6 +26,21 @@ import { signEDDSA, unblindNoteKey } from '../utils/keys-utils';
 import { unblindNoteKeyLegacy } from '../utils/keys-utils-legacy';
 import { LEGACY_MEMO_METADATA_BYTE_CHUNKS, Memo } from './memo';
 
+/**
+ *
+ * A Note on Encoded MPKs:
+ *
+ * The presence of senderRandom field, or an encoded/unencoded MPK in a decrypted note,
+ * tells us whether or not the sender address was hidden or visible.
+ *
+ *          MPK               senderRandom                                Sender address
+ * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ * Value    Unencoded         Random hex (15)                             Hidden
+ * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ * Value    Encoded           undefined or MEMO_SENDER_RANDOM_NULL        Visible
+ * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ */
+
 export class TransactNote {
   // address data of recipient
   readonly receiverAddressData: AddressData;
@@ -88,13 +103,17 @@ export class TransactNote {
     value: bigint,
     token: string,
     senderViewingKeys: ViewingKeyPair,
-    senderRandom: Optional<string>,
+    shouldShowSender: boolean,
     outputType: OutputType,
     memoText: Optional<string>,
   ): TransactNote {
+    // See note at top of file.
+    const shouldCreateSenderRandom = !shouldShowSender;
+    const senderRandom = shouldCreateSenderRandom ? randomHex(15) : MEMO_SENDER_RANDOM_NULL;
+
     const annotationData = Memo.createEncryptedNoteAnnotationData(
       outputType,
-      senderRandom || MEMO_SENDER_RANDOM_NULL,
+      senderRandom,
       senderViewingKeys.privateKey,
     );
     return new TransactNote(
@@ -110,6 +129,13 @@ export class TransactNote {
 
   private getNotePublicKey(): bigint {
     return poseidon([this.receiverAddressData.masterPublicKey, hexToBigInt(this.random)]);
+  }
+
+  getSenderAddress(): Optional<string> {
+    if (!this.senderAddressData) {
+      return undefined;
+    }
+    return encodeAddress(this.senderAddressData);
   }
 
   /**
@@ -482,7 +508,9 @@ export class TransactNote {
       }
       case TokenType.ERC1155: {
         if (hexlify(token, false).length !== 64) {
-          throw new Error(`Random must be length 64 (32 bytes). Got ${hexlify(token, false)}.`);
+          throw new Error(
+            `ERC1155 token must be length 64 (32 bytes). Got ${hexlify(token, false)}.`,
+          );
         }
         break;
       }

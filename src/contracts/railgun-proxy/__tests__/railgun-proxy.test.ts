@@ -143,7 +143,6 @@ describe('Railgun Proxy', function runTests() {
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         wallet2.addressKeys,
@@ -152,7 +151,7 @@ describe('Railgun Proxy', function runTests() {
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        false, // showSenderAddress
         OutputType.Transfer,
         undefined, // memoText
       ),
@@ -268,7 +267,6 @@ describe('Railgun Proxy', function runTests() {
 
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         wallet2.addressKeys,
@@ -277,7 +275,7 @@ describe('Railgun Proxy', function runTests() {
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        false, // showSenderAddress
         OutputType.RelayerFee,
         undefined, // memoText
       ),
@@ -441,7 +439,6 @@ describe('Railgun Proxy', function runTests() {
     // Create transaction
     const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
 
-    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         wallet2.addressKeys,
@@ -450,7 +447,7 @@ describe('Railgun Proxy', function runTests() {
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        true, // showSenderAddress
         OutputType.RelayerFee,
         undefined, // memoText
       ),
@@ -492,7 +489,7 @@ describe('Railgun Proxy', function runTests() {
       ),
     ).to.deep.equal({
       outputType: OutputType.RelayerFee,
-      senderRandom,
+      senderRandom: MEMO_SENDER_RANDOM_NULL,
       walletSource: 'test proxy',
     });
     expect(

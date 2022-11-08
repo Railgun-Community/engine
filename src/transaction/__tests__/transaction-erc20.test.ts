@@ -130,7 +130,6 @@ describe('Transaction/ERC20', function test() {
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
     ): Promise<TransactNote> => {
-      const senderRandom = randomHex(15);
       return TransactNote.create(
         address,
         undefined,
@@ -138,7 +137,7 @@ describe('Transaction/ERC20', function test() {
         value,
         token,
         wallet.getViewingKeyPair(),
-        senderRandom,
+        false, // showSenderAddress
         outputType,
         undefined, // memoText
       );
@@ -266,9 +265,16 @@ describe('Transaction/ERC20', function test() {
       100n,
       token,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       noteAnnotationData.outputType,
       memoText,
+    );
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - required to set senderRandom outside this function
+    note.annotationData = Memo.createEncryptedNoteAnnotationData(
+      noteAnnotationData.outputType,
+      senderRandom,
+      wallet.getViewingKeyPair().privateKey,
     );
 
     assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
@@ -375,9 +381,16 @@ describe('Transaction/ERC20', function test() {
       100n,
       token,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      false, // showSenderAddress
       noteAnnotationData.outputType,
       memoText,
+    );
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - required to set senderRandom outside this function
+    note.annotationData = Memo.createEncryptedNoteAnnotationData(
+      noteAnnotationData.outputType,
+      senderRandom,
+      wallet.getViewingKeyPair().privateKey,
     );
 
     assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
@@ -471,7 +484,7 @@ describe('Transaction/ERC20', function test() {
     const senderRandom = MEMO_SENDER_RANDOM_NULL;
     const noteAnnotationData: NoteAnnotationData = {
       outputType: OutputType.RelayerFee,
-      senderRandom,
+      senderRandom: MEMO_SENDER_RANDOM_NULL,
       walletSource: 'erc20 wallet',
     };
 
@@ -484,7 +497,7 @@ describe('Transaction/ERC20', function test() {
       100n,
       token,
       wallet.getViewingKeyPair(),
-      senderRandom,
+      true, // showSenderAddress
       noteAnnotationData.outputType,
       memoText,
     );
@@ -494,7 +507,7 @@ describe('Transaction/ERC20', function test() {
       sender.pubkey,
       note.receiverAddressData.viewingPublicKey,
       note.random,
-      senderRandom,
+      MEMO_SENDER_RANDOM_NULL,
     );
 
     const senderShared = await getSharedSymmetricKey(
@@ -611,7 +624,6 @@ describe('Transaction/ERC20', function test() {
     ).to.eventually.be.rejectedWith('Too many transaction outputs');
 
     transactionBatch.resetOutputs();
-    const senderRandom = randomHex(15);
     transactionBatch.addOutput(
       TransactNote.create(
         address,
@@ -620,7 +632,7 @@ describe('Transaction/ERC20', function test() {
         6500000000000n,
         '000925cdf66ddf5b88016df1fe915e68eff8f192',
         wallet.getViewingKeyPair(),
-        senderRandom,
+        false, // showSenderAddress
         OutputType.RelayerFee,
         undefined, // memoText
       ),
