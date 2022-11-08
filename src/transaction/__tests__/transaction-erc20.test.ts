@@ -137,7 +137,7 @@ describe('Transaction/ERC20', function test() {
         value,
         token,
         wallet.getViewingKeyPair(),
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         outputType,
         undefined, // memoText
       );
@@ -265,7 +265,7 @@ describe('Transaction/ERC20', function test() {
       100n,
       token,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
       memoText,
     );
@@ -381,7 +381,7 @@ describe('Transaction/ERC20', function test() {
       100n,
       token,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
       memoText,
     );
@@ -497,7 +497,7 @@ describe('Transaction/ERC20', function test() {
       100n,
       token,
       wallet.getViewingKeyPair(),
-      true, // showSenderAddress
+      true, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
       memoText,
     );
@@ -632,7 +632,7 @@ describe('Transaction/ERC20', function test() {
         6500000000000n,
         '000925cdf66ddf5b88016df1fe915e68eff8f192',
         wallet.getViewingKeyPair(),
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
       ),

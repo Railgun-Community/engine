@@ -253,7 +253,7 @@ describe('RailgunEngine', function test() {
         1n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        false, // shouldShowSender
+        false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
       ),
@@ -372,7 +372,7 @@ describe('RailgunEngine', function test() {
         10n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        true, // showSenderAddress
+        true, // showSenderAddressToRecipient
         OutputType.Transfer,
         memoText,
       ),
@@ -389,7 +389,7 @@ describe('RailgunEngine', function test() {
         1n,
         tokenAddress,
         wallet.getViewingKeyPair(),
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         relayerMemoText, // memoText
       ),

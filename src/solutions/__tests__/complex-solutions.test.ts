@@ -50,7 +50,7 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
     value,
     TOKEN_ADDRESS,
     viewingKeyPair,
-    false, // showSenderAddress
+    false, // showSenderAddressToRecipient
     OutputType.Transfer,
     undefined, // memoText
   );

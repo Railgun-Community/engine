@@ -311,7 +311,7 @@ describe('Note/TransactNote', () => {
         hexToBigInt(vector.note.amount),
         vector.note.token,
         viewingKeyPair,
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         'something', // memoText
       );

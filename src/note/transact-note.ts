@@ -103,12 +103,12 @@ export class TransactNote {
     value: bigint,
     token: string,
     senderViewingKeys: ViewingKeyPair,
-    shouldShowSender: boolean,
+    showSenderAddressToRecipient: boolean,
     outputType: OutputType,
     memoText: Optional<string>,
   ): TransactNote {
     // See note at top of file.
-    const shouldCreateSenderRandom = !shouldShowSender;
+    const shouldCreateSenderRandom = !showSenderAddressToRecipient;
     const senderRandom = shouldCreateSenderRandom ? randomHex(15) : MEMO_SENDER_RANDOM_NULL;
 
     const annotationData = Memo.createEncryptedNoteAnnotationData(

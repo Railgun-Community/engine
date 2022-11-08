@@ -151,7 +151,7 @@ describe('Railgun Proxy', function runTests() {
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         OutputType.Transfer,
         undefined, // memoText
       ),
@@ -275,7 +275,7 @@ describe('Railgun Proxy', function runTests() {
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
       ),
@@ -447,7 +447,7 @@ describe('Railgun Proxy', function runTests() {
         300n,
         TOKEN_ADDRESS,
         wallet.getViewingKeyPair(),
-        true, // showSenderAddress
+        true, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
       ),

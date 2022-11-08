@@ -160,7 +160,7 @@ class Transaction {
         change,
         this.tokenAddress,
         senderViewingKeys,
-        true, // showSenderAddress
+        true, // showSenderAddressToRecipient
         OutputType.Change,
         undefined, // memoText
       ),

@@ -87,7 +87,7 @@ describe('Transaction/Transaction Batch', function run() {
         value,
         token,
         wallet.getViewingKeyPair(),
-        false, // showSenderAddress
+        false, // showSenderAddressToRecipient
         OutputType.Transfer,
         undefined, // memoText
       );

@@ -160,7 +160,7 @@ describe('Relay Adapt', function test() {
       1000n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -214,7 +214,7 @@ describe('Relay Adapt', function test() {
       100n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -375,7 +375,7 @@ describe('Relay Adapt', function test() {
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -529,7 +529,7 @@ describe('Relay Adapt', function test() {
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
       undefined, // memoText
     );
@@ -687,7 +687,7 @@ describe('Relay Adapt', function test() {
       300n,
       WETH_TOKEN_ADDRESS,
       wallet.getViewingKeyPair(),
-      false, // showSenderAddress
+      false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
       undefined, // memoText
     );
