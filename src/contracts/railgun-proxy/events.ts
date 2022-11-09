@@ -97,7 +97,7 @@ export function formatShieldEvent(
   };
 }
 
-function formatCommitmentCiphertext(
+export function formatCommitmentCiphertext(
   commitment: CommitmentCiphertextStructOutput,
 ): CommitmentCiphertext {
   const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } = commitment;
