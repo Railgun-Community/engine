@@ -127,7 +127,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('Wallet balance too low');
+    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(shieldValue));
@@ -182,7 +182,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.setUnshield(ethersWallet.address, shieldValue * 1n);
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('Wallet balance too low');
+    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
 
     transactionBatch.resetOutputs();
     transactionBatch.resetUnshield();

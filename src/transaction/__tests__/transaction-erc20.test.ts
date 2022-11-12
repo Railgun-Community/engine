@@ -646,13 +646,13 @@ describe('Transaction/ERC20', function test() {
     transactionBatch.addOutput(await makeNote(21000000000027360000000000n));
     await expect(
       transactionBatch.generateValidSpendingSolutionGroups(wallet),
-    ).to.eventually.be.rejectedWith('Wallet balance too low');
+    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(11000000000027360000000000n));
     await expect(
       transactionBatch.generateValidSpendingSolutionGroups(wallet),
-    ).to.eventually.be.rejectedWith('Wallet balance too low');
+    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
 
     const transaction2 = new TransactionBatch('ff', TokenType.ERC20, chain);
 

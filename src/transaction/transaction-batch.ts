@@ -127,7 +127,7 @@ class TransactionBatch {
     );
 
     // Check if wallet balance is enough to cover this transaction
-    if (totalRequired > balance) throw new Error('Wallet balance too low');
+    if (totalRequired > balance) throw new Error('RAILGUN wallet balance too low.');
 
     // If single group possible, return it.
     const singleSpendingSolutionGroup = this.createSimpleSpendingSolutionGroupsIfPossible(
