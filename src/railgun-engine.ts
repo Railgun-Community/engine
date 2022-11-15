@@ -131,6 +131,9 @@ class RailgunEngine extends EventEmitter {
    * @param unshields - unshield events
    */
   async unshieldListener(chain: Chain, unshields: UnshieldStoredEvent[]): Promise<void> {
+    if (!unshields.length) {
+      return;
+    }
     EngineDebug.log(
       `engine.unshieldListener[${chain.type}:${chain.id}] ${JSON.stringify(
         unshields.map((unshield) => unshield.txid),
