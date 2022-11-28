@@ -428,7 +428,7 @@ class RailgunEngine extends EventEmitter {
       await provider.getBlockNumber();
     } catch (err) {
       EngineDebug.error(err as Error);
-      throw new Error(`Cannot connect to network ${chain.type}:${chain.id}`);
+      throw new Error(`Cannot connect to RPC provider.`);
     }
 
     if (
