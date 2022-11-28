@@ -82,6 +82,7 @@ describe('Railgun Proxy', function runTests() {
       provider,
       0,
     );
+    await engine.scanHistory(chain);
     proxyContract = engine.proxyContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(

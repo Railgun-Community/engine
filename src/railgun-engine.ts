@@ -423,6 +423,14 @@ class RailgunEngine extends EventEmitter {
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
+    try {
+      // Test that provider responds.
+      await provider.getBlockNumber();
+    } catch (err) {
+      EngineDebug.error(err as Error);
+      throw new Error(`Cannot connect to network ${chain.type}:${chain.id}`);
+    }
+
     if (
       (this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id]) ||
       (this.proxyContracts[chain.type] && this.proxyContracts[chain.type][chain.id]) ||
@@ -493,8 +501,6 @@ class RailgunEngine extends EventEmitter {
       nullifierListener,
       unshieldListener,
     );
-
-    await this.scanHistory(chain);
   }
 
   /**

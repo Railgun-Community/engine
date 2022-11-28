@@ -75,6 +75,7 @@ describe('Relay Adapt', function test() {
       provider,
       DEPLOYMENT_BLOCK,
     );
+    await engine.scanHistory(chain);
     proxyContract = engine.proxyContracts[chain.type][chain.id];
     relayAdaptContract = engine.relayAdaptContracts[chain.type][chain.id];
 

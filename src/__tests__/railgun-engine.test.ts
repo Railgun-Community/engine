@@ -103,6 +103,7 @@ describe('RailgunEngine', function test() {
       provider,
       24,
     );
+    await engine.scanHistory(chain);
     merkleTree = engine.merkletrees[chain.type][chain.id].erc20;
     proxyContract = engine.proxyContracts[chain.type][chain.id];
   });
