@@ -10,7 +10,7 @@ import { encodeAddress, decodeAddress } from './key-derivation/bech32';
 import { hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
-import { Chain, ChainType, EngineDebugger } from './models/engine-types';
+import { Chain, EngineDebugger } from './models/engine-types';
 import { Commitment, Nullifier } from './models/formatted-types';
 import {
   CommitmentEvent,
@@ -25,7 +25,6 @@ import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactsGetter } from './models/prover-types';
-import { ENGINE_V3_START_BLOCK_NUMBERS_EVM } from './utils/constants';
 
 class RailgunEngine extends EventEmitter {
   readonly db;
@@ -259,13 +258,6 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.MerkletreeHistoryScanUpdate, updateData);
   }
 
-  private static getEngineV3StartBlockNumber(chain: Chain) {
-    if (chain.type === ChainType.EVM && ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id]) {
-      return ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id];
-    }
-    return 0;
-  }
-
   /**
    * Scan contract history and sync
    * @param chain - chain type/id to scan
@@ -312,14 +304,12 @@ class RailgunEngine extends EventEmitter {
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
     EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
-    const engineV3StartBlockNumber = RailgunEngine.getEngineV3StartBlockNumber(chain);
-
     try {
       // Run slow scan
       await proxyContract.getHistoricalEvents(
+        chain,
         startScanningBlockSlowScan,
         latestBlock,
-        engineV3StartBlockNumber,
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.commitmentListener(
             chain,

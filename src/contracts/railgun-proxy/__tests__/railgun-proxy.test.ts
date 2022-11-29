@@ -240,15 +240,12 @@ describe('Railgun Proxy', function runTests() {
     resultNullifiers = [];
     resultUnshields = [];
 
-    // Cannot test legacy events.
-    const engineV3StartBlockNumber = 0;
-
     let latestBlock = (await provider.getBlock('latest')).number;
 
     await proxyContract.getHistoricalEvents(
+      chain,
       startingBlock,
       latestBlock,
-      engineV3StartBlockNumber,
       eventsListener,
       nullifiersListener,
       unshieldListener,
@@ -316,9 +313,9 @@ describe('Railgun Proxy', function runTests() {
     latestBlock = (await provider.getBlock('latest')).number;
 
     await proxyContract.getHistoricalEvents(
+      chain,
       startingBlock,
       latestBlock,
-      engineV3StartBlockNumber,
       eventsListener,
       nullifiersListener,
       unshieldListener,

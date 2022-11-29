@@ -28,7 +28,7 @@ import {
 } from './legacy-events/legacy-events';
 import { RailgunSmartWallet } from '../../typechain-types';
 import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
-import { Chain } from '../../models';
+import { Chain, ChainType } from '../../models';
 import { LegacyRailgunLogic } from './legacy-events/RailgunLogic_LegacyEvents';
 import {
   CommitmentCiphertextStructOutput,
@@ -43,6 +43,7 @@ import {
   TransactionStruct,
   UnshieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
+import { ENGINE_V3_START_BLOCK_NUMBERS_EVM } from '../../utils';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
@@ -244,20 +245,29 @@ class RailgunProxyContract extends EventEmitter {
     }
   }
 
+  private static getEngineV3StartBlockNumber(chain: Chain) {
+    if (chain.type === ChainType.EVM && ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id]) {
+      return ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id];
+    }
+    return 0;
+  }
+
   /**
    * Gets historical events from block
    * @param startBlock - block to scan from
    * @param latestBlock - block to scan to
    */
   async getHistoricalEvents(
+    chain: Chain,
     startBlock: number,
     latestBlock: number,
-    engineV3StartBlockNumber: number,
     eventsListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
     eventsUnshieldListener: EventsUnshieldListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
+    const engineV3StartBlockNumber = RailgunProxyContract.getEngineV3StartBlockNumber(chain);
+
     let currentStartBlock = startBlock;
 
     const eventFilterNullified = this.contract.filters.Nullified();
