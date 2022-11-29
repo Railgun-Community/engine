@@ -10,7 +10,7 @@ import { encodeAddress, decodeAddress } from './key-derivation/bech32';
 import { hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
-import { Chain, EngineDebugger } from './models/engine-types';
+import { Chain, ChainType, EngineDebugger } from './models/engine-types';
 import { Commitment, Nullifier } from './models/formatted-types';
 import {
   CommitmentEvent,
@@ -25,6 +25,7 @@ import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactsGetter } from './models/prover-types';
+import { ENGINE_V3_START_BLOCK_NUMBERS_EVM } from './utils/constants';
 
 class RailgunEngine extends EventEmitter {
   readonly db;
@@ -45,8 +46,6 @@ class RailgunEngine extends EventEmitter {
 
   static walletSource: Optional<string>;
 
-  readonly engineV3StartBlockNumbers: number[][];
-
   /**
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
@@ -61,12 +60,8 @@ class RailgunEngine extends EventEmitter {
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
     engineDebugger?: EngineDebugger,
-    engineV3StartBlockNumbers?: number[][],
   ) {
     super();
-
-    // Temporary. Will be a constant after full upgrades.
-    this.engineV3StartBlockNumbers = engineV3StartBlockNumbers || [];
 
     WalletInfo.setWalletSource(walletSource);
     this.db = new Database(leveldown);
@@ -264,12 +259,9 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.MerkletreeHistoryScanUpdate, updateData);
   }
 
-  private getEngineV3StartBlockNumber(chain: Chain) {
-    if (
-      this.engineV3StartBlockNumbers[chain.type] &&
-      this.engineV3StartBlockNumbers[chain.type][chain.id]
-    ) {
-      return this.engineV3StartBlockNumbers[chain.type][chain.id];
+  private static getEngineV3StartBlockNumber(chain: Chain) {
+    if (chain.type === ChainType.EVM && ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id]) {
+      return ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id];
     }
     return 0;
   }
@@ -320,7 +312,7 @@ class RailgunEngine extends EventEmitter {
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
     EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
-    const engineV3StartBlockNumber = this.getEngineV3StartBlockNumber(chain);
+    const engineV3StartBlockNumber = RailgunEngine.getEngineV3StartBlockNumber(chain);
 
     try {
       // Run slow scan

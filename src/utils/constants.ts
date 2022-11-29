@@ -11,3 +11,11 @@ export const SNARK_PRIME_BIGINT: bigint = BigInt(
 export const ADDRESS_VERSION = 1;
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+export const ENGINE_V3_START_BLOCK_NUMBERS_EVM: { [chainID: number]: number } = {
+  1: 16076750,
+  5: 7921409,
+  56: 23478204,
+  137: 36219104,
+  80001: 29032556,
+};
