@@ -371,15 +371,17 @@ class RailgunEngine extends EventEmitter {
    */
   async fullRescanMerkletreesAndWallets(chain: Chain) {
     if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
-      EngineDebug.log(
+      const err = new Error(
         `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
-      return;
+      EngineDebug.error(err);
+      throw err;
     }
     const merkletree = this.merkletrees[chain.type][chain.id].erc20;
     if (merkletree.isScanning) {
-      EngineDebug.log('Already scanning. Cannot re-scan.');
-      return;
+      const err = new Error(`Full rescan already in progress.`);
+      EngineDebug.error(err);
+      throw err;
     }
     this.emitScanUpdateEvent(chain, 0.01); // 1%
     merkletree.isScanning = true; // Don't allow scans while removing leaves.
