@@ -2,11 +2,11 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { BN } from 'bn.js';
-import { ZERO_ADDRESS } from '../../utils/constants';
 import { Commitment, CommitmentType, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { MerkleTree, TreePurpose, MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../merkletree';
+import { MerkleTree, MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../merkletree';
+import { TOKEN_SUB_ID_NULL } from '../../models/transaction-constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -14,7 +14,6 @@ const { expect } = chai;
 // Database object
 let db: Database;
 let merkletree: MerkleTree;
-let merkletreeNFT: MerkleTree;
 
 const chain: Chain = {
   type: 0,
@@ -25,8 +24,7 @@ describe('MerkleTree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
-    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
-    merkletreeNFT = new MerkleTree(db, chain, 'erc721', async () => true);
+    merkletree = new MerkleTree(db, chain, async () => true);
   });
 
   it('Should hash left/right', () => {
@@ -74,26 +72,12 @@ describe('MerkleTree', () => {
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     ];
 
-    const testVectorNFT = [
-      '0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc',
-      '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
-      '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
-      '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
-      '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
-      '1437bb465994e0453357c17a676b9fdba554e215795ebc17ea5012770dfb77c7',
-      '12359ef9572912b49f44556b8bbbfa69318955352f54cfa35cb0f41309ed445a',
-      '2dc656dadc82cf7a4707786f4d682b0f130b6515f7927bde48214d37ec25a46c',
-      '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
-    ];
-
     expect(merkletree.zeros).to.deep.equal(testVector);
-    expect(merkletreeNFT.zeros).to.deep.equal(testVectorNFT);
   });
 
   it('Should get DB paths', () => {
     type Vector = {
       chain: Chain;
-      purpose: TreePurpose;
       treeNumber: number;
       level: number;
       index: number;
@@ -103,7 +87,6 @@ describe('MerkleTree', () => {
     const vectors: Vector[] = [
       {
         chain: { type: ChainType.EVM, id: 0 },
-        purpose: 'erc20',
         treeNumber: 0,
         level: 1,
         index: 5,
@@ -117,7 +100,6 @@ describe('MerkleTree', () => {
       },
       {
         chain: { type: ChainType.EVM, id: 4 },
-        purpose: 'erc20',
         treeNumber: 2,
         level: 7,
         index: 10,
@@ -129,29 +111,10 @@ describe('MerkleTree', () => {
           '000000000000000000000000000000000000000000000000000000000000000a',
         ],
       },
-      {
-        chain: { type: ChainType.EVM, id: 3 },
-        purpose: 'erc721',
-        treeNumber: 1,
-        level: 9,
-        index: 14,
-        result: [
-          '0000000000000000000000000000006d65726b6c65747265652d657263373231',
-          '0000000000000000000000000000000000000000000000000000000000000003',
-          '0000000000000000000000000000000000000000000000000000000000000001',
-          '0000000000000000000000000000000000000000000000000000000000000009',
-          '000000000000000000000000000000000000000000000000000000000000000e',
-        ],
-      },
     ];
 
     vectors.forEach((vector) => {
-      const merkletreeVectorTest = new MerkleTree(
-        db,
-        vector.chain,
-        vector.purpose,
-        async () => true,
-      );
+      const merkletreeVectorTest = new MerkleTree(db, vector.chain, async () => true);
 
       expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
         vector.result.slice(0, 3),
@@ -353,7 +316,7 @@ describe('MerkleTree', () => {
           token: {
             tokenAddress: '0x03',
             tokenType: TokenType.ERC20,
-            tokenSubID: ZERO_ADDRESS,
+            tokenSubID: TOKEN_SUB_ID_NULL,
           },
         },
         encryptedRandom: ['01', '01'],
@@ -381,7 +344,7 @@ describe('MerkleTree', () => {
       preImage: {
         npk: '00',
         value: '02',
-        token: { tokenAddress: '0x03', tokenType: 0, tokenSubID: ZERO_ADDRESS },
+        token: { tokenAddress: '0x03', tokenType: 0, tokenSubID: TOKEN_SUB_ID_NULL },
       },
       encryptedRandom: ['01', '01'],
       blockNumber: 0,
@@ -529,7 +492,7 @@ describe('MerkleTree', () => {
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false
-    const merkletreeTest = new MerkleTree(db, chain, 'erc20', async () => false);
+    const merkletreeTest = new MerkleTree(db, chain, async () => false);
 
     // Check root is empty tree root
     expect(await merkletreeTest.getRoot(0)).to.equal(

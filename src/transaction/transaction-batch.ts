@@ -1,10 +1,10 @@
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover, ProverProgressCallback } from '../prover/prover';
-import { ByteLength, formatToByteLength, HashZero, trim } from '../utils/bytes';
+import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
-import { SpendingSolutionGroup, TXO } from '../models/txo-types';
-import { TokenType, AdaptID } from '../models/formatted-types';
+import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
+import { AdaptID } from '../models/formatted-types';
 import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
@@ -23,8 +23,9 @@ import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import { TreeBalance } from '../models';
 import { TransactionStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
+import { getTokenDataHash } from '../note/note-util';
 
-class TransactionBatch {
+export class TransactionBatch {
   private adaptID: AdaptID = {
     contract: '0x0000000000000000000000000000000000000000',
     parameters: HashZero,
@@ -32,34 +33,17 @@ class TransactionBatch {
 
   private chain: Chain;
 
-  private tokenAddress: string;
-
   private outputs: TransactNote[] = [];
 
-  private tokenType: TokenType;
-
-  private unshieldAddress: Optional<string>;
-
-  private unshieldTotal: bigint = BigInt(0);
-
-  private allowOverride: Optional<boolean>;
+  private unshieldDataMap: { [tokenHash: string]: UnshieldData } = {};
 
   private overallBatchMinGasPrice: bigint;
 
   /**
-   * Create ERC20Transaction Object
-   * @param tokenAddress - token address, unformatted
-   * @param tokenType - enum of token type
+   * Create TransactionBatch Object
    * @param chain - chain type/id of network
    */
-  constructor(
-    tokenAddress: string,
-    tokenType: TokenType,
-    chain: Chain,
-    overallBatchMinGasPrice: bigint = 0n,
-  ) {
-    this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
-    this.tokenType = tokenType;
+  constructor(chain: Chain, overallBatchMinGasPrice: bigint = BigInt(0)) {
     this.chain = chain;
     this.overallBatchMinGasPrice = overallBatchMinGasPrice;
   }
@@ -72,65 +56,93 @@ class TransactionBatch {
     this.outputs = [];
   }
 
-  setUnshield(unshieldAddress: string, value: string | bigint, allowOverride?: boolean) {
-    if (this.unshieldAddress != null) {
-      throw new Error('You may only call .unshield once for a given transaction batch.');
+  addUnshieldData(unshieldData: UnshieldData) {
+    if (this.unshieldDataMap[unshieldData.tokenHash]) {
+      throw new Error(
+        'You may only call .addUnshieldData once per token for a given TransactionBatch.',
+      );
     }
-
-    this.unshieldAddress = unshieldAddress;
-    this.unshieldTotal = BigInt(value);
-    this.allowOverride = allowOverride;
+    if (unshieldData.value === 0n) {
+      throw new Error('Unshield value must be greater than 0.');
+    }
+    if (getTokenDataHash(unshieldData.tokenData) !== unshieldData.tokenHash) {
+      throw new Error('Invalid Unshield token data hash.');
+    }
+    this.unshieldDataMap[unshieldData.tokenHash] = unshieldData;
   }
 
-  resetUnshield() {
-    this.unshieldAddress = undefined;
-    this.unshieldTotal = BigInt(0);
-    this.allowOverride = undefined;
+  resetUnshieldData() {
+    this.unshieldDataMap = {};
+  }
+
+  private unshieldTotal(tokenHash: string) {
+    return this.unshieldDataMap[tokenHash] ? this.unshieldDataMap[tokenHash].value : BigInt(0);
   }
 
   setAdaptID(adaptID: AdaptID) {
     this.adaptID = adaptID;
   }
 
+  private getOutputTokenHashes = (): string[] => {
+    const tokenHashes: string[] = [];
+    const outputTokenHashes: string[] = this.outputs.map((output) => output.tokenHash);
+    const unshieldTokenHashes: string[] = Object.keys(this.unshieldDataMap);
+    [...outputTokenHashes, ...unshieldTokenHashes].forEach((tokenHash) => {
+      if (!tokenHashes.includes(tokenHash)) {
+        tokenHashes.push(tokenHash);
+      }
+    });
+    return tokenHashes;
+  };
+
+  async generateValidSpendingSolutionGroupsAllOutputs(
+    wallet: RailgunWallet,
+  ): Promise<SpendingSolutionGroup[]> {
+    const tokenHashes: string[] = this.getOutputTokenHashes();
+    const spendingSolutionGroupsPerToken = await Promise.all(
+      tokenHashes.map((tokenHash) => this.generateValidSpendingSolutionGroups(wallet, tokenHash)),
+    );
+    return spendingSolutionGroupsPerToken.flat();
+  }
+
   /**
    * Generates spending solution groups for outputs
    * @param wallet - wallet to spend from
    */
-  async generateValidSpendingSolutionGroups(
+  private async generateValidSpendingSolutionGroups(
     wallet: RailgunWallet,
+    tokenHash: string,
   ): Promise<SpendingSolutionGroup[]> {
-    const outputTotal = this.outputs.reduce((left, right) => left + right.value, BigInt(0));
+    const tokenOutputs = this.outputs.filter((output) => output.tokenHash === tokenHash);
+
+    const outputTotal = tokenOutputs.reduce((left, right) => left + right.value, BigInt(0));
 
     // Calculate total required to be supplied by UTXOs
-    const totalRequired = outputTotal + this.unshieldTotal;
-
-    // Check if output token fields match tokenID for this transaction
-    this.outputs.forEach((output, index) => {
-      if (output.token !== this.tokenAddress)
-        throw new Error(`Token address mismatch on output ${index}`);
-    });
+    const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
 
     // Get UTXOs sorted by tree
-    const treeSortedBalances = (await wallet.balancesByTree(this.chain))[
-      formatToByteLength(this.tokenAddress, 32, false)
-    ];
-
-    if (treeSortedBalances === undefined) {
-      const formattedTokenAddress = `0x${trim(this.tokenAddress, ByteLength.Address)}`;
-      throw new Error(`No wallet balance for token: ${formattedTokenAddress}`);
+    const balances = await wallet.balancesByTree(this.chain);
+    const treeSortedBalances = balances[tokenHash];
+    if (treeSortedBalances == null) {
+      throw new Error(`Can not find RAILGUN wallet balance for token ID: ${tokenHash}`);
     }
 
     // Sum balances
-    const balance: bigint = treeSortedBalances.reduce(
+    const tokenBalance: bigint = treeSortedBalances.reduce(
       (left, right) => left + right.balance,
       BigInt(0),
     );
 
     // Check if wallet balance is enough to cover this transaction
-    if (totalRequired > balance) throw new Error('RAILGUN wallet balance too low.');
+    if (totalRequired > tokenBalance) {
+      EngineDebug.log(`Token balance too low: ${tokenHash}`);
+      throw new Error('RAILGUN private token balance too low.');
+    }
 
     // If single group possible, return it.
     const singleSpendingSolutionGroup = this.createSimpleSpendingSolutionGroupsIfPossible(
+      tokenHash,
+      tokenOutputs,
       treeSortedBalances,
       totalRequired,
     );
@@ -139,10 +151,16 @@ class TransactionBatch {
     }
 
     // Single group not possible - need a more complex model.
-    return this.createComplexSatisfyingSpendingSolutionGroups(treeSortedBalances);
+    return this.createComplexSatisfyingSpendingSolutionGroups(
+      tokenHash,
+      tokenOutputs,
+      treeSortedBalances,
+    );
   }
 
   private createSimpleSpendingSolutionGroupsIfPossible(
+    tokenHash: string,
+    tokenOutputs: TransactNote[],
     treeSortedBalances: TreeBalance[],
     totalRequired: bigint,
   ): Optional<SpendingSolutionGroup> {
@@ -154,16 +172,23 @@ class TransactionBatch {
       if (amount < totalRequired) {
         throw new Error('Could not find UTXOs to satisfy required amount.');
       }
-      if (!isValidFor3Outputs(utxos.length) && this.outputs.length > 0 && this.unshieldTotal > 0) {
+      if (
+        !isValidFor3Outputs(utxos.length) &&
+        this.outputs.length > 0 &&
+        this.unshieldTotal(tokenHash) > 0
+      ) {
         // Cannot have 3 outputs. Can't include unshield in note.
         throw new Error('Requires 3 outputs, given a unshield and at least one standard output.');
       }
 
+      const unshieldValue = this.unshieldTotal(tokenHash);
+
       const spendingSolutionGroup: SpendingSolutionGroup = {
         utxos,
         spendingTree,
-        unshieldValue: this.unshieldTotal,
-        outputs: this.outputs,
+        unshieldValue,
+        tokenOutputs,
+        tokenHash,
       };
 
       return spendingSolutionGroup;
@@ -207,19 +232,22 @@ class TransactionBatch {
    * Finds array of UTXOs groups that satisfies the required amount, excluding an already-used array of UTXO IDs.
    */
   createComplexSatisfyingSpendingSolutionGroups(
+    tokenHash: string,
+    tokenOutputs: TransactNote[],
     treeSortedBalances: TreeBalance[],
   ): SpendingSolutionGroup[] {
     const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
     const excludedUTXOIDs: string[] = [];
-    const remainingOutputs = [...this.outputs];
+    const remainingTokenOutputs = [...tokenOutputs];
 
-    while (remainingOutputs.length > 0) {
-      const output = remainingOutputs[0];
+    while (remainingTokenOutputs.length > 0) {
+      const tokenOutput = remainingTokenOutputs[0];
       const outputSpendingSolutionGroups = createSpendingSolutionGroupsForOutput(
+        tokenHash,
         treeSortedBalances,
-        output,
-        remainingOutputs,
+        tokenOutput,
+        remainingTokenOutputs,
         excludedUTXOIDs,
       );
       if (!outputSpendingSolutionGroups.length) {
@@ -228,15 +256,16 @@ class TransactionBatch {
       spendingSolutionGroups.push(...outputSpendingSolutionGroups);
     }
 
-    if (remainingOutputs.length > 0) {
+    if (remainingTokenOutputs.length > 0) {
       // Could not find enough solutions.
       throw consolidateBalanceError();
     }
 
-    if (this.unshieldTotal > 0) {
+    if (this.unshieldDataMap[tokenHash]) {
       const unshieldSpendingSolutionGroups = createSpendingSolutionGroupsForUnshield(
+        tokenHash,
         treeSortedBalances,
-        this.unshieldTotal,
+        this.unshieldTotal(tokenHash),
         excludedUTXOIDs,
       );
 
@@ -263,7 +292,7 @@ class TransactionBatch {
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
   ): Promise<TransactionStruct[]> {
-    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
+    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(wallet);
     EngineDebug.log('Actual spending solution groups:');
     EngineDebug.log(
       stringifySafe(
@@ -311,8 +340,8 @@ class TransactionBatch {
     wallet: RailgunWallet,
     encryptionKey: string,
   ): Promise<TransactionStruct[]> {
-    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroups(wallet);
-    EngineDebug.log(`Dummy spending solution groups: token ${this.tokenAddress}`);
+    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(wallet);
+    EngineDebug.log(`Dummy spending solution groups:`);
     EngineDebug.log(
       stringifySafe(
         serializeExtractedSpendingSolutionGroupsData(
@@ -333,21 +362,18 @@ class TransactionBatch {
   generateTransactionForSpendingSolutionGroup(
     spendingSolutionGroup: SpendingSolutionGroup,
   ): Transaction {
-    const { spendingTree, utxos, outputs, unshieldValue } = spendingSolutionGroup;
+    const { spendingTree, utxos, tokenOutputs, unshieldValue, tokenHash } = spendingSolutionGroup;
     const transaction = new Transaction(
-      this.tokenAddress,
-      this.tokenType,
       this.chain,
+      tokenHash,
       spendingTree,
       utxos,
+      tokenOutputs,
       this.adaptID,
     );
-    transaction.setOutputs(outputs);
-    if (this.unshieldAddress && unshieldValue > 0) {
-      transaction.unshield(this.unshieldAddress, unshieldValue, this.allowOverride);
+    if (this.unshieldDataMap[tokenHash] && unshieldValue > 0) {
+      transaction.addUnshieldData(this.unshieldDataMap[tokenHash], unshieldValue);
     }
     return transaction;
   }
 }
-
-export { TransactionBatch };

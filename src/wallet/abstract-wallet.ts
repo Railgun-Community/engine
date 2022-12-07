@@ -65,6 +65,7 @@ import { TransactNote } from '../note/transact-note';
 import { binarySearchForUpperBoundIndex } from '../utils/search';
 import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
+import { getTokenDataHash, serializeTokenData } from '../note/note-util';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -81,7 +82,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly nullifyingKey: bigint;
 
-  readonly erc20Merkletrees: MerkleTree[][] = [];
+  readonly merkletrees: MerkleTree[][] = [];
 
   private creationBlockNumbers: Optional<number[][]>;
 
@@ -112,19 +113,19 @@ abstract class AbstractWallet extends EventEmitter {
    * Loads merkle tree into wallet
    * @param merkletree - merkletree to load
    */
-  loadERC20Merkletree(merkletree: MerkleTree) {
-    if (!this.erc20Merkletrees[merkletree.chain.type]) {
-      this.erc20Merkletrees[merkletree.chain.type] = [];
+  loadMerkletree(merkletree: MerkleTree) {
+    if (!this.merkletrees[merkletree.chain.type]) {
+      this.merkletrees[merkletree.chain.type] = [];
     }
-    this.erc20Merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
+    this.merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
   }
 
   /**
    * Unload merkle tree by chain
    * @param chain - chain type/id of tree to unload
    */
-  unloadERC20Merkletree(chain: Chain) {
-    delete this.erc20Merkletrees[chain.type][chain.id];
+  unloadMerkletree(chain: Chain) {
+    delete this.merkletrees[chain.type][chain.id];
   }
 
   /**
@@ -377,7 +378,7 @@ abstract class AbstractWallet extends EventEmitter {
           const serialized: NoteSerialized = {
             npk: commitment.preImage.npk,
             random,
-            token: commitment.preImage.token.tokenAddress,
+            token: getTokenDataHash(commitment.preImage.token),
             value: commitment.preImage.value,
             annotationData: '', // Empty for non-private txs.
             recipientAddress: walletAddress,
@@ -564,7 +565,7 @@ abstract class AbstractWallet extends EventEmitter {
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
-    const merkletree = this.erc20Merkletrees[chain.type][chain.id];
+    const merkletree = this.merkletrees[chain.type][chain.id];
 
     // Calculate UTXOs
     return Promise.all(
@@ -713,7 +714,7 @@ abstract class AbstractWallet extends EventEmitter {
           receiveTokenAmounts: [],
         };
       }
-      const token = formatToByteLength(note.token, 32, false);
+      const token = formatToByteLength(note.tokenHash, 32, false);
       txidTransactionMap[txid].receiveTokenAmounts.push({
         token,
         amount: note.value,
@@ -761,11 +762,11 @@ abstract class AbstractWallet extends EventEmitter {
         }
 
         // Get possible unshield event for this transaction.
-        txidTransactionMap[txid].unshieldEvents = await this.erc20Merkletrees[chain.type][
+        txidTransactionMap[txid].unshieldEvents = await this.merkletrees[chain.type][
           chain.id
         ].getUnshieldEvents(txid);
 
-        const token = formatToByteLength(note.token, 32, false);
+        const token = formatToByteLength(note.tokenHash, 32, false);
         const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
           token,
           amount: note.value,
@@ -812,13 +813,21 @@ abstract class AbstractWallet extends EventEmitter {
         });
 
         const unshieldTokenAmounts: TransactionHistoryTransferTokenAmount[] = unshieldEvents.map(
-          (unshieldEvent) => ({
-            token: formatToByteLength(unshieldEvent.tokenAddress, 32, false),
-            amount: BigInt(unshieldEvent.amount),
-            memoText: undefined,
-            recipientAddress: unshieldEvent.toAddress,
-            senderAddress: undefined,
-          }),
+          (unshieldEvent) => {
+            const tokenData = serializeTokenData(
+              unshieldEvent.tokenAddress,
+              unshieldEvent.tokenType,
+              unshieldEvent.tokenSubID,
+            );
+            const tokenHash = getTokenDataHash(tokenData);
+            return {
+              token: tokenHash,
+              amount: BigInt(unshieldEvent.amount),
+              memoText: undefined,
+              recipientAddress: unshieldEvent.toAddress,
+              senderAddress: undefined,
+            };
+          },
         );
 
         const historyEntry: TransactionHistoryEntrySpent = {
@@ -847,7 +856,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Loop through each TXO and add to balances if unspent
     TXOs.forEach((txOutput) => {
-      const token = formatToByteLength(txOutput.note.token, 32, false);
+      const token = formatToByteLength(txOutput.note.tokenHash, 32, false);
       // If we don't have an entry for this token yet, create one
       if (!balances[token]) {
         balances[token] = {
@@ -916,7 +925,7 @@ abstract class AbstractWallet extends EventEmitter {
   async scanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
-    const merkletree = this.erc20Merkletrees[chain.type][chain.id];
+    const merkletree = this.merkletrees[chain.type][chain.id];
 
     try {
       // Fetch wallet details and latest tree.

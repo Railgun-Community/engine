@@ -17,7 +17,6 @@ import {
   TokenType,
   TransactCommitment,
 } from '../../../models/formatted-types';
-import { TransactionBatch } from '../../../transaction/transaction-batch';
 import {
   CommitmentEvent,
   EngineEvent,
@@ -33,9 +32,12 @@ import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunProxyContract } from '../railgun-proxy';
 import { MEMO_SENDER_RANDOM_NULL } from '../../../models/transaction-constants';
-import { ShieldNote } from '../../../note/shield-note';
 import { TransactNote } from '../../../note/transact-note';
-import { UnshieldNote } from '../../../note/unshield-note';
+import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
+import { ShieldNoteNFT } from '../../../note/nft/shield-note-nft';
+import { TransactionBatch } from '../../../transaction/transaction-batch';
+import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
+import { getTokenDataERC20, getTokenDataHash } from '../../../note/note-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -114,13 +116,7 @@ describe('Railgun Proxy', function runTests() {
       value: bigint = BigInt(110000) * DECIMALS_18,
     ): Promise<[TransactionReceipt, unknown]> => {
       // Create shield
-      const shield = new ShieldNote(
-        wallet.masterPublicKey,
-        RANDOM,
-        value,
-        TOKEN_ADDRESS,
-        TokenType.ERC20,
-      );
+      const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
       const shieldPrivateKey = hexToBytes(randomHex(32));
       const shieldInput = await shield.serialize(
         shieldPrivateKey,
@@ -153,15 +149,18 @@ describe('Railgun Proxy', function runTests() {
     }
     await testShield();
 
-    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
+    const transactionBatch = new TransactionBatch(chain);
+
+    const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
+    const tokenHash = getTokenDataHash(tokenData);
 
     transactionBatch.addOutput(
-      TransactNote.create(
+      TransactNote.createTransfer(
         wallet2.addressKeys,
         wallet.addressKeys,
         RANDOM,
         300n,
-        TOKEN_ADDRESS,
+        tokenHash,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.Transfer,
@@ -274,22 +273,30 @@ describe('Railgun Proxy', function runTests() {
 
     startingBlock = await provider.getBlockNumber();
 
-    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
+    const transactionBatch = new TransactionBatch(chain);
+
+    const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
+    const tokenHash = getTokenDataHash(tokenData);
 
     transactionBatch.addOutput(
-      TransactNote.create(
+      TransactNote.createTransfer(
         wallet2.addressKeys,
         wallet.addressKeys,
         RANDOM,
         300n,
-        TOKEN_ADDRESS,
+        tokenHash,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
       ),
     );
-    transactionBatch.setUnshield(etherswallet.address, 100n);
+    transactionBatch.addUnshieldData({
+      toAddress: etherswallet.address,
+      value: 100n,
+      tokenData,
+      tokenHash,
+    });
     const serializedTxs = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
@@ -351,7 +358,7 @@ describe('Railgun Proxy', function runTests() {
 
     const tree = 0;
 
-    const merkletree = engine.merkletrees[chain.type][chain.id].erc20;
+    const merkletree = engine.merkletrees[chain.type][chain.id];
 
     expect(await merkletree.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChain!: Chain;
@@ -376,7 +383,7 @@ describe('Railgun Proxy', function runTests() {
       this.skip();
       return;
     }
-    const unshield = new UnshieldNote(etherswallet.address, 100n, token.address, TokenType.ERC20);
+    const unshield = new UnshieldNoteERC20(etherswallet.address, 100n, token.address);
     const contractHash = await proxyContract.hashCommitment(unshield.preImage);
 
     expect(hexlify(contractHash)).to.equal(unshield.hashHex);
@@ -399,13 +406,7 @@ describe('Railgun Proxy', function runTests() {
     const merkleRootBefore = await proxyContract.merkleRoot();
 
     // Create shield
-    const shield = new ShieldNote(
-      wallet.masterPublicKey,
-      RANDOM,
-      VALUE,
-      TOKEN_ADDRESS,
-      TokenType.ERC20,
-    );
+    const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
@@ -469,7 +470,13 @@ describe('Railgun Proxy', function runTests() {
     await approval.wait();
 
     // Create shield
-    const shield = ShieldNote.ShieldedNFT(wallet.masterPublicKey, RANDOM, NFT_ADDRESS, 1);
+    const shield = new ShieldNoteNFT(
+      wallet.masterPublicKey,
+      RANDOM,
+      NFT_ADDRESS,
+      TokenType.ERC721,
+      BigInt(1).toString(),
+    );
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
@@ -516,22 +523,30 @@ describe('Railgun Proxy', function runTests() {
       async () => {},
     );
     // Create transaction
-    const transactionBatch = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, chain);
+    const transactionBatch = new TransactionBatch(chain);
+
+    const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
+    const tokenHash = getTokenDataHash(tokenData);
 
     transactionBatch.addOutput(
-      TransactNote.create(
+      TransactNote.createTransfer(
         wallet2.addressKeys,
         wallet.addressKeys,
         RANDOM,
         300n,
-        TOKEN_ADDRESS,
+        tokenHash,
         wallet.getViewingKeyPair(),
         true, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
       ),
     );
-    transactionBatch.setUnshield(etherswallet.address, 100n);
+    transactionBatch.addUnshieldData({
+      toAddress: etherswallet.address,
+      value: 100n,
+      tokenData,
+      tokenHash,
+    });
 
     // Create transact
     const transact = await proxyContract.transact(

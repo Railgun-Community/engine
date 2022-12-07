@@ -304,12 +304,12 @@ describe('Note/TransactNote', () => {
         privateKey: privateViewingKey,
         pubkey: publicViewingKey,
       };
-      const note = TransactNote.create(
+      const note = TransactNote.createTransfer(
         address,
         address,
         vector.note.random,
         hexToBigInt(vector.note.amount),
-        vector.note.token,
+        vector.note.token, // tokenHash
         viewingKeyPair,
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -338,7 +338,7 @@ describe('Note/TransactNote', () => {
         true, // isSentNote
         true, // isLegacyDecryption
       );
-      expect(decrypted.token).to.equal(note.token);
+      expect(decrypted.tokenHash).to.equal(note.tokenHash);
       expect(decrypted.value).to.equal(note.value);
       expect(decrypted.random).to.equal(note.random);
       expect(decrypted.hash).to.equal(note.hash);
@@ -357,7 +357,7 @@ describe('Note/TransactNote', () => {
         true, // isSentNote
         true, // isLegacyDecryption
       );
-      expect(decryptedFromCiphertext.token).to.equal(note.token);
+      expect(decryptedFromCiphertext.tokenHash).to.equal(note.tokenHash);
       expect(decryptedFromCiphertext.value).to.equal(note.value);
       expect(decryptedFromCiphertext.random).to.equal(note.random);
       expect(decryptedFromCiphertext.hash).to.equal(note.hash);

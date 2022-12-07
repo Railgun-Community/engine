@@ -8,7 +8,7 @@ import {
 } from '../complex-solutions';
 import { sortUTXOsBySize } from '../utxos';
 import { TransactionBatch } from '../../transaction/transaction-batch';
-import { OutputType, TokenType } from '../../models/formatted-types';
+import { OutputType } from '../../models/formatted-types';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
 import { randomHex } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
@@ -18,6 +18,7 @@ import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { TransactNote } from '../../note/transact-note';
 import { RailgunEngine } from '../../railgun-engine';
 import { TXO, TreeBalance } from '../../models';
+import { getTokenDataERC20, getTokenDataHash } from '../../note/note-util';
 
 const addressData1 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
@@ -29,7 +30,10 @@ const addressData3 = RailgunEngine.decodeAddress(
   '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
 );
 
-const TOKEN_ADDRESS = 'abc';
+const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const tokenData = getTokenDataERC20(tokenAddress);
+const tokenHash = getTokenDataHash(tokenData);
+
 const CHAIN = {
   type: ChainType.EVM,
   id: 1,
@@ -43,12 +47,12 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
     pubkey: publicViewingKey,
   };
 
-  return TransactNote.create(
+  return TransactNote.createTransfer(
     addressData,
     undefined,
     randomHex(16),
     value,
-    TOKEN_ADDRESS,
+    tokenHash,
     viewingKeyPair,
     false, // showSenderAddressToRecipient
     OutputType.Transfer,
@@ -227,6 +231,7 @@ describe('Solutions/Complex Solutions', () => {
       await createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups1 = createSpendingSolutionGroupsForOutput(
+      tokenHash,
       sortedTreeBalances,
       remainingOutputs1[0],
       remainingOutputs1,
@@ -241,12 +246,14 @@ describe('Solutions/Complex Solutions', () => {
         utxoValues: [20n, 0n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
+        tokenHash,
       },
       {
         utxoTxids: ['i'],
         utxoValues: [90n],
         outputValues: [60n],
         outputAddressDatas: [addressData1],
+        tokenHash,
       },
     ]);
 
@@ -257,6 +264,7 @@ describe('Solutions/Complex Solutions', () => {
       await createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups2 = createSpendingSolutionGroupsForOutput(
+      tokenHash,
       sortedTreeBalances,
       remainingOutputs2[0],
       remainingOutputs2,
@@ -271,12 +279,14 @@ describe('Solutions/Complex Solutions', () => {
         utxoValues: [20n, 0n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
+        tokenHash,
       },
       {
         utxoTxids: ['i', 'h'],
         utxoValues: [90n, 80n],
         outputValues: [130n],
         outputAddressDatas: [addressData1],
+        tokenHash,
       },
     ]);
 
@@ -284,6 +294,7 @@ describe('Solutions/Complex Solutions', () => {
     const remainingOutputs3: TransactNote[] = [await createMockNote(addressData1, BigInt(500))];
     expect(() =>
       createSpendingSolutionGroupsForOutput(
+        tokenHash,
         sortedTreeBalances,
         remainingOutputs3[0],
         remainingOutputs3,
@@ -321,15 +332,19 @@ describe('Solutions/Complex Solutions', () => {
     const sortedTreeBalances = [treeBalance0, treeBalance1];
 
     // Case 1.
-    const transactionBatch1 = new TransactionBatch(TOKEN_ADDRESS, TokenType.ERC20, CHAIN);
+    const transactionBatch1 = new TransactionBatch(CHAIN);
     const outputs1: TransactNote[] = [
       await createMockNote(addressData1, BigInt(80)),
       await createMockNote(addressData2, BigInt(70)),
       await createMockNote(addressData3, BigInt(60)),
     ];
     outputs1.forEach((output) => transactionBatch1.addOutput(output));
-    const spendingSolutionGroups1 =
-      transactionBatch1.createComplexSatisfyingSpendingSolutionGroups(sortedTreeBalances);
+    const tokenOutputs = outputs1; // filtered by token
+    const spendingSolutionGroups1 = transactionBatch1.createComplexSatisfyingSpendingSolutionGroups(
+      tokenHash,
+      tokenOutputs,
+      sortedTreeBalances,
+    );
     const extractedData1 = extractSpendingSolutionGroupsData(spendingSolutionGroups1);
     expect(extractedData1).to.deep.equal([
       {
@@ -337,24 +352,28 @@ describe('Solutions/Complex Solutions', () => {
         utxoValues: [20n, 0n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
+        tokenHash,
       },
       {
         utxoTxids: ['i'],
         utxoValues: [90n],
         outputValues: [60n],
         outputAddressDatas: [addressData1],
+        tokenHash,
       },
       {
         utxoTxids: ['h'],
         utxoValues: [80n],
         outputValues: [70n],
         outputAddressDatas: [addressData2],
+        tokenHash,
       },
       {
         utxoTxids: ['g'],
         utxoValues: [70n],
         outputValues: [60n],
         outputAddressDatas: [addressData3],
+        tokenHash,
       },
     ]);
   });

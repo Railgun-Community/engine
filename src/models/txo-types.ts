@@ -1,5 +1,5 @@
 import { TransactNote } from '../note/transact-note';
-import { NoteAnnotationData } from './formatted-types';
+import { NoteAnnotationData, TokenData } from './formatted-types';
 
 export type TXO = {
   tree: number;
@@ -21,6 +21,15 @@ export type SentCommitment = {
 export type SpendingSolutionGroup = {
   utxos: TXO[];
   spendingTree: number;
-  outputs: TransactNote[];
+  tokenOutputs: TransactNote[];
   unshieldValue: bigint;
+  tokenHash: string;
+};
+
+export type UnshieldData = {
+  toAddress: string;
+  value: bigint;
+  tokenData: TokenData;
+  tokenHash: string;
+  allowOverride?: boolean;
 };

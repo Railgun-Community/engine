@@ -1,4 +1,4 @@
-export const DEFAULT_TOKEN_SUB_ID = BigInt(0);
+export const TOKEN_SUB_ID_NULL = '0x00';
 
 export const UnshieldFlag = {
   NO_UNSHIELD: BigInt(0),

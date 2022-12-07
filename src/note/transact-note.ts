@@ -6,7 +6,7 @@ import {
   LegacyNoteSerialized,
   NoteSerialized,
   OutputType,
-  TokenType,
+  TokenData,
 } from '../models/formatted-types';
 import { PublicInputs } from '../models/prover-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
@@ -25,6 +25,7 @@ import { aes } from '../utils/encryption';
 import { signEDDSA, unblindNoteKey } from '../utils/keys-utils';
 import { unblindNoteKeyLegacy } from '../utils/keys-utils-legacy';
 import { LEGACY_MEMO_METADATA_BYTE_CHUNKS, Memo } from './memo';
+import { assertValidNoteRandom, getTokenDataHash, NFT_NOTE_VALUE } from './note-util';
 
 /**
  *
@@ -48,8 +49,8 @@ export class TransactNote {
   // address data of sender
   readonly senderAddressData: Optional<AddressData>;
 
-  // 32 byte token address
-  readonly token: string;
+  // 32 byte hash of token data
+  readonly tokenHash: string;
 
   // 16 byte random
   readonly random: string;
@@ -70,7 +71,7 @@ export class TransactNote {
    * Create Note object from values
    * @param {BigInt} receiverAddressData - recipient wallet address data
    * @param {string} random - note randomness
-   * @param {string} token - note token ID
+   * @param {string} tokenData - note token ID
    * @param {BigInt} value - note value
    */
   private constructor(
@@ -78,17 +79,17 @@ export class TransactNote {
     senderAddressData: Optional<AddressData>,
     random: string,
     value: bigint,
-    token: string,
+    tokenHash: string,
     annotationData: string,
     memoText: Optional<string>,
   ) {
-    TransactNote.assertValidRandom(random);
+    assertValidNoteRandom(random);
 
     this.receiverAddressData = receiverAddressData;
     this.senderAddressData = senderAddressData;
 
     this.random = random;
-    this.token = formatToByteLength(token, ByteLength.UINT_256);
+    this.tokenHash = tokenHash;
     this.value = BigInt(value);
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();
@@ -96,12 +97,12 @@ export class TransactNote {
     this.memoText = memoText;
   }
 
-  static create(
+  static createTransfer(
     receiverAddressData: AddressData,
     senderAddressData: Optional<AddressData>,
     random: string,
     value: bigint,
-    token: string,
+    tokenHash: string,
     senderViewingKeys: ViewingKeyPair,
     showSenderAddressToRecipient: boolean,
     outputType: OutputType,
@@ -116,13 +117,38 @@ export class TransactNote {
       senderRandom,
       senderViewingKeys.privateKey,
     );
+
     return new TransactNote(
       receiverAddressData,
       senderAddressData,
       random,
       value,
-      token,
+      tokenHash,
       annotationData,
+      memoText,
+    );
+  }
+
+  static createNFTTransfer(
+    receiverAddressData: AddressData,
+    senderAddressData: Optional<AddressData>,
+    random: string,
+    tokenData: TokenData,
+    senderViewingKeys: ViewingKeyPair,
+    showSenderAddressToRecipient: boolean,
+    memoText: Optional<string>,
+  ): TransactNote {
+    const tokenHash = getTokenDataHash(tokenData);
+
+    return TransactNote.createTransfer(
+      receiverAddressData,
+      senderAddressData,
+      random,
+      NFT_NOTE_VALUE,
+      tokenHash,
+      senderViewingKeys,
+      showSenderAddressToRecipient,
+      OutputType.Transfer,
       memoText,
     );
   }
@@ -143,7 +169,7 @@ export class TransactNote {
    * @returns {bigint} hash
    */
   private getHash(): bigint {
-    return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
+    return poseidon([this.notePublicKey, hexToBigInt(this.tokenHash), this.value]);
   }
 
   /**
@@ -299,7 +325,7 @@ export class TransactNote {
 
     const random = decryptedValues[2].substring(0, 32);
     const value = hexToBigInt(decryptedValues[2].substring(32, 64));
-    const tokenAddress = decryptedValues[1];
+    const tokenHash = decryptedValues[1];
     const memoText = Memo.decodeMemoText(combine(decryptedValues.slice(3)));
 
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
@@ -325,7 +351,7 @@ export class TransactNote {
         currentWalletAddressData,
         random,
         value,
-        tokenAddress,
+        tokenHash,
         annotationData,
         memoText,
       );
@@ -358,7 +384,7 @@ export class TransactNote {
       senderAddressData,
       random,
       value,
-      tokenAddress,
+      tokenHash,
       annotationData,
       memoText,
     );
@@ -367,7 +393,7 @@ export class TransactNote {
   private formatFields(prefix: boolean = false) {
     return {
       npk: nToHex(this.notePublicKey, ByteLength.UINT_256, prefix),
-      token: formatToByteLength(this.token, ByteLength.UINT_256, prefix),
+      token: formatToByteLength(this.tokenHash, ByteLength.UINT_256, prefix),
       value: nToHex(BigInt(this.value), ByteLength.UINT_128, prefix),
       random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
       annotationData: this.annotationData,
@@ -481,69 +507,13 @@ export class TransactNote {
     return poseidon([nullifyingKey, BigInt(leafIndex)]);
   }
 
-  static assertValidRandom(random: string) {
-    if (hexlify(random, false).length !== 32) {
-      throw new Error(`Random must be length 32 (16 bytes). Got ${hexlify(random, false)}.`);
-    }
-  }
-
-  static assertValidToken(
-    token: string,
-    tokenType: TokenType,
-    tokenSubID: Optional<string>,
-    value: bigint,
-  ) {
-    switch (tokenType) {
-      case TokenType.ERC20: {
-        if (hexlify(token, false).length !== 40 && hexlify(token, false).length !== 64) {
-          throw new Error(
-            `ERC20 token must be length 40 (20 bytes) or 64 (32 bytes). Got ${hexlify(
-              token,
-              false,
-            )}.`,
-          );
-        }
-        if (tokenSubID) {
-          throw new Error('ERC20 cannot have tokenSubID parameter.');
-        }
-        break;
-      }
-      case TokenType.ERC721: {
-        if (hexlify(token, false).length !== 40) {
-          throw new Error(`NFT token must be length 40 (20 bytes). Got ${hexlify(token, false)}.`);
-        }
-        if (!tokenSubID) {
-          throw new Error('ERC721 must have tokenSubID parameter.');
-        }
-        if (value !== BigInt(1)) {
-          throw new Error('ERC721 note must have value of 1.');
-        }
-        break;
-      }
-      case TokenType.ERC1155: {
-        if (hexlify(token, false).length !== 64) {
-          throw new Error(
-            `ERC1155 token must be length 64 (32 bytes). Got ${hexlify(token, false)}.`,
-          );
-        }
-        if (!tokenSubID) {
-          throw new Error('ERC1155 must have tokenSubID parameter.');
-        }
-        break;
-      }
-      default: {
-        throw new Error('Unhandled token type.');
-      }
-    }
-  }
-
   newProcessingNoteWithValue(value: bigint): TransactNote {
     return new TransactNote(
       this.receiverAddressData,
       this.senderAddressData,
       randomHex(16),
       value,
-      this.token,
+      this.tokenHash,
       this.annotationData,
       this.memoText,
     );

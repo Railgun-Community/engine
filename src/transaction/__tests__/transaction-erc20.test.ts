@@ -11,11 +11,9 @@ import {
   LegacyGeneratedCommitment,
   NoteAnnotationData,
   OutputType,
-  TokenType,
 } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Memo } from '../../note/memo';
-import { TransactionBatch } from '../transaction-batch';
 import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../../utils/bytes';
 import {
   getNoteBlindingKeys,
@@ -36,6 +34,8 @@ import { BoundParamsStruct } from '../../typechain-types/contracts/logic/Railgun
 import { MEMO_SENDER_RANDOM_NULL } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { aes } from '../../utils';
+import { TransactionBatch } from '../transaction-batch';
+import { getTokenDataERC20, getTokenDataHash } from '../../note/note-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -52,7 +52,9 @@ let address: AddressData;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const tokenData = getTokenDataERC20(tokenAddress);
+const tokenHash = getTokenDataHash(tokenData);
 const random = randomHex(16);
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
@@ -90,11 +92,7 @@ const shieldLeaf: LegacyGeneratedCommitment = {
   txid: '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
   preImage: {
     npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
-    token: {
-      tokenAddress: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
-      tokenType: TokenType.ERC20,
-      tokenSubID: '0x0000000000000000000000000000000000000000',
-    },
+    token: getTokenDataERC20(tokenAddress),
     value: '000000000000021cbfcc6fd98333b5f1',
   },
   encryptedRandom: [
@@ -112,7 +110,7 @@ describe('Transaction/ERC20', function test() {
       type: ChainType.EVM,
       id: 1,
     };
-    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
+    merkletree = new MerkleTree(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -125,24 +123,24 @@ describe('Transaction/ERC20', function test() {
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
-    wallet.loadERC20Merkletree(merkletree);
+    wallet.loadMerkletree(merkletree);
     makeNote = async (
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
     ): Promise<TransactNote> => {
-      return TransactNote.create(
+      return TransactNote.createTransfer(
         address,
         undefined,
         random,
         value,
-        token,
+        tokenHash,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         outputType,
         undefined, // memoText
       );
     };
-    merkletree.validateRoot = () => Promise.resolve(true);
+    merkletree.rootValidator = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [shieldLeaf]); // start with a shield
     await merkletree.updateTrees();
 
@@ -154,7 +152,7 @@ describe('Transaction/ERC20', function test() {
   });
 
   beforeEach(async () => {
-    transactionBatch = new TransactionBatch(token, TokenType.ERC20, chain);
+    transactionBatch = new TransactionBatch(chain);
   });
 
   it('Should hash bound parameters', async () => {
@@ -258,12 +256,12 @@ describe('Transaction/ERC20', function test() {
 
     const memoText = 'Some Memo Text';
 
-    const note = TransactNote.create(
+    const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       random,
       100n,
-      token,
+      tokenHash,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
@@ -374,12 +372,12 @@ describe('Transaction/ERC20', function test() {
 
     const memoText = undefined;
 
-    const note = TransactNote.create(
+    const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       random,
       100n,
-      token,
+      tokenHash,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
@@ -490,12 +488,12 @@ describe('Transaction/ERC20', function test() {
 
     const memoText = undefined;
 
-    const note = TransactNote.create(
+    const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       random,
       100n,
-      token,
+      tokenHash,
       wallet.getViewingKeyPair(),
       true, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
@@ -580,9 +578,8 @@ describe('Transaction/ERC20', function test() {
 
   it('Should generate a valid signature for transaction', async () => {
     transactionBatch.addOutput(await makeNote());
-    const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
-      wallet,
-    );
+    const spendingSolutionGroups =
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet);
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -604,9 +601,8 @@ describe('Transaction/ERC20', function test() {
 
   it('Should generate validated inputs for transaction batch', async () => {
     transactionBatch.addOutput(await makeNote());
-    const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
-      wallet,
-    );
+    const spendingSolutionGroups =
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet);
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -621,16 +617,16 @@ describe('Transaction/ERC20', function test() {
     transactionBatch.addOutput(await makeNote());
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('Too many transaction outputs');
+    ).to.eventually.be.rejectedWith('Can not add more than 2 outputs.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(
-      TransactNote.create(
+      TransactNote.createTransfer(
         address,
         undefined,
         random,
         6500000000000n,
-        '000925cdf66ddf5b88016df1fe915e68eff8f192',
+        '000925cdf66ddf5b88016df1fe915e68eff8f192', // invalid tokenHash
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -639,38 +635,52 @@ describe('Transaction/ERC20', function test() {
     );
 
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroups(wallet),
-    ).to.eventually.be.rejectedWith('Token address mismatch on output 0');
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
+    ).to.eventually.be.rejectedWith(
+      'Can not find RAILGUN wallet balance for token ID: 000925cdf66ddf5b88016df1fe915e68eff8f192',
+    );
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(21000000000027360000000000n));
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroups(wallet),
-    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
+    ).to.eventually.be.rejectedWith('RAILGUN private token balance too low.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(11000000000027360000000000n));
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroups(wallet),
-    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
+    ).to.eventually.be.rejectedWith('RAILGUN private token balance too low.');
 
-    const transaction2 = new TransactionBatch('ff', TokenType.ERC20, chain);
+    const transaction2 = new TransactionBatch(chain);
 
-    transaction2.setUnshield(ethersWallet.address, 12n);
+    const tokenDataBadAddress = getTokenDataERC20('0x00000000000000000000000000000000000000ff');
+    const tokenHashBadAddress = getTokenDataHash(tokenDataBadAddress);
+
+    transaction2.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: 12n,
+      tokenData: tokenDataBadAddress,
+      tokenHash: tokenHashBadAddress,
+    });
 
     await expect(
-      transaction2.generateValidSpendingSolutionGroups(wallet),
+      transaction2.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      `No wallet balance for token: 0x00000000000000000000000000000000000000ff`,
+      'Can not find RAILGUN wallet balance for token ID: 00000000000000000000000000000000000000000000000000000000000000ff',
     );
   });
 
   it('Should generate validated inputs for transaction batch - unshield', async () => {
     transactionBatch.addOutput(await makeNote());
-    transactionBatch.setUnshield(ethersWallet.address, 2n, true);
-    const spendingSolutionGroups = await transactionBatch.generateValidSpendingSolutionGroups(
-      wallet,
-    );
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: 2n,
+      tokenData,
+      tokenHash,
+    });
+    const spendingSolutionGroups =
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet);
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -730,11 +740,11 @@ describe('Transaction/ERC20', function test() {
 
   // it('Generator', async () => {
   //   const dblocal = new Database(memdown());
-  //   const merkletreelocal = new MerkleTree(dblocal, 1, 'erc20', async () => true);
+  //   const merkletreelocal = new MerkleTree(dblocal, 1, async () => true);
   //   const walletlocal = await Wallet.fromMnemonic(dblocal, testEncryptionKey, testMnemonic);
   //   const proverlocal = new Prover(artifactsGetter);
 
-  //   const note = TransactNote.create(
+  //   const note = TransactNote.createTransfer(
   //     '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   //     '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
   //     new BN('11000000000000000000000000', 10),
@@ -761,7 +771,7 @@ describe('Transaction/ERC20', function test() {
   //   const transactionlocal = new ERC20Transaction('5FbDB2315678afecb367f032d93F642f64180aa3', 1);
 
   //   transactionlocal.outputs = [
-  //     TransactNote.create(
+  //     TransactNote.createTransfer(
   //       '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
   //       '0x1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
   //       'ffff',
@@ -776,7 +786,7 @@ describe('Transaction/ERC20', function test() {
 
   this.afterAll(() => {
     // Clean up database
-    wallet.unloadERC20Merkletree(merkletree.chain);
+    wallet.unloadMerkletree(merkletree.chain);
     db.close();
   });
 });

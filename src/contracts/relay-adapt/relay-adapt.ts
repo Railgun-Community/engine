@@ -2,7 +2,8 @@ import { Provider } from '@ethersproject/abstract-provider';
 import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { Result } from 'ethers/lib/utils';
 import { ABIRelayAdapt } from '../../abi/abi';
-import { TokenData, TokenType, TransactionReceiptLog } from '../../models/formatted-types';
+import { TransactionReceiptLog } from '../../models/formatted-types';
+import { getTokenDataERC20 } from '../../note/note-util';
 import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
 import {
   ShieldRequestStruct,
@@ -62,11 +63,8 @@ class RelayAdaptContract {
   private async getOrderedCallsForUnshieldBaseToken(
     unshieldAddress: string,
   ): Promise<PopulatedTransaction[]> {
-    const baseTokenData: TokenData = {
-      tokenAddress: ZERO_ADDRESS,
-      tokenType: TokenType.ERC20,
-      tokenSubID: ZERO_ADDRESS,
-    };
+    // Use 0x00 address ERC20 to represent base token.
+    const baseTokenData = getTokenDataERC20(ZERO_ADDRESS);
 
     // Automatically unwraps and unshields all tokens.
     const value = 0n;

@@ -26,14 +26,7 @@ import { UnshieldStoredEvent } from '../models';
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
 
-// Declare depth
-const depths = {
-  erc20: 16,
-  erc721: 8,
-} as const;
-
-// Declare purposes
-export type TreePurpose = keyof typeof depths;
+const TREE_DEPTH = 16;
 
 type TreeMetadata = {
   scannedHeight: number;
@@ -69,10 +62,6 @@ class MerkleTree {
 
   readonly chain: Chain;
 
-  readonly purpose: TreePurpose;
-
-  readonly depth: number;
-
   readonly zeros: string[] = [];
 
   private treeLengths: number[] = [];
@@ -81,7 +70,7 @@ class MerkleTree {
   private writeQueue: Commitment[][][] = [];
 
   // Check function to test if merkle root is valid
-  public validateRoot: RootValidator;
+  public rootValidator: RootValidator;
 
   public trees: bigint[][];
 
@@ -93,30 +82,20 @@ class MerkleTree {
    * Create MerkleTree controller from database
    * @param db - database object to use
    * @param chain - Chain type/id
-   * @param purpose - purpose of merkle tree
-   * @param validateRoot - root validator callback
-   * @param depth - merkle tree depth
+   * @param rootValidator - root validator callback
    */
-  constructor(
-    db: Database,
-    chain: Chain,
-    purpose: TreePurpose,
-    validateRoot: RootValidator,
-    depth: number = depths[purpose],
-  ) {
+  constructor(db: Database, chain: Chain, rootValidator: RootValidator) {
     // Set passed values
     this.db = db;
     this.chain = chain;
-    this.trees = Array(depth)
+    this.trees = Array(TREE_DEPTH)
       .fill(0)
       .map(() => []);
-    this.purpose = purpose;
-    this.depth = depth;
-    this.validateRoot = validateRoot;
+    this.rootValidator = rootValidator;
 
     // Calculate zero values
     this.zeros[0] = MERKLE_ZERO_VALUE;
-    for (let level = 1; level <= this.depth; level += 1) {
+    for (let level = 1; level <= TREE_DEPTH; level += 1) {
       this.zeros[level] = MerkleTree.hashLeftRight(this.zeros[level - 1], this.zeros[level - 1]);
     }
   }
@@ -135,7 +114,7 @@ class MerkleTree {
     const elementsIndexes: number[] = [index ^ 1];
 
     // Loop through each level and calculate index
-    while (elementsIndexes.length < this.depth) {
+    while (elementsIndexes.length < TREE_DEPTH) {
       // Shift right and flip last bit
       elementsIndexes.push((elementsIndexes[elementsIndexes.length - 1] >> 1) ^ 1);
     }
@@ -176,8 +155,11 @@ class MerkleTree {
    * @returns database prefix
    */
   getChainDBPrefix(): string[] {
-    return [fromUTF8String(`merkletree-${this.purpose}`), getChainFullNetworkID(this.chain)].map(
-      (el) => formatToByteLength(el, ByteLength.UINT_256),
+    // DO NOT change this string.
+    const merkletreePrefix = fromUTF8String('merkletree-erc20');
+
+    return [merkletreePrefix, getChainFullNetworkID(this.chain)].map((el) =>
+      formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -308,8 +290,19 @@ class MerkleTree {
    * @param index - index of commitment
    * @returns commitment
    */
-  getCommitment(tree: number, index: number): Promise<Optional<Commitment>> {
-    return this.db.get(this.getCommitmentDBPath(tree, index), 'json');
+  async getCommitment(tree: number, index: number): Promise<Commitment> {
+    try {
+      const commitment = (await this.db.get(
+        this.getCommitmentDBPath(tree, index),
+        'json',
+      )) as Commitment;
+      return commitment;
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      throw new Error(err.message);
+    }
   }
 
   /**
@@ -423,7 +416,7 @@ class MerkleTree {
    * @returns tree root
    */
   getRoot(tree: number): Promise<string> {
-    return this.getNodeHash(tree, this.depth, 0);
+    return this.getNodeHash(tree, TREE_DEPTH, 0);
   }
 
   /**
@@ -518,7 +511,7 @@ class MerkleTree {
     });
 
     // Loop through each level and calculate values
-    while (level < this.depth) {
+    while (level < TREE_DEPTH) {
       // Set starting index for this level
       index = nextLevelStartIndex;
 
@@ -551,8 +544,8 @@ class MerkleTree {
       level += 1;
     }
 
-    const rootNode = hashWriteGroup[this.depth][0];
-    const validRoot = await this.validateRoot(tree, rootNode);
+    const rootNode = hashWriteGroup[TREE_DEPTH][0];
+    const validRoot = await this.rootValidator(tree, rootNode);
     if (!validRoot) {
       throw new Error(
         `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
@@ -585,7 +578,7 @@ class MerkleTree {
     while (this.writeQueue[treeIndex]) {
       // Process leaves as a group until we hit an invalid merkleroot.
       // Then, process each single item.
-      // This optimizes for fewer `validateRoot` calls, while still protecting
+      // This optimizes for fewer `rootValidator` calls, while still protecting
       // users against invalid roots and broken trees.
 
       this.processingWriteQueueTrees[treeIndex] = true;
@@ -773,4 +766,4 @@ class MerkleTree {
   }
 }
 
-export { MerkleTree, depths };
+export { MerkleTree };

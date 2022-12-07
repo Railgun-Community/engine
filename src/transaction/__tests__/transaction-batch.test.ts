@@ -3,9 +3,8 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Commitment, CommitmentType, OutputType, TokenType } from '../../models/formatted-types';
+import { Commitment, CommitmentType, OutputType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
-import { TransactionBatch } from '../transaction-batch';
 import { randomHex } from '../../utils/bytes';
 import { config } from '../../test/config.test';
 import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
@@ -15,6 +14,8 @@ import { MerkleTree } from '../../merkletree/merkletree';
 import { TransactNote } from '../../note/transact-note';
 import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
+import { TransactionBatch } from '../transaction-batch';
+import { getTokenDataERC20, getTokenDataHash } from '../../note/note-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -31,7 +32,9 @@ let address: AddressData;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-const token = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+const tokenData = getTokenDataERC20(tokenAddress);
+const tokenHash = getTokenDataHash(tokenData);
 const random = randomHex(16);
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
@@ -42,11 +45,7 @@ const shieldLeaf = (txid: string): Commitment => ({
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
   preImage: {
     npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
-    token: {
-      tokenAddress: '0x5fbdb2315678afecb367f032d93f642f64180aa3',
-      tokenType: TokenType.ERC20,
-      tokenSubID: '0x0000000000000000000000000000000000000000',
-    },
+    token: tokenData,
     value: '000000000000021cbfcc6fd98333b5f1', // 9975062344139650872817n
   },
   encryptedRandom: [
@@ -66,7 +65,7 @@ describe('Transaction/Transaction Batch', function run() {
       type: ChainType.EVM,
       id: 1,
     };
-    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
+    merkletree = new MerkleTree(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -78,21 +77,21 @@ describe('Transaction/Transaction Batch', function run() {
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
-    wallet.loadERC20Merkletree(merkletree);
+    wallet.loadMerkletree(merkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
-      return TransactNote.create(
+      return TransactNote.createTransfer(
         address,
         undefined,
         random,
         value,
-        token,
+        tokenHash,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.Transfer,
         undefined, // memoText
       );
     };
-    merkletree.validateRoot = () => Promise.resolve(true);
+    merkletree.rootValidator = () => Promise.resolve(true);
     await merkletree.queueLeaves(0, 0, [shieldLeaf('a')]);
     await merkletree.queueLeaves(1, 0, [
       shieldLeaf('b'),
@@ -107,7 +106,7 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   beforeEach(async () => {
-    transactionBatch = new TransactionBatch(token, TokenType.ERC20, chain);
+    transactionBatch = new TransactionBatch(chain);
   });
 
   it('Should validate transaction batch outputs', async () => {
@@ -127,7 +126,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
+    ).to.eventually.be.rejectedWith('RAILGUN private token balance too low.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(shieldValue));
@@ -159,7 +158,12 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   it('Should validate transaction batch outputs w/ unshields', async () => {
-    transactionBatch.setUnshield(ethersWallet.address, shieldValue * 6n);
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue * 6n,
+      tokenData,
+      tokenHash,
+    });
     const txs = await transactionBatch.generateTransactions(
       prover,
       wallet,
@@ -177,21 +181,31 @@ describe('Transaction/Transaction Batch', function run() {
     ]);
 
     transactionBatch.resetOutputs();
-    transactionBatch.resetUnshield();
+    transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
-    transactionBatch.setUnshield(ethersWallet.address, shieldValue * 1n);
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue * 1n,
+      tokenData,
+      tokenHash,
+    });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('RAILGUN wallet balance too low.');
+    ).to.eventually.be.rejectedWith('RAILGUN private token balance too low.');
 
     transactionBatch.resetOutputs();
-    transactionBatch.resetUnshield();
+    transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(shieldValue));
     transactionBatch.addOutput(await makeNote(shieldValue));
     transactionBatch.addOutput(await makeNote(shieldValue));
     transactionBatch.addOutput(await makeNote(shieldValue));
     transactionBatch.addOutput(await makeNote(shieldValue));
-    transactionBatch.setUnshield(ethersWallet.address, shieldValue);
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue,
+      tokenData,
+      tokenHash,
+    });
     const txs2 = await transactionBatch.generateTransactions(
       prover,
       wallet,
@@ -213,11 +227,16 @@ describe('Transaction/Transaction Batch', function run() {
     // TODO: Unhandled case.
     // Fix by using change from one note for the next output note... and so on.
     transactionBatch.resetOutputs();
-    transactionBatch.resetUnshield();
+    transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
-    transactionBatch.setUnshield(ethersWallet.address, shieldValue + 1n);
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue + 1n,
+      tokenData,
+      tokenHash,
+    });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
@@ -230,9 +249,14 @@ describe('Transaction/Transaction Batch', function run() {
     await merkletree.queueLeaves(1, 0, [shieldLeaf('g'), shieldLeaf('h')]);
     await merkletree.updateTrees();
     transactionBatch.resetOutputs();
-    transactionBatch.resetUnshield();
+    transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(0n));
-    transactionBatch.setUnshield(ethersWallet.address, shieldValue * 5n);
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue * 5n,
+      tokenData,
+      tokenHash,
+    });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
@@ -242,7 +266,7 @@ describe('Transaction/Transaction Batch', function run() {
 
   this.afterAll(() => {
     // Clean up database
-    wallet.unloadERC20Merkletree(merkletree.chain);
+    wallet.unloadMerkletree(merkletree.chain);
     db.close();
   });
 });

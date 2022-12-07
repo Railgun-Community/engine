@@ -9,10 +9,10 @@ import {
   randomHex,
 } from '../utils/bytes';
 import { AdaptID, OutputType, TokenType } from '../models/formatted-types';
-import { DEFAULT_TOKEN_SUB_ID, UnshieldFlag } from '../models/transaction-constants';
+import { UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { UnshieldNote } from '../note/unshield-note';
-import { TXO } from '../models/txo-types';
+import { TXO, UnshieldData } from '../models/txo-types';
 import { Memo } from '../note/memo';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
@@ -25,27 +25,25 @@ import {
 } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { hashBoundParams } from './bound-params';
 import { getChainFullNetworkID } from '../chain/chain';
+import { UnshieldNoteERC20 } from '../note/erc20/unshield-note-erc20';
+import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 
 class Transaction {
-  private adaptID: AdaptID;
+  private readonly adaptID: AdaptID;
 
-  private chain: Chain;
+  private readonly chain: Chain;
 
-  private tokenAddress: string;
+  private readonly tokenOutputs: TransactNote[] = [];
 
-  private outputs: TransactNote[] = [];
-
-  private unshieldNote: UnshieldNote = UnshieldNote.empty();
+  private unshieldNote: UnshieldNote = UnshieldNoteERC20.empty();
 
   private unshieldFlag: bigint = UnshieldFlag.NO_UNSHIELD;
 
-  private tokenType: TokenType;
+  private readonly tokenHash: string;
 
-  private tokenSubID: bigint;
+  private readonly spendingTree: number;
 
-  private spendingTree: number;
-
-  private utxos: TXO[];
+  private readonly utxos: TXO[];
 
   /**
    * Create ERC20Transaction Object
@@ -56,36 +54,57 @@ class Transaction {
    * @param utxos - UTXOs to spend from
    */
   constructor(
-    tokenAddress: string,
-    tokenType: TokenType,
     chain: Chain,
+    tokenHash: string,
     spendingTree: number,
     utxos: TXO[],
+    tokenOutputs: TransactNote[],
     adaptID: AdaptID,
-    tokenSubID: bigint = DEFAULT_TOKEN_SUB_ID,
   ) {
-    this.tokenAddress = formatToByteLength(tokenAddress, ByteLength.UINT_256);
-    this.tokenType = tokenType;
-    this.chain = chain;
-    this.spendingTree = spendingTree;
-    this.utxos = utxos;
-    this.adaptID = adaptID;
-    this.tokenSubID = tokenSubID;
-  }
-
-  setOutputs(outputs: TransactNote[]) {
-    if (this.outputs.length > 2) {
+    if (tokenOutputs.length > 2) {
       throw new Error('Can not add more than 2 outputs.');
     }
-    this.outputs = outputs;
+
+    this.chain = chain;
+    this.tokenHash = tokenHash;
+    this.spendingTree = spendingTree;
+    this.utxos = utxos;
+    this.tokenOutputs = tokenOutputs;
+    this.adaptID = adaptID;
   }
 
-  unshield(unshieldAddress: string, value: bigint, allowOverride?: boolean) {
+  addUnshieldData(unshieldData: UnshieldData, unshieldValue: bigint) {
     if (this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD) {
       throw new Error('You may only call .unshield once for a given transaction.');
     }
+    if (unshieldData.tokenHash !== this.tokenHash) {
+      throw new Error('Unshield token does not match Transaction token.');
+    }
 
-    this.unshieldNote = new UnshieldNote(unshieldAddress, value, this.tokenAddress, this.tokenType);
+    const { tokenData, allowOverride } = unshieldData;
+    const { tokenAddress, tokenType, tokenSubID } = tokenData;
+
+    switch (tokenType) {
+      case TokenType.ERC20:
+        this.unshieldNote = new UnshieldNoteERC20(
+          unshieldData.toAddress,
+          unshieldValue,
+          tokenAddress,
+          allowOverride,
+        );
+        break;
+      case TokenType.ERC721:
+      case TokenType.ERC1155:
+        this.unshieldNote = new UnshieldNoteNFT(
+          unshieldData.toAddress,
+          tokenAddress,
+          tokenType,
+          tokenSubID,
+          allowOverride,
+        );
+        break;
+    }
+
     this.unshieldFlag = allowOverride ? UnshieldFlag.OVERRIDE : UnshieldFlag.UNSHIELD;
   }
 
@@ -106,14 +125,14 @@ class Transaction {
     publicInputs: PublicInputs;
     boundParams: BoundParamsStruct;
   }> {
-    const merkletree = wallet.erc20Merkletrees[this.chain.type][this.chain.id];
-    const merkleRoot = await merkletree.getRoot(this.spendingTree); // TODO: Is this correct tree?
+    const merkletree = wallet.merkletrees[this.chain.type][this.chain.id];
+    const merkleRoot = await merkletree.getRoot(this.spendingTree);
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();
     const senderViewingKeys = wallet.getViewingKeyPair();
 
     // Check if there's too many outputs
-    if (this.outputs.length > 2) throw new Error('Too many transaction outputs');
+    if (this.tokenOutputs.length > 2) throw new Error('Too many transaction outputs');
 
     // Get values
     const nullifiers: bigint[] = [];
@@ -142,23 +161,23 @@ class Transaction {
     const totalIn = utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
     const totalOut =
-      this.outputs.reduce((left, right) => left + right.value, BigInt(0)) + this.unshieldValue;
+      this.tokenOutputs.reduce((left, right) => left + right.value, BigInt(0)) + this.unshieldValue;
 
     const change = totalIn - totalOut;
     if (change < 0) {
       throw new Error('Negative change value - transaction not possible.');
     }
 
-    const allOutputs: (TransactNote | UnshieldNote)[] = [...this.outputs];
+    const allOutputs: (TransactNote | UnshieldNote)[] = [...this.tokenOutputs];
 
     // Create change output
     allOutputs.push(
-      TransactNote.create(
+      TransactNote.createTransfer(
         wallet.addressKeys, // Receiver
         wallet.addressKeys, // Sender
         randomHex(16),
         change,
-        this.tokenAddress,
+        this.tokenHash,
         senderViewingKeys,
         true, // showSenderAddressToRecipient
         OutputType.Change,
@@ -254,7 +273,7 @@ class Transaction {
 
     // Format inputs
     const inputs: PrivateInputs = {
-      tokenAddress: hexToBigInt(this.tokenAddress),
+      tokenAddress: hexToBigInt(this.tokenHash),
       randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
       pathElements,

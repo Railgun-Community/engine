@@ -42,14 +42,14 @@ export function formatShieldCommitments(
 ): ShieldCommitment[] {
   const shieldCommitments = preImages.map((commitmentPreImage, index) => {
     const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
-    const token = serializeTokenData(
+    const tokenData = serializeTokenData(
       commitmentPreImage.token.tokenAddress,
       commitmentPreImage.token.tokenType,
       commitmentPreImage.token.tokenSubID.toHexString(),
     );
     const value = commitmentPreImage.value.toBigInt();
-    const preImage = serializePreImage(npk, token, value);
-    const noteHash = getNoteHash(npk, token.tokenAddress, value);
+    const preImage = serializePreImage(npk, tokenData, value);
+    const noteHash = getNoteHash(npk, tokenData, value);
 
     const commitment: ShieldCommitment = {
       commitmentType: CommitmentType.ShieldCommitment,

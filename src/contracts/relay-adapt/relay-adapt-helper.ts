@@ -2,12 +2,11 @@ import { ethers, PopulatedTransaction, BigNumber } from 'ethers';
 import { randomHex, hexToBytes } from '../../utils/bytes';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
-import { ShieldNote } from '../../note/shield-note';
 import {
   ShieldRequestStruct,
   TransactionStruct,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
-import { TokenType } from '../../models/formatted-types';
+import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 
 class RelayAdaptHelper {
   static generateRelayShieldRequests(
@@ -15,7 +14,7 @@ class RelayAdaptHelper {
     random: string,
     shieldTokens: string[],
   ): Promise<ShieldRequestStruct[]> {
-    const relayShields = RelayAdaptHelper.createRelayShields(
+    const relayShields = RelayAdaptHelper.createRelayShieldERC20s(
       wallet.masterPublicKey,
       random,
       shieldTokens,
@@ -29,13 +28,13 @@ class RelayAdaptHelper {
     );
   }
 
-  private static createRelayShields(
+  private static createRelayShieldERC20s(
     masterPublicKey: bigint,
     random: string,
     tokens: string[],
-  ): ShieldNote[] {
+  ): ShieldNoteERC20[] {
     return tokens.map((token) => {
-      return new ShieldNote(masterPublicKey, random, 0n, token, TokenType.ERC20);
+      return new ShieldNoteERC20(masterPublicKey, random, 0n, token);
     });
   }
 
@@ -95,6 +94,22 @@ class RelayAdaptHelper {
       ],
       [nullifiers, transactions.length, actionData],
     );
+
+    // Test: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee', 1, actionData]
+    //
+    // actionData:
+    //
+    // calls:
+    //  0:
+    // {to: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933', data: '0xd5774a280000000000000000000000000000000000000000000000000000000000000000', value: 0n}
+    // 1:
+    // {to: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933', data: '0xc2e9ffd8000000000000000000000000000000000000…000000000000000000000000000000000000000000000', value: 0n}
+    // minGasLimit:
+    // BigNumber {_hex: '0x00', _isBigNumber: true}
+    // random:
+    // Uint8Array(31) [18, 52, 86, 120, 144, 171, 205, 239, 18, 52, 86, 120, 144, 171, 205, 239, 18, 52, 86, 120, 144, 171, 205, 239, 18, 52, 86, 120, 144, 171, 205, buffer: ArrayBuffer(31), byteLength: 31, byteOffset: 0, length: 31]
+    // requireSuccess:
+    // true];
 
     return ethers.utils.keccak256(hexToBytes(preimage));
   }

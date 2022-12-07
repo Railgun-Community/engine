@@ -1,65 +1,38 @@
 import { poseidon } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { ShieldCiphertext, TokenType } from '../models/formatted-types';
+import { ShieldCiphertext, TokenData } from '../models/formatted-types';
 import { ShieldRequestStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { getPublicViewingKey, getSharedSymmetricKey } from '../utils';
 import { ByteLength, combine, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
-import { ZERO_ADDRESS } from '../utils/constants';
 import { aes } from '../utils/encryption';
-import { TransactNote } from './transact-note';
+import { assertValidNoteRandom, assertValidNoteToken, getTokenDataHash } from './note-util';
 
-export class ShieldNote {
+export abstract class ShieldNote {
   readonly masterPublicKey: bigint;
 
   readonly random: string;
 
   readonly value: bigint;
 
-  readonly tokenAddress: string;
+  readonly tokenData: TokenData;
 
-  readonly tokenType: TokenType;
-
-  readonly tokenSubID: string;
+  readonly tokenHash: string;
 
   readonly notePublicKey: bigint;
 
   readonly hash: bigint;
 
-  constructor(
-    masterPublicKey: bigint,
-    random: string,
-    value: bigint,
-    tokenAddress: string,
-    tokenType: TokenType,
-    tokenSubID?: string,
-  ) {
-    TransactNote.assertValidRandom(random);
-    TransactNote.assertValidToken(tokenAddress, tokenType, tokenSubID, value);
+  constructor(masterPublicKey: bigint, random: string, value: bigint, tokenData: TokenData) {
+    assertValidNoteRandom(random);
+    assertValidNoteToken(tokenData, value);
 
     this.masterPublicKey = masterPublicKey;
     this.random = random;
-    this.tokenAddress = tokenAddress;
-    this.tokenType = tokenType;
-    this.tokenSubID = tokenSubID || ZERO_ADDRESS;
+    this.tokenData = tokenData;
+    this.tokenHash = getTokenDataHash(tokenData);
     this.value = value;
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();
-  }
-
-  static ShieldedNFT(
-    masterPublicKey: bigint,
-    random: string,
-    tokenAddress: string,
-    tokenID: number,
-  ) {
-    return new ShieldNote(
-      masterPublicKey,
-      random,
-      ShieldNote.nftNoteValue(),
-      tokenAddress,
-      TokenType.ERC721,
-      ShieldNote.nftTokenIDToSubID(tokenID),
-    );
   }
 
   /**
@@ -71,22 +44,6 @@ export class ShieldNote {
     return 'RAILGUN_SHIELD';
   }
 
-  private static nftTokenIDToSubID(tokenID: number): string {
-    return nToHex(BigInt(tokenID), ByteLength.Address, true);
-  }
-
-  private static nftNoteValue(): bigint {
-    return BigInt(1);
-  }
-
-  get tokenData() {
-    return {
-      tokenAddress: this.tokenAddress,
-      tokenType: this.tokenType,
-      tokenSubID: this.tokenSubID,
-    };
-  }
-
   private getNotePublicKey(): bigint {
     return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
   }
@@ -95,7 +52,7 @@ export class ShieldNote {
    * Get note hash
    */
   private getHash(): bigint {
-    return poseidon([this.notePublicKey, hexToBigInt(this.tokenAddress), this.value]);
+    return poseidon([this.notePublicKey, hexToBigInt(this.tokenHash), this.value]);
   }
 
   static decryptRandom(encryptedBundle: [string, string, string], sharedKey: Uint8Array): string {

@@ -33,7 +33,7 @@ describe('Wallet', () => {
   beforeEach(async () => {
     // Create database and wallet
     db = new Database(memdown());
-    merkletree = new MerkleTree(db, chain, 'erc20', async () => true);
+    merkletree = new MerkleTree(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -41,7 +41,7 @@ describe('Wallet', () => {
       0,
       undefined, // creationBlockNumbers
     );
-    wallet.loadERC20Merkletree(merkletree);
+    wallet.loadMerkletree(merkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
@@ -272,7 +272,7 @@ describe('Wallet', () => {
 
   afterEach(() => {
     // Clean up database
-    wallet.unloadERC20Merkletree(merkletree.chain);
+    wallet.unloadMerkletree(merkletree.chain);
     db.close();
   });
 });

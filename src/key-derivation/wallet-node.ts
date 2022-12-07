@@ -1,10 +1,10 @@
-import { poseidon, Signature } from 'circomlibjs';
+import { poseidon } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { KeyNode } from '../models/engine-types';
 import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } from './bip32';
 import { hexStringToBytes, hexToBigInt } from '../utils/bytes';
 import { mnemonicToSeed } from './bip39';
-import { getPublicSpendingKey, getPublicViewingKey, signEDDSA } from '../utils/keys-utils';
+import { getPublicSpendingKey, getPublicViewingKey } from '../utils/keys-utils';
 
 const HARDENED_OFFSET = 0x80000000;
 
@@ -110,9 +110,5 @@ export class WalletNode {
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
     return poseidon([hexToBigInt(bytesToHex(privateKey))]);
-  }
-
-  signBySpendingKey(message: bigint): Signature {
-    return signEDDSA(this.getSpendingKeyPair().privateKey, message);
   }
 }

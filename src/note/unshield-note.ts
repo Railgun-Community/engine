@@ -1,54 +1,57 @@
-import { TokenData, TokenType } from '../models/formatted-types';
+import { UnshieldData } from '../models';
+import { TokenData } from '../models/formatted-types';
 import { CommitmentPreimageStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ByteLength, nToHex } from '../utils/bytes';
-import { ZERO_ADDRESS } from '../utils/constants';
-import { TransactNote } from './transact-note';
-import { getNoteHash, serializePreImage, serializeTokenData } from './note-util';
+import {
+  assertValidNoteToken,
+  getNoteHash,
+  getTokenDataHash,
+  serializePreImage,
+} from './note-util';
 
-export class UnshieldNote {
-  readonly unshieldAddress: string;
+export abstract class UnshieldNote {
+  readonly toAddress: string;
 
   readonly value: bigint;
 
-  readonly tokenAddress: string;
+  readonly tokenData: TokenData;
 
-  readonly tokenType: TokenType;
-
-  readonly tokenSubID: string;
+  readonly tokenHash: string;
 
   readonly hash: bigint;
+
+  readonly allowOverride: boolean;
 
   /**
    * Create Note object
    *
-   * @param {string} unshieldAddress - address to unshield to
-   * @param {bigint} value - note value
-   * @param {string} tokenAddress - note token
-   * @param {TokenType} tokenType - note token type
+   * @param toAddress - address to unshield to
+   * @param value - note value
+   * @param tokenData
    */
-  constructor(
-    unshieldAddress: string,
-    value: bigint,
-    tokenAddress: string,
-    tokenType: TokenType,
-    tokenSubID?: string,
-  ) {
-    TransactNote.assertValidToken(tokenAddress, tokenType, tokenSubID, value);
+  constructor(toAddress: string, value: bigint, tokenData: TokenData, allowOverride: boolean) {
+    assertValidNoteToken(tokenData, value);
 
-    this.unshieldAddress = unshieldAddress;
+    this.toAddress = toAddress;
     this.value = value;
-    this.tokenAddress = tokenAddress;
-    this.tokenType = tokenType;
-    this.tokenSubID = tokenSubID || ZERO_ADDRESS;
-    this.hash = getNoteHash(unshieldAddress, tokenAddress, value);
+    this.tokenData = tokenData;
+    this.tokenHash = getTokenDataHash(tokenData);
+    this.allowOverride = allowOverride;
+    this.hash = getNoteHash(toAddress, tokenData, value);
   }
 
-  get token(): TokenData {
-    return serializeTokenData(this.tokenAddress, this.tokenType, this.tokenSubID);
+  get unshieldData(): UnshieldData {
+    return {
+      toAddress: this.toAddress,
+      value: this.value,
+      tokenData: this.tokenData,
+      tokenHash: this.tokenHash,
+      allowOverride: this.allowOverride,
+    };
   }
 
   get npk(): string {
-    return this.unshieldAddress;
+    return this.toAddress;
   }
 
   get notePublicKey() {
@@ -60,15 +63,11 @@ export class UnshieldNote {
   }
 
   serialize(prefix: boolean = false) {
-    return serializePreImage(this.unshieldAddress, this.token, this.value, prefix);
+    return serializePreImage(this.toAddress, this.tokenData, this.value, prefix);
   }
 
   get preImage(): CommitmentPreimageStruct {
-    const { npk, token, value } = this;
-    return { npk, token, value };
-  }
-
-  static empty() {
-    return new UnshieldNote(ZERO_ADDRESS, BigInt(0), ZERO_ADDRESS, TokenType.ERC20);
+    const { npk, tokenData, value } = this;
+    return { npk, token: tokenData, value };
   }
 }

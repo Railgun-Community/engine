@@ -66,8 +66,9 @@ const createSpendingSolutionsForValue = (
 };
 
 export const createSpendingSolutionGroupsForOutput = (
+  tokenHash: string,
   treeSortedBalances: TreeBalance[],
-  output: TransactNote,
+  tokenOutput: TransactNote,
   remainingOutputs: TransactNote[],
   excludedUTXOIDs: string[],
 ): SpendingSolutionGroup[] => {
@@ -76,13 +77,14 @@ export const createSpendingSolutionGroupsForOutput = (
     solutionValue: bigint,
     utxos: TXO[],
   ): SpendingSolutionGroup => {
-    const solutionOutput = output.newProcessingNoteWithValue(solutionValue);
+    const solutionOutput = tokenOutput.newProcessingNoteWithValue(solutionValue);
 
     return {
       spendingTree: tree,
       utxos,
-      outputs: [solutionOutput],
+      tokenOutputs: [solutionOutput],
       unshieldValue: BigInt(0),
+      tokenHash,
     };
   };
 
@@ -92,13 +94,13 @@ export const createSpendingSolutionGroupsForOutput = (
 
     if (amountLeft > 0) {
       // Add another remaining output note for any Amount Left.
-      remainingOutputs.unshift(output.newProcessingNoteWithValue(amountLeft));
+      remainingOutputs.unshift(tokenOutput.newProcessingNoteWithValue(amountLeft));
     }
   };
 
   return createSpendingSolutionsForValue(
     treeSortedBalances,
-    output.value,
+    tokenOutput.value,
     excludedUTXOIDs,
     spendingSolutionGroupGenerator,
     updateOutputsCallback,
@@ -106,6 +108,7 @@ export const createSpendingSolutionGroupsForOutput = (
 };
 
 export const createSpendingSolutionGroupsForUnshield = (
+  tokenHash: string,
   treeSortedBalances: TreeBalance[],
   unshieldValue: bigint,
   excludedUTXOIDs: string[],
@@ -118,8 +121,9 @@ export const createSpendingSolutionGroupsForUnshield = (
     return {
       spendingTree: tree,
       utxos,
-      outputs: [],
+      tokenOutputs: [],
       unshieldValue: solutionValue,
+      tokenHash,
     };
   };
 

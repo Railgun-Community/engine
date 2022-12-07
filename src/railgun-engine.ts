@@ -29,7 +29,7 @@ import { ArtifactsGetter } from './models/prover-types';
 class RailgunEngine extends EventEmitter {
   readonly db;
 
-  readonly merkletrees: { erc20: MerkleTree /* erc721: MerkleTree */ }[][] = [];
+  readonly merkletrees: MerkleTree[][] = [];
 
   readonly proxyContracts: RailgunProxyContract[][] = [];
 
@@ -96,13 +96,9 @@ class RailgunEngine extends EventEmitter {
       `[commitmentListener: ${chain.type}:${chain.id}]: ${leaves.length} leaves at ${startingIndex}`,
     );
     // Queue leaves to merkle tree
-    await this.merkletrees[chain.type][chain.id].erc20.queueLeaves(
-      treeNumber,
-      startingIndex,
-      leaves,
-    );
+    await this.merkletrees[chain.type][chain.id].queueLeaves(treeNumber, startingIndex, leaves);
     if (shouldUpdateTrees) {
-      await this.merkletrees[chain.type][chain.id].erc20.updateTrees();
+      await this.merkletrees[chain.type][chain.id].updateTrees();
     }
   }
 
@@ -116,7 +112,7 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
-    await this.merkletrees[chain.type][chain.id].erc20.nullify(nullifiers);
+    await this.merkletrees[chain.type][chain.id].nullify(nullifiers);
   }
 
   /**
@@ -133,11 +129,11 @@ class RailgunEngine extends EventEmitter {
         unshields.map((unshield) => unshield.txid),
       )}`,
     );
-    await this.merkletrees[chain.type][chain.id].erc20.addUnshieldEvents(unshields);
+    await this.merkletrees[chain.type][chain.id].addUnshieldEvents(unshields);
   }
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
-    const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+    const merkletree = this.merkletrees[chain.type][chain.id];
     const proxyContract = this.proxyContracts[chain.type][chain.id];
     const { provider } = proxyContract.contract;
 
@@ -193,7 +189,7 @@ class RailgunEngine extends EventEmitter {
     }
     try {
       EngineDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
-      const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+      const merkletree = this.merkletrees[chain.type][chain.id];
 
       const startScanningBlockQuickSync = await this.getStartScanningBlock(chain);
       EngineDebug.log(`Start scanning block for QuickSync: ${startScanningBlockQuickSync}`);
@@ -275,7 +271,7 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
-    const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+    const merkletree = this.merkletrees[chain.type][chain.id];
     const proxyContract = this.proxyContracts[chain.type][chain.id];
     if (merkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
@@ -361,7 +357,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to clear
    */
   async clearSyncedMerkletreeLeaves(chain: Chain) {
-    await this.merkletrees[chain.type][chain.id].erc20.clearLeavesFromDB();
+    await this.merkletrees[chain.type][chain.id].clearLeavesFromDB();
     await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
 
@@ -377,7 +373,7 @@ class RailgunEngine extends EventEmitter {
       EngineDebug.error(err);
       throw err;
     }
-    const merkletree = this.merkletrees[chain.type][chain.id].erc20;
+    const merkletree = this.merkletrees[chain.type][chain.id];
     if (merkletree.isScanning) {
       const err = new Error(`Full rescan already in progress.`);
       EngineDebug.error(err);
@@ -447,11 +443,9 @@ class RailgunEngine extends EventEmitter {
     if (!this.merkletrees[chain.type]) {
       this.merkletrees[chain.type] = [];
     }
-    this.merkletrees[chain.type][chain.id] = {
-      erc20: new MerkleTree(this.db, chain, 'erc20', (tree, root) =>
-        this.proxyContracts[chain.type][chain.id].validateRoot(tree, root),
-      ),
-    };
+    this.merkletrees[chain.type][chain.id] = new MerkleTree(this.db, chain, (tree, root) =>
+      this.proxyContracts[chain.type][chain.id].validateRoot(tree, root),
+    );
 
     if (!this.deploymentBlocks[chain.type]) {
       this.deploymentBlocks[chain.type] = [];
@@ -460,7 +454,7 @@ class RailgunEngine extends EventEmitter {
 
     // Load erc20 merkletrees to wallets
     Object.values(this.wallets).forEach((wallet) => {
-      wallet.loadERC20Merkletree(this.merkletrees[chain.type][chain.id].erc20);
+      wallet.loadMerkletree(this.merkletrees[chain.type][chain.id]);
     });
 
     // Setup listeners
@@ -498,7 +492,7 @@ class RailgunEngine extends EventEmitter {
 
       // Unlaod erc20 merkletrees from wallets
       Object.values(this.wallets).forEach((wallet) => {
-        wallet.unloadERC20Merkletree(chain);
+        wallet.unloadMerkletree(chain);
       });
 
       // Delete contract and merkle tree objects
@@ -597,7 +591,7 @@ class RailgunEngine extends EventEmitter {
     // Load erc20 merkletrees for wallet
     this.merkletrees.forEach((merkletreesForChainType) => {
       merkletreesForChainType.forEach((merkletree) => {
-        wallet.loadERC20Merkletree(merkletree.erc20);
+        wallet.loadMerkletree(merkletree);
       });
     });
   }
