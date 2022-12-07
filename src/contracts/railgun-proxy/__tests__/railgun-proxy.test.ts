@@ -5,7 +5,8 @@ import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
-import { abi as erc20Abi } from '../../../test/erc20-abi.test';
+import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
+import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import { hexlify, hexToBytes, randomHex } from '../../../utils/bytes';
@@ -26,7 +27,7 @@ import {
 import { Memo } from '../../../note/memo';
 import { ViewOnlyWallet } from '../../../wallet/view-only-wallet';
 import { Groth16 } from '../../../prover/prover';
-import { ERC20 } from '../../../typechain-types';
+import { ERC20, TestERC721 } from '../../../typechain-types';
 import { promiseTimeout } from '../../../utils/promises';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
@@ -45,6 +46,7 @@ let engine: RailgunEngine;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
+let nft: TestERC721;
 let proxyContract: RailgunProxyContract;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
@@ -54,6 +56,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
+const NFT_ADDRESS = config.contracts.nft;
 const RANDOM = randomHex(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
@@ -95,6 +98,8 @@ describe('Railgun Proxy', function runTests() {
     const balance = await token.balanceOf(etherswallet.address);
     await token.approve(proxyContract.address, balance);
 
+    nft = new ethers.Contract(NFT_ADDRESS, erc721Abi, etherswallet) as TestERC721;
+
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
     viewOnlyWallet = await engine.createViewOnlyWalletFromShareableViewingKey(
@@ -109,7 +114,13 @@ describe('Railgun Proxy', function runTests() {
       value: bigint = BigInt(110000) * DECIMALS_18,
     ): Promise<[TransactionReceipt, unknown]> => {
       // Create shield
-      const shield = new ShieldNote(wallet.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
+      const shield = new ShieldNote(
+        wallet.masterPublicKey,
+        RANDOM,
+        value,
+        TOKEN_ADDRESS,
+        TokenType.ERC20,
+      );
       const shieldPrivateKey = hexToBytes(randomHex(32));
       const shieldInput = await shield.serialize(
         shieldPrivateKey,
@@ -371,7 +382,7 @@ describe('Railgun Proxy', function runTests() {
     expect(hexlify(contractHash)).to.equal(unshield.hashHex);
   });
 
-  it('[HH] Should shield', async function run() {
+  it('[HH] Should shield erc20', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -388,7 +399,75 @@ describe('Railgun Proxy', function runTests() {
     const merkleRootBefore = await proxyContract.merkleRoot();
 
     // Create shield
-    const shield = new ShieldNote(wallet.masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
+    const shield = new ShieldNote(
+      wallet.masterPublicKey,
+      RANDOM,
+      VALUE,
+      TOKEN_ADDRESS,
+      TokenType.ERC20,
+    );
+    const shieldPrivateKey = hexToBytes(randomHex(32));
+    const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
+
+    const shieldTx = await proxyContract.generateShield([shieldInput]);
+
+    const awaiterShield = awaitScan(wallet, chain);
+
+    // Send shield on chain
+    await (await etherswallet.sendTransaction(shieldTx)).wait();
+
+    // Wait for events to fire
+    await new Promise((resolve) =>
+      proxyContract.contract.once(proxyContract.contract.filters.Shield(), resolve),
+    );
+
+    await expect(awaiterShield).to.be.fulfilled;
+
+    // Check result
+    expect(result.treeNumber).to.equal(0);
+    expect(result.startPosition).to.equal(0);
+    expect(result.commitments.length).to.equal(1);
+
+    const merkleRootAfterShield = await proxyContract.merkleRoot();
+
+    // Check merkle root changed
+    expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
+  });
+
+  it.only('[HH] Should shield erc721', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    let result!: CommitmentEvent;
+    proxyContract.treeUpdates(
+      async (commitmentEvent: CommitmentEvent) => {
+        result = commitmentEvent;
+      },
+      async () => {},
+      async () => {},
+    );
+    const merkleRootBefore = await proxyContract.merkleRoot();
+
+    // Mint NFTs with tokenIDs 0 and 1 into public balance.
+    const nftBalanceBeforeMint = await nft.balanceOf(etherswallet.address);
+    expect(nftBalanceBeforeMint.toHexString()).to.equal('0x00');
+    const mintTx0 = await nft.mint(etherswallet.address, 0);
+    await mintTx0.wait();
+    const mintTx1 = await nft.mint(etherswallet.address, 1);
+    await mintTx1.wait();
+    const nftBalanceAfterMint = await nft.balanceOf(etherswallet.address);
+    expect(nftBalanceAfterMint.toHexString()).to.equal('0x02');
+    const tokenOwner = await nft.ownerOf(1);
+    expect(tokenOwner).to.equal(etherswallet.address);
+    const tokenURI = await nft.tokenURI(1);
+    expect(tokenURI).to.equal('');
+    const approval = await nft.approve(proxyContract.address, 1);
+    await approval.wait();
+
+    // Create shield
+    const shield = ShieldNote.ShieldedNFT(wallet.masterPublicKey, RANDOM, NFT_ADDRESS, 1);
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 

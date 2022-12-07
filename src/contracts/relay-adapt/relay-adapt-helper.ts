@@ -7,6 +7,7 @@ import {
   ShieldRequestStruct,
   TransactionStruct,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
+import { TokenType } from '../../models/formatted-types';
 
 class RelayAdaptHelper {
   static generateRelayShieldRequests(
@@ -34,7 +35,7 @@ class RelayAdaptHelper {
     tokens: string[],
   ): ShieldNote[] {
     return tokens.map((token) => {
-      return new ShieldNote(masterPublicKey, random, 0n, token);
+      return new ShieldNote(masterPublicKey, random, 0n, token, TokenType.ERC20);
     });
   }
 

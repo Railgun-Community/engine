@@ -487,7 +487,12 @@ export class TransactNote {
     }
   }
 
-  static assertValidToken(token: string, tokenType: TokenType) {
+  static assertValidToken(
+    token: string,
+    tokenType: TokenType,
+    tokenSubID: Optional<string>,
+    value: bigint,
+  ) {
     switch (tokenType) {
       case TokenType.ERC20: {
         if (hexlify(token, false).length !== 40 && hexlify(token, false).length !== 64) {
@@ -498,11 +503,20 @@ export class TransactNote {
             )}.`,
           );
         }
+        if (tokenSubID) {
+          throw new Error('ERC20 cannot have tokenSubID parameter.');
+        }
         break;
       }
       case TokenType.ERC721: {
-        if (hexlify(token, false).length !== 64) {
-          throw new Error(`NFT token must be length 64 (32 bytes). Got ${hexlify(token, false)}.`);
+        if (hexlify(token, false).length !== 40) {
+          throw new Error(`NFT token must be length 40 (20 bytes). Got ${hexlify(token, false)}.`);
+        }
+        if (!tokenSubID) {
+          throw new Error('ERC721 must have tokenSubID parameter.');
+        }
+        if (value !== BigInt(1)) {
+          throw new Error('ERC721 note must have value of 1.');
         }
         break;
       }
@@ -511,6 +525,9 @@ export class TransactNote {
           throw new Error(
             `ERC1155 token must be length 64 (32 bytes). Got ${hexlify(token, false)}.`,
           );
+        }
+        if (!tokenSubID) {
+          throw new Error('ERC1155 must have tokenSubID parameter.');
         }
         break;
       }

@@ -26,7 +26,7 @@ describe('Note/ShieldNote', () => {
   it('Should create shield note', () => {
     mpk = getRandomScalar();
     const rand = randomHex(16);
-    shield = new ShieldNote(mpk, rand, 1000n, TOKEN);
+    shield = new ShieldNote(mpk, rand, 1000n, TOKEN, TokenType.ERC20);
     const { tokenAddress, tokenType, tokenSubID } = shield.tokenData;
     expect(tokenAddress).to.equal(TOKEN);
     expect(tokenType).to.equal(TokenType.ERC20);
@@ -39,9 +39,11 @@ describe('Note/ShieldNote', () => {
   it('Should validate length of random parameter', () => {
     const msg = /Random must be length 32.*/;
     mpk = getRandomScalar();
-    expect(() => new ShieldNote(mpk, randomHex(15), 1000n, TOKEN)).to.throw(msg);
-    expect(() => new ShieldNote(mpk, randomHex(17), 1000n, TOKEN)).to.throw(msg);
-    expect(new ShieldNote(mpk, randomHex(16), 1000n, TOKEN)).to.be.an.instanceOf(ShieldNote);
+    expect(() => new ShieldNote(mpk, randomHex(15), 1000n, TOKEN, TokenType.ERC20)).to.throw(msg);
+    expect(() => new ShieldNote(mpk, randomHex(17), 1000n, TOKEN, TokenType.ERC20)).to.throw(msg);
+    expect(new ShieldNote(mpk, randomHex(16), 1000n, TOKEN, TokenType.ERC20)).to.be.an.instanceOf(
+      ShieldNote,
+    );
   });
 
   it('Should serialize ShieldNote to preimage and ciphertext', async () => {
@@ -49,7 +51,7 @@ describe('Note/ShieldNote', () => {
     vpk = randomBytes(32);
     const viewingPublicKey = await getPublicViewingKey(vpk);
     const rand = randomHex(16);
-    shield = new ShieldNote(mpk, rand, 1000n, TOKEN);
+    shield = new ShieldNote(mpk, rand, 1000n, TOKEN, TokenType.ERC20);
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const { preimage, ciphertext } = await shield.serialize(shieldPrivateKey, viewingPublicKey);
     expect(hexlify(await preimage.npk)).length(64);

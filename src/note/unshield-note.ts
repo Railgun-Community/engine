@@ -14,6 +14,8 @@ export class UnshieldNote {
 
   readonly tokenType: TokenType;
 
+  readonly tokenSubID: string;
+
   readonly hash: bigint;
 
   /**
@@ -24,18 +26,25 @@ export class UnshieldNote {
    * @param {string} tokenAddress - note token
    * @param {TokenType} tokenType - note token type
    */
-  constructor(unshieldAddress: string, value: bigint, tokenAddress: string, tokenType: TokenType) {
-    TransactNote.assertValidToken(tokenAddress, tokenType);
+  constructor(
+    unshieldAddress: string,
+    value: bigint,
+    tokenAddress: string,
+    tokenType: TokenType,
+    tokenSubID?: string,
+  ) {
+    TransactNote.assertValidToken(tokenAddress, tokenType, tokenSubID, value);
 
     this.unshieldAddress = unshieldAddress;
     this.value = value;
     this.tokenAddress = tokenAddress;
     this.tokenType = tokenType;
+    this.tokenSubID = tokenSubID || ZERO_ADDRESS;
     this.hash = getNoteHash(unshieldAddress, tokenAddress, value);
   }
 
   get token(): TokenData {
-    return serializeTokenData(this.tokenAddress, this.tokenType, ZERO_ADDRESS);
+    return serializeTokenData(this.tokenAddress, this.tokenType, this.tokenSubID);
   }
 
   get npk(): string {

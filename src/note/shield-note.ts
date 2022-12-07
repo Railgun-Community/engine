@@ -15,24 +15,51 @@ export class ShieldNote {
 
   readonly value: bigint;
 
-  readonly token: string;
+  readonly tokenAddress: string;
 
-  readonly tokenType = TokenType.ERC20;
+  readonly tokenType: TokenType;
+
+  readonly tokenSubID: string;
 
   readonly notePublicKey: bigint;
 
   readonly hash: bigint;
 
-  constructor(masterPublicKey: bigint, random: string, value: bigint, token: string) {
+  constructor(
+    masterPublicKey: bigint,
+    random: string,
+    value: bigint,
+    tokenAddress: string,
+    tokenType: TokenType,
+    tokenSubID?: string,
+  ) {
     TransactNote.assertValidRandom(random);
-    TransactNote.assertValidToken(token, this.tokenType);
+    TransactNote.assertValidToken(tokenAddress, tokenType, tokenSubID, value);
 
     this.masterPublicKey = masterPublicKey;
     this.random = random;
-    this.token = token;
+    this.tokenAddress = tokenAddress;
+    this.tokenType = tokenType;
+    this.tokenSubID = tokenSubID || ZERO_ADDRESS;
     this.value = value;
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();
+  }
+
+  static ShieldedNFT(
+    masterPublicKey: bigint,
+    random: string,
+    tokenAddress: string,
+    tokenID: number,
+  ) {
+    return new ShieldNote(
+      masterPublicKey,
+      random,
+      ShieldNote.nftNoteValue(),
+      tokenAddress,
+      TokenType.ERC721,
+      ShieldNote.nftTokenIDToSubID(tokenID),
+    );
   }
 
   /**
@@ -44,11 +71,19 @@ export class ShieldNote {
     return 'RAILGUN_SHIELD';
   }
 
+  private static nftTokenIDToSubID(tokenID: number): string {
+    return nToHex(BigInt(tokenID), ByteLength.Address, true);
+  }
+
+  private static nftNoteValue(): bigint {
+    return BigInt(1);
+  }
+
   get tokenData() {
     return {
-      tokenAddress: this.token,
-      tokenSubID: ZERO_ADDRESS,
+      tokenAddress: this.tokenAddress,
       tokenType: this.tokenType,
+      tokenSubID: this.tokenSubID,
     };
   }
 
@@ -60,7 +95,7 @@ export class ShieldNote {
    * Get note hash
    */
   private getHash(): bigint {
-    return poseidon([this.notePublicKey, hexToBigInt(this.token), this.value]);
+    return poseidon([this.notePublicKey, hexToBigInt(this.tokenAddress), this.value]);
   }
 
   static decryptRandom(encryptedBundle: [string, string, string], sharedKey: Uint8Array): string {

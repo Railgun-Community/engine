@@ -4,7 +4,7 @@ import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { RailgunEngine } from '../railgun-engine';
-import { abi as erc20Abi } from '../test/erc20-abi.test';
+import { abi as erc20Abi } from '../test/test-erc20-abi.test';
 import { config } from '../test/config.test';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import {
@@ -54,7 +54,7 @@ const shieldTestTokens = async (address: string, value: bigint) => {
   const mpk = RailgunEngine.decodeAddress(address).masterPublicKey;
   const receiverViewingPublicKey = wallet.getViewingKeyPair().pubkey;
   const random = randomHex(16);
-  const shield = new ShieldNote(mpk, random, value, token.address);
+  const shield = new ShieldNote(mpk, random, value, token.address, TokenType.ERC20, undefined);
 
   const shieldPrivateKey = hexToBytes(randomHex(32));
   const shieldInput = await shield.serialize(shieldPrivateKey, receiverViewingPublicKey);

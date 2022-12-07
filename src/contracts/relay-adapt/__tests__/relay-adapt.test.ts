@@ -7,7 +7,7 @@ import { groth16 } from 'snarkjs';
 import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
-import { abi as erc20Abi } from '../../../test/erc20-abi.test';
+import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
@@ -94,6 +94,7 @@ describe('Relay Adapt', function test() {
         SHIELD_RANDOM,
         value,
         WETH_TOKEN_ADDRESS,
+        TokenType.ERC20,
       );
       const shieldPrivateKey = hexToBytes(randomHex(32));
       const shieldRequest = await shield.serialize(
@@ -119,7 +120,13 @@ describe('Relay Adapt', function test() {
     const { masterPublicKey } = wallet;
 
     // Create shield
-    const shield = new ShieldNote(masterPublicKey, SHIELD_RANDOM, 10000n, WETH_TOKEN_ADDRESS);
+    const shield = new ShieldNote(
+      masterPublicKey,
+      SHIELD_RANDOM,
+      10000n,
+      WETH_TOKEN_ADDRESS,
+      TokenType.ERC20,
+    );
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const shieldRequest = await shield.serialize(
       shieldPrivateKey,
