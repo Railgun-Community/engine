@@ -434,7 +434,7 @@ describe('Railgun Proxy', function runTests() {
     expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
   });
 
-  it.only('[HH] Should shield erc721', async function run() {
+  it('[HH] Should shield erc721', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -463,6 +463,8 @@ describe('Railgun Proxy', function runTests() {
     expect(tokenOwner).to.equal(etherswallet.address);
     const tokenURI = await nft.tokenURI(1);
     expect(tokenURI).to.equal('');
+
+    // Approve shield
     const approval = await nft.approve(proxyContract.address, 1);
     await approval.wait();
 
