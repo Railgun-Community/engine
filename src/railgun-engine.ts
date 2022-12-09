@@ -11,7 +11,7 @@ import { hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
-import { Commitment, Nullifier } from './models/formatted-types';
+import { Commitment, Nullifier, TokenData } from './models/formatted-types';
 import {
   CommitmentEvent,
   EngineEvent,
@@ -25,6 +25,7 @@ import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactsGetter } from './models/prover-types';
+import { NFTTokenDataGetter } from './nft/nft-token-data-getter';
 
 class RailgunEngine extends EventEmitter {
   readonly db;
@@ -671,6 +672,12 @@ class RailgunEngine extends EventEmitter {
     );
     this.loadWallet(wallet);
     return wallet;
+  }
+
+  async getNFTTokenDataForChain(chain: Chain, tokenHash: string): Promise<TokenData> {
+    const railgunSmartWalletContract = this.railgunSmartWalletContracts[chain.type][chain.id];
+    const nftTokenDataGetter = new NFTTokenDataGetter(this.db, railgunSmartWalletContract);
+    return nftTokenDataGetter.getNFTTokenData(tokenHash);
   }
 
   static encodeAddress = encodeAddress;

@@ -9,7 +9,13 @@ import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
 import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
-import { hexlify, hexToBytes, randomHex } from '../../../utils/bytes';
+import {
+  ByteLength,
+  formatToByteLength,
+  hexlify,
+  hexToBytes,
+  randomHex,
+} from '../../../utils/bytes';
 import { artifactsGetter, awaitScan, DECIMALS_18 } from '../../../test/helper.test';
 import {
   Nullifier,
@@ -38,6 +44,7 @@ import { ShieldNoteNFT } from '../../../note/nft/shield-note-nft';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
 import { getTokenDataERC20, getTokenDataHash } from '../../../note/note-util';
+import { NFTTokenDataGetter } from '../../../nft/nft-token-data-getter';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -438,7 +445,7 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
   });
 
-  it('[HH] Should shield erc721', async function run() {
+  it.only('[HH] Should shield erc721', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -502,10 +509,15 @@ describe('Railgun Smart Wallet', function runTests() {
 
     // Check tokenData stored in contract.
     const { tokenHash } = shield;
-    const onChainTokenData = await railgunSmartWalletContract.getTokenData(tokenHash);
-    expect(onChainTokenData.tokenAddress).to.equal(NFT_ADDRESS);
-    expect(onChainTokenData.tokenSubID.toString()).to.equal('1');
+    const onChainTokenData = await engine.getNFTTokenDataForChain(chain, tokenHash);
+    expect(onChainTokenData.tokenAddress.toLowerCase()).to.equal(NFT_ADDRESS.toLowerCase());
+    expect(onChainTokenData.tokenSubID).to.equal(formatToByteLength('01', ByteLength.UINT_256));
     expect(onChainTokenData.tokenType).to.equal(TokenType.ERC721);
+
+    // Check that NFT Token Data Cache has data for this hash.
+    const nftTokenDataGetter = new NFTTokenDataGetter(engine.db, railgunSmartWalletContract);
+    const cachedNFTTokenData = await nftTokenDataGetter.getCachedNFTTokenData(tokenHash);
+    expect(cachedNFTTokenData).to.deep.equal(onChainTokenData);
 
     // Check result
     expect(result.treeNumber).to.equal(0);

@@ -118,11 +118,11 @@ class RailgunSmartWalletContract extends EventEmitter {
   }
 
   /**
-   * Get token data from tokenHash.
+   * Get NFT token data from tokenHash.
    * @param tokenHash - tokenHash
    * @returns token data
    */
-  getTokenData(tokenHash: string): Promise<TokenDataStructOutput> {
+  getNFTTokenData(tokenHash: string): Promise<TokenDataStructOutput> {
     try {
       const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
       return this.contract.tokenIDMapping(formattedTokenHash);
