@@ -510,7 +510,9 @@ describe('Railgun Smart Wallet', function runTests() {
     const tokenDataGetter = new TokenDataGetter(engine.db, chain);
     const onChainTokenData = await tokenDataGetter.getNFTTokenData(tokenHash);
     expect(onChainTokenData.tokenAddress.toLowerCase()).to.equal(NFT_ADDRESS.toLowerCase());
-    expect(onChainTokenData.tokenSubID).to.equal(formatToByteLength('01', ByteLength.UINT_256));
+    expect(onChainTokenData.tokenSubID).to.equal(
+      formatToByteLength('01', ByteLength.UINT_256, true),
+    );
     expect(onChainTokenData.tokenType).to.equal(TokenType.ERC721);
 
     // Check that NFT Token Data Cache has data for this hash.
