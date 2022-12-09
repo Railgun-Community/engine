@@ -198,7 +198,7 @@ class MerkleTree {
       ...this.getTreeDBPrefix(tree),
       hexlify(new BN(0).notn(32)), // 2^32-1
       hexlify(new BN(index)),
-    ].map((element) => element.padStart(64, '0'));
+    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
   /**
@@ -212,7 +212,7 @@ class MerkleTree {
       ...this.getTreeDBPrefix(tree),
       hexlify(new BN(0).notn(32).subn(1)), // 2^32-2
       hexlify(nullifier),
-    ].map((element) => element.padStart(64, '0'));
+    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
   /**
@@ -229,7 +229,7 @@ class MerkleTree {
     if (tokenAddress != null) {
       path.push(hexlify(padToLength(tokenAddress, 32)));
     }
-    return path.map((element) => element.padStart(64, '0'));
+    return path.map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
   /**

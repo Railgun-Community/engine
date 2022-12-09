@@ -1,10 +1,9 @@
-import msgpack from 'msgpack-lite';
 import { RailgunSmartWalletContract } from '../contracts';
 import { Database } from '../database/database';
 import { TokenData } from '../models';
 import { serializeTokenData } from '../note';
 import { TokenDataStructOutput } from '../typechain-types/contracts/logic/RailgunLogic';
-import { ByteLength, formatToByteLength, fromUTF8String, hexlify } from '../utils';
+import { ByteLength, formatToByteLength, fromUTF8String } from '../utils';
 
 export class NFTTokenDataGetter {
   private db: Database;
@@ -40,12 +39,12 @@ export class NFTTokenDataGetter {
 
   private static getNFTTokenDataPrefix(): string[] {
     const nftTokenDataPrefix = fromUTF8String('nft-token-data-map');
-    return [nftTokenDataPrefix].map((el) => formatToByteLength(el, ByteLength.UINT_256));
+    return [nftTokenDataPrefix];
   }
 
   private static getNFTTokenDataPath(tokenHash: string): string[] {
-    return [...NFTTokenDataGetter.getNFTTokenDataPrefix(), tokenHash].map((element) =>
-      element.padStart(64, '0'),
+    return [...NFTTokenDataGetter.getNFTTokenDataPrefix(), tokenHash].map((el) =>
+      formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 

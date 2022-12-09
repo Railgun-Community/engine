@@ -160,7 +160,7 @@ abstract class AbstractWallet extends EventEmitter {
       fromUTF8String('wallet'),
       `${hexlify(this.id)}-spent`,
       getChainFullNetworkID(chain),
-    ].map((element) => element.padStart(64, '0'));
+    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
     if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
     if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
     return path;

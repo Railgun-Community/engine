@@ -445,7 +445,7 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
   });
 
-  it.only('[HH] Should shield erc721', async function run() {
+  it('[HH] Should shield erc721', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
