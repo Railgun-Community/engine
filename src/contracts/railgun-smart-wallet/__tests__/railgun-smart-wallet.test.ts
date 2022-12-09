@@ -30,7 +30,7 @@ import { ERC20, TestERC721 } from '../../../typechain-types';
 import { promiseTimeout } from '../../../utils/promises';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
-import { RailgunProxyContract } from '../railgun-proxy';
+import { RailgunSmartWalletContract } from '../railgun-smart-wallet';
 import { MEMO_SENDER_RANDOM_NULL } from '../../../models/transaction-constants';
 import { TransactNote } from '../../../note/transact-note';
 import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
@@ -49,7 +49,7 @@ let etherswallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
 let nft: TestERC721;
-let proxyContract: RailgunProxyContract;
+let railgunSmartWalletContract: RailgunSmartWalletContract;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 let viewOnlyWallet: ViewOnlyWallet;
@@ -64,7 +64,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testShield: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
-describe('Railgun Proxy', function runTests() {
+describe('Railgun Smart Wallet', function runTests() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -88,7 +88,7 @@ describe('Railgun Proxy', function runTests() {
       0,
     );
     await engine.scanHistory(chain);
-    proxyContract = engine.proxyContracts[chain.type][chain.id];
+    railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -98,7 +98,7 @@ describe('Railgun Proxy', function runTests() {
 
     token = new ethers.Contract(TOKEN_ADDRESS, erc20Abi, etherswallet) as ERC20;
     const balance = await token.balanceOf(etherswallet.address);
-    await token.approve(proxyContract.address, balance);
+    await token.approve(railgunSmartWalletContract.address, balance);
 
     nft = new ethers.Contract(NFT_ADDRESS, erc721Abi, etherswallet) as TestERC721;
 
@@ -123,7 +123,7 @@ describe('Railgun Proxy', function runTests() {
         wallet.getViewingKeyPair().pubkey,
       );
 
-      const shieldTx = await proxyContract.generateShield([shieldInput]);
+      const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
       // Send shield on chain
       const tx = await etherswallet.sendTransaction(shieldTx);
@@ -137,7 +137,7 @@ describe('Railgun Proxy', function runTests() {
       return;
     }
 
-    expect(await proxyContract.merkleRoot()).to.equal(
+    expect(await railgunSmartWalletContract.merkleRoot()).to.equal(
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     );
   });
@@ -167,7 +167,7 @@ describe('Railgun Proxy', function runTests() {
         undefined, // memoText
       ),
     );
-    const tx = await proxyContract.transact(
+    const tx = await railgunSmartWalletContract.transact(
       await transactionBatch.generateDummyTransactions(engine.prover, wallet, testEncryptionKey),
     );
 
@@ -182,13 +182,13 @@ describe('Railgun Proxy', function runTests() {
       return;
     }
     expect(
-      await proxyContract.validateRoot(
+      await railgunSmartWalletContract.validateRoot(
         0,
         '0x14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
       ),
     ).to.equal(true);
     expect(
-      await proxyContract.validateRoot(
+      await railgunSmartWalletContract.validateRoot(
         0,
         '0x09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
       ),
@@ -200,7 +200,7 @@ describe('Railgun Proxy', function runTests() {
       this.skip();
       return;
     }
-    const fees = await proxyContract.fees();
+    const fees = await railgunSmartWalletContract.fees();
     expect(fees).to.be.an('object');
     expect(fees.shield).to.be.a('string');
     expect(fees.unshield).to.be.a('string');
@@ -229,14 +229,14 @@ describe('Railgun Proxy', function runTests() {
     let startingBlock = await provider.getBlockNumber();
 
     // Add a secondary listener.
-    proxyContract.treeUpdates(eventsListener, nullifiersListener, unshieldListener);
+    railgunSmartWalletContract.treeUpdates(eventsListener, nullifiersListener, unshieldListener);
 
     // Subscribe to Nullified event
     const resultNullifiers2: Nullifier[] = [];
     const nullifiersListener2 = (nullifiers: Nullifier[]) => {
       resultNullifiers2.push(...nullifiers);
     };
-    proxyContract.on(EngineEvent.ContractNullifierReceived, nullifiersListener2);
+    railgunSmartWalletContract.on(EngineEvent.ContractNullifierReceived, nullifiersListener2);
 
     const [txResponse] = await testShield();
 
@@ -252,7 +252,7 @@ describe('Railgun Proxy', function runTests() {
 
     let latestBlock = (await provider.getBlock('latest')).number;
 
-    await proxyContract.getHistoricalEvents(
+    await railgunSmartWalletContract.getHistoricalEvents(
       chain,
       startingBlock,
       latestBlock,
@@ -303,7 +303,7 @@ describe('Railgun Proxy', function runTests() {
       testEncryptionKey,
       () => {},
     );
-    const transact = await proxyContract.transact(serializedTxs);
+    const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
     // Send transact on chain
     const txTransact = await etherswallet.sendTransaction(transact);
@@ -330,7 +330,7 @@ describe('Railgun Proxy', function runTests() {
 
     latestBlock = (await provider.getBlock('latest')).number;
 
-    await proxyContract.getHistoricalEvents(
+    await railgunSmartWalletContract.getHistoricalEvents(
       chain,
       startingBlock,
       latestBlock,
@@ -384,7 +384,7 @@ describe('Railgun Proxy', function runTests() {
       return;
     }
     const unshield = new UnshieldNoteERC20(etherswallet.address, 100n, token.address);
-    const contractHash = await proxyContract.hashCommitment(unshield.preImage);
+    const contractHash = await railgunSmartWalletContract.hashCommitment(unshield.preImage);
 
     expect(hexlify(contractHash)).to.equal(unshield.hashHex);
   });
@@ -396,21 +396,21 @@ describe('Railgun Proxy', function runTests() {
     }
 
     let result!: CommitmentEvent;
-    proxyContract.treeUpdates(
+    railgunSmartWalletContract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
       async () => {},
       async () => {},
     );
-    const merkleRootBefore = await proxyContract.merkleRoot();
+    const merkleRootBefore = await railgunSmartWalletContract.merkleRoot();
 
     // Create shield
     const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
-    const shieldTx = await proxyContract.generateShield([shieldInput]);
+    const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
     const awaiterShield = awaitScan(wallet, chain);
 
@@ -419,7 +419,10 @@ describe('Railgun Proxy', function runTests() {
 
     // Wait for events to fire
     await new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Shield(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Shield(),
+        resolve,
+      ),
     );
 
     await expect(awaiterShield).to.be.fulfilled;
@@ -429,7 +432,7 @@ describe('Railgun Proxy', function runTests() {
     expect(result.startPosition).to.equal(0);
     expect(result.commitments.length).to.equal(1);
 
-    const merkleRootAfterShield = await proxyContract.merkleRoot();
+    const merkleRootAfterShield = await railgunSmartWalletContract.merkleRoot();
 
     // Check merkle root changed
     expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
@@ -442,14 +445,14 @@ describe('Railgun Proxy', function runTests() {
     }
 
     let result!: CommitmentEvent;
-    proxyContract.treeUpdates(
+    railgunSmartWalletContract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
       async () => {},
       async () => {},
     );
-    const merkleRootBefore = await proxyContract.merkleRoot();
+    const merkleRootBefore = await railgunSmartWalletContract.merkleRoot();
 
     // Mint NFTs with tokenIDs 0 and 1 into public balance.
     const nftBalanceBeforeMint = await nft.balanceOf(etherswallet.address);
@@ -466,7 +469,7 @@ describe('Railgun Proxy', function runTests() {
     expect(tokenURI).to.equal('');
 
     // Approve shield
-    const approval = await nft.approve(proxyContract.address, 1);
+    const approval = await nft.approve(railgunSmartWalletContract.address, 1);
     await approval.wait();
 
     // Create shield
@@ -480,7 +483,7 @@ describe('Railgun Proxy', function runTests() {
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
-    const shieldTx = await proxyContract.generateShield([shieldInput]);
+    const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
     const awaiterShield = awaitScan(wallet, chain);
 
@@ -489,17 +492,27 @@ describe('Railgun Proxy', function runTests() {
 
     // Wait for events to fire
     await new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Shield(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Shield(),
+        resolve,
+      ),
     );
 
     await expect(awaiterShield).to.be.fulfilled;
+
+    // Check tokenData stored in contract.
+    const { tokenHash } = shield;
+    const onChainTokenData = await railgunSmartWalletContract.getTokenData(tokenHash);
+    expect(onChainTokenData.tokenAddress).to.equal(NFT_ADDRESS);
+    expect(onChainTokenData.tokenSubID.toString()).to.equal('1');
+    expect(onChainTokenData.tokenType).to.equal(TokenType.ERC721);
 
     // Check result
     expect(result.treeNumber).to.equal(0);
     expect(result.startPosition).to.equal(0);
     expect(result.commitments.length).to.equal(1);
 
-    const merkleRootAfterShield = await proxyContract.merkleRoot();
+    const merkleRootAfterShield = await railgunSmartWalletContract.merkleRoot();
 
     // Check merkle root changed
     expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
@@ -512,10 +525,10 @@ describe('Railgun Proxy', function runTests() {
     }
 
     await testShield(1000n);
-    const merkleRootAfterShield = await proxyContract.merkleRoot();
+    const merkleRootAfterShield = await railgunSmartWalletContract.merkleRoot();
 
     let result!: CommitmentEvent;
-    proxyContract.treeUpdates(
+    railgunSmartWalletContract.treeUpdates(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
@@ -549,7 +562,7 @@ describe('Railgun Proxy', function runTests() {
     });
 
     // Create transact
-    const transact = await proxyContract.transact(
+    const transact = await railgunSmartWalletContract.transact(
       await transactionBatch.generateTransactions(
         engine.prover,
         wallet,
@@ -563,11 +576,14 @@ describe('Railgun Proxy', function runTests() {
 
     // Wait for events to fire
     await new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
     );
 
     // Check merkle root changed
-    const merkleRootAfterTransact = await proxyContract.merkleRoot();
+    const merkleRootAfterTransact = await railgunSmartWalletContract.merkleRoot();
     expect(merkleRootAfterTransact).to.not.equal(merkleRootAfterShield);
 
     // Check result

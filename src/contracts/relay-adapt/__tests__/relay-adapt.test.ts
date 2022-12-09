@@ -17,7 +17,7 @@ import { ERC20 } from '../../../typechain-types';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
-import { RailgunProxyContract } from '../../railgun-proxy/railgun-proxy';
+import { RailgunSmartWalletContract } from '../../railgun-smart-wallet/railgun-smart-wallet';
 import { RelayAdaptContract } from '../relay-adapt';
 import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
 import { TransactNote } from '../../../note/transact-note';
@@ -35,7 +35,7 @@ let engine: RailgunEngine;
 let etherswallet: ethers.Wallet;
 let snapshot: number;
 let relayAdaptContract: RelayAdaptContract;
-let proxyContract: RailgunProxyContract;
+let railgunSmartWalletContract: RailgunSmartWalletContract;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 
@@ -80,7 +80,7 @@ describe('Relay Adapt', function test() {
       DEPLOYMENT_BLOCK,
     );
     await engine.scanHistory(chain);
-    proxyContract = engine.proxyContracts[chain.type][chain.id];
+    railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
     relayAdaptContract = engine.relayAdaptContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(testMnemonic).derivePath(
@@ -138,7 +138,10 @@ describe('Relay Adapt', function test() {
     const txResponse = await etherswallet.sendTransaction(shieldTx);
 
     const receiveShieldEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Shield(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Shield(),
+        resolve,
+      ),
     );
 
     await Promise.all([txResponse.wait(), receiveShieldEvent]);
@@ -280,10 +283,16 @@ describe('Relay Adapt', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
     );
     const receiveUnshieldEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Unshield(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Unshield(),
+        resolve,
+      ),
     );
 
     const awaiterScan = awaitScan(wallet, chain);
@@ -333,7 +342,7 @@ describe('Relay Adapt', function test() {
       testEncryptionKey,
       () => {},
     );
-    const transact = await proxyContract.transact(serializedTxs);
+    const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
     // Unshield to relay adapt.
     const txTransact = await etherswallet.sendTransaction(transact);
@@ -474,7 +483,10 @@ describe('Relay Adapt', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
     );
 
     // 2 scans: Unshield and Shield
@@ -503,7 +515,9 @@ describe('Relay Adapt', function test() {
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
-    const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
+    const proxyWethBalance = (
+      await wethTokenContract.balanceOf(railgunSmartWalletContract.address)
+    ).toBigInt();
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
 
     const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
@@ -622,10 +636,16 @@ describe('Relay Adapt', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
     );
     const receiveUnshieldEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Unshield(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Unshield(),
+        resolve,
+      ),
     );
 
     // 2 scans: Unshield and Shield
@@ -660,7 +680,9 @@ describe('Relay Adapt', function test() {
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
-    const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
+    const proxyWethBalance = (
+      await wethTokenContract.balanceOf(railgunSmartWalletContract.address)
+    ).toBigInt();
     const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
@@ -782,7 +804,10 @@ describe('Relay Adapt', function test() {
     const txResponse = await etherswallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
-      proxyContract.contract.once(proxyContract.contract.filters.Transact(), resolve),
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
     );
 
     // 2 scans: Unshield and Shield
@@ -817,7 +842,9 @@ describe('Relay Adapt', function test() {
     );
     expect(treasuryBalance.toBigInt()).to.equal(299n);
 
-    const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
+    const proxyWethBalance = (
+      await wethTokenContract.balanceOf(railgunSmartWalletContract.address)
+    ).toBigInt();
     const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     expect(proxyWethBalance).to.equal(expectedProxyBalance);
@@ -832,7 +859,7 @@ describe('Relay Adapt', function test() {
     // const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(config.contracts.treasuryProxy);
     // expect(treasuryBalance.toBigInt()).to.equal(250n);
 
-    // const proxyWethBalance = (await wethTokenContract.balanceOf(proxyContract.address)).toBigInt();
+    // const proxyWethBalance = (await wethTokenContract.balanceOf(railgunSmartWalletContract.address)).toBigInt();
     // const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     // expect(proxyWethBalance).to.equal(expectedPrivateWethBalance);

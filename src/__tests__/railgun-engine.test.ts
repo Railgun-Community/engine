@@ -19,7 +19,7 @@ import { ShieldNoteERC20 } from '../note/erc20/shield-note-erc20';
 import { ShieldNoteNFT } from '../note/nft/shield-note-nft';
 import { MerkleTree } from '../merkletree/merkletree';
 import { ByteLength, formatToByteLength, hexToBigInt, hexToBytes, randomHex } from '../utils/bytes';
-import { RailgunProxyContract } from '../contracts/railgun-proxy/railgun-proxy';
+import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import {
   CommitmentType,
   LegacyGeneratedCommitment,
@@ -49,7 +49,7 @@ let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
-let proxyContract: RailgunProxyContract;
+let railgunSmartWalletContract: RailgunSmartWalletContract;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -64,7 +64,7 @@ const shieldTestTokens = async (railgunAddress: string, value: bigint) => {
   const shieldInput = await shield.serialize(shieldPrivateKey, receiverViewingPublicKey);
 
   // Create shield
-  const shieldTx = await proxyContract.generateShield([shieldInput]);
+  const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
   // Send shield on chain
   await etherswallet.sendTransaction(shieldTx);
@@ -72,7 +72,7 @@ const shieldTestTokens = async (railgunAddress: string, value: bigint) => {
 };
 
 const shieldTestNFT = async (railgunAddress: string, tokenID: bigint) => {
-  const approval = await nft.approve(proxyContract.address, tokenID);
+  const approval = await nft.approve(railgunSmartWalletContract.address, tokenID);
   await approval.wait();
 
   const mpk = RailgunEngine.decodeAddress(railgunAddress).masterPublicKey;
@@ -84,7 +84,7 @@ const shieldTestNFT = async (railgunAddress: string, tokenID: bigint) => {
   const shieldInput = await shield.serialize(shieldPrivateKey, receiverViewingPublicKey);
 
   // Create shield
-  const shieldTx = await proxyContract.generateShield([shieldInput]);
+  const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
   // Send shield on chain
   await etherswallet.sendTransaction(shieldTx);
@@ -131,7 +131,7 @@ describe('RailgunEngine', function test() {
     );
     await engine.scanHistory(chain);
     merkleTree = engine.merkletrees[chain.type][chain.id];
-    proxyContract = engine.proxyContracts[chain.type][chain.id];
+    railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
   });
 
   it('[HH] Should load existing wallets', async function run() {
@@ -296,7 +296,7 @@ describe('RailgunEngine', function test() {
       testEncryptionKey,
       () => {},
     );
-    const transact = await proxyContract.transact(transactions);
+    const transact = await railgunSmartWalletContract.transact(transactions);
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
@@ -435,7 +435,7 @@ describe('RailgunEngine', function test() {
       testEncryptionKey,
       () => {},
     );
-    const transact = await proxyContract.transact(transactions);
+    const transact = await railgunSmartWalletContract.transact(transactions);
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();
@@ -645,7 +645,7 @@ describe('RailgunEngine', function test() {
       testEncryptionKey,
       () => {},
     );
-    const transact = await proxyContract.transact(transactions);
+    const transact = await railgunSmartWalletContract.transact(transactions);
 
     const transactTx = await etherswallet.sendTransaction(transact);
     await transactTx.wait();

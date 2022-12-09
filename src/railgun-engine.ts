@@ -1,7 +1,7 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import type { ethers } from 'ethers';
 import EventEmitter from 'events';
-import { RailgunProxyContract } from './contracts/railgun-proxy/railgun-proxy';
+import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
 import { Database, DatabaseNamespace } from './database/database';
 import { MerkleTree } from './merkletree/merkletree';
@@ -31,7 +31,7 @@ class RailgunEngine extends EventEmitter {
 
   readonly merkletrees: MerkleTree[][] = [];
 
-  readonly proxyContracts: RailgunProxyContract[][] = [];
+  readonly railgunSmartWalletContracts: RailgunSmartWalletContract[][] = [];
 
   readonly relayAdaptContracts: RelayAdaptContract[][] = [];
 
@@ -134,8 +134,8 @@ class RailgunEngine extends EventEmitter {
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
     const merkletree = this.merkletrees[chain.type][chain.id];
-    const proxyContract = this.proxyContracts[chain.type][chain.id];
-    const { provider } = proxyContract.contract;
+    const railgunSmartWalletContract = this.railgunSmartWalletContracts[chain.type][chain.id];
+    const { provider } = railgunSmartWalletContract.contract;
 
     // Get latest tree
     const latestTree = await merkletree.latestTree();
@@ -265,14 +265,17 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
-    if (!this.proxyContracts[chain.type] || !this.proxyContracts[chain.type][chain.id]) {
+    if (
+      !this.railgunSmartWalletContracts[chain.type] ||
+      !this.railgunSmartWalletContracts[chain.type][chain.id]
+    ) {
       EngineDebug.log(
         `Cannot scan history. Proxy contract not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
       return;
     }
     const merkletree = this.merkletrees[chain.type][chain.id];
-    const proxyContract = this.proxyContracts[chain.type][chain.id];
+    const railgunSmartWalletContract = this.railgunSmartWalletContracts[chain.type][chain.id];
     if (merkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
       EngineDebug.log('Already scanning. Stopping additional re-scan.');
@@ -296,13 +299,14 @@ class RailgunEngine extends EventEmitter {
     }
     EngineDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
-    const latestBlock = (await proxyContract.contract.provider.getBlock('latest')).number;
+    const latestBlock = (await railgunSmartWalletContract.contract.provider.getBlock('latest'))
+      .number;
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
     EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
     try {
       // Run slow scan
-      await proxyContract.getHistoricalEvents(
+      await railgunSmartWalletContract.getHistoricalEvents(
         chain,
         startScanningBlockSlowScan,
         latestBlock,
@@ -389,14 +393,14 @@ class RailgunEngine extends EventEmitter {
 
   /**
    * Load network
-   * @param proxyContractAddress - address of railgun instance (proxy contract)
+   * @param railgunSmartWalletContractAddress - address of railgun instance (proxy contract)
    * @param relayAdaptContractAddress - address of railgun instance (proxy contract)
    * @param provider - ethers provider for network
    * @param deploymentBlock - block number to start scanning from
    */
   async loadNetwork(
     chain: Chain,
-    proxyContractAddress: string,
+    railgunSmartWalletContractAddress: string,
     relayAdaptContractAddress: string,
     provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
     deploymentBlock: number,
@@ -413,7 +417,8 @@ class RailgunEngine extends EventEmitter {
 
     if (
       (this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id]) ||
-      (this.proxyContracts[chain.type] && this.proxyContracts[chain.type][chain.id]) ||
+      (this.railgunSmartWalletContracts[chain.type] &&
+        this.railgunSmartWalletContracts[chain.type][chain.id]) ||
       (this.relayAdaptContracts[chain.type] && this.relayAdaptContracts[chain.type][chain.id])
     ) {
       // If a network with this chainID exists, unload it and load the provider as a new network
@@ -421,11 +426,11 @@ class RailgunEngine extends EventEmitter {
     }
 
     // Create proxy contract instance
-    if (!this.proxyContracts[chain.type]) {
-      this.proxyContracts[chain.type] = [];
+    if (!this.railgunSmartWalletContracts[chain.type]) {
+      this.railgunSmartWalletContracts[chain.type] = [];
     }
-    this.proxyContracts[chain.type][chain.id] = new RailgunProxyContract(
-      proxyContractAddress,
+    this.railgunSmartWalletContracts[chain.type][chain.id] = new RailgunSmartWalletContract(
+      railgunSmartWalletContractAddress,
       provider,
       chain,
     );
@@ -444,7 +449,7 @@ class RailgunEngine extends EventEmitter {
       this.merkletrees[chain.type] = [];
     }
     this.merkletrees[chain.type][chain.id] = new MerkleTree(this.db, chain, (tree, root) =>
-      this.proxyContracts[chain.type][chain.id].validateRoot(tree, root),
+      this.railgunSmartWalletContracts[chain.type][chain.id].validateRoot(tree, root),
     );
 
     if (!this.deploymentBlocks[chain.type]) {
@@ -474,7 +479,7 @@ class RailgunEngine extends EventEmitter {
     const unshieldListener = async (unshields: UnshieldStoredEvent[]) => {
       await this.unshieldListener(chain, unshields);
     };
-    this.proxyContracts[chain.type][chain.id].treeUpdates(
+    this.railgunSmartWalletContracts[chain.type][chain.id].treeUpdates(
       eventsListener,
       nullifierListener,
       unshieldListener,
@@ -486,9 +491,12 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chainID of network to unload
    */
   unloadNetwork(chain: Chain) {
-    if (this.proxyContracts[chain.type] && this.proxyContracts[chain.id]) {
+    if (
+      this.railgunSmartWalletContracts[chain.type] &&
+      this.railgunSmartWalletContracts[chain.id]
+    ) {
       // Unload listeners
-      this.proxyContracts[chain.type][chain.id].unload();
+      this.railgunSmartWalletContracts[chain.type][chain.id].unload();
 
       // Unlaod erc20 merkletrees from wallets
       Object.values(this.wallets).forEach((wallet) => {
@@ -496,7 +504,7 @@ class RailgunEngine extends EventEmitter {
       });
 
       // Delete contract and merkle tree objects
-      delete this.proxyContracts[chain.id][chain.type];
+      delete this.railgunSmartWalletContracts[chain.id][chain.type];
       delete this.relayAdaptContracts[chain.id][chain.type];
       delete this.merkletrees[chain.id][chain.type];
     }
@@ -561,11 +569,11 @@ class RailgunEngine extends EventEmitter {
    */
   unload() {
     // Unload chains
-    this.proxyContracts.forEach((contractsForChainType, chainType) => {
-      contractsForChainType.forEach((proxyContract, chainID) => {
+    this.railgunSmartWalletContracts.forEach((contractsForChainType, chainType) => {
+      contractsForChainType.forEach((railgunSmartWalletContract, chainID) => {
         EngineDebug.log(`unload contract for ${chainType}:${chainID}`);
         this.unloadNetwork({ type: chainType, id: chainID });
-        proxyContract.contract.removeAllListeners();
+        railgunSmartWalletContract.contract.removeAllListeners();
       });
     });
 
@@ -581,7 +589,7 @@ class RailgunEngine extends EventEmitter {
    * Get list of loaded networks
    */
   get networks(): number[] {
-    return this.proxyContracts.map((element, index) => index);
+    return this.railgunSmartWalletContracts.map((element, index) => index);
   }
 
   private loadWallet(wallet: AbstractWallet): void {

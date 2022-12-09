@@ -49,7 +49,7 @@ const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
 const EVENTS_SCAN_TIMEOUT = 2500;
 
-class RailgunProxyContract extends EventEmitter {
+class RailgunSmartWalletContract extends EventEmitter {
   readonly contract: RailgunSmartWallet;
 
   readonly address: string;
@@ -58,14 +58,14 @@ class RailgunProxyContract extends EventEmitter {
 
   /**
    * Connect to Railgun instance on network
-   * @param proxyContractAddress - address of Railgun instance (Proxy contract)
+   * @param railgunSmartWalletContractAddress - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(proxyContractAddress: string, provider: Provider, chain: Chain) {
+  constructor(railgunSmartWalletContractAddress: string, provider: Provider, chain: Chain) {
     super();
-    this.address = proxyContractAddress;
+    this.address = railgunSmartWalletContractAddress;
     this.contract = new Contract(
-      proxyContractAddress,
+      railgunSmartWalletContractAddress,
       ABIRailgunSmartWallet,
       provider,
     ) as RailgunSmartWallet;
@@ -111,6 +111,21 @@ class RailgunProxyContract extends EventEmitter {
     try {
       // Return result of root history lookup
       return this.contract.rootHistory(tree, hexlify(root, true));
+    } catch (err) {
+      EngineDebug.error(err as Error);
+      throw err;
+    }
+  }
+
+  /**
+   * Get token data from tokenHash.
+   * @param tokenHash - tokenHash
+   * @returns token data
+   */
+  getTokenData(tokenHash: string): Promise<TokenDataStructOutput> {
+    try {
+      const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
+      return this.contract.tokenIDMapping(formattedTokenHash);
     } catch (err) {
       EngineDebug.error(err as Error);
       throw err;
@@ -266,7 +281,7 @@ class RailgunProxyContract extends EventEmitter {
     eventsUnshieldListener: EventsUnshieldListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
-    const engineV3StartBlockNumber = RailgunProxyContract.getEngineV3StartBlockNumber(chain);
+    const engineV3StartBlockNumber = RailgunSmartWalletContract.getEngineV3StartBlockNumber(chain);
 
     let currentStartBlock = startBlock;
 
@@ -394,4 +409,4 @@ class RailgunProxyContract extends EventEmitter {
   }
 }
 
-export { RailgunProxyContract };
+export { RailgunSmartWalletContract };
