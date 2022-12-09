@@ -43,8 +43,9 @@ import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
 import { ShieldNoteNFT } from '../../../note/nft/shield-note-nft';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
-import { getTokenDataERC20, getTokenDataHash } from '../../../note/note-util';
-import { NFTTokenDataGetter } from '../../../nft/nft-token-data-getter';
+import { getTokenDataERC20 } from '../../../note/note-util';
+import { TokenDataGetter } from '../../../token/token-data-getter';
+import { ContractStore } from '../../contract-store';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -95,7 +96,7 @@ describe('Railgun Smart Wallet', function runTests() {
       0,
     );
     await engine.scanHistory(chain);
-    railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
+    railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
 
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
@@ -159,7 +160,6 @@ describe('Railgun Smart Wallet', function runTests() {
     const transactionBatch = new TransactionBatch(chain);
 
     const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
-    const tokenHash = getTokenDataHash(tokenData);
 
     transactionBatch.addOutput(
       TransactNote.createTransfer(
@@ -167,7 +167,7 @@ describe('Railgun Smart Wallet', function runTests() {
         wallet.addressKeys,
         RANDOM,
         300n,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.Transfer,
@@ -283,7 +283,6 @@ describe('Railgun Smart Wallet', function runTests() {
     const transactionBatch = new TransactionBatch(chain);
 
     const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
-    const tokenHash = getTokenDataHash(tokenData);
 
     transactionBatch.addOutput(
       TransactNote.createTransfer(
@@ -291,7 +290,7 @@ describe('Railgun Smart Wallet', function runTests() {
         wallet.addressKeys,
         RANDOM,
         300n,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -302,7 +301,6 @@ describe('Railgun Smart Wallet', function runTests() {
       toAddress: etherswallet.address,
       value: 100n,
       tokenData,
-      tokenHash,
     });
     const serializedTxs = await transactionBatch.generateTransactions(
       engine.prover,
@@ -509,14 +507,14 @@ describe('Railgun Smart Wallet', function runTests() {
 
     // Check tokenData stored in contract.
     const { tokenHash } = shield;
-    const onChainTokenData = await engine.getNFTTokenDataForChain(chain, tokenHash);
+    const tokenDataGetter = new TokenDataGetter(engine.db, chain);
+    const onChainTokenData = await tokenDataGetter.getNFTTokenData(tokenHash);
     expect(onChainTokenData.tokenAddress.toLowerCase()).to.equal(NFT_ADDRESS.toLowerCase());
     expect(onChainTokenData.tokenSubID).to.equal(formatToByteLength('01', ByteLength.UINT_256));
     expect(onChainTokenData.tokenType).to.equal(TokenType.ERC721);
 
     // Check that NFT Token Data Cache has data for this hash.
-    const nftTokenDataGetter = new NFTTokenDataGetter(engine.db, railgunSmartWalletContract);
-    const cachedNFTTokenData = await nftTokenDataGetter.getCachedNFTTokenData(tokenHash);
+    const cachedNFTTokenData = await tokenDataGetter.getCachedNFTTokenData(tokenHash);
     expect(cachedNFTTokenData).to.deep.equal(onChainTokenData);
 
     // Check result
@@ -551,7 +549,6 @@ describe('Railgun Smart Wallet', function runTests() {
     const transactionBatch = new TransactionBatch(chain);
 
     const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
-    const tokenHash = getTokenDataHash(tokenData);
 
     transactionBatch.addOutput(
       TransactNote.createTransfer(
@@ -559,7 +556,7 @@ describe('Railgun Smart Wallet', function runTests() {
         wallet.addressKeys,
         RANDOM,
         300n,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         true, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -570,7 +567,6 @@ describe('Railgun Smart Wallet', function runTests() {
       toAddress: etherswallet.address,
       value: 100n,
       tokenData,
-      tokenHash,
     });
 
     // Create transact

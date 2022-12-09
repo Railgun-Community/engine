@@ -4,7 +4,7 @@ import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
-import { AdaptID } from '../models/formatted-types';
+import { AdaptID, TokenData } from '../models/formatted-types';
 import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
@@ -57,7 +57,8 @@ export class TransactionBatch {
   }
 
   addUnshieldData(unshieldData: UnshieldData) {
-    if (this.unshieldDataMap[unshieldData.tokenHash]) {
+    const tokenHash = getTokenDataHash(unshieldData.tokenData);
+    if (this.unshieldDataMap[tokenHash]) {
       throw new Error(
         'You may only call .addUnshieldData once per token for a given TransactionBatch.',
       );
@@ -65,10 +66,7 @@ export class TransactionBatch {
     if (unshieldData.value === 0n) {
       throw new Error('Unshield value must be greater than 0.');
     }
-    if (getTokenDataHash(unshieldData.tokenData) !== unshieldData.tokenHash) {
-      throw new Error('Invalid Unshield token data hash.');
-    }
-    this.unshieldDataMap[unshieldData.tokenHash] = unshieldData;
+    this.unshieldDataMap[tokenHash] = unshieldData;
   }
 
   resetUnshieldData() {
@@ -83,24 +81,29 @@ export class TransactionBatch {
     this.adaptID = adaptID;
   }
 
-  private getOutputTokenHashes = (): string[] => {
+  private getOutputTokenDatas = (): TokenData[] => {
     const tokenHashes: string[] = [];
-    const outputTokenHashes: string[] = this.outputs.map((output) => output.tokenHash);
-    const unshieldTokenHashes: string[] = Object.keys(this.unshieldDataMap);
-    [...outputTokenHashes, ...unshieldTokenHashes].forEach((tokenHash) => {
+    const tokenDatas: TokenData[] = [];
+    const outputTokenDatas: TokenData[] = this.outputs.map((output) => output.tokenData);
+    const unshieldTokenDatas: TokenData[] = Object.values(this.unshieldDataMap).map(
+      (output) => output.tokenData,
+    );
+    [...outputTokenDatas, ...unshieldTokenDatas].forEach((tokenData) => {
+      const tokenHash = getTokenDataHash(tokenData);
       if (!tokenHashes.includes(tokenHash)) {
         tokenHashes.push(tokenHash);
+        tokenDatas.push(tokenData);
       }
     });
-    return tokenHashes;
+    return tokenDatas;
   };
 
   async generateValidSpendingSolutionGroupsAllOutputs(
     wallet: RailgunWallet,
   ): Promise<SpendingSolutionGroup[]> {
-    const tokenHashes: string[] = this.getOutputTokenHashes();
+    const tokenDatas: TokenData[] = this.getOutputTokenDatas();
     const spendingSolutionGroupsPerToken = await Promise.all(
-      tokenHashes.map((tokenHash) => this.generateValidSpendingSolutionGroups(wallet, tokenHash)),
+      tokenDatas.map((tokenData) => this.generateValidSpendingSolutionGroups(wallet, tokenData)),
     );
     return spendingSolutionGroupsPerToken.flat();
   }
@@ -111,8 +114,9 @@ export class TransactionBatch {
    */
   private async generateValidSpendingSolutionGroups(
     wallet: RailgunWallet,
-    tokenHash: string,
+    tokenData: TokenData,
   ): Promise<SpendingSolutionGroup[]> {
+    const tokenHash = getTokenDataHash(tokenData);
     const tokenOutputs = this.outputs.filter((output) => output.tokenHash === tokenHash);
 
     const outputTotal = tokenOutputs.reduce((left, right) => left + right.value, BigInt(0));
@@ -141,6 +145,7 @@ export class TransactionBatch {
 
     // If single group possible, return it.
     const singleSpendingSolutionGroup = this.createSimpleSpendingSolutionGroupsIfPossible(
+      tokenData,
       tokenHash,
       tokenOutputs,
       treeSortedBalances,
@@ -152,13 +157,14 @@ export class TransactionBatch {
 
     // Single group not possible - need a more complex model.
     return this.createComplexSatisfyingSpendingSolutionGroups(
-      tokenHash,
+      tokenData,
       tokenOutputs,
       treeSortedBalances,
     );
   }
 
   private createSimpleSpendingSolutionGroupsIfPossible(
+    tokenData: TokenData,
     tokenHash: string,
     tokenOutputs: TransactNote[],
     treeSortedBalances: TreeBalance[],
@@ -188,7 +194,7 @@ export class TransactionBatch {
         spendingTree,
         unshieldValue,
         tokenOutputs,
-        tokenHash,
+        tokenData,
       };
 
       return spendingSolutionGroup;
@@ -232,7 +238,7 @@ export class TransactionBatch {
    * Finds array of UTXOs groups that satisfies the required amount, excluding an already-used array of UTXO IDs.
    */
   createComplexSatisfyingSpendingSolutionGroups(
-    tokenHash: string,
+    tokenData: TokenData,
     tokenOutputs: TransactNote[],
     treeSortedBalances: TreeBalance[],
   ): SpendingSolutionGroup[] {
@@ -244,7 +250,7 @@ export class TransactionBatch {
     while (remainingTokenOutputs.length > 0) {
       const tokenOutput = remainingTokenOutputs[0];
       const outputSpendingSolutionGroups = createSpendingSolutionGroupsForOutput(
-        tokenHash,
+        tokenData,
         treeSortedBalances,
         tokenOutput,
         remainingTokenOutputs,
@@ -261,9 +267,10 @@ export class TransactionBatch {
       throw consolidateBalanceError();
     }
 
+    const tokenHash = getTokenDataHash(tokenData);
     if (this.unshieldDataMap[tokenHash]) {
       const unshieldSpendingSolutionGroups = createSpendingSolutionGroupsForUnshield(
-        tokenHash,
+        tokenData,
         treeSortedBalances,
         this.unshieldTotal(tokenHash),
         excludedUTXOIDs,
@@ -362,15 +369,16 @@ export class TransactionBatch {
   generateTransactionForSpendingSolutionGroup(
     spendingSolutionGroup: SpendingSolutionGroup,
   ): Transaction {
-    const { spendingTree, utxos, tokenOutputs, unshieldValue, tokenHash } = spendingSolutionGroup;
+    const { spendingTree, utxos, tokenOutputs, unshieldValue, tokenData } = spendingSolutionGroup;
     const transaction = new Transaction(
       this.chain,
-      tokenHash,
+      tokenData,
       spendingTree,
       utxos,
       tokenOutputs,
       this.adaptID,
     );
+    const tokenHash = getTokenDataHash(tokenData);
     if (this.unshieldDataMap[tokenHash] && unshieldValue > 0) {
       transaction.addUnshieldData(this.unshieldDataMap[tokenHash], unshieldValue);
     }

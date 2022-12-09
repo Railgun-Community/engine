@@ -15,7 +15,7 @@ import { TransactNote } from '../../note/transact-note';
 import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { TransactionBatch } from '../transaction-batch';
-import { getTokenDataERC20, getTokenDataHash } from '../../note/note-util';
+import { getTokenDataERC20 } from '../../note/note-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -34,8 +34,8 @@ const testEncryptionKey = config.encryptionKey;
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
-const tokenHash = getTokenDataHash(tokenData);
 const random = randomHex(16);
+
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
 
@@ -84,7 +84,7 @@ describe('Transaction/Transaction Batch', function run() {
         undefined,
         random,
         value,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.Transfer,
@@ -162,7 +162,6 @@ describe('Transaction/Transaction Batch', function run() {
       toAddress: ethersWallet.address,
       value: shieldValue * 6n,
       tokenData,
-      tokenHash,
     });
     const txs = await transactionBatch.generateTransactions(
       prover,
@@ -187,7 +186,6 @@ describe('Transaction/Transaction Batch', function run() {
       toAddress: ethersWallet.address,
       value: shieldValue * 1n,
       tokenData,
-      tokenHash,
     });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
@@ -204,7 +202,6 @@ describe('Transaction/Transaction Batch', function run() {
       toAddress: ethersWallet.address,
       value: shieldValue,
       tokenData,
-      tokenHash,
     });
     const txs2 = await transactionBatch.generateTransactions(
       prover,
@@ -235,7 +232,6 @@ describe('Transaction/Transaction Batch', function run() {
       toAddress: ethersWallet.address,
       value: shieldValue + 1n,
       tokenData,
-      tokenHash,
     });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
@@ -255,7 +251,6 @@ describe('Transaction/Transaction Batch', function run() {
       toAddress: ethersWallet.address,
       value: shieldValue * 5n,
       tokenData,
-      tokenHash,
     });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),

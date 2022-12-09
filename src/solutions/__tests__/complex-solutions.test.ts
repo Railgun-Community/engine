@@ -18,7 +18,7 @@ import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { TransactNote } from '../../note/transact-note';
 import { RailgunEngine } from '../../railgun-engine';
 import { TXO, TreeBalance } from '../../models';
-import { getTokenDataERC20, getTokenDataHash } from '../../note/note-util';
+import { getTokenDataERC20 } from '../../note/note-util';
 
 const addressData1 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
@@ -32,7 +32,6 @@ const addressData3 = RailgunEngine.decodeAddress(
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
-const tokenHash = getTokenDataHash(tokenData);
 
 const CHAIN = {
   type: ChainType.EVM,
@@ -52,7 +51,7 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
     undefined,
     randomHex(16),
     value,
-    tokenHash,
+    tokenData,
     viewingKeyPair,
     false, // showSenderAddressToRecipient
     OutputType.Transfer,
@@ -104,6 +103,7 @@ describe('Solutions/Complex Solutions', () => {
   it('Should create next solution batch from utxos (5)', async () => {
     const treeBalance1: TreeBalance = {
       balance: BigInt(150),
+      tokenData,
       utxos: [
         await createMockTXO('a', BigInt(30)),
         await createMockTXO('b', BigInt(40)),
@@ -164,6 +164,7 @@ describe('Solutions/Complex Solutions', () => {
   it('Should create next solution batch from utxos (9)', async () => {
     const treeBalance1: TreeBalance = {
       balance: BigInt(450),
+      tokenData,
       utxos: [
         await createMockTXO('a', BigInt(30)),
         await createMockTXO('b', BigInt(40)),
@@ -201,6 +202,7 @@ describe('Solutions/Complex Solutions', () => {
   it('Should create spending solution groups for various outputs', async () => {
     const treeBalance0: TreeBalance = {
       balance: BigInt(20),
+      tokenData,
       utxos: [
         await createMockTXO('aa', BigInt(20)),
         await createMockTXO('ab', BigInt(0)),
@@ -209,6 +211,7 @@ describe('Solutions/Complex Solutions', () => {
     };
     const treeBalance1: TreeBalance = {
       balance: BigInt(450),
+      tokenData,
       utxos: [
         await createMockTXO('a', BigInt(30)),
         await createMockTXO('b', BigInt(40)),
@@ -231,7 +234,7 @@ describe('Solutions/Complex Solutions', () => {
       await createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups1 = createSpendingSolutionGroupsForOutput(
-      tokenHash,
+      tokenData,
       sortedTreeBalances,
       remainingOutputs1[0],
       remainingOutputs1,
@@ -246,14 +249,14 @@ describe('Solutions/Complex Solutions', () => {
         utxoValues: [20n, 0n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
-        tokenHash,
+        tokenData,
       },
       {
         utxoTxids: ['i'],
         utxoValues: [90n],
         outputValues: [60n],
         outputAddressDatas: [addressData1],
-        tokenHash,
+        tokenData,
       },
     ]);
 
@@ -264,7 +267,7 @@ describe('Solutions/Complex Solutions', () => {
       await createMockNote(addressData3, BigInt(60)),
     ];
     const spendingSolutionGroups2 = createSpendingSolutionGroupsForOutput(
-      tokenHash,
+      tokenData,
       sortedTreeBalances,
       remainingOutputs2[0],
       remainingOutputs2,
@@ -279,14 +282,14 @@ describe('Solutions/Complex Solutions', () => {
         utxoValues: [20n, 0n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
-        tokenHash,
+        tokenData,
       },
       {
         utxoTxids: ['i', 'h'],
         utxoValues: [90n, 80n],
         outputValues: [130n],
         outputAddressDatas: [addressData1],
-        tokenHash,
+        tokenData,
       },
     ]);
 
@@ -294,7 +297,7 @@ describe('Solutions/Complex Solutions', () => {
     const remainingOutputs3: TransactNote[] = [await createMockNote(addressData1, BigInt(500))];
     expect(() =>
       createSpendingSolutionGroupsForOutput(
-        tokenHash,
+        tokenData,
         sortedTreeBalances,
         remainingOutputs3[0],
         remainingOutputs3,
@@ -308,6 +311,7 @@ describe('Solutions/Complex Solutions', () => {
   it('Should create complex spending solution groups for transaction batch', async () => {
     const treeBalance0: TreeBalance = {
       balance: BigInt(20),
+      tokenData,
       utxos: [
         await createMockTXO('aa', BigInt(20)),
         await createMockTXO('ab', BigInt(0)),
@@ -316,6 +320,7 @@ describe('Solutions/Complex Solutions', () => {
     };
     const treeBalance1: TreeBalance = {
       balance: BigInt(450),
+      tokenData,
       utxos: [
         await createMockTXO('a', BigInt(30)),
         await createMockTXO('b', BigInt(40)),
@@ -341,7 +346,7 @@ describe('Solutions/Complex Solutions', () => {
     outputs1.forEach((output) => transactionBatch1.addOutput(output));
     const tokenOutputs = outputs1; // filtered by token
     const spendingSolutionGroups1 = transactionBatch1.createComplexSatisfyingSpendingSolutionGroups(
-      tokenHash,
+      tokenData,
       tokenOutputs,
       sortedTreeBalances,
     );
@@ -352,28 +357,28 @@ describe('Solutions/Complex Solutions', () => {
         utxoValues: [20n, 0n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
-        tokenHash,
+        tokenData,
       },
       {
         utxoTxids: ['i'],
         utxoValues: [90n],
         outputValues: [60n],
         outputAddressDatas: [addressData1],
-        tokenHash,
+        tokenData,
       },
       {
         utxoTxids: ['h'],
         utxoValues: [80n],
         outputValues: [70n],
         outputAddressDatas: [addressData2],
-        tokenHash,
+        tokenData,
       },
       {
         utxoTxids: ['g'],
         utxoValues: [70n],
         outputValues: [60n],
         outputAddressDatas: [addressData3],
-        tokenHash,
+        tokenData,
       },
     ]);
   });

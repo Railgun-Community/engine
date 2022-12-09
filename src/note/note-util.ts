@@ -81,7 +81,7 @@ export const serializeTokenData = (
   return {
     tokenAddress: formatToByteLength(tokenAddress, ByteLength.Address, true),
     tokenType,
-    tokenSubID: nToHex(BigInt(tokenSubID), ByteLength.UINT_256),
+    tokenSubID: nToHex(BigInt(tokenSubID), ByteLength.UINT_256, true),
   };
 };
 

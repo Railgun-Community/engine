@@ -28,7 +28,6 @@ import {
 } from './legacy-events/legacy-events';
 import { RailgunSmartWallet } from '../../typechain-types';
 import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
-import { Chain, ChainType } from '../../models';
 import { LegacyRailgunLogic } from './legacy-events/RailgunLogic_LegacyEvents';
 import {
   CommitmentCiphertextStructOutput,
@@ -44,6 +43,7 @@ import {
   UnshieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ENGINE_V3_START_BLOCK_NUMBERS_EVM } from '../../utils';
+import { Chain, ChainType } from '../../models/engine-types';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
@@ -54,7 +54,7 @@ class RailgunSmartWalletContract extends EventEmitter {
 
   readonly address: string;
 
-  private readonly chain: Chain;
+  readonly chain: Chain;
 
   /**
    * Connect to Railgun instance on network

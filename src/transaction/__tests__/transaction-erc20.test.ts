@@ -5,6 +5,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { BigNumber } from 'ethers';
+import { Provider } from '@ethersproject/abstract-provider';
 import {
   Ciphertext,
   CommitmentType,
@@ -35,7 +36,10 @@ import { MEMO_SENDER_RANDOM_NULL } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { aes } from '../../utils';
 import { TransactionBatch } from '../transaction-batch';
-import { getTokenDataERC20, getTokenDataHash } from '../../note/note-util';
+import { getTokenDataERC20 } from '../../note/note-util';
+import { TokenDataGetter } from '../../token/token-data-getter';
+import { ContractStore } from '../../contracts/contract-store';
+import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -43,6 +47,7 @@ const { expect } = chai;
 let db: Database;
 let merkletree: MerkleTree;
 let wallet: RailgunWallet;
+let tokenDataGetter: TokenDataGetter;
 let chain: Chain;
 let ethersWallet: EthersWallet;
 let transactionBatch: TransactionBatch;
@@ -54,37 +59,9 @@ const testEncryptionKey = config.encryptionKey;
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
-const tokenHash = getTokenDataHash(tokenData);
 const random = randomHex(16);
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
-
-// const keypairs = [
-//   {
-//     // Primary 0
-//     privateKey: hexStringToBytes('0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144'),
-//     pubkey: hexStringToBytes('c95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b'),
-//     address: 'rgeth1q8y4j4ssfa53xxcuy6wrq6yd8tld6rp6z4wjwr5x96jvr7y6vqapk0tmp0s',
-//   },
-//   {
-//     // Primary 1
-//     privateKey: hexStringToBytes('0d65921bba9cd412064b41cf915266f5d9302e8bcbfd3ed8457ea914edbb01c2'),
-//     pubkey: hexStringToBytes('6dd2398c78ea7662655bbce41224012c4948645ba12fc843f9dbb9a6b9e24005'),
-//     address: 'rgeth1q9kaywvv0r48vcn9tw7wgy3yqykyjjrytwsjljzrl8dmnf4eufqq2qdalzf',
-//   },
-//   {
-//     // Primary 5
-//     privateKey: hexStringToBytes('0a84aed056690cf95db7a35a2f79795f3f6656203a05b35047b7cb7b6f4d27c3'),
-//     pubkey: hexStringToBytes('49036a0ebd462c2a7e4311de737a92b6e36bd0c5505c446ec8919dfccc5d448e'),
-//     address: 'rgeth1q9ysx6swh4rzc2n7gvgauum6j2mwx67sc4g9c3rwezgemlxvt4zgujlt072',
-//   },
-//   {
-//     // Change 2
-//     privateKey: hexStringToBytes('0ad38aeedddc5a9cbc51007ce04d1800a628cc5aea50c5c8fb4cd23c13941500'),
-//     pubkey: hexStringToBytes('e4fb4c45e08bf87ba679185d03b0d5de4df67b5079226eff9d7e990a30773e07'),
-//     address: 'rgeth1q8j0knz9uz9ls7ax0yv96qas6h0ymanm2pujymhln4lfjz3swulqwn5p63t',
-//   },
-// ];
 
 const shieldLeaf: LegacyGeneratedCommitment = {
   commitmentType: CommitmentType.LegacyGeneratedCommitment,
@@ -124,6 +101,14 @@ describe('Transaction/ERC20', function test() {
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadMerkletree(merkletree);
+
+    // Load fake contract
+    ContractStore.railgunSmartWalletContracts[chain.type] = [];
+    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+      new RailgunSmartWalletContract(config.contracts.proxy, null as unknown as Provider, chain);
+
+    tokenDataGetter = new TokenDataGetter(db, chain);
+
     makeNote = async (
       value: bigint = 65n * DECIMALS_18,
       outputType: OutputType = OutputType.Transfer,
@@ -133,7 +118,7 @@ describe('Transaction/ERC20', function test() {
         undefined,
         random,
         value,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         outputType,
@@ -261,7 +246,7 @@ describe('Transaction/ERC20', function test() {
       wallet.addressKeys,
       random,
       100n,
-      tokenHash,
+      tokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
@@ -313,7 +298,7 @@ describe('Transaction/ERC20', function test() {
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
     expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
 
-    const senderDecrypted = TransactNote.decrypt(
+    const senderDecrypted = await TransactNote.decrypt(
       wallet.addressKeys,
       noteCiphertext,
       senderShared,
@@ -324,6 +309,7 @@ describe('Transaction/ERC20', function test() {
       senderRandom,
       true, // isSentNote
       false, // isLegacyDecryption
+      tokenDataGetter,
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -333,7 +319,7 @@ describe('Transaction/ERC20', function test() {
     ).to.deep.equal(noteAnnotationData);
     expect(senderDecrypted.memoText).to.equal(memoText);
 
-    const receiverDecrypted = TransactNote.decrypt(
+    const receiverDecrypted = await TransactNote.decrypt(
       wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
@@ -344,6 +330,7 @@ describe('Transaction/ERC20', function test() {
       undefined, // senderRandom
       false, // isSentNote
       false, // isLegacyDecryption
+      tokenDataGetter,
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.equal(undefined);
@@ -377,7 +364,7 @@ describe('Transaction/ERC20', function test() {
       wallet.addressKeys,
       random,
       100n,
-      tokenHash,
+      tokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
@@ -429,7 +416,7 @@ describe('Transaction/ERC20', function test() {
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
     expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
 
-    const senderDecrypted = TransactNote.decrypt(
+    const senderDecrypted = await TransactNote.decrypt(
       wallet.addressKeys,
       noteCiphertext,
       senderShared,
@@ -440,6 +427,7 @@ describe('Transaction/ERC20', function test() {
       senderRandom,
       true, // isSentNote
       false, // isLegacyDecryption
+      tokenDataGetter,
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -449,7 +437,7 @@ describe('Transaction/ERC20', function test() {
     ).to.deep.equal(noteAnnotationData);
     expect(senderDecrypted.memoText).to.equal(memoText);
 
-    const receiverDecrypted = TransactNote.decrypt(
+    const receiverDecrypted = await TransactNote.decrypt(
       wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
@@ -460,6 +448,7 @@ describe('Transaction/ERC20', function test() {
       undefined, // senderRandom
       false, // isSentNote
       false, // isLegacyDecryption
+      tokenDataGetter,
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.equal(undefined);
@@ -493,7 +482,7 @@ describe('Transaction/ERC20', function test() {
       wallet.addressKeys,
       random,
       100n,
-      tokenHash,
+      tokenData,
       wallet.getViewingKeyPair(),
       true, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
@@ -538,7 +527,7 @@ describe('Transaction/ERC20', function test() {
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
     expect(note.receiverAddressData.masterPublicKey).to.not.equal(encodedMasterPublicKey);
 
-    const senderDecrypted = TransactNote.decrypt(
+    const senderDecrypted = await TransactNote.decrypt(
       wallet.addressKeys,
       noteCiphertext,
       senderShared,
@@ -549,6 +538,7 @@ describe('Transaction/ERC20', function test() {
       senderRandom,
       true, // isSentNote
       false, // isLegacyDecryption
+      tokenDataGetter,
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -558,7 +548,7 @@ describe('Transaction/ERC20', function test() {
     ).to.deep.equal(noteAnnotationData);
     expect(senderDecrypted.memoText).to.equal(memoText);
 
-    const receiverDecrypted = TransactNote.decrypt(
+    const receiverDecrypted = await TransactNote.decrypt(
       wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
@@ -569,6 +559,7 @@ describe('Transaction/ERC20', function test() {
       undefined, // senderRandom
       false, // isSentNote
       false, // isLegacyDecryption
+      tokenDataGetter,
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -626,7 +617,7 @@ describe('Transaction/ERC20', function test() {
         undefined,
         random,
         6500000000000n,
-        '000925cdf66ddf5b88016df1fe915e68eff8f192', // invalid tokenHash
+        getTokenDataERC20('000925cdf66ddf5b88016df1fe915e68eff8f192'),
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -637,7 +628,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'Can not find RAILGUN wallet balance for token ID: 000925cdf66ddf5b88016df1fe915e68eff8f192',
+      'Can not find RAILGUN wallet balance for token ID: 000000000000000000000000000925cdf66ddf5b88016df1fe915e68eff8f192',
     );
 
     transactionBatch.resetOutputs();
@@ -655,13 +646,11 @@ describe('Transaction/ERC20', function test() {
     const transaction2 = new TransactionBatch(chain);
 
     const tokenDataBadAddress = getTokenDataERC20('0x00000000000000000000000000000000000000ff');
-    const tokenHashBadAddress = getTokenDataHash(tokenDataBadAddress);
 
     transaction2.addUnshieldData({
       toAddress: ethersWallet.address,
       value: 12n,
       tokenData: tokenDataBadAddress,
-      tokenHash: tokenHashBadAddress,
     });
 
     await expect(
@@ -677,7 +666,6 @@ describe('Transaction/ERC20', function test() {
       toAddress: ethersWallet.address,
       value: 2n,
       tokenData,
-      tokenHash,
     });
     const spendingSolutionGroups =
       await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet);
@@ -737,52 +725,6 @@ describe('Transaction/ERC20', function test() {
     expect(txs[0].nullifiers.length).to.equal(1);
     expect(txs[0].commitments.length).to.equal(2);
   });
-
-  // it('Generator', async () => {
-  //   const dblocal = new Database(memdown());
-  //   const merkletreelocal = new MerkleTree(dblocal, 1, async () => true);
-  //   const walletlocal = await Wallet.fromMnemonic(dblocal, testEncryptionKey, testMnemonic);
-  //   const proverlocal = new Prover(artifactsGetter);
-
-  //   const note = TransactNote.createTransfer(
-  //     '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-  //     '0x1e686e7506b0f4f21d6991b4cb58d39e77c31ed0577a986750c8dce8804af5b9',
-  //     new BN('11000000000000000000000000', 10),
-  //     '5FbDB2315678afecb367f032d93F642f64180aa3',
-  //   );
-
-  //   walletlocal.loadTree(merkletreelocal);
-
-  //   const encryptionKey = babyjubjub.ecdh(
-  //     '0852ea0ca28847f125cf5c206d8f62d4dc59202477dce90988dc57d5e9b2f144',
-  //     '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-  //   );
-
-  //   await merkletreelocal.queueLeaves(0, 0, [
-  //     {
-  //       hash: note.hash,
-  //       txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-  //       senderPubKey: '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-  //       ciphertext: note.encrypt(encryptionKey),
-  //     },
-  //   ]);
-  //   await walletlocal.scan(1);
-
-  //   const transactionlocal = new ERC20Transaction('5FbDB2315678afecb367f032d93F642f64180aa3', 1);
-
-  //   transactionlocal.outputs = [
-  //     TransactNote.createTransfer(
-  //       '0xc95956104f69131b1c269c30688d3afedd0c3a155d270e862ea4c1f89a603a1b',
-  //       '0x1bcfa32dbb44dc6a26712bc500b6373885b08a7cd73ee433072f1d410aeb4801',
-  //       'ffff',
-  //       '5FbDB2315678afecb367f032d93F642f64180aa3',
-  //     ),
-  //   ];
-
-  //   const tx = await transactionlocal.prove(proverlocal, walletlocal, testEncryptionKey);
-
-  //   console.log(JSON.stringify(tx, null, '  '));
-  // });
 
   this.afterAll(() => {
     // Clean up database

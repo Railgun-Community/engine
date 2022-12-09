@@ -35,6 +35,7 @@ import { MEMO_SENDER_RANDOM_NULL, TOKEN_SUB_ID_NULL } from '../models/transactio
 import { getTokenDataERC20, getTokenDataHash, getTokenDataNFT } from '../note/note-util';
 import { TransactionBatch } from '../transaction/transaction-batch';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
+import { ContractStore } from '../contracts/contract-store';
 
 chai.use(chaiAsPromised);
 
@@ -131,7 +132,7 @@ describe('RailgunEngine', function test() {
     );
     await engine.scanHistory(chain);
     merkleTree = engine.merkletrees[chain.type][chain.id];
-    railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
+    railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
   });
 
   it('[HH] Should load existing wallets', async function run() {
@@ -264,14 +265,12 @@ describe('RailgunEngine', function test() {
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     const tokenData = getTokenDataERC20(tokenAddress);
-    const tokenHash = getTokenDataHash(tokenData);
 
     // Create transaction
     const transactionBatch = new TransactionBatch(chain);
     transactionBatch.addUnshieldData({
       toAddress: etherswallet.address,
       value: BigInt(300) * DECIMALS_18,
-      tokenHash,
       tokenData,
     });
 
@@ -282,7 +281,7 @@ describe('RailgunEngine', function test() {
         wallet.addressKeys,
         randomHex(16),
         1n,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -316,12 +315,13 @@ describe('RailgunEngine', function test() {
     const history = await wallet.getTransactionHistory(chain);
     expect(history.length).to.equal(2);
 
-    const tokenFormatted = formatToByteLength(tokenAddress, 32, false);
+    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
 
     // Check first output: Shield (receive only).
     expect(history[0].receiveTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
@@ -340,7 +340,8 @@ describe('RailgunEngine', function test() {
     );
     expect(history[1].transferTokenAmounts).deep.eq([]);
     expect(history[1].relayerFeeTokenAmount).deep.eq({
-      token: tokenFormatted,
+      tokenData: getTokenDataERC20(tokenAddress),
+      tokenHash: tokenFormatted,
       amount: BigInt(1),
       noteAnnotationData: {
         outputType: OutputType.RelayerFee,
@@ -352,7 +353,8 @@ describe('RailgunEngine', function test() {
     });
     expect(history[1].changeTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt('109424999999999999999999'),
         noteAnnotationData: {
           outputType: OutputType.Change,
@@ -364,7 +366,8 @@ describe('RailgunEngine', function test() {
     ]);
     expect(history[1].unshieldTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt('299250000000000000000'), // 300 minus fee
         recipientAddress: etherswallet.address,
         memoText: undefined,
@@ -395,7 +398,6 @@ describe('RailgunEngine', function test() {
       'A really long memo with emojis 😐 👩🏾‍🔧 and other text, in order to test a major memo for a real live production use case.';
 
     const tokenData = getTokenDataERC20(tokenAddress);
-    const tokenHash = getTokenDataHash(tokenData);
 
     // Add output for Transfer
     transactionBatch.addOutput(
@@ -404,7 +406,7 @@ describe('RailgunEngine', function test() {
         wallet.addressKeys,
         randomHex(16),
         10n,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         true, // showSenderAddressToRecipient
         OutputType.Transfer,
@@ -421,7 +423,7 @@ describe('RailgunEngine', function test() {
         wallet.addressKeys,
         randomHex(16),
         1n,
-        tokenHash,
+        tokenData,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -460,7 +462,8 @@ describe('RailgunEngine', function test() {
     // Check first output: Shield (receive only).
     expect(history[0].receiveTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
@@ -479,7 +482,8 @@ describe('RailgunEngine', function test() {
     );
     expect(history[1].transferTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt(10),
         noteAnnotationData: {
           outputType: OutputType.Transfer,
@@ -492,7 +496,8 @@ describe('RailgunEngine', function test() {
       },
     ]);
     expect(history[1].relayerFeeTokenAmount).deep.eq({
-      token: tokenFormatted,
+      tokenData: getTokenDataERC20(tokenAddress),
+      tokenHash: tokenFormatted,
       amount: BigInt(1),
       noteAnnotationData: {
         outputType: OutputType.RelayerFee,
@@ -504,7 +509,8 @@ describe('RailgunEngine', function test() {
     });
     expect(history[1].changeTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt('109724999999999999999989'),
         noteAnnotationData: {
           outputType: OutputType.Change,
@@ -520,13 +526,15 @@ describe('RailgunEngine', function test() {
     expect(history2.length).to.equal(1);
     expect(history2[0].receiveTokenAmounts).deep.eq([
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt(10),
         memoText,
         senderAddress: wallet.getAddress(),
       },
       {
-        token: tokenFormatted,
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
         amount: BigInt(1),
         memoText: relayerMemoText,
         senderAddress: undefined,
@@ -572,7 +580,8 @@ describe('RailgunEngine', function test() {
     // Check first output: Shield (receive only).
     expect(history[0].receiveTokenAmounts).deep.eq([
       {
-        token: tokenHashNFT1,
+        tokenData: tokenDataNFT1,
+        tokenHash: tokenHashNFT1,
         amount: BigInt(1),
         memoText: undefined,
         senderAddress: undefined,
@@ -622,7 +631,6 @@ describe('RailgunEngine', function test() {
     const relayerMemoText = 'A short memo with only 32 chars.';
 
     const tokenDataRelayerFee = getTokenDataERC20(token.address);
-    const tokenHashRelayerFee = getTokenDataHash(tokenDataRelayerFee);
 
     // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
     transactionBatch.addOutput(
@@ -631,7 +639,7 @@ describe('RailgunEngine', function test() {
         wallet.addressKeys,
         randomHex(16),
         20n,
-        tokenHashRelayerFee,
+        tokenDataRelayerFee,
         wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -657,13 +665,15 @@ describe('RailgunEngine', function test() {
     const historyAfterTransfer = await wallet.getTransactionHistory(chain);
     expect(historyAfterTransfer.length).to.equal(4);
 
-    const relayerFeeTokenFormatted = formatToByteLength(tokenAddress, 32, false);
+    const relayerFeeTokenData = getTokenDataERC20(tokenAddress);
+    const relayerFeeTokenHash = getTokenDataHash(relayerFeeTokenData);
 
     // Check first output: Shield (receive only).
     expect(historyAfterTransfer[3].receiveTokenAmounts).deep.eq([]);
     expect(historyAfterTransfer[3].transferTokenAmounts).deep.eq([
       {
-        token: tokenHashNFT1,
+        tokenData: tokenDataNFT1,
+        tokenHash: tokenHashNFT1,
         amount: BigInt(1),
         noteAnnotationData: {
           outputType: OutputType.Transfer,
@@ -677,7 +687,8 @@ describe('RailgunEngine', function test() {
       },
     ]);
     expect(historyAfterTransfer[3].relayerFeeTokenAmount).deep.eq({
-      token: relayerFeeTokenFormatted,
+      tokenData: relayerFeeTokenData,
+      tokenHash: relayerFeeTokenHash,
       amount: BigInt(20),
       noteAnnotationData: {
         outputType: OutputType.RelayerFee,
@@ -690,7 +701,8 @@ describe('RailgunEngine', function test() {
     });
     expect(historyAfterTransfer[3].changeTokenAmounts).deep.eq([
       {
-        token: relayerFeeTokenFormatted,
+        tokenData: relayerFeeTokenData,
+        tokenHash: relayerFeeTokenHash,
         amount: BigInt('109724999999999999999980'),
         noteAnnotationData: {
           outputType: OutputType.Change,
@@ -702,7 +714,8 @@ describe('RailgunEngine', function test() {
     ]);
     expect(historyAfterTransfer[3].unshieldTokenAmounts).deep.eq([
       {
-        token: tokenHashNFT0,
+        tokenData: tokenDataNFT0,
+        tokenHash: tokenHashNFT0,
         amount: BigInt(1),
         recipientAddress: etherswallet.address,
         memoText: undefined,

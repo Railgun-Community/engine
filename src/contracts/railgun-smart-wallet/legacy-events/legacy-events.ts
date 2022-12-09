@@ -20,7 +20,7 @@ import {
   LegacyEncryptedCommitment,
   LegacyGeneratedCommitment,
   Nullifier,
-} from '../../../models';
+} from '../../../models/formatted-types';
 import { getNoteHash, serializePreImage, serializeTokenData } from '../../../note/note-util';
 import { ByteLength, formatToByteLength, nToHex } from '../../../utils';
 import EngineDebug from '../../../debugger/debugger';

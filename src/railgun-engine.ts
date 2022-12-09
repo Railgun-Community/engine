@@ -11,7 +11,7 @@ import { hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
-import { Commitment, Nullifier, TokenData } from './models/formatted-types';
+import { Commitment, Nullifier } from './models/formatted-types';
 import {
   CommitmentEvent,
   EngineEvent,
@@ -25,16 +25,12 @@ import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactsGetter } from './models/prover-types';
-import { NFTTokenDataGetter } from './nft/nft-token-data-getter';
+import { ContractStore } from './contracts/contract-store';
 
 class RailgunEngine extends EventEmitter {
   readonly db;
 
   readonly merkletrees: MerkleTree[][] = [];
-
-  readonly railgunSmartWalletContracts: RailgunSmartWalletContract[][] = [];
-
-  readonly relayAdaptContracts: RelayAdaptContract[][] = [];
 
   readonly prover: Prover;
 
@@ -135,7 +131,8 @@ class RailgunEngine extends EventEmitter {
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
     const merkletree = this.merkletrees[chain.type][chain.id];
-    const railgunSmartWalletContract = this.railgunSmartWalletContracts[chain.type][chain.id];
+    const railgunSmartWalletContract =
+      ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
     const { provider } = railgunSmartWalletContract.contract;
 
     // Get latest tree
@@ -267,8 +264,8 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     if (
-      !this.railgunSmartWalletContracts[chain.type] ||
-      !this.railgunSmartWalletContracts[chain.type][chain.id]
+      !ContractStore.railgunSmartWalletContracts[chain.type] ||
+      !ContractStore.railgunSmartWalletContracts[chain.type][chain.id]
     ) {
       EngineDebug.log(
         `Cannot scan history. Proxy contract not yet loaded for chain ${chain.type}:${chain.id}.`,
@@ -276,7 +273,8 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     const merkletree = this.merkletrees[chain.type][chain.id];
-    const railgunSmartWalletContract = this.railgunSmartWalletContracts[chain.type][chain.id];
+    const railgunSmartWalletContract =
+      ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
     if (merkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
       EngineDebug.log('Already scanning. Stopping additional re-scan.');
@@ -418,29 +416,27 @@ class RailgunEngine extends EventEmitter {
 
     if (
       (this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id]) ||
-      (this.railgunSmartWalletContracts[chain.type] &&
-        this.railgunSmartWalletContracts[chain.type][chain.id]) ||
-      (this.relayAdaptContracts[chain.type] && this.relayAdaptContracts[chain.type][chain.id])
+      (ContractStore.railgunSmartWalletContracts[chain.type] &&
+        ContractStore.railgunSmartWalletContracts[chain.type][chain.id]) ||
+      (ContractStore.relayAdaptContracts[chain.type] &&
+        ContractStore.relayAdaptContracts[chain.type][chain.id])
     ) {
       // If a network with this chainID exists, unload it and load the provider as a new network
       this.unloadNetwork(chain);
     }
 
     // Create proxy contract instance
-    if (!this.railgunSmartWalletContracts[chain.type]) {
-      this.railgunSmartWalletContracts[chain.type] = [];
+    if (!ContractStore.railgunSmartWalletContracts[chain.type]) {
+      ContractStore.railgunSmartWalletContracts[chain.type] = [];
     }
-    this.railgunSmartWalletContracts[chain.type][chain.id] = new RailgunSmartWalletContract(
-      railgunSmartWalletContractAddress,
-      provider,
-      chain,
-    );
+    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+      new RailgunSmartWalletContract(railgunSmartWalletContractAddress, provider, chain);
 
     // Create relay adapt contract instance
-    if (!this.relayAdaptContracts[chain.type]) {
-      this.relayAdaptContracts[chain.type] = [];
+    if (!ContractStore.relayAdaptContracts[chain.type]) {
+      ContractStore.relayAdaptContracts[chain.type] = [];
     }
-    this.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
+    ContractStore.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
       relayAdaptContractAddress,
       provider,
     );
@@ -450,7 +446,7 @@ class RailgunEngine extends EventEmitter {
       this.merkletrees[chain.type] = [];
     }
     this.merkletrees[chain.type][chain.id] = new MerkleTree(this.db, chain, (tree, root) =>
-      this.railgunSmartWalletContracts[chain.type][chain.id].validateRoot(tree, root),
+      ContractStore.railgunSmartWalletContracts[chain.type][chain.id].validateRoot(tree, root),
     );
 
     if (!this.deploymentBlocks[chain.type]) {
@@ -458,7 +454,7 @@ class RailgunEngine extends EventEmitter {
     }
     this.deploymentBlocks[chain.type][chain.id] = deploymentBlock;
 
-    // Load erc20 merkletrees to wallets
+    // Load merkletrees to wallets
     Object.values(this.wallets).forEach((wallet) => {
       wallet.loadMerkletree(this.merkletrees[chain.type][chain.id]);
     });
@@ -480,7 +476,7 @@ class RailgunEngine extends EventEmitter {
     const unshieldListener = async (unshields: UnshieldStoredEvent[]) => {
       await this.unshieldListener(chain, unshields);
     };
-    this.railgunSmartWalletContracts[chain.type][chain.id].treeUpdates(
+    ContractStore.railgunSmartWalletContracts[chain.type][chain.id].treeUpdates(
       eventsListener,
       nullifierListener,
       unshieldListener,
@@ -493,20 +489,25 @@ class RailgunEngine extends EventEmitter {
    */
   unloadNetwork(chain: Chain) {
     if (
-      this.railgunSmartWalletContracts[chain.type] &&
-      this.railgunSmartWalletContracts[chain.id]
+      ContractStore.railgunSmartWalletContracts[chain.type] &&
+      ContractStore.railgunSmartWalletContracts[chain.id]
     ) {
       // Unload listeners
-      this.railgunSmartWalletContracts[chain.type][chain.id].unload();
+      ContractStore.railgunSmartWalletContracts[chain.type][chain.id].unload();
 
-      // Unlaod erc20 merkletrees from wallets
+      // Unload merkletrees from wallets
+      Object.values(this.wallets).forEach((wallet) => {
+        wallet.unloadMerkletree(chain);
+      });
+
+      // Unload merkletrees from wallets
       Object.values(this.wallets).forEach((wallet) => {
         wallet.unloadMerkletree(chain);
       });
 
       // Delete contract and merkle tree objects
-      delete this.railgunSmartWalletContracts[chain.id][chain.type];
-      delete this.relayAdaptContracts[chain.id][chain.type];
+      delete ContractStore.railgunSmartWalletContracts[chain.id][chain.type];
+      delete ContractStore.relayAdaptContracts[chain.id][chain.type];
       delete this.merkletrees[chain.id][chain.type];
     }
   }
@@ -570,7 +571,7 @@ class RailgunEngine extends EventEmitter {
    */
   unload() {
     // Unload chains
-    this.railgunSmartWalletContracts.forEach((contractsForChainType, chainType) => {
+    ContractStore.railgunSmartWalletContracts.forEach((contractsForChainType, chainType) => {
       contractsForChainType.forEach((railgunSmartWalletContract, chainID) => {
         EngineDebug.log(`unload contract for ${chainType}:${chainID}`);
         this.unloadNetwork({ type: chainType, id: chainID });
@@ -586,18 +587,11 @@ class RailgunEngine extends EventEmitter {
     this.db.close();
   }
 
-  /**
-   * Get list of loaded networks
-   */
-  get networks(): number[] {
-    return this.railgunSmartWalletContracts.map((element, index) => index);
-  }
-
   private loadWallet(wallet: AbstractWallet): void {
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
 
-    // Load erc20 merkletrees for wallet
+    // Load merkletrees for wallet
     this.merkletrees.forEach((merkletreesForChainType) => {
       merkletreesForChainType.forEach((merkletree) => {
         wallet.loadMerkletree(merkletree);
@@ -674,15 +668,15 @@ class RailgunEngine extends EventEmitter {
     return wallet;
   }
 
-  async getNFTTokenDataForChain(chain: Chain, tokenHash: string): Promise<TokenData> {
-    const railgunSmartWalletContract = this.railgunSmartWalletContracts[chain.type][chain.id];
-    const nftTokenDataGetter = new NFTTokenDataGetter(this.db, railgunSmartWalletContract);
-    return nftTokenDataGetter.getNFTTokenData(tokenHash);
-  }
+  // Top-level exports:
 
   static encodeAddress = encodeAddress;
 
   static decodeAddress = decodeAddress;
+
+  railgunSmartWalletContracts = ContractStore.railgunSmartWalletContracts;
+
+  relayAdaptContracts = ContractStore.relayAdaptContracts;
 }
 
 export { RailgunEngine };

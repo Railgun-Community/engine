@@ -2,12 +2,7 @@ import { UnshieldData } from '../models';
 import { TokenData } from '../models/formatted-types';
 import { CommitmentPreimageStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ByteLength, nToHex } from '../utils/bytes';
-import {
-  assertValidNoteToken,
-  getNoteHash,
-  getTokenDataHash,
-  serializePreImage,
-} from './note-util';
+import { assertValidNoteToken, getNoteHash, serializePreImage } from './note-util';
 
 export abstract class UnshieldNote {
   readonly toAddress: string;
@@ -15,8 +10,6 @@ export abstract class UnshieldNote {
   readonly value: bigint;
 
   readonly tokenData: TokenData;
-
-  readonly tokenHash: string;
 
   readonly hash: bigint;
 
@@ -35,7 +28,6 @@ export abstract class UnshieldNote {
     this.toAddress = toAddress;
     this.value = value;
     this.tokenData = tokenData;
-    this.tokenHash = getTokenDataHash(tokenData);
     this.allowOverride = allowOverride;
     this.hash = getNoteHash(toAddress, tokenData, value);
   }
@@ -45,7 +37,6 @@ export abstract class UnshieldNote {
       toAddress: this.toAddress,
       value: this.value,
       tokenData: this.tokenData,
-      tokenHash: this.tokenHash,
       allowOverride: this.allowOverride,
     };
   }

@@ -4,6 +4,7 @@ import { TreeBalance } from '../models/wallet-types';
 import { VALID_NULLIFIER_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
 import { TransactNote } from '../note/transact-note';
+import { TokenData } from '../models';
 
 type SolutionSpendingGroupGenerator = (
   tree: number,
@@ -66,7 +67,7 @@ const createSpendingSolutionsForValue = (
 };
 
 export const createSpendingSolutionGroupsForOutput = (
-  tokenHash: string,
+  tokenData: TokenData,
   treeSortedBalances: TreeBalance[],
   tokenOutput: TransactNote,
   remainingOutputs: TransactNote[],
@@ -84,7 +85,7 @@ export const createSpendingSolutionGroupsForOutput = (
       utxos,
       tokenOutputs: [solutionOutput],
       unshieldValue: BigInt(0),
-      tokenHash,
+      tokenData,
     };
   };
 
@@ -108,7 +109,7 @@ export const createSpendingSolutionGroupsForOutput = (
 };
 
 export const createSpendingSolutionGroupsForUnshield = (
-  tokenHash: string,
+  tokenData: TokenData,
   treeSortedBalances: TreeBalance[],
   unshieldValue: bigint,
   excludedUTXOIDs: string[],
@@ -123,7 +124,7 @@ export const createSpendingSolutionGroupsForUnshield = (
       utxos,
       tokenOutputs: [],
       unshieldValue: solutionValue,
-      tokenHash,
+      tokenData,
     };
   };
 

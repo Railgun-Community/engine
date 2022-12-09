@@ -10,6 +10,7 @@ import {
 } from '../models/formatted-types';
 import { PublicInputs } from '../models/prover-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
+import { TokenDataGetter } from '../token/token-data-getter';
 import {
   ByteLength,
   chunk,
@@ -25,7 +26,13 @@ import { aes } from '../utils/encryption';
 import { signEDDSA, unblindNoteKey } from '../utils/keys-utils';
 import { unblindNoteKeyLegacy } from '../utils/keys-utils-legacy';
 import { LEGACY_MEMO_METADATA_BYTE_CHUNKS, Memo } from './memo';
-import { assertValidNoteRandom, getTokenDataHash, NFT_NOTE_VALUE } from './note-util';
+import {
+  assertValidNoteRandom,
+  getTokenDataERC20,
+  getTokenDataHash,
+  NFT_NOTE_VALUE,
+  serializeTokenData,
+} from './note-util';
 
 /**
  *
@@ -51,6 +58,8 @@ export class TransactNote {
 
   // 32 byte hash of token data
   readonly tokenHash: string;
+
+  readonly tokenData: TokenData;
 
   // 16 byte random
   readonly random: string;
@@ -79,7 +88,7 @@ export class TransactNote {
     senderAddressData: Optional<AddressData>,
     random: string,
     value: bigint,
-    tokenHash: string,
+    tokenData: TokenData,
     annotationData: string,
     memoText: Optional<string>,
   ) {
@@ -89,8 +98,13 @@ export class TransactNote {
     this.senderAddressData = senderAddressData;
 
     this.random = random;
-    this.tokenHash = tokenHash;
     this.value = BigInt(value);
+    this.tokenData = serializeTokenData(
+      tokenData.tokenAddress,
+      tokenData.tokenType,
+      tokenData.tokenSubID,
+    );
+    this.tokenHash = getTokenDataHash(tokenData);
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();
     this.annotationData = annotationData;
@@ -102,7 +116,7 @@ export class TransactNote {
     senderAddressData: Optional<AddressData>,
     random: string,
     value: bigint,
-    tokenHash: string,
+    tokenData: TokenData,
     senderViewingKeys: ViewingKeyPair,
     showSenderAddressToRecipient: boolean,
     outputType: OutputType,
@@ -123,7 +137,7 @@ export class TransactNote {
       senderAddressData,
       random,
       value,
-      tokenHash,
+      tokenData,
       annotationData,
       memoText,
     );
@@ -138,14 +152,12 @@ export class TransactNote {
     showSenderAddressToRecipient: boolean,
     memoText: Optional<string>,
   ): TransactNote {
-    const tokenHash = getTokenDataHash(tokenData);
-
     return TransactNote.createTransfer(
       receiverAddressData,
       senderAddressData,
       random,
       NFT_NOTE_VALUE,
-      tokenHash,
+      tokenData,
       senderViewingKeys,
       showSenderAddressToRecipient,
       OutputType.Transfer,
@@ -250,7 +262,7 @@ export class TransactNote {
   /**
    * AES-256-GCM decrypts note data
    */
-  static decrypt(
+  static async decrypt(
     currentWalletAddressData: AddressData,
     noteCiphertext: Ciphertext,
     sharedKey: Uint8Array,
@@ -261,7 +273,8 @@ export class TransactNote {
     senderRandom: Optional<string>,
     isSentNote: boolean,
     isLegacyDecryption: boolean,
-  ): TransactNote {
+    tokenDataGetter: TokenDataGetter,
+  ): Promise<TransactNote> {
     const ciphertextDataWithMemoText = [...noteCiphertext.data, memo];
     const fullCiphertext: Ciphertext = {
       ...noteCiphertext,
@@ -282,6 +295,7 @@ export class TransactNote {
       senderRandom,
       isSentNote,
       isLegacyDecryption,
+      tokenDataGetter,
     );
   }
 
@@ -307,7 +321,7 @@ export class TransactNote {
       : receiverMasterPublicKey ^ senderMasterPublicKey;
   }
 
-  private static noteFromDecryptedValues(
+  private static async noteFromDecryptedValues(
     currentWalletAddressData: AddressData,
     decryptedValues: string[],
     annotationData: string,
@@ -316,6 +330,7 @@ export class TransactNote {
     senderRandom: Optional<string>,
     isSentNote: boolean,
     isLegacyDecryption: boolean,
+    tokenDataGetter: TokenDataGetter,
   ) {
     // Decrypted Values:
     // 0: Master Public Key (Encoded)
@@ -327,6 +342,8 @@ export class TransactNote {
     const value = hexToBigInt(decryptedValues[2].substring(32, 64));
     const tokenHash = decryptedValues[1];
     const memoText = Memo.decodeMemoText(combine(decryptedValues.slice(3)));
+
+    const tokenData = await tokenDataGetter.getTokenDataFromHash(tokenHash);
 
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
 
@@ -351,7 +368,7 @@ export class TransactNote {
         currentWalletAddressData,
         random,
         value,
-        tokenHash,
+        tokenData,
         annotationData,
         memoText,
       );
@@ -384,7 +401,7 @@ export class TransactNote {
       senderAddressData,
       random,
       value,
-      tokenHash,
+      tokenData,
       annotationData,
       memoText,
     );
@@ -447,22 +464,26 @@ export class TransactNote {
    * @param viewingPrivateKey - viewing private key for decryption
    * @returns TransactNote
    */
-  static deserialize(
+  static async deserialize(
     noteData: NoteSerialized | LegacyNoteSerialized,
     viewingPrivateKey: Uint8Array,
-  ): TransactNote {
+    tokenDataGetter: TokenDataGetter,
+  ): Promise<TransactNote> {
     if ('encryptedRandom' in noteData) {
       // LegacyNoteSerialized type.
       return TransactNote.deserializeLegacy(noteData, viewingPrivateKey);
     }
 
+    const tokenHash = noteData.token;
+    const tokenData = await tokenDataGetter.getTokenDataFromHash(tokenHash);
+
     // NoteSerialized type.
     return new TransactNote(
       decodeAddress(noteData.recipientAddress),
       noteData.senderAddress ? decodeAddress(noteData.senderAddress) : undefined,
-      hexlify(noteData.random),
+      noteData.random,
       hexToBigInt(noteData.value),
-      hexlify(noteData.token),
+      tokenData,
       noteData.annotationData,
       noteData.memoText || undefined,
     );
@@ -486,12 +507,16 @@ export class TransactNote {
       : [];
     const annotationData: string = combine(annotationDataChunked);
 
+    // Legacy can only be erc20.
+    const tokenHash = noteData.token;
+    const tokenData = getTokenDataERC20(tokenHash);
+
     return new TransactNote(
       decodeAddress(noteData.recipientAddress),
       undefined, // senderAddress
       combine(decryptedRandom),
       hexToBigInt(noteData.value),
-      hexlify(noteData.token),
+      tokenData,
       annotationData,
       noteData.memoText || undefined,
     );
@@ -513,7 +538,7 @@ export class TransactNote {
       this.senderAddressData,
       randomHex(16),
       value,
-      this.tokenHash,
+      this.tokenData,
       this.annotationData,
       this.memoText,
     );

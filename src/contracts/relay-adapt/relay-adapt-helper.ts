@@ -1,21 +1,21 @@
 import { ethers, PopulatedTransaction, BigNumber } from 'ethers';
 import { randomHex, hexToBytes } from '../../utils/bytes';
-import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
 import {
   ShieldRequestStruct,
   TransactionStruct,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
+import { AddressData } from '../../key-derivation';
 
 class RelayAdaptHelper {
   static generateRelayShieldRequests(
-    wallet: RailgunWallet,
+    addressData: AddressData,
     random: string,
     shieldTokens: string[],
   ): Promise<ShieldRequestStruct[]> {
     const relayShields = RelayAdaptHelper.createRelayShieldERC20s(
-      wallet.masterPublicKey,
+      addressData.masterPublicKey,
       random,
       shieldTokens,
     );
@@ -23,7 +23,7 @@ class RelayAdaptHelper {
       relayShields.map((shield) => {
         // Random private key for Relay Adapt shield.
         const shieldPrivateKey = hexToBytes(randomHex(32));
-        return shield.serialize(shieldPrivateKey, wallet.addressKeys.viewingPublicKey);
+        return shield.serialize(shieldPrivateKey, addressData.viewingPublicKey);
       }),
     );
   }

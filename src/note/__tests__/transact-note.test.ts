@@ -1,8 +1,16 @@
+import { Provider } from '@ethersproject/abstract-provider';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { randomBytes } from 'ethers/lib/utils';
+import memdown from 'memdown';
+import { ContractStore } from '../../contracts/contract-store';
+import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
+import { Database } from '../../database/database';
 import { ViewingKeyPair } from '../../key-derivation/wallet-node';
+import { Chain, ChainType } from '../../models/engine-types';
 import { Ciphertext, LegacyNoteSerialized, OutputType } from '../../models/formatted-types';
+import { config } from '../../test/config.test';
+import { TokenDataGetter } from '../../token/token-data-getter';
 import {
   ByteLength,
   formatToByteLength,
@@ -12,6 +20,7 @@ import {
   nToHex,
 } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
+import { getTokenDataERC20 } from '../note-util';
 import { TransactNote } from '../transact-note';
 
 chai.use(chaiAsPromised);
@@ -288,7 +297,26 @@ const ciphertextVectors: {
   },
 ];
 
+let db: Database;
+let tokenDataGetter: TokenDataGetter;
+let chain: Chain;
+
 describe('Note/TransactNote', () => {
+  beforeEach(() => {
+    db = new Database(memdown());
+    chain = {
+      type: ChainType.EVM,
+      id: 1,
+    };
+
+    // Load fake contract
+    ContractStore.railgunSmartWalletContracts[chain.type] = [];
+    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+      new RailgunSmartWalletContract(config.contracts.proxy, null as unknown as Provider, chain);
+
+    tokenDataGetter = new TokenDataGetter(db, chain);
+  });
+
   it('Should encrypt and decrypt notes', () => {
     ciphertextVectors.forEach(async (vector) => {
       const viewingPublicKey = hexStringToBytes(vector.note.pubkey);
@@ -304,12 +332,15 @@ describe('Note/TransactNote', () => {
         privateKey: privateViewingKey,
         pubkey: publicViewingKey,
       };
+
+      const tokenData = getTokenDataERC20(vector.note.token);
+
       const note = TransactNote.createTransfer(
         address,
         address,
         vector.note.random,
         hexToBigInt(vector.note.amount),
-        vector.note.token, // tokenHash
+        tokenData,
         viewingKeyPair,
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
@@ -326,7 +357,7 @@ describe('Note/TransactNote', () => {
       );
 
       // Check if encrypted values are successfully decrypted
-      const decrypted = TransactNote.decrypt(
+      const decrypted = await TransactNote.decrypt(
         address,
         noteCiphertext,
         sharedKeyBytes,
@@ -337,6 +368,7 @@ describe('Note/TransactNote', () => {
         undefined, // senderRandom
         true, // isSentNote
         true, // isLegacyDecryption
+        tokenDataGetter,
       );
       expect(decrypted.tokenHash).to.equal(note.tokenHash);
       expect(decrypted.value).to.equal(note.value);
@@ -345,7 +377,7 @@ describe('Note/TransactNote', () => {
       expect(decrypted.memoText).to.equal(note.memoText);
 
       // Check if vector encrypted values are successfully decrypted
-      const decryptedFromCiphertext = TransactNote.decrypt(
+      const decryptedFromCiphertext = await TransactNote.decrypt(
         address,
         noteCiphertext,
         sharedKeyBytes,
@@ -356,6 +388,7 @@ describe('Note/TransactNote', () => {
         undefined, // senderRandom
         true, // isSentNote
         true, // isLegacyDecryption
+        tokenDataGetter,
       );
       expect(decryptedFromCiphertext.tokenHash).to.equal(note.tokenHash);
       expect(decryptedFromCiphertext.value).to.equal(note.value);
@@ -371,58 +404,62 @@ describe('Note/TransactNote', () => {
     });
   });
 
-  it('Should serialize and deserialize notes', () => {
-    vectors.forEach((vector) => {
-      const vectorBytes = hexStringToBytes(vector.vpk);
+  it('Should serialize and deserialize notes', async () => {
+    await Promise.all(
+      vectors.map(async (vector) => {
+        const vectorBytes = hexStringToBytes(vector.vpk);
 
-      const note = TransactNote.deserialize(vector.note, vectorBytes);
-      expect(hexlify(note.random)).to.equal(vector.random);
+        const note = await TransactNote.deserialize(vector.note, vectorBytes, tokenDataGetter);
+        expect(hexlify(note.random)).to.equal(vector.random);
 
-      const hexHash = nToHex(note.hash, ByteLength.UINT_256);
-      expect(hexHash).to.equal(vector.hash);
+        const hexHash = nToHex(note.hash, ByteLength.UINT_256);
+        expect(hexHash).to.equal(vector.hash);
 
-      const reserialized = note.serialize();
-      expect(reserialized.npk).to.equal(vector.note.npk);
-      expect(reserialized.value).to.equal(vector.note.value);
-      expect(reserialized.token).to.equal(vector.note.token);
-      expect(reserialized.annotationData).to.equal('01');
-      expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
+        const reserialized = note.serialize();
+        expect(reserialized.npk).to.equal(vector.note.npk);
+        expect(reserialized.value).to.equal(vector.note.value);
+        expect(reserialized.token).to.equal(vector.note.token);
+        expect(reserialized.annotationData).to.equal('01');
+        expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
 
-      const reserializedContract = note.serialize(true);
-      expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
-      expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
-      expect(reserializedContract.annotationData).to.equal('01');
-      expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
-    });
+        const reserializedContract = note.serialize(true);
+        expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
+        expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
+        expect(reserializedContract.annotationData).to.equal('01');
+        expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
+      }),
+    );
   });
 
-  it('Should serialize and deserialize notes (legacy)', () => {
-    vectors.forEach((vector) => {
-      const vectorBytes = hexStringToBytes(vector.vpk);
+  it('Should serialize and deserialize notes (legacy)', async () => {
+    await Promise.all(
+      vectors.map(async (vector) => {
+        const vectorBytes = hexStringToBytes(vector.vpk);
 
-      const note = TransactNote.deserialize(vector.note, vectorBytes);
-      expect(hexlify(note.random)).to.equal(vector.random);
+        const note = await TransactNote.deserialize(vector.note, vectorBytes, tokenDataGetter);
+        expect(hexlify(note.random)).to.equal(vector.random);
 
-      const hexHash = nToHex(note.hash, ByteLength.UINT_256);
-      expect(hexHash).to.equal(vector.hash);
+        const hexHash = nToHex(note.hash, ByteLength.UINT_256);
+        expect(hexHash).to.equal(vector.hash);
 
-      const reserialized = note.serializeLegacy(vectorBytes);
-      expect(reserialized.npk).to.equal(vector.note.npk);
-      expect(reserialized.value).to.equal(vector.note.value);
-      expect(reserialized.token).to.equal(vector.note.token);
-      expect(reserialized.memoField).to.deep.equal(
-        vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
-      );
-      expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
+        const reserialized = note.serializeLegacy(vectorBytes);
+        expect(reserialized.npk).to.equal(vector.note.npk);
+        expect(reserialized.value).to.equal(vector.note.value);
+        expect(reserialized.token).to.equal(vector.note.token);
+        expect(reserialized.memoField).to.deep.equal(
+          vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
+        );
+        expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
 
-      const reserializedContract = note.serializeLegacy(vectorBytes, true);
-      expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
-      expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
-      expect(reserializedContract.memoField).to.deep.equal(
-        vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256, true)),
-      );
-      expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
-    });
+        const reserializedContract = note.serializeLegacy(vectorBytes, true);
+        expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
+        expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
+        expect(reserializedContract.memoField).to.deep.equal(
+          vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256, true)),
+        );
+        expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
+      }),
+    );
   });
 
   it('Should calculate nullifiers', () => {

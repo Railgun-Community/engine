@@ -23,13 +23,12 @@ export type SpendingSolutionGroup = {
   spendingTree: number;
   tokenOutputs: TransactNote[];
   unshieldValue: bigint;
-  tokenHash: string;
+  tokenData: TokenData;
 };
 
 export type UnshieldData = {
   toAddress: string;
   value: bigint;
   tokenData: TokenData;
-  tokenHash: string;
   allowOverride?: boolean;
 };

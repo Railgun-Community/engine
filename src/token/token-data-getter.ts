@@ -1,18 +1,34 @@
-import { RailgunSmartWalletContract } from '../contracts';
+import { ContractStore } from '../contracts/contract-store';
+import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { Database } from '../database/database';
-import { TokenData } from '../models';
-import { serializeTokenData } from '../note';
+import { Chain } from '../models/engine-types';
+import { TokenData } from '../models/formatted-types';
+import { getTokenDataERC20, serializeTokenData } from '../note/note-util';
 import { TokenDataStructOutput } from '../typechain-types/contracts/logic/RailgunLogic';
 import { ByteLength, formatToByteLength, fromUTF8String } from '../utils';
 
-export class NFTTokenDataGetter {
+// 12 empty bytes.
+const ERC20_TOKEN_HASH_PREFIX = '000000000000000000000000';
+
+export class TokenDataGetter {
   private db: Database;
 
   private railgunSmartWalletContract: RailgunSmartWalletContract;
 
-  constructor(db: Database, railgunSmartWalletContract: RailgunSmartWalletContract) {
+  constructor(db: Database, chain: Chain) {
     this.db = db;
-    this.railgunSmartWalletContract = railgunSmartWalletContract;
+    this.railgunSmartWalletContract = ContractStore.getRailgunSmartWalletContract(chain);
+  }
+
+  async getTokenDataFromHash(tokenHash: string): Promise<TokenData> {
+    const formatted = formatToByteLength(tokenHash, ByteLength.UINT_256);
+    const isERC20 = formatted.startsWith(ERC20_TOKEN_HASH_PREFIX);
+    if (isERC20) {
+      // tokenHash is erc20 tokenAddress.
+      return getTokenDataERC20(tokenHash);
+    }
+    const tokenDataNFT = await this.getNFTTokenData(tokenHash);
+    return tokenDataNFT;
   }
 
   async getNFTTokenData(tokenHash: string): Promise<TokenData> {
@@ -24,7 +40,7 @@ export class NFTTokenDataGetter {
     }
 
     const contractData = await this.railgunSmartWalletContract.getNFTTokenData(formattedTokenHash);
-    const tokenData = NFTTokenDataGetter.structToTokenData(contractData);
+    const tokenData = TokenDataGetter.structToTokenData(contractData);
     await this.cacheNFTTokenData(tokenHash, tokenData);
     return tokenData;
   }
@@ -43,19 +59,19 @@ export class NFTTokenDataGetter {
   }
 
   private static getNFTTokenDataPath(tokenHash: string): string[] {
-    return [...NFTTokenDataGetter.getNFTTokenDataPrefix(), tokenHash].map((el) =>
+    return [...TokenDataGetter.getNFTTokenDataPrefix(), tokenHash].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
   private async cacheNFTTokenData(tokenHash: string, tokenData: TokenData): Promise<void> {
-    await this.db.put(NFTTokenDataGetter.getNFTTokenDataPath(tokenHash), tokenData, 'json');
+    await this.db.put(TokenDataGetter.getNFTTokenDataPath(tokenHash), tokenData, 'json');
   }
 
   async getCachedNFTTokenData(tokenHash: string): Promise<Optional<TokenData>> {
     try {
       const tokenData = (await this.db.get(
-        NFTTokenDataGetter.getNFTTokenDataPath(tokenHash),
+        TokenDataGetter.getNFTTokenDataPath(tokenHash),
         'json',
       )) as TokenData;
       return tokenData;

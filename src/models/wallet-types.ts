@@ -1,5 +1,5 @@
 import { UnshieldStoredEvent } from './event-types';
-import { NoteAnnotationData } from './formatted-types';
+import { NoteAnnotationData, TokenData } from './formatted-types';
 import { TXO } from './txo-types';
 
 export type WalletDetails = {
@@ -10,17 +10,16 @@ export type WalletDetails = {
 
 export type TreeBalance = {
   balance: bigint;
+  tokenData: TokenData;
   utxos: TXO[];
 };
 
 export type Balances = {
-  [key: string]: TreeBalance;
-  // Key: Token
+  [tokenHash: string]: TreeBalance;
 };
 
 export type BalancesByTree = {
-  [key: string]: TreeBalance[];
-  // Index = tree
+  [tree: string]: TreeBalance[];
 };
 
 export type AddressKeys = {
@@ -45,7 +44,8 @@ export type ShareableViewingKeyData = {
 };
 
 export type TransactionHistoryTokenAmount = {
-  token: string;
+  tokenHash: string;
+  tokenData: TokenData;
   amount: bigint;
   noteAnnotationData?: NoteAnnotationData;
   memoText: Optional<string>;

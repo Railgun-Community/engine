@@ -8,7 +8,7 @@ import {
   nToHex,
   randomHex,
 } from '../utils/bytes';
-import { AdaptID, OutputType, TokenType } from '../models/formatted-types';
+import { AdaptID, OutputType, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { UnshieldNote } from '../note/unshield-note';
@@ -27,6 +27,7 @@ import { hashBoundParams } from './bound-params';
 import { getChainFullNetworkID } from '../chain/chain';
 import { UnshieldNoteERC20 } from '../note/erc20/unshield-note-erc20';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
+import { getTokenDataHash } from '../note';
 
 class Transaction {
   private readonly adaptID: AdaptID;
@@ -38,6 +39,8 @@ class Transaction {
   private unshieldNote: UnshieldNote = UnshieldNoteERC20.empty();
 
   private unshieldFlag: bigint = UnshieldFlag.NO_UNSHIELD;
+
+  private readonly tokenData: TokenData;
 
   private readonly tokenHash: string;
 
@@ -55,7 +58,7 @@ class Transaction {
    */
   constructor(
     chain: Chain,
-    tokenHash: string,
+    tokenData: TokenData,
     spendingTree: number,
     utxos: TXO[],
     tokenOutputs: TransactNote[],
@@ -66,7 +69,8 @@ class Transaction {
     }
 
     this.chain = chain;
-    this.tokenHash = tokenHash;
+    this.tokenData = tokenData;
+    this.tokenHash = getTokenDataHash(tokenData);
     this.spendingTree = spendingTree;
     this.utxos = utxos;
     this.tokenOutputs = tokenOutputs;
@@ -77,7 +81,9 @@ class Transaction {
     if (this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD) {
       throw new Error('You may only call .unshield once for a given transaction.');
     }
-    if (unshieldData.tokenHash !== this.tokenHash) {
+
+    const tokenHashUnshield = getTokenDataHash(unshieldData.tokenData);
+    if (tokenHashUnshield !== this.tokenHash) {
       throw new Error('Unshield token does not match Transaction token.');
     }
 
@@ -177,7 +183,7 @@ class Transaction {
         wallet.addressKeys, // Sender
         randomHex(16),
         change,
-        this.tokenHash,
+        this.tokenData,
         senderViewingKeys,
         true, // showSenderAddressToRecipient
         OutputType.Change,

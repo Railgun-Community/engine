@@ -66,6 +66,7 @@ import { binarySearchForUpperBoundIndex } from '../utils/search';
 import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import { getTokenDataHash, serializeTokenData } from '../note/note-util';
+import { TokenDataGetter } from '../token/token-data-getter';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -126,6 +127,10 @@ abstract class AbstractWallet extends EventEmitter {
    */
   unloadMerkletree(chain: Chain) {
     delete this.merkletrees[chain.type][chain.id];
+  }
+
+  private createTokenDataGetter(chain: Chain): TokenDataGetter {
+    return new TokenDataGetter(this.db, chain);
   }
 
   /**
@@ -257,7 +262,7 @@ abstract class AbstractWallet extends EventEmitter {
     return walletDetails;
   }
 
-  private decryptLeaf(
+  private async decryptLeaf(
     ciphertext: Ciphertext,
     memo: string,
     annotationData: string,
@@ -267,9 +272,10 @@ abstract class AbstractWallet extends EventEmitter {
     senderRandom: Optional<string>,
     isSentNote: boolean,
     isLegacyDecryption: boolean,
-  ): Optional<TransactNote> {
+    tokenDataGetter: TokenDataGetter,
+  ): Promise<Optional<TransactNote>> {
     try {
-      return TransactNote.decrypt(
+      const decrypted = await TransactNote.decrypt(
         this.addressKeys,
         ciphertext,
         sharedKey,
@@ -280,7 +286,9 @@ abstract class AbstractWallet extends EventEmitter {
         senderRandom,
         isSentNote,
         isLegacyDecryption,
+        tokenDataGetter,
       );
+      return decrypted;
     } catch (err) {
       // Expect error if leaf not addressed to us.
       return undefined;
@@ -316,6 +324,8 @@ abstract class AbstractWallet extends EventEmitter {
     const walletAddress = this.getAddress();
     const commitmentType: CommitmentType = AbstractWallet.getCommitmentType(leaf);
 
+    const tokenDataGetter = this.createTokenDataGetter(chain);
+
     switch (commitmentType) {
       case CommitmentType.TransactCommitment: {
         const commitment = leaf as TransactCommitment;
@@ -330,7 +340,7 @@ abstract class AbstractWallet extends EventEmitter {
           getSharedSymmetricKey(viewingPrivateKey, blindedReceiverViewingKey),
         ]);
         if (sharedKeyReceiver) {
-          noteReceive = this.decryptLeaf(
+          noteReceive = await this.decryptLeaf(
             commitment.ciphertext.ciphertext,
             commitment.ciphertext.memo,
             commitment.ciphertext.annotationData,
@@ -340,6 +350,7 @@ abstract class AbstractWallet extends EventEmitter {
             undefined, // senderRandom - not used
             false, // isSentNote
             false, // isLegacyDecryption
+            tokenDataGetter,
           );
           serializedNoteReceive = noteReceive ? noteReceive.serialize() : undefined;
         }
@@ -348,7 +359,7 @@ abstract class AbstractWallet extends EventEmitter {
             commitment.ciphertext.annotationData,
             viewingPrivateKey,
           );
-          noteSend = this.decryptLeaf(
+          noteSend = await this.decryptLeaf(
             commitment.ciphertext.ciphertext,
             commitment.ciphertext.memo,
             commitment.ciphertext.annotationData,
@@ -358,6 +369,7 @@ abstract class AbstractWallet extends EventEmitter {
             senderRandom,
             true, // isSentNote
             false, // isLegacyDecryption
+            tokenDataGetter,
           );
           serializedNoteSend = noteSend ? noteSend.serialize() : undefined;
         }
@@ -386,7 +398,11 @@ abstract class AbstractWallet extends EventEmitter {
             memoText: undefined,
           };
 
-          noteReceive = TransactNote.deserialize(serialized, viewingPrivateKey);
+          noteReceive = await TransactNote.deserialize(
+            serialized,
+            viewingPrivateKey,
+            tokenDataGetter,
+          );
           serializedNoteReceive = serialized;
         } catch (err) {
           // Expect error if leaf not addressed to us.
@@ -406,7 +422,7 @@ abstract class AbstractWallet extends EventEmitter {
         );
         const memo = combine(commitment.ciphertext.memo.slice(LEGACY_MEMO_METADATA_BYTE_CHUNKS));
         if (sharedKeyReceiver) {
-          noteReceive = this.decryptLeaf(
+          noteReceive = await this.decryptLeaf(
             commitment.ciphertext.ciphertext,
             memo,
             annotationData,
@@ -416,6 +432,7 @@ abstract class AbstractWallet extends EventEmitter {
             undefined, // senderRandom - not used
             false, // isSentNote
             true, // isLegacyDecryption
+            tokenDataGetter,
           );
           serializedNoteReceive = noteReceive
             ? noteReceive.serializeLegacy(viewingPrivateKey)
@@ -423,7 +440,7 @@ abstract class AbstractWallet extends EventEmitter {
         }
         if (sharedKeySender) {
           const senderRandom = Memo.decryptSenderRandom(annotationData, viewingPrivateKey);
-          noteSend = this.decryptLeaf(
+          noteSend = await this.decryptLeaf(
             commitment.ciphertext.ciphertext,
             memo,
             annotationData,
@@ -433,6 +450,7 @@ abstract class AbstractWallet extends EventEmitter {
             senderRandom,
             true, // isSentNote
             true, // isLegacyDecryption
+            tokenDataGetter,
           );
           serializedNoteSend = noteSend ? noteSend.serializeLegacy(viewingPrivateKey) : undefined;
         }
@@ -450,7 +468,11 @@ abstract class AbstractWallet extends EventEmitter {
           memoText: undefined,
         };
         try {
-          noteReceive = TransactNote.deserialize(serialized, viewingPrivateKey);
+          noteReceive = await TransactNote.deserialize(
+            serialized,
+            viewingPrivateKey,
+            tokenDataGetter,
+          );
           serializedNoteReceive = serialized;
         } catch (err) {
           // Expect error if leaf not addressed to us.
@@ -469,7 +491,7 @@ abstract class AbstractWallet extends EventEmitter {
       const nullifier = TransactNote.getNullifier(this.nullifyingKey, position);
       const storedCommitment: StoredReceiveCommitment = {
         spendtxid: false,
-        txid: hexlify(leaf.txid),
+        txid: leaf.txid,
         nullifier: nToHex(nullifier, ByteLength.UINT_256),
         decrypted: noteReceive.serialize(),
         senderAddress: noteReceive.senderAddressData
@@ -486,7 +508,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     if (noteSend && serializedNoteSend) {
       const storedCommitment: StoredSendCommitment = {
-        txid: hexlify(leaf.txid),
+        txid: leaf.txid,
         decrypted: serializedNoteSend,
         noteExtraData: Memo.decryptNoteAnnotationData(noteSend.annotationData, viewingPrivateKey),
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
@@ -567,6 +589,8 @@ abstract class AbstractWallet extends EventEmitter {
 
     const merkletree = this.merkletrees[chain.type][chain.id];
 
+    const tokenDataGetter = this.createTokenDataGetter(chain);
+
     // Calculate UTXOs
     return Promise.all(
       keySplits.map(async (keySplit) => {
@@ -591,12 +615,13 @@ abstract class AbstractWallet extends EventEmitter {
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
 
-        const note = TransactNote.deserialize(
+        const note = await TransactNote.deserialize(
           {
             ...txo.decrypted,
             recipientAddress,
           },
           vpk,
+          tokenDataGetter,
         );
 
         return {
@@ -622,6 +647,8 @@ abstract class AbstractWallet extends EventEmitter {
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
+    const tokenDataGetter = this.createTokenDataGetter(chain);
+
     // Calculate spent commitments
     return Promise.all(
       keySplits.map(async (keySplit) => {
@@ -631,7 +658,7 @@ abstract class AbstractWallet extends EventEmitter {
         const tree = numberify(keySplit[3]).toNumber();
         const position = numberify(keySplit[4]).toNumber();
 
-        const note = TransactNote.deserialize(sentCommitment.decrypted, vpk);
+        const note = await TransactNote.deserialize(sentCommitment.decrypted, vpk, tokenDataGetter);
 
         return {
           tree,
@@ -671,7 +698,8 @@ abstract class AbstractWallet extends EventEmitter {
           receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
             const matchingChangeOutput = changeTokenAmounts.find(
               (ta) =>
-                ta.token === receiveTokenAmount.token && ta.amount === receiveTokenAmount.amount,
+                ta.tokenHash === receiveTokenAmount.tokenHash &&
+                ta.amount === receiveTokenAmount.amount,
             );
             if (!matchingChangeOutput) {
               // Receive token amount is not a "change" output.
@@ -714,9 +742,10 @@ abstract class AbstractWallet extends EventEmitter {
           receiveTokenAmounts: [],
         };
       }
-      const token = formatToByteLength(note.tokenHash, 32, false);
+      const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
       txidTransactionMap[txid].receiveTokenAmounts.push({
-        token,
+        tokenHash,
+        tokenData: note.tokenData,
         amount: note.value,
         memoText: note.memoText,
         senderAddress: note.getSenderAddress(),
@@ -766,9 +795,10 @@ abstract class AbstractWallet extends EventEmitter {
           chain.id
         ].getUnshieldEvents(txid);
 
-        const token = formatToByteLength(note.tokenHash, 32, false);
+        const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
         const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
-          token,
+          tokenHash,
+          tokenData: note.tokenData,
           amount: note.value,
           noteAnnotationData,
           memoText: note.memoText,
@@ -821,7 +851,8 @@ abstract class AbstractWallet extends EventEmitter {
             );
             const tokenHash = getTokenDataHash(tokenData);
             return {
-              token: tokenHash,
+              tokenHash,
+              tokenData,
               amount: BigInt(unshieldEvent.amount),
               memoText: undefined,
               recipientAddress: unshieldEvent.toAddress,
@@ -855,23 +886,23 @@ abstract class AbstractWallet extends EventEmitter {
     const balances: Balances = {};
 
     // Loop through each TXO and add to balances if unspent
-    TXOs.forEach((txOutput) => {
-      const token = formatToByteLength(txOutput.note.tokenHash, 32, false);
+    TXOs.forEach((utxo) => {
+      const tokenHash = formatToByteLength(utxo.note.tokenHash, ByteLength.UINT_256, false);
       // If we don't have an entry for this token yet, create one
-      if (!balances[token]) {
-        balances[token] = {
+      if (!balances[tokenHash]) {
+        balances[tokenHash] = {
           balance: BigInt(0),
           utxos: [],
+          tokenData: utxo.note.tokenData,
         };
       }
 
-      // If txOutput is unspent process it
-      if (!txOutput.spendtxid) {
+      // If utxo is unspent process it
+      if (!utxo.spendtxid) {
         // Store utxo
-        balances[token].utxos.push(txOutput);
-
+        balances[tokenHash].utxos.push(utxo);
         // Increment balance
-        balances[token].balance += txOutput.note.value;
+        balances[tokenHash].balance += utxo.note.value;
       }
     });
 
@@ -907,6 +938,7 @@ abstract class AbstractWallet extends EventEmitter {
           balancesByTree[token][utxo.tree] = {
             balance: utxo.note.value,
             utxos: [utxo],
+            tokenData: utxo.note.tokenData,
           };
         } else {
           balancesByTree[token][utxo.tree].balance += utxo.note.value;

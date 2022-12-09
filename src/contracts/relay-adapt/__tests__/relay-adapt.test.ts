@@ -24,7 +24,7 @@ import { TransactNote } from '../../../note/transact-note';
 import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
 import { TransactionStruct } from '../../../models';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
-import { getTokenDataERC20, getTokenDataHash } from '../../../note/note-util';
+import { getTokenDataERC20 } from '../../../note/note-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -46,7 +46,6 @@ const WETH_TOKEN_ADDRESS = config.contracts.weth9;
 const SHIELD_RANDOM = randomHex(16);
 
 const wethTokenData = getTokenDataERC20(WETH_TOKEN_ADDRESS);
-const wethTokenHash = getTokenDataHash(wethTokenData);
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
@@ -166,7 +165,7 @@ describe('Relay Adapt', function test() {
       wallet.addressKeys,
       randomHex(16),
       1000n,
-      wethTokenHash,
+      wethTokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
@@ -219,7 +218,7 @@ describe('Relay Adapt', function test() {
       wallet.addressKeys,
       randomHex(16),
       100n,
-      wethTokenHash,
+      wethTokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
@@ -382,7 +381,7 @@ describe('Relay Adapt', function test() {
       wallet.addressKeys,
       randomHex(16),
       300n,
-      wethTokenHash,
+      wethTokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
@@ -540,7 +539,7 @@ describe('Relay Adapt', function test() {
       wallet.addressKeys,
       randomHex(16),
       300n,
-      wethTokenHash,
+      wethTokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
@@ -705,7 +704,7 @@ describe('Relay Adapt', function test() {
       wallet.addressKeys,
       randomHex(16),
       300n,
-      wethTokenHash,
+      wethTokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       OutputType.RelayerFee,
