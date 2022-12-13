@@ -54,7 +54,7 @@ export function formatShieldCommitments(
     const commitment: ShieldCommitment = {
       commitmentType: CommitmentType.ShieldCommitment,
       hash: nToHex(noteHash, ByteLength.UINT_256),
-      txid: transactionHash,
+      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       blockNumber,
       preImage,
       encryptedBundle: shieldCiphertext[index].encryptedBundle,
@@ -129,7 +129,7 @@ export function formatTransactCommitments(
     return {
       commitmentType: CommitmentType.TransactCommitment,
       hash: formatToByteLength(hash[index], ByteLength.UINT_256),
-      txid: transactionHash,
+      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       blockNumber,
       ciphertext: formatCommitmentCiphertext(commitment),
     };
