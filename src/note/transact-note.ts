@@ -7,6 +7,7 @@ import {
   NoteSerialized,
   OutputType,
   TokenData,
+  TokenType,
 } from '../models/formatted-types';
 import { PublicInputs } from '../models/prover-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
@@ -30,7 +31,7 @@ import {
   assertValidNoteRandom,
   getTokenDataERC20,
   getTokenDataHash,
-  NFT_NOTE_VALUE,
+  ERC721_NOTE_VALUE,
   serializeTokenData,
 } from './note-util';
 
@@ -143,7 +144,7 @@ export class TransactNote {
     );
   }
 
-  static createNFTTransfer(
+  static createERC721Transfer(
     receiverAddressData: AddressData,
     senderAddressData: Optional<AddressData>,
     random: string,
@@ -152,11 +153,40 @@ export class TransactNote {
     showSenderAddressToRecipient: boolean,
     memoText: Optional<string>,
   ): TransactNote {
+    if (tokenData.tokenType !== TokenType.ERC721) {
+      throw new Error(`Invalid token type for ERC721 transfer: ${tokenData.tokenType}`);
+    }
     return TransactNote.createTransfer(
       receiverAddressData,
       senderAddressData,
       random,
-      NFT_NOTE_VALUE,
+      ERC721_NOTE_VALUE,
+      tokenData,
+      senderViewingKeys,
+      showSenderAddressToRecipient,
+      OutputType.Transfer,
+      memoText,
+    );
+  }
+
+  static createERC1155Transfer(
+    receiverAddressData: AddressData,
+    senderAddressData: Optional<AddressData>,
+    random: string,
+    tokenData: TokenData,
+    amount: bigint,
+    senderViewingKeys: ViewingKeyPair,
+    showSenderAddressToRecipient: boolean,
+    memoText: Optional<string>,
+  ): TransactNote {
+    if (tokenData.tokenType !== TokenType.ERC1155) {
+      throw new Error(`Invalid token type for ERC1155 transfer: ${tokenData.tokenType}`);
+    }
+    return TransactNote.createTransfer(
+      receiverAddressData,
+      senderAddressData,
+      random,
+      amount,
       tokenData,
       senderViewingKeys,
       showSenderAddressToRecipient,

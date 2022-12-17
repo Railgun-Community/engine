@@ -14,7 +14,7 @@ import {
   trim,
 } from '../utils/bytes';
 
-export const NFT_NOTE_VALUE = BigInt(1);
+export const ERC721_NOTE_VALUE = BigInt(1);
 
 export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
   const tokenAddressLength = hexlify(tokenData.tokenAddress, false).length;
@@ -23,7 +23,7 @@ export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
     case TokenType.ERC20: {
       if (tokenAddressLength !== 40 && tokenAddressLength !== 64) {
         throw new Error(
-          `ERC20 token must be length 40 (20 bytes) or 64 (32 bytes). Got ${hexlify(
+          `ERC20 address must be length 40 (20 bytes) or 64 (32 bytes). Got ${hexlify(
             tokenData.tokenAddress,
             false,
           )}.`,
@@ -34,24 +34,37 @@ export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
       }
       return;
     }
-    case TokenType.ERC721:
-    case TokenType.ERC1155: {
+    case TokenType.ERC721: {
       if (tokenAddressLength !== 40) {
         throw new Error(
-          `NFT token must be length 40 (20 bytes). Got ${hexlify(tokenData.tokenAddress, false)}.`,
+          `ERC721 address must be length 40 (20 bytes). Got ${hexlify(
+            tokenData.tokenAddress,
+            false,
+          )}.`,
         );
       }
       if (!tokenData.tokenSubID.length) {
-        throw new Error('NFT note must have tokenSubID parameter.');
+        throw new Error('ERC721 note must have tokenSubID parameter.');
       }
       if (value !== BigInt(1)) {
-        throw new Error('NFT note must have value of 1.');
+        throw new Error('ERC721 note must have value of 1.');
       }
       return;
     }
+    case TokenType.ERC1155: {
+      if (tokenAddressLength !== 40) {
+        throw new Error(
+          `ERC1155 address must be length 40 (20 bytes). Got ${hexlify(
+            tokenData.tokenAddress,
+            false,
+          )}.`,
+        );
+      }
+      if (!tokenData.tokenSubID.length) {
+        throw new Error('ERC1155 note must have tokenSubID parameter.');
+      }
+    }
   }
-
-  throw new Error('Unhandled token type.');
 };
 
 export const assertValidNoteRandom = (random: string) => {

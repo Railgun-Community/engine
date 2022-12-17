@@ -608,7 +608,7 @@ describe('RailgunEngine', function test() {
 
     // Add output for Transfer
     transactionBatch.addOutput(
-      TransactNote.createNFTTransfer(
+      TransactNote.createERC721Transfer(
         wallet2.addressKeys,
         wallet.addressKeys,
         randomHex(16),

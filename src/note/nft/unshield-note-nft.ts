@@ -1,5 +1,5 @@
 import { TokenType } from '../../models';
-import { getTokenDataNFT, NFT_NOTE_VALUE } from '../note-util';
+import { getTokenDataNFT, ERC721_NOTE_VALUE } from '../note-util';
 import { UnshieldNote } from '../unshield-note';
 
 export class UnshieldNoteNFT extends UnshieldNote {
@@ -11,6 +11,6 @@ export class UnshieldNoteNFT extends UnshieldNote {
     allowOverride: boolean = false,
   ) {
     const tokenData = getTokenDataNFT(nftAddress, tokenType, tokenSubID);
-    super(toAddress, NFT_NOTE_VALUE, tokenData, allowOverride);
+    super(toAddress, ERC721_NOTE_VALUE, tokenData, allowOverride);
   }
 }

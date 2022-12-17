@@ -1,5 +1,5 @@
 import { TokenType } from '../../models';
-import { getTokenDataNFT, NFT_NOTE_VALUE } from '../note-util';
+import { getTokenDataNFT, ERC721_NOTE_VALUE } from '../note-util';
 import { ShieldNote } from '../shield-note';
 
 export class ShieldNoteNFT extends ShieldNote {
@@ -11,6 +11,6 @@ export class ShieldNoteNFT extends ShieldNote {
     tokenSubID: string,
   ) {
     const tokenData = getTokenDataNFT(nftAddress, tokenType, tokenSubID);
-    super(masterPublicKey, random, NFT_NOTE_VALUE, tokenData);
+    super(masterPublicKey, random, ERC721_NOTE_VALUE, tokenData);
   }
 }
