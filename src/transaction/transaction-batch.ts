@@ -152,7 +152,7 @@ export class TransactionBatch {
       EngineDebug.log(`Token balance too low: token hash ${tokenHash}`);
       switch (tokenData.tokenType) {
         case TokenType.ERC20:
-          throw new Error(`RAILGUN private token balance for ${tokenData.tokenAddress} too low.`);
+          throw new Error(`RAILGUN private token balance too low for ${tokenData.tokenAddress}.`);
         case TokenType.ERC721:
         case TokenType.ERC1155:
           throw new Error(`RAILGUN private NFT balance too low.`);

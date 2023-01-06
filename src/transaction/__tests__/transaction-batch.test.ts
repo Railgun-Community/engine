@@ -126,7 +126,9 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('RAILGUN private token balance too low.');
+    ).to.eventually.be.rejectedWith(
+      `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}.`,
+    );
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(shieldValue));
@@ -189,7 +191,9 @@ describe('Transaction/Transaction Batch', function run() {
     });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('RAILGUN private token balance too low.');
+    ).to.eventually.be.rejectedWith(
+      `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}.`,
+    );
 
     transactionBatch.resetOutputs();
     transactionBatch.resetUnshieldData();

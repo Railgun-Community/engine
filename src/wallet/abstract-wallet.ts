@@ -9,7 +9,7 @@ import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
 import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../key-derivation/wallet-node';
 import { MerkleTree } from '../merkletree/merkletree';
-import { EngineEvent, ScannedEventData } from '../models/event-types';
+import { EngineEvent, WalletScannedEventData } from '../models/event-types';
 import {
   BytesData,
   Ciphertext,
@@ -1045,7 +1045,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
-      this.emit(EngineEvent.WalletScanComplete, { chain } as ScannedEventData);
+      this.emit(EngineEvent.WalletScanComplete, { chain } as WalletScannedEventData);
     } catch (err) {
       if (err instanceof Error) {
         EngineDebug.log(`wallet.scan error: ${err.message}`);

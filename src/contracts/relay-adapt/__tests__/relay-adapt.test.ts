@@ -323,7 +323,7 @@ describe('Relay Adapt', function test() {
     // );
   });
 
-  it.only('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
+  it('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

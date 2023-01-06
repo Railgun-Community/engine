@@ -40,7 +40,7 @@ export type AccumulatedEvents = {
   nullifierEvents: Nullifier[];
 };
 
-export type ScannedEventData = {
+export type WalletScannedEventData = {
   chain: Chain;
 };
 

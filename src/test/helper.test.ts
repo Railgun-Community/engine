@@ -10,7 +10,7 @@ import {
   CommitmentEvent,
   EngineEvent,
   QuickSync,
-  ScannedEventData,
+  WalletScannedEventData,
   UnshieldStoredEvent,
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
@@ -50,10 +50,12 @@ export const mockQuickSync: QuickSync = (
 
 export const awaitScan = (wallet: AbstractWallet, chain: Chain) =>
   new Promise((resolve, reject) =>
-    wallet.once(EngineEvent.WalletScanComplete, ({ chain: returnedChain }: ScannedEventData) =>
-      returnedChain.type === chain.type && returnedChain.id === chain.id
-        ? resolve(returnedChain)
-        : reject(),
+    wallet.once(
+      EngineEvent.WalletScanComplete,
+      ({ chain: returnedChain }: WalletScannedEventData) =>
+        returnedChain.type === chain.type && returnedChain.id === chain.id
+          ? resolve(returnedChain)
+          : reject(),
     ),
   );
 
