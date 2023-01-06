@@ -35,6 +35,10 @@ export type TokenData = {
   tokenSubID: string;
 };
 
+export type NFTTokenData = TokenData & {
+  tokenType: TokenType.ERC721 | TokenType.ERC1155;
+};
+
 export type EncryptedData = [string, string];
 
 export enum CommitmentType {

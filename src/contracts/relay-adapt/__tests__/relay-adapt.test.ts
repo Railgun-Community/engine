@@ -8,12 +8,13 @@ import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
 import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
+import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
-import { OutputType } from '../../../models/formatted-types';
+import { NFTTokenData, OutputType } from '../../../models/formatted-types';
 import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
-import { ERC20 } from '../../../typechain-types';
+import { ERC20, TestERC721 } from '../../../typechain-types';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
@@ -25,6 +26,8 @@ import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
 import { TransactionStruct } from '../../../models';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { getTokenDataERC20 } from '../../../note/note-util';
+import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
+import { UnshieldNoteNFT } from '../../../note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -32,10 +35,11 @@ const { expect } = chai;
 let provider: ethers.providers.JsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
-let etherswallet: ethers.Wallet;
+let ethersWallet: ethers.Wallet;
 let snapshot: number;
 let relayAdaptContract: RelayAdaptContract;
 let railgunSmartWalletContract: RailgunSmartWalletContract;
+let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 
@@ -53,7 +57,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 let testShieldBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Relay Adapt', function test() {
-  this.timeout(30000);
+  this.timeout(45000);
 
   beforeEach(async () => {
     engine = new RailgunEngine('TestWalletAdapt', memdown(), artifactsGetter, undefined);
@@ -85,8 +89,10 @@ describe('Relay Adapt', function test() {
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(testMnemonic).derivePath(
       ethers.utils.defaultPath,
     );
-    etherswallet = new ethers.Wallet(privateKey, provider);
+    ethersWallet = new ethers.Wallet(privateKey, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
+
+    nft = new ethers.Contract(config.contracts.testERC721, erc721Abi, ethersWallet) as TestERC721;
 
     testShieldBaseToken = async (
       value: bigint = 10000n,
@@ -108,7 +114,7 @@ describe('Relay Adapt', function test() {
 
       // Send shield on chain
       const awaiterShield = awaitScan(wallet, chain);
-      const tx = await etherswallet.sendTransaction(shieldTx);
+      const tx = await ethersWallet.sendTransaction(shieldTx);
       return Promise.all([tx.wait(), awaiterShield]);
     };
   });
@@ -134,7 +140,7 @@ describe('Relay Adapt', function test() {
     const awaiterShield = awaitScan(wallet, chain);
 
     // Send shield on chain
-    const txResponse = await etherswallet.sendTransaction(shieldTx);
+    const txResponse = await ethersWallet.sendTransaction(shieldTx);
 
     const receiveShieldEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -192,7 +198,7 @@ describe('Relay Adapt', function test() {
 
     const relayTransactionGasEstimate = await relayAdaptContract.populateUnshieldBaseToken(
       dummyTransactions,
-      etherswallet.address,
+      ethersWallet.address,
       random,
     );
 
@@ -246,11 +252,11 @@ describe('Relay Adapt', function test() {
     const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
     const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsUnshieldBaseToken(
       dummyTransactions,
-      etherswallet.address,
+      ethersWallet.address,
       random,
     );
     expect(relayAdaptParams).to.equal(
-      '0x0f70267ccd1c0c9cc386ae2b45314aef1b08bdb5dba634047f173d941d5d07f4',
+      '0x8a6f1a81105234382720c9783320cabd2f1e8788a11b61e34beefab48f4e2102',
     );
 
     // 4. Create real transactions with relay adapt params.
@@ -269,17 +275,17 @@ describe('Relay Adapt', function test() {
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
-    // const preEthBalance = await etherswallet.getBalance();
+    // const preEthBalance = await ethersWallet.getBalance();
 
     // 5: Generate final relay transaction for unshield base token.
     const relayTransaction = await relayAdaptContract.populateUnshieldBaseToken(
       transactions,
-      etherswallet.address,
+      ethersWallet.address,
       random,
     );
 
     // 6: Send relay transaction.
-    const txResponse = await etherswallet.sendTransaction(relayTransaction);
+    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -311,10 +317,167 @@ describe('Relay Adapt', function test() {
     expect(callResultError).to.equal(undefined);
 
     // TODO: Fix this assertion. How much gas is used?
-    // const postEthBalance = await etherswallet.getBalance();
+    // const postEthBalance = await ethersWallet.getBalance();
     // expect(preEthBalance.toBigInt() - txReceipt.gasUsed.toBigInt() + 300n).to.equal(
     //   postEthBalance.toBigInt(),
     // );
+  });
+
+  it.only('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    // Shield WETH for Relayer fee.
+    await testShieldBaseToken();
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
+
+    // Mint NFTs with tokenIDs 0 and 1 into public balance.
+    await mintNFTsID01ForTest(nft, ethersWallet);
+
+    // Approve shield
+    const approval = await nft.approve(railgunSmartWalletContract.address, 1);
+    await approval.wait();
+
+    // Create shield
+    const shield = await shieldNFTForTest(
+      wallet,
+      ethersWallet,
+      railgunSmartWalletContract,
+      chain,
+      randomHex(16),
+      nft.address,
+      '1',
+    );
+
+    const nftBalanceAfterShield = await nft.balanceOf(railgunSmartWalletContract.address);
+    expect(nftBalanceAfterShield.toHexString()).to.equal('0x01');
+
+    const nftTokenData = shield.tokenData as NFTTokenData;
+
+    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    const transactionBatch = new TransactionBatch(chain);
+    const relayerFee = TransactNote.createTransfer(
+      wallet2.addressKeys,
+      wallet.addressKeys,
+      randomHex(16),
+      300n,
+      wethTokenData,
+      wallet.getViewingKeyPair(),
+      false, // showSenderAddressToRecipient
+      OutputType.RelayerFee,
+      undefined, // memoText
+    );
+    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+
+    const unshieldNote = new UnshieldNoteNFT(
+      relayAdaptContract.address,
+      shield.tokenData as NFTTokenData,
+    );
+    transactionBatch.addUnshieldData(unshieldNote.unshieldData);
+
+    // 2. Create dummy transactions from batch.
+    const dummyTransactions = await transactionBatch.generateDummyTransactions(
+      engine.prover,
+      wallet,
+      testEncryptionKey,
+    );
+
+    // 3. Create the cross contract calls.
+    // Do nothing for now.
+    // TODO: Add an interaction via cross contract call.
+    const crossContractCalls: PopulatedTransaction[] = [];
+
+    // 4. Create shield inputs.
+    const shieldRandom = '0x10203040506070809000102030405060';
+    const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
+      wallet,
+      shieldRandom,
+      [],
+      [nftTokenData], // shieldNFTsTokenData
+    );
+
+    // 5. Generate relay adapt params from dummy transactions.
+    const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
+    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
+      dummyTransactions,
+      crossContractCalls,
+      relayShieldInputs,
+      random,
+    );
+
+    // 6. Get gas estimate from dummy txs.
+    const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
+      dummyTransactions,
+      crossContractCalls,
+      relayShieldInputs,
+      random,
+    );
+    populatedTransactionGasEstimate.from = DEAD_ADDRESS;
+    const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
+    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+
+    // 7. Create real transactions with relay adapt params.
+    transactionBatch.setAdaptID({
+      contract: relayAdaptContract.address,
+      parameters: relayAdaptParams,
+    });
+    const transactions = await transactionBatch.generateTransactions(
+      engine.prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    transactions.forEach((transaction) => {
+      expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
+      expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
+    });
+
+    // 8. Generate real relay transaction for cross contract call.
+    const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
+      transactions,
+      crossContractCalls,
+      relayShieldInputs,
+      random,
+    );
+    const gasEstimateFinal = await provider.estimateGas(relayTransaction);
+    expect(gasEstimate.sub(gasEstimateFinal).abs().toNumber()).to.be.below(
+      12000,
+      'Gas difference from estimate (dummy) to final transaction should be less than 12000',
+    );
+
+    // 9: Send relay transaction.
+    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
+
+    const receiveTransactEvent = new Promise((resolve) =>
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
+    );
+    const receiveUnshieldEvent = new Promise((resolve) =>
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Unshield(),
+        resolve,
+      ),
+    );
+
+    const awaiterScan = awaitScan(wallet, chain);
+
+    const [txReceipt] = await Promise.all([
+      txResponse.wait(),
+      receiveTransactEvent,
+      receiveUnshieldEvent,
+    ]);
+    await expect(awaiterScan).to.be.fulfilled; // Unshield
+
+    const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
+    expect(callResultError).to.equal(undefined);
+
+    const nftBalanceAfterReshield = await nft.balanceOf(railgunSmartWalletContract.address);
+    expect(nftBalanceAfterReshield.toHexString()).to.equal('0x01');
   });
 
   it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
@@ -344,13 +507,13 @@ describe('Relay Adapt', function test() {
     const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
     // Unshield to relay adapt.
-    const txTransact = await etherswallet.sendTransaction(transact);
+    const txTransact = await ethersWallet.sendTransaction(transact);
     await Promise.all([txTransact.wait(), awaitScan(wallet, chain)]);
 
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
-      etherswallet,
+      ethersWallet,
     ) as ERC20;
 
     let relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
@@ -407,7 +570,7 @@ describe('Relay Adapt', function test() {
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
-      etherswallet,
+      ethersWallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 990n;
@@ -417,11 +580,12 @@ describe('Relay Adapt', function test() {
 
     // 4. Create shield inputs.
     const shieldRandom = '0x10203040506070809000102030405060';
-    const shieldTokens: string[] = [WETH_TOKEN_ADDRESS];
+    const shieldERC20Addresses: string[] = [WETH_TOKEN_ADDRESS];
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
       shieldRandom,
-      shieldTokens,
+      shieldERC20Addresses,
+      [], // shieldNFTsTokenData
     );
 
     // 5. Generate relay adapt params from dummy transactions.
@@ -479,7 +643,7 @@ describe('Relay Adapt', function test() {
     relayTransaction.gasLimit = gasEstimate.mul(120).div(100);
 
     // 9. Send transaction.
-    const txResponse = await etherswallet.sendTransaction(relayTransaction);
+    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -488,7 +652,7 @@ describe('Relay Adapt', function test() {
       ),
     );
 
-    // 2 scans: Unshield and Shield
+    // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
@@ -565,7 +729,7 @@ describe('Relay Adapt', function test() {
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
-      etherswallet,
+      ethersWallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 20000n; // More than is available (after 0.25% unshield fee).
@@ -575,11 +739,12 @@ describe('Relay Adapt', function test() {
 
     // 4. Create shield inputs.
     const shieldRandom = '10203040506070809000102030405060';
-    const shieldTokens: string[] = [WETH_TOKEN_ADDRESS];
+    const shieldERC20Addresses: string[] = [WETH_TOKEN_ADDRESS];
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
       shieldRandom,
-      shieldTokens,
+      shieldERC20Addresses,
+      [], // shieldNFTsTokenData
     );
 
     // 5. Generate relay adapt params from dummy transactions.
@@ -632,7 +797,7 @@ describe('Relay Adapt', function test() {
     relayTransaction.gasLimit = gasEstimate.mul(120).div(100);
 
     // 9. Send transaction.
-    const txResponse = await etherswallet.sendTransaction(relayTransaction);
+    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -647,7 +812,7 @@ describe('Relay Adapt', function test() {
       ),
     );
 
-    // 2 scans: Unshield and Shield
+    // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([
@@ -730,7 +895,7 @@ describe('Relay Adapt', function test() {
     const wethTokenContract = new ethers.Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
-      etherswallet,
+      ethersWallet,
     ) as ERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 20000n; // More than is available (after 0.25% unshield fee).
@@ -740,11 +905,12 @@ describe('Relay Adapt', function test() {
 
     // 4. Create shield inputs.
     const shieldRandom = '10203040506070809000102030405060';
-    const shieldTokens: string[] = [WETH_TOKEN_ADDRESS];
+    const shieldERC20Addresses: string[] = [WETH_TOKEN_ADDRESS];
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
       shieldRandom,
-      shieldTokens,
+      shieldERC20Addresses,
+      [], // shieldNFTsTokenData
     );
 
     // 5. Generate relay adapt params from dummy transactions.
@@ -800,7 +966,7 @@ describe('Relay Adapt', function test() {
     relayTransaction.gasLimit = gasEstimateFinal.mul(101).div(100);
 
     // 9. Send transaction.
-    const txResponse = await etherswallet.sendTransaction(relayTransaction);
+    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -809,7 +975,7 @@ describe('Relay Adapt', function test() {
       ),
     );
 
-    // 2 scans: Unshield and Shield
+    // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
@@ -866,7 +1032,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('Should generate relay shield notes and inputs', async () => {
-    const shieldTokens: string[] = [
+    const shieldERC20Addresses: string[] = [
       config.contracts.weth9.toLowerCase(),
       config.contracts.rail.toLowerCase(),
     ];
@@ -875,13 +1041,14 @@ describe('Relay Adapt', function test() {
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       wallet,
       random,
-      shieldTokens,
+      shieldERC20Addresses,
+      [], // shieldNFTsTokenData
     );
 
     expect(relayShieldInputs.length).to.equal(2);
     expect(
       relayShieldInputs.map((shieldInput) => shieldInput.preimage.token.tokenAddress),
-    ).to.deep.equal(shieldTokens);
+    ).to.deep.equal(shieldERC20Addresses);
     relayShieldInputs.forEach((relayShieldInput) => {
       expect(relayShieldInput.preimage.npk).to.equal(
         nToHex(

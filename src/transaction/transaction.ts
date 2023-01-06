@@ -8,7 +8,7 @@ import {
   nToHex,
   randomHex,
 } from '../utils/bytes';
-import { AdaptID, OutputType, TokenData, TokenType } from '../models/formatted-types';
+import { AdaptID, NFTTokenData, OutputType, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { UnshieldNote } from '../note/unshield-note';
@@ -100,15 +100,19 @@ class Transaction {
         );
         break;
       case TokenType.ERC721:
-      case TokenType.ERC1155:
-        this.unshieldNote = new UnshieldNoteNFT(
-          unshieldData.toAddress,
+      case TokenType.ERC1155: {
+        const nftTokenData: NFTTokenData = {
           tokenAddress,
           tokenType,
           tokenSubID,
+        };
+        this.unshieldNote = new UnshieldNoteNFT(
+          unshieldData.toAddress,
+          nftTokenData,
           allowOverride,
         );
         break;
+      }
     }
 
     this.unshieldFlag = allowOverride ? UnshieldFlag.OVERRIDE : UnshieldFlag.UNSHIELD;

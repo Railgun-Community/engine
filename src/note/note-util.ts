@@ -1,5 +1,5 @@
 import { poseidon } from 'circomlibjs';
-import { TokenData, TokenType } from '../models/formatted-types';
+import { NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
 import { keccak256, SNARK_PRIME_BIGINT } from '../utils';
 import {
@@ -135,7 +135,7 @@ export const getTokenDataNFT = (
   nftAddress: string,
   tokenType: TokenType.ERC721 | TokenType.ERC1155,
   tokenSubID: string,
-): TokenData => {
+): NFTTokenData => {
   return {
     tokenAddress: formatToByteLength(nftAddress, ByteLength.Address, true),
     tokenType,

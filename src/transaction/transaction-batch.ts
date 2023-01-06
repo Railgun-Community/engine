@@ -4,7 +4,7 @@ import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
-import { AdaptID, TokenData } from '../models/formatted-types';
+import { AdaptID, TokenData, TokenType } from '../models/formatted-types';
 import {
   consolidateBalanceError,
   createSpendingSolutionGroupsForOutput,
@@ -128,7 +128,17 @@ export class TransactionBatch {
     const balances = await wallet.balancesByTree(this.chain);
     const treeSortedBalances = balances[tokenHash];
     if (treeSortedBalances == null) {
-      throw new Error(`Can not find RAILGUN wallet balance for token ID: ${tokenHash}`);
+      switch (tokenData.tokenType) {
+        case TokenType.ERC20:
+          throw new Error(
+            `Can not find RAILGUN wallet balance for ERC20 token: ${tokenData.tokenAddress}`,
+          );
+        case TokenType.ERC721:
+        case TokenType.ERC1155:
+          throw new Error(
+            `Can not find RAILGUN wallet balance for NFT with token ID: ${tokenHash}`,
+          );
+      }
     }
 
     // Sum balances
@@ -139,8 +149,14 @@ export class TransactionBatch {
 
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired > tokenBalance) {
-      EngineDebug.log(`Token balance too low: ${tokenHash}`);
-      throw new Error('RAILGUN private token balance too low.');
+      EngineDebug.log(`Token balance too low: token hash ${tokenHash}`);
+      switch (tokenData.tokenType) {
+        case TokenType.ERC20:
+          throw new Error(`RAILGUN private token balance for ${tokenData.tokenAddress} too low.`);
+        case TokenType.ERC721:
+        case TokenType.ERC1155:
+          throw new Error(`RAILGUN private NFT balance too low.`);
+      }
     }
 
     // If single group possible, return it.

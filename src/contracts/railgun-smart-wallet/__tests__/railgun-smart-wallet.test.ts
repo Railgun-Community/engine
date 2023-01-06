@@ -40,12 +40,12 @@ import { RailgunSmartWalletContract } from '../railgun-smart-wallet';
 import { MEMO_SENDER_RANDOM_NULL } from '../../../models/transaction-constants';
 import { TransactNote } from '../../../note/transact-note';
 import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
-import { ShieldNoteNFT } from '../../../note/nft/shield-note-nft';
 import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
 import { getTokenDataERC20 } from '../../../note/note-util';
 import { TokenDataGetter } from '../../../token/token-data-getter';
 import { ContractStore } from '../../contract-store';
+import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -53,7 +53,7 @@ const { expect } = chai;
 let provider: ethers.providers.JsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
-let etherswallet: ethers.Wallet;
+let ethersWallet: ethers.Wallet;
 let snapshot: number;
 let token: ERC20;
 let nft: TestERC721;
@@ -66,7 +66,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
-const NFT_ADDRESS = config.contracts.nft;
+const NFT_ADDRESS = config.contracts.testERC721;
 const RANDOM = randomHex(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
@@ -101,14 +101,14 @@ describe('Railgun Smart Wallet', function runTests() {
     const { privateKey } = ethers.utils.HDNode.fromMnemonic(config.mnemonic).derivePath(
       ethers.utils.defaultPath,
     );
-    etherswallet = new ethers.Wallet(privateKey, provider);
+    ethersWallet = new ethers.Wallet(privateKey, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
-    token = new ethers.Contract(TOKEN_ADDRESS, erc20Abi, etherswallet) as ERC20;
-    const balance = await token.balanceOf(etherswallet.address);
+    token = new ethers.Contract(TOKEN_ADDRESS, erc20Abi, ethersWallet) as ERC20;
+    const balance = await token.balanceOf(ethersWallet.address);
     await token.approve(railgunSmartWalletContract.address, balance);
 
-    nft = new ethers.Contract(NFT_ADDRESS, erc721Abi, etherswallet) as TestERC721;
+    nft = new ethers.Contract(NFT_ADDRESS, erc721Abi, ethersWallet) as TestERC721;
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
@@ -134,7 +134,7 @@ describe('Railgun Smart Wallet', function runTests() {
       const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
       // Send shield on chain
-      const tx = await etherswallet.sendTransaction(shieldTx);
+      const tx = await ethersWallet.sendTransaction(shieldTx);
       return Promise.all([tx.wait(), awaitScan(wallet, chain)]);
     };
   });
@@ -298,7 +298,7 @@ describe('Railgun Smart Wallet', function runTests() {
       ),
     );
     transactionBatch.addUnshieldData({
-      toAddress: etherswallet.address,
+      toAddress: ethersWallet.address,
       value: 100n,
       tokenData,
     });
@@ -311,7 +311,7 @@ describe('Railgun Smart Wallet', function runTests() {
     const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
     // Send transact on chain
-    const txTransact = await etherswallet.sendTransaction(transact);
+    const txTransact = await ethersWallet.sendTransaction(transact);
     const [txResponseTransact] = await Promise.all([
       txTransact.wait(),
       promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
@@ -388,7 +388,7 @@ describe('Railgun Smart Wallet', function runTests() {
       this.skip();
       return;
     }
-    const unshield = new UnshieldNoteERC20(etherswallet.address, 100n, token.address);
+    const unshield = new UnshieldNoteERC20(ethersWallet.address, 100n, token.address);
     const contractHash = await railgunSmartWalletContract.hashCommitment(unshield.preImage);
 
     expect(hexlify(contractHash)).to.equal(unshield.hashHex);
@@ -420,7 +420,7 @@ describe('Railgun Smart Wallet', function runTests() {
     const awaiterShield = awaitScan(wallet, chain);
 
     // Send shield on chain
-    await (await etherswallet.sendTransaction(shieldTx)).wait();
+    await (await ethersWallet.sendTransaction(shieldTx)).wait();
 
     // Wait for events to fire
     await new Promise((resolve) =>
@@ -460,50 +460,22 @@ describe('Railgun Smart Wallet', function runTests() {
     const merkleRootBefore = await railgunSmartWalletContract.merkleRoot();
 
     // Mint NFTs with tokenIDs 0 and 1 into public balance.
-    const nftBalanceBeforeMint = await nft.balanceOf(etherswallet.address);
-    expect(nftBalanceBeforeMint.toHexString()).to.equal('0x00');
-    const mintTx0 = await nft.mint(etherswallet.address, 0);
-    await mintTx0.wait();
-    const mintTx1 = await nft.mint(etherswallet.address, 1);
-    await mintTx1.wait();
-    const nftBalanceAfterMint = await nft.balanceOf(etherswallet.address);
-    expect(nftBalanceAfterMint.toHexString()).to.equal('0x02');
-    const tokenOwner = await nft.ownerOf(1);
-    expect(tokenOwner).to.equal(etherswallet.address);
-    const tokenURI = await nft.tokenURI(1);
-    expect(tokenURI).to.equal('');
+    await mintNFTsID01ForTest(nft, ethersWallet);
 
     // Approve shield
     const approval = await nft.approve(railgunSmartWalletContract.address, 1);
     await approval.wait();
 
     // Create shield
-    const shield = new ShieldNoteNFT(
-      wallet.masterPublicKey,
+    const shield = await shieldNFTForTest(
+      wallet,
+      ethersWallet,
+      railgunSmartWalletContract,
+      chain,
       RANDOM,
-      NFT_ADDRESS,
-      TokenType.ERC721,
+      nft.address,
       BigInt(1).toString(),
     );
-    const shieldPrivateKey = hexToBytes(randomHex(32));
-    const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
-
-    const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
-
-    const awaiterShield = awaitScan(wallet, chain);
-
-    // Send shield on chain
-    await (await etherswallet.sendTransaction(shieldTx)).wait();
-
-    // Wait for events to fire
-    await new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Shield(),
-        resolve,
-      ),
-    );
-
-    await expect(awaiterShield).to.be.fulfilled;
 
     // Check tokenData stored in contract.
     const { tokenHash } = shield;
@@ -566,7 +538,7 @@ describe('Railgun Smart Wallet', function runTests() {
       ),
     );
     transactionBatch.addUnshieldData({
-      toAddress: etherswallet.address,
+      toAddress: ethersWallet.address,
       value: 100n,
       tokenData,
     });
@@ -582,7 +554,7 @@ describe('Railgun Smart Wallet', function runTests() {
     );
 
     // Send transact on chain
-    await (await etherswallet.sendTransaction(transact)).wait();
+    await (await ethersWallet.sendTransaction(transact)).wait();
 
     // Wait for events to fire
     await new Promise((resolve) =>

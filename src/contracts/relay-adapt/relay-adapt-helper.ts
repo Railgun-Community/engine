@@ -7,35 +7,85 @@ import {
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 import { AddressData } from '../../key-derivation';
+import { NFTTokenData, TokenType } from '../../models/formatted-types';
+import { ShieldNoteNFT } from '../../note/nft/shield-note-nft';
+import { ERC721_NOTE_VALUE } from '../../note/note-util';
 
 class RelayAdaptHelper {
-  static generateRelayShieldRequests(
+  static async generateRelayShieldRequests(
     addressData: AddressData,
     random: string,
-    shieldTokens: string[],
+    shieldERC20Addresses: string[],
+    shieldNFTsTokenData: NFTTokenData[],
   ): Promise<ShieldRequestStruct[]> {
-    const relayShields = RelayAdaptHelper.createRelayShieldERC20s(
-      addressData.masterPublicKey,
-      random,
-      shieldTokens,
-    );
+    return Promise.all([
+      ...(await RelayAdaptHelper.createRelayShieldRequestsERC20s(
+        addressData,
+        random,
+        shieldERC20Addresses,
+      )),
+      ...(await RelayAdaptHelper.createRelayShieldRequestsNFTs(
+        addressData,
+        random,
+        shieldNFTsTokenData,
+      )),
+    ]);
+  }
+
+  private static async createRelayShieldRequestsERC20s(
+    addressData: AddressData,
+    random: string,
+    shieldERC20Addresses: string[],
+  ): Promise<ShieldRequestStruct[]> {
     return Promise.all(
-      relayShields.map((shield) => {
+      shieldERC20Addresses.map((erc20Address) => {
+        const shieldERC20 = new ShieldNoteERC20(
+          addressData.masterPublicKey,
+          random,
+          0n, // 0n will automatically shield entire balance.
+          erc20Address,
+        );
+
         // Random private key for Relay Adapt shield.
         const shieldPrivateKey = hexToBytes(randomHex(32));
-        return shield.serialize(shieldPrivateKey, addressData.viewingPublicKey);
+
+        return shieldERC20.serialize(shieldPrivateKey, addressData.viewingPublicKey);
       }),
     );
   }
 
-  private static createRelayShieldERC20s(
-    masterPublicKey: bigint,
+  private static async createRelayShieldRequestsNFTs(
+    addressData: AddressData,
     random: string,
-    tokens: string[],
-  ): ShieldNoteERC20[] {
-    return tokens.map((token) => {
-      return new ShieldNoteERC20(masterPublicKey, random, 0n, token);
-    });
+    shieldNFTsTokenData: NFTTokenData[],
+  ): Promise<ShieldRequestStruct[]> {
+    return Promise.all(
+      shieldNFTsTokenData.map((nftTokenData) => {
+        const value = RelayAdaptHelper.valueForNFTShield(nftTokenData);
+
+        const shieldERC20 = new ShieldNoteNFT(
+          addressData.masterPublicKey,
+          random,
+          value,
+          nftTokenData,
+        );
+
+        // Random private key for Relay Adapt shield.
+        const shieldPrivateKey = hexToBytes(randomHex(32));
+
+        return shieldERC20.serialize(shieldPrivateKey, addressData.viewingPublicKey);
+      }),
+    );
+  }
+
+  private static valueForNFTShield(nftTokenData: NFTTokenData): bigint {
+    switch (nftTokenData.tokenType) {
+      case TokenType.ERC721:
+        return ERC721_NOTE_VALUE;
+      case TokenType.ERC1155:
+        return 0n; // 0n will automatically shield entire balance.
+    }
+    throw new Error('Unhandled NFT token type.');
   }
 
   static validateShieldRequests(shieldRequests: ShieldRequestStruct[]) {
@@ -94,22 +144,6 @@ class RelayAdaptHelper {
       ],
       [nullifiers, transactions.length, actionData],
     );
-
-    // Test: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee', 1, actionData]
-    //
-    // actionData:
-    //
-    // calls:
-    //  0:
-    // {to: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933', data: '0xd5774a280000000000000000000000000000000000000000000000000000000000000000', value: 0n}
-    // 1:
-    // {to: '0x67d269191c92Caf3cD7723F116c85e6E9bf55933', data: '0xc2e9ffd8000000000000000000000000000000000000…000000000000000000000000000000000000000000000', value: 0n}
-    // minGasLimit:
-    // BigNumber {_hex: '0x00', _isBigNumber: true}
-    // random:
-    // Uint8Array(31) [18, 52, 86, 120, 144, 171, 205, 239, 18, 52, 86, 120, 144, 171, 205, 239, 18, 52, 86, 120, 144, 171, 205, 239, 18, 52, 86, 120, 144, 171, 205, buffer: ArrayBuffer(31), byteLength: 31, byteOffset: 0, length: 31]
-    // requireSuccess:
-    // true];
 
     return ethers.utils.keccak256(hexToBytes(preimage));
   }
