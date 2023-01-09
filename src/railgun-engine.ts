@@ -42,6 +42,8 @@ class RailgunEngine extends EventEmitter {
 
   static walletSource: Optional<string>;
 
+  private readonly skipMerkletreeScans: Optional<boolean>;
+
   /**
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
@@ -56,6 +58,7 @@ class RailgunEngine extends EventEmitter {
     artifactsGetter: ArtifactsGetter,
     quickSync?: QuickSync,
     engineDebugger?: EngineDebugger,
+    skipMerkletreeScans?: boolean,
   ) {
     super();
 
@@ -66,6 +69,7 @@ class RailgunEngine extends EventEmitter {
     if (engineDebugger) {
       EngineDebug.init(engineDebugger);
     }
+    this.skipMerkletreeScans = skipMerkletreeScans;
   }
 
   static setEngineDebugger = (engineDebugger: EngineDebugger): void => {
@@ -257,6 +261,10 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to scan
    */
   async scanHistory(chain: Chain) {
+    if (this.skipMerkletreeScans) {
+      EngineDebug.log(`Skipping merkletree scan: skipMerkletreeScans set on RAILGUN Engine.`);
+      return;
+    }
     if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
       EngineDebug.log(
         `Cannot scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
