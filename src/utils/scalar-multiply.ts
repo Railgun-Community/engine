@@ -43,7 +43,11 @@ export const scalarMultiplyWasmFallbackToJavascript = (
     // Fallback to Javascript.
     EngineDebug.log('curve25519-scalarmult-wasm scalarMultiply failed: Fallback to JavaScript');
     EngineDebug.error(err);
-    const pk = Point.fromHex(bytesToHex(point));
-    return pk.multiply(scalar).toRawBytes();
+    return scalarMultiplyJavascript(point, scalar);
   }
+};
+
+export const scalarMultiplyJavascript = (point: Uint8Array, scalar: bigint) => {
+  const pk = Point.fromHex(bytesToHex(point));
+  return pk.multiply(scalar).toRawBytes();
 };

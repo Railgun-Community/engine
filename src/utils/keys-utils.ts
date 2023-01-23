@@ -1,7 +1,7 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
-import { bytesToN, hexlify, hexToBigInt, nToBytes } from './bytes';
-import { sha512 } from './hash';
+import { bytesToN, hexlify, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
+import { sha256, sha512 } from './hash';
 import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
@@ -187,10 +187,17 @@ async function getSharedSymmetricKey(
     await initCurve25519Promise;
 
     // Retrieve private scalar from private key
-    const scalar = await getPrivateScalarFromPrivateKey(privateKeyPairA);
+    const scalar: bigint = await getPrivateScalarFromPrivateKey(privateKeyPairA);
 
     // Multiply ephemeral key by private scalar to get shared key
-    return scalarMultiplyWasmFallbackToJavascript(blindedPublicKeyPairB, scalar);
+    const keyPreimage: Uint8Array = scalarMultiplyWasmFallbackToJavascript(
+      blindedPublicKeyPairB,
+      scalar,
+    );
+
+    // SHA256 hash to get the final key
+    const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    return hashed;
   } catch (err) {
     return undefined;
   }
