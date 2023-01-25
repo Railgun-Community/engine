@@ -547,6 +547,31 @@ class RailgunEngine extends EventEmitter {
       .catch(() => Promise.resolve(undefined));
   }
 
+  async getCompletedTxidFromNullifiers(
+    chain: Chain,
+    nullifiers: string[],
+  ): Promise<Optional<string>> {
+    if (!nullifiers.length) {
+      return undefined;
+    }
+
+    const merkletree = this.merkletrees[chain.type][chain.id];
+
+    const firstNullifier = nullifiers[0];
+    const firstTxid = await merkletree.getStoredNullifier(firstNullifier);
+    if (!firstTxid) {
+      return undefined;
+    }
+
+    const otherTxids: Optional<string>[] = await Promise.all(
+      nullifiers.slice(1).map(merkletree.getStoredNullifier),
+    );
+
+    const matchingTxids = otherTxids.filter((txid) => txid === firstTxid);
+    const allMatch = matchingTxids.length === nullifiers.length - 1;
+    return allMatch ? `0x${firstTxid}` : undefined;
+  }
+
   async scanAllWallets(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     const wallets = this.allWallets();
     // eslint-disable-next-line no-restricted-syntax

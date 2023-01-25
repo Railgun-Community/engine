@@ -241,7 +241,7 @@ class MerkleTree {
     // Return if nullifier is set
     let txid: Optional<string>;
     const latestTree = await this.latestTree();
-    for (let tree = 0; tree < latestTree + 1; tree += 1) {
+    for (let tree = latestTree; tree >= 0; tree -= 1) {
       try {
         txid = (await this.db.get(this.getNullifierDBPath(tree, nullifier))) as string;
         break;

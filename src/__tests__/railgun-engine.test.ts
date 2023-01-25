@@ -298,6 +298,11 @@ describe('RailgunEngine', function test() {
 
     const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
 
+    // Make sure nullifier events map to completed txid.
+    const nullifiers = transactions.map((transaction) => transaction.nullifiers).flat() as string[];
+    const completedTxid = await engine.getCompletedTxidFromNullifiers(chain, nullifiers);
+    expect(completedTxid).to.equal(transactTx.hash);
+
     // Check first output: Shield (receive only).
     expect(history[0].receiveTokenAmounts).deep.eq([
       {
