@@ -47,7 +47,7 @@ import { Chain, ChainType } from '../../models/engine-types';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
-const EVENTS_SCAN_TIMEOUT = 2500;
+const EVENTS_SCAN_TIMEOUT = 5000;
 
 class RailgunSmartWalletContract extends EventEmitter {
   readonly contract: RailgunSmartWallet;
@@ -235,7 +235,7 @@ class RailgunSmartWalletContract extends EventEmitter {
         this.contract.queryFilter(eventFilter, startBlock, endBlock),
         EVENTS_SCAN_TIMEOUT,
       ).catch((err) => {
-        throw err;
+        throw new Error(`Timed out after ${EVENTS_SCAN_TIMEOUT}`);
       });
       return events;
     } catch (err) {
