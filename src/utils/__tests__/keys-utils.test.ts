@@ -57,6 +57,9 @@ describe('Test keys-utils', () => {
 
     const signature = await signED25519(message, privateViewingKey);
     assert.isTrue(await verifyED25519(message, signature, publicViewingKey));
+    assert.isTrue(
+      await verifyED25519(bytesToHex(message), bytesToHex(signature), publicViewingKey),
+    );
 
     const fakeMessage = utf8ToBytes('123');
     assert.isFalse(await verifyED25519(fakeMessage, signature, publicViewingKey));
