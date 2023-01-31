@@ -31,8 +31,8 @@ async function signED25519(message: Uint8Array, privateKey: Uint8Array): Promise
 }
 
 function verifyED25519(
-  message: Uint8Array,
-  signature: Uint8Array,
+  message: string | Uint8Array,
+  signature: string | Uint8Array,
   pubkey: Uint8Array,
 ): Promise<boolean> {
   return verify(signature, message, pubkey);
