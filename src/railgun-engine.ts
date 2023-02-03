@@ -97,9 +97,10 @@ class RailgunEngine extends EventEmitter {
       `[commitmentListener: ${chain.type}:${chain.id}]: ${leaves.length} leaves at ${startingIndex}`,
     );
     // Queue leaves to merkle tree
-    await this.merkletrees[chain.type][chain.id].queueLeaves(treeNumber, startingIndex, leaves);
+    const merkletree = this.getMerkletreeForChain(chain);
+    await merkletree.queueLeaves(treeNumber, startingIndex, leaves);
     if (shouldUpdateTrees) {
-      await this.merkletrees[chain.type][chain.id].updateTrees();
+      await merkletree.updateTrees();
     }
   }
 
@@ -113,7 +114,8 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
-    await this.merkletrees[chain.type][chain.id].nullify(nullifiers);
+    const merkletree = this.getMerkletreeForChain(chain);
+    await merkletree.nullify(nullifiers);
   }
 
   /**
@@ -130,11 +132,12 @@ class RailgunEngine extends EventEmitter {
         unshields.map((unshield) => unshield.txid),
       )}`,
     );
-    await this.merkletrees[chain.type][chain.id].addUnshieldEvents(unshields);
+    const merkletree = this.getMerkletreeForChain(chain);
+    await merkletree.addUnshieldEvents(unshields);
   }
 
   async getMostRecentValidCommitmentBlock(chain: Chain): Promise<Optional<number>> {
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.getMerkletreeForChain(chain);
     const railgunSmartWalletContract =
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
     const { provider } = railgunSmartWalletContract.contract;
@@ -191,7 +194,7 @@ class RailgunEngine extends EventEmitter {
     }
     try {
       EngineDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
-      const merkletree = this.merkletrees[chain.type][chain.id];
+      const merkletree = this.getMerkletreeForChain(chain);
 
       const startScanningBlockQuickSync = await this.getStartScanningBlock(chain);
       EngineDebug.log(`Start scanning block for QuickSync: ${startScanningBlockQuickSync}`);
@@ -280,7 +283,7 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.getMerkletreeForChain(chain);
     const railgunSmartWalletContract =
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
     if (merkletree.isScanning) {
@@ -368,7 +371,8 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to clear
    */
   async clearSyncedMerkletreeLeaves(chain: Chain) {
-    await this.merkletrees[chain.type][chain.id].clearLeavesFromDB();
+    const merkletree = this.getMerkletreeForChain(chain);
+    await merkletree.clearLeavesFromDB();
     await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
 
@@ -384,7 +388,7 @@ class RailgunEngine extends EventEmitter {
       EngineDebug.error(err);
       throw err;
     }
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.getMerkletreeForChain(chain);
     if (merkletree.isScanning) {
       const err = new Error(`Full rescan already in progress.`);
       EngineDebug.error(err);
@@ -464,7 +468,8 @@ class RailgunEngine extends EventEmitter {
 
     // Load merkletrees to wallets
     Object.values(this.wallets).forEach((wallet) => {
-      wallet.loadMerkletree(this.merkletrees[chain.type][chain.id]);
+      const merkletree = this.getMerkletreeForChain(chain);
+      wallet.loadMerkletree(merkletree);
     });
 
     // Setup listeners
@@ -547,6 +552,14 @@ class RailgunEngine extends EventEmitter {
       .catch(() => Promise.resolve(undefined));
   }
 
+  private getMerkletreeForChain(chain: Chain): MerkleTree {
+    const merkletree = this.merkletrees[chain.type][chain.id];
+    if (!merkletree) {
+      throw new Error(`No merkletree for chain ${chain.type}:${chain.id}`);
+    }
+    return merkletree;
+  }
+
   async getCompletedTxidFromNullifiers(
     chain: Chain,
     nullifiers: string[],
@@ -555,7 +568,7 @@ class RailgunEngine extends EventEmitter {
       return undefined;
     }
 
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.getMerkletreeForChain(chain);
 
     const firstNullifier = nullifiers[0];
     const firstTxid = await merkletree.getStoredNullifier(firstNullifier);

@@ -587,7 +587,7 @@ abstract class AbstractWallet extends EventEmitter {
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
 
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.getMerkletreeForChain(chain);
 
     const tokenDataGetter = this.createTokenDataGetter(chain);
 
@@ -791,9 +791,8 @@ abstract class AbstractWallet extends EventEmitter {
         }
 
         // Get possible unshield event for this transaction.
-        txidTransactionMap[txid].unshieldEvents = await this.merkletrees[chain.type][
-          chain.id
-        ].getUnshieldEvents(txid);
+        const merkletree = this.getMerkletreeForChain(chain);
+        txidTransactionMap[txid].unshieldEvents = await merkletree.getUnshieldEvents(txid);
 
         const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
         const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
@@ -874,6 +873,14 @@ abstract class AbstractWallet extends EventEmitter {
     );
 
     return history;
+  }
+
+  private getMerkletreeForChain(chain: Chain): MerkleTree {
+    const merkletree = this.merkletrees[chain.type][chain.id];
+    if (!merkletree) {
+      throw new Error(`No merkletree for chain ${chain.type}:${chain.id}`);
+    }
+    return merkletree;
   }
 
   /**
@@ -957,7 +964,7 @@ abstract class AbstractWallet extends EventEmitter {
   async scanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
-    const merkletree = this.merkletrees[chain.type][chain.id];
+    const merkletree = this.getMerkletreeForChain(chain);
 
     try {
       // Fetch wallet details and latest tree.
