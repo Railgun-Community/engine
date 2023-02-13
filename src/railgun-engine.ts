@@ -188,7 +188,7 @@ class RailgunEngine extends EventEmitter {
     return startScanningBlock;
   }
 
-  private async performQuickScan(chain: Chain, endProgress: number) {
+  private async performQuickSync(chain: Chain, endProgress: number) {
     if (!this.quickSync) {
       return;
     }
@@ -296,7 +296,7 @@ class RailgunEngine extends EventEmitter {
     this.emitScanUpdateEvent(chain, 0.03); // 3%
 
     const postQuickSyncProgress = 0.5;
-    await this.performQuickScan(chain, postQuickSyncProgress);
+    await this.performQuickSync(chain, postQuickSyncProgress);
 
     this.emitScanUpdateEvent(chain, postQuickSyncProgress); // 50%
 
@@ -309,8 +309,7 @@ class RailgunEngine extends EventEmitter {
     }
     EngineDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
-    const latestBlock = (await railgunSmartWalletContract.contract.provider.getBlock('latest'))
-      .number;
+    const latestBlock = await railgunSmartWalletContract.contract.provider.getBlockNumber();
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
     EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
@@ -381,7 +380,8 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to rescan
    */
   async fullRescanMerkletreesAndWallets(chain: Chain) {
-    if (!this.merkletrees[chain.type] || !this.merkletrees[chain.type][chain.id]) {
+    const hasMerkletree = this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id];
+    if (!hasMerkletree) {
       const err = new Error(
         `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
@@ -426,45 +426,42 @@ class RailgunEngine extends EventEmitter {
       throw new Error(`Cannot connect to RPC provider.`);
     }
 
-    if (
-      (this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id]) ||
-      (ContractStore.railgunSmartWalletContracts[chain.type] &&
-        ContractStore.railgunSmartWalletContracts[chain.type][chain.id]) ||
-      (ContractStore.relayAdaptContracts[chain.type] &&
-        ContractStore.relayAdaptContracts[chain.type][chain.id])
-    ) {
+    const hasMerkletree = this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id];
+    const hasSmartWalletContract =
+      ContractStore.railgunSmartWalletContracts[chain.type] &&
+      ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
+    const hasRelayAdaptContract =
+      ContractStore.relayAdaptContracts[chain.type] &&
+      ContractStore.relayAdaptContracts[chain.type][chain.id];
+    if (hasMerkletree || hasSmartWalletContract || hasRelayAdaptContract) {
       // If a network with this chainID exists, unload it and load the provider as a new network
       this.unloadNetwork(chain);
     }
 
     // Create proxy contract instance
-    if (!ContractStore.railgunSmartWalletContracts[chain.type]) {
-      ContractStore.railgunSmartWalletContracts[chain.type] = [];
-    }
+    ContractStore.railgunSmartWalletContracts[chain.type] ??= [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(railgunSmartWalletContractAddress, provider, chain);
 
     // Create relay adapt contract instance
-    if (!ContractStore.relayAdaptContracts[chain.type]) {
-      ContractStore.relayAdaptContracts[chain.type] = [];
-    }
+    ContractStore.relayAdaptContracts[chain.type] ??= [];
     ContractStore.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
       relayAdaptContractAddress,
       provider,
     );
 
     // Create tree controllers
-    if (!this.merkletrees[chain.type]) {
-      this.merkletrees[chain.type] = [];
-    }
+    this.merkletrees[chain.type] ??= [];
     this.merkletrees[chain.type][chain.id] = new MerkleTree(this.db, chain, (tree, root) =>
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id].validateRoot(tree, root),
     );
 
-    if (!this.deploymentBlocks[chain.type]) {
-      this.deploymentBlocks[chain.type] = [];
-    }
+    this.deploymentBlocks[chain.type] ??= [];
     this.deploymentBlocks[chain.type][chain.id] = deploymentBlock;
+
+    if (this.skipMerkletreeScans) {
+      return;
+    }
 
     // Load merkletrees to wallets
     Object.values(this.wallets).forEach((wallet) => {
@@ -636,6 +633,12 @@ class RailgunEngine extends EventEmitter {
   private loadWallet(wallet: AbstractWallet): void {
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
+
+    if (this.skipMerkletreeScans) {
+      throw new Error(
+        'Cannot load wallet: skipMerkletreeScans set to true. Wallets require merkle scans to load balances and history.',
+      );
+    }
 
     // Load merkletrees for wallet
     this.merkletrees.forEach((merkletreesForChainType) => {
