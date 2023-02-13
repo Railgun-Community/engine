@@ -3,10 +3,10 @@ import { toUTF8String, combine, chunk, fromUTF8String } from './bytes';
 import { encryptedDataToCiphertext, ciphertextToEncryptedJSONData } from './ciphertext';
 import { aes } from './encryption';
 
-export const tryDecryptJSONDataWithSharedKey = async (
+export const tryDecryptJSONDataWithSharedKey = (
   encryptedData: EncryptedData,
   sharedKey: Uint8Array,
-): Promise<object | null> => {
+): object | null => {
   try {
     const ciphertext = encryptedDataToCiphertext(encryptedData);
     const chunkedData = aes.gcm.decrypt(ciphertext, sharedKey);

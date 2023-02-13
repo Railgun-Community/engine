@@ -30,7 +30,7 @@ describe('ecies', () => {
     expect(sharedKeyAlternate).to.deep.equal(sharedKey);
     assert(sharedKeyAlternate != null);
 
-    const decrypted = await tryDecryptJSONDataWithSharedKey(encryptedData, sharedKeyAlternate);
+    const decrypted = tryDecryptJSONDataWithSharedKey(encryptedData, sharedKeyAlternate);
     expect(decrypted).to.deep.equal(data);
   });
 });
