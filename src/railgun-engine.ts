@@ -439,24 +439,32 @@ class RailgunEngine extends EventEmitter {
     }
 
     // Create proxy contract instance
-    ContractStore.railgunSmartWalletContracts[chain.type] ??= [];
+    if (!ContractStore.railgunSmartWalletContracts[chain.type]) {
+      ContractStore.railgunSmartWalletContracts[chain.type] = [];
+    }
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(railgunSmartWalletContractAddress, provider, chain);
 
     // Create relay adapt contract instance
-    ContractStore.relayAdaptContracts[chain.type] ??= [];
+    if (!ContractStore.relayAdaptContracts[chain.type]) {
+      ContractStore.relayAdaptContracts[chain.type] = [];
+    }
     ContractStore.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
       relayAdaptContractAddress,
       provider,
     );
 
     // Create tree controllers
-    this.merkletrees[chain.type] ??= [];
+    if (!this.merkletrees[chain.type]) {
+      this.merkletrees[chain.type] = [];
+    }
     this.merkletrees[chain.type][chain.id] = new MerkleTree(this.db, chain, (tree, root) =>
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id].validateRoot(tree, root),
     );
 
-    this.deploymentBlocks[chain.type] ??= [];
+    if (!this.deploymentBlocks[chain.type]) {
+      this.deploymentBlocks[chain.type] = [];
+    }
     this.deploymentBlocks[chain.type][chain.id] = deploymentBlock;
 
     if (this.skipMerkletreeScans) {
