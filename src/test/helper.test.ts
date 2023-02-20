@@ -16,31 +16,38 @@ import {
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
-import { PublicInputs } from '../models/prover-types';
+import { ArtifactGetter, PublicInputs } from '../models/prover-types';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 const WALLET_PATH = "m/44'/60'/0'/0/0";
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-export const artifactGetter = async (inputs: PublicInputs) => {
+const testNodeArtifactGetter = async (inputs: PublicInputs): Promise<Artifact> => {
   const nullifiers = inputs.nullifiers.length;
   const commitments = inputs.commitmentsOut.length;
-  if (!artifactExists(nullifiers, commitments)) {
-    throw new Error(
-      `No artifacts for inputs: ${inputs.nullifiers.length}-${inputs.commitmentsOut.length}`,
-    );
-  }
-  return artifacts.getArtifact(nullifiers, commitments);
+  assertTestNodeArtifactExists(nullifiers, commitments);
+
+  return {
+    ...artifacts.getArtifact(nullifiers, commitments),
+    dat: undefined,
+  };
 };
 
-export const artifactExists = (nullifiers: number, commitments: number): boolean => {
+const assertTestNodeArtifactExists = (nullifiers: number, commitments: number): void => {
   const artifactList = artifacts.listArtifacts();
   const found = artifactList.find((artifactMetadata) => {
     return (
       artifactMetadata.nullifiers === nullifiers && artifactMetadata.commitments === commitments
     );
   });
-  return found != null;
+  if (!found) {
+    throw new Error(`No artifacts for inputs: ${nullifiers}-${commitments}`);
+  }
+};
+
+export const testArtifactsGetter: ArtifactGetter = {
+  getArtifacts: testNodeArtifactGetter,
+  assertArtifactExists: assertTestNodeArtifactExists,
 };
 
 export const mockQuickSync: QuickSync = (

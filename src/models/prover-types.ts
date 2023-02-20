@@ -66,4 +66,7 @@ export type FormattedCircuitInputs = {
   valueOut: bigint[];
 };
 
-export type ArtifactGetter = (publicInputs: PublicInputs) => Promise<Artifact>;
+export type ArtifactGetter = {
+  assertArtifactExists: (nullifiers: number, commitments: number) => void;
+  getArtifacts: (publicInputs: PublicInputs) => Promise<Artifact>;
+};

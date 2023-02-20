@@ -17,7 +17,7 @@ import {
   hexToBytes,
   randomHex,
 } from '../../../utils/bytes';
-import { artifactGetter, awaitScan, DECIMALS_18 } from '../../../test/helper.test';
+import { awaitScan, DECIMALS_18, testArtifactsGetter } from '../../../test/helper.test';
 import {
   Nullifier,
   OutputType,
@@ -77,7 +77,7 @@ describe('Railgun Smart Wallet', function runTests() {
   this.timeout(60000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine('Test Proxy', memdown(), artifactGetter, undefined);
+    engine = new RailgunEngine('Test Proxy', memdown(), testArtifactsGetter, undefined);
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {

@@ -160,7 +160,7 @@ export class Prover {
     }
 
     // Fetch artifacts
-    const artifacts = await this.artifactGetter(publicInputs);
+    const artifacts = await this.artifactGetter.getArtifacts(publicInputs);
 
     // Return output of groth16 verify
     const publicSignals: bigint[] = [
@@ -184,9 +184,13 @@ export class Prover {
   }
 
   async dummyProve(publicInputs: PublicInputs): Promise<Proof> {
-    // Pull artifacts to make sure we have valid artifacts for this number of inputs.
+    // Make sure we have valid artifacts for this number of inputs.
     // Note that the artifacts are not used in the dummy proof.
-    await this.artifactGetter(publicInputs);
+    this.artifactGetter.assertArtifactExists(
+      publicInputs.nullifiers.length,
+      publicInputs.commitmentsOut.length,
+    );
+
     return Prover.zeroProof;
   }
 
@@ -202,7 +206,7 @@ export class Prover {
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
     progressCallback(5);
-    const artifacts = await this.artifactGetter(publicInputs);
+    const artifacts = await this.artifactGetter.getArtifacts(publicInputs);
     if (!artifacts.wasm && !artifacts.dat) {
       throw new Error('Requires WASM or DAT prover artifact');
     }

@@ -8,7 +8,7 @@ import { Commitment, CommitmentType, OutputType } from '../../models/formatted-t
 import { Chain, ChainType } from '../../models/engine-types';
 import { randomHex } from '../../utils/bytes';
 import { config } from '../../test/config.test';
-import { artifactGetter, DECIMALS_18, mockQuickSync } from '../../test/helper.test';
+import { DECIMALS_18, mockQuickSync, testArtifactsGetter } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
@@ -76,12 +76,15 @@ describe('Transaction/Transaction Batch', function run() {
       undefined, // creationBlockNumbers
     );
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
-    prover = new Prover(artifactGetter);
-    prover.setSnarkJSGroth16(groth16 as Groth16);
-    address = wallet.addressKeys;
 
     const provider = new JsonRpcProvider(config.rpc);
-    const engine = new RailgunEngine('Tx Batch Tests', memdown(), artifactGetter, mockQuickSync);
+
+    const engine = new RailgunEngine(
+      'Tx Batch Tests',
+      memdown(),
+      testArtifactsGetter,
+      mockQuickSync,
+    );
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,
@@ -89,6 +92,11 @@ describe('Transaction/Transaction Batch', function run() {
       provider,
       0,
     );
+
+    prover = engine.prover;
+    prover.setSnarkJSGroth16(groth16 as Groth16);
+    address = wallet.addressKeys;
+
     wallet.loadMerkletree(merkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
       return TransactNote.createTransfer(

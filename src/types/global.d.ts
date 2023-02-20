@@ -24,17 +24,17 @@ declare type Artifact = {
   vkey: object;
 };
 
-declare module 'railgun-community-circuit-artifacts' {
-  type ArtifactListMetadata = {
-    nullifiers: number;
-    commitments: number;
-  }[];
+// declare module 'railgun-community-circuit-artifacts' {
+//   type ArtifactListMetadata = {
+//     nullifiers: number;
+//     commitments: number;
+//   }[];
 
-  export function getArtifact(nullifiers: number, commitments: number): Artifact;
+//   export function getArtifact(nullifiers: number, commitments: number): Artifact;
 
-  export function getVKey(nullifiers: number, commitments: number): string;
+//   export function getVKey(nullifiers: number, commitments: number): string;
 
-  export function listArtifacts(): ArtifactListMetadata;
-}
+//   export function listArtifacts(): ArtifactListMetadata;
+// }
 
 declare module 'snarkjs';
