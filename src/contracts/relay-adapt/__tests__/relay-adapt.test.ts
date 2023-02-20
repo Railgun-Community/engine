@@ -32,7 +32,7 @@ import { UnshieldNoteNFT } from '../../../note';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-let provider: ethers.providers.JsonRpcProvider;
+let provider: JsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
 let ethersWallet: ethers.Wallet;
@@ -70,7 +70,7 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    provider = new ethers.providers.JsonRpcProvider(config.rpc);
+    provider = new JsonRpcProvider(config.rpc);
     chain = {
       type: ChainType.EVM,
       id: (await provider.getNetwork()).chainId,

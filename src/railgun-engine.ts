@@ -1,6 +1,6 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
-import type { ethers } from 'ethers';
 import EventEmitter from 'events';
+import { FallbackProvider, JsonRpcProvider } from '@ethersproject/providers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
 import { Database, DatabaseNamespace } from './database/database';
@@ -413,7 +413,7 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     railgunSmartWalletContractAddress: string,
     relayAdaptContractAddress: string,
-    provider: ethers.providers.JsonRpcProvider | ethers.providers.FallbackProvider,
+    provider: JsonRpcProvider | FallbackProvider,
     deploymentBlock: number,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);

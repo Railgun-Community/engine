@@ -11,7 +11,6 @@ import {
   createSpendingSolutionGroupsForUnshield,
 } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
-import { isValidFor3Outputs } from '../solutions/nullifiers';
 import EngineDebug from '../debugger/debugger';
 import {
   extractSpendingSolutionGroupsData,
@@ -193,14 +192,6 @@ export class TransactionBatch {
       );
       if (amount < totalRequired) {
         throw new Error('Could not find UTXOs to satisfy required amount.');
-      }
-      if (
-        !isValidFor3Outputs(utxos.length) &&
-        this.outputs.length > 0 &&
-        this.unshieldTotal(tokenHash) > 0
-      ) {
-        // Cannot have 3 outputs. Can't include unshield in note.
-        throw new Error('Requires 3 outputs, given a unshield and at least one standard output.');
       }
 
       const unshieldValue = this.unshieldTotal(tokenHash);

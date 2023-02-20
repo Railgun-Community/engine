@@ -1,12 +1,13 @@
 import { assert, expect } from 'chai';
 import { randomBytes } from 'ethers/lib/utils';
 import {
+  CONSOLIDATE_BALANCE_ERROR,
   createSpendingSolutionGroupsForOutput,
   findNextSolutionBatch,
   nextNullifierTarget,
   shouldAddMoreUTXOsForSolutionBatch,
 } from '../complex-solutions';
-import { sortUTXOsBySize } from '../utxos';
+import { filterZeroUTXOs, sortUTXOsByAscendingValue } from '../utxos';
 import { TransactionBatch } from '../../transaction/transaction-batch';
 import { OutputType } from '../../models/formatted-types';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
@@ -68,14 +69,15 @@ describe('Solutions/Complex Solutions', () => {
   it('Should get valid next nullifier targets', () => {
     expect(nextNullifierTarget(0)).to.equal(1);
     expect(nextNullifierTarget(1)).to.equal(2);
-    expect(nextNullifierTarget(2)).to.equal(8);
-    expect(nextNullifierTarget(3)).to.equal(8);
-    expect(nextNullifierTarget(4)).to.equal(8);
-    expect(nextNullifierTarget(5)).to.equal(8);
-    expect(nextNullifierTarget(6)).to.equal(8);
+    expect(nextNullifierTarget(2)).to.equal(3);
+    expect(nextNullifierTarget(3)).to.equal(4);
+    expect(nextNullifierTarget(4)).to.equal(5);
+    expect(nextNullifierTarget(5)).to.equal(6);
+    expect(nextNullifierTarget(6)).to.equal(7);
     expect(nextNullifierTarget(7)).to.equal(8);
-    expect(nextNullifierTarget(8)).to.equal(undefined);
-    expect(nextNullifierTarget(9)).to.equal(undefined);
+    expect(nextNullifierTarget(8)).to.equal(9);
+    expect(nextNullifierTarget(9)).to.equal(10);
+    expect(nextNullifierTarget(10)).to.equal(undefined);
   });
 
   it('Should determine whether to add utxos to solution batch', () => {
@@ -84,23 +86,20 @@ describe('Solutions/Complex Solutions', () => {
     const highAmount = BigInt(1001);
     const totalRequired = BigInt(1000);
 
-    // Hit exact total amount. Valid nullifier amount. [ALL SET]
+    // Hit exact total amount. Valid. [ALL SET]
     expect(shouldAddMoreUTXOsForSolutionBatch(1, 5, exactAmount, totalRequired)).to.equal(false);
 
-    // Hit total amount. Invalid nullifier amount. [NEED MORE]
-    expect(shouldAddMoreUTXOsForSolutionBatch(3, 5, highAmount, totalRequired)).to.equal(true);
+    // Higher than total amount. Valid. [ALL SET]
+    expect(shouldAddMoreUTXOsForSolutionBatch(3, 5, highAmount, totalRequired)).to.equal(false);
 
-    // Lower than total amount. Invalid nullifier amount. [NEED MORE]
+    // Lower than total amount. Valid nullifier amount. [NEED MORE]
     expect(shouldAddMoreUTXOsForSolutionBatch(3, 8, lowAmount, totalRequired)).to.equal(true);
 
-    // Lower than total amount. Invalid nullifier amount. Next is not reachable. [ALL SET - but invalid]
-    expect(shouldAddMoreUTXOsForSolutionBatch(3, 5, lowAmount, totalRequired)).to.equal(false);
-
-    // Lower than total amount. Valid nullifier amount. Next is not reachable. [ALL SET]
-    expect(shouldAddMoreUTXOsForSolutionBatch(8, 10, lowAmount, totalRequired)).to.equal(false);
+    // Lower than total amount. Invalid nullifier amount. Next is not reachable. [ALL SET]
+    expect(shouldAddMoreUTXOsForSolutionBatch(10, 11, lowAmount, totalRequired)).to.equal(false);
   });
 
-  it('Should create next solution batch from utxos (5)', async () => {
+  it('Should create next solution batch from utxos (6)', async () => {
     const treeBalance1: TreeBalance = {
       balance: BigInt(150),
       tokenData,
@@ -116,28 +115,32 @@ describe('Solutions/Complex Solutions', () => {
 
     const utxosForSort = [...treeBalance1.utxos];
     expect(utxosForSort.map((utxo) => utxo.txid)).to.deep.equal(['a', 'b', 'c', 'd', 'e', 'f']);
-    sortUTXOsBySize(utxosForSort);
-    expect(utxosForSort.map((utxo) => utxo.txid)).to.deep.equal(['c', 'b', 'a', 'e', 'd', 'f']);
+
+    const filteredZeroes = filterZeroUTXOs(utxosForSort);
+    expect(filteredZeroes.map((utxo) => utxo.txid)).to.deep.equal(['a', 'b', 'c', 'd', 'e']);
+
+    sortUTXOsByAscendingValue(utxosForSort);
+    expect(utxosForSort.map((utxo) => utxo.txid)).to.deep.equal(['f', 'd', 'e', 'a', 'b', 'c']);
 
     // More than balance. No excluded txids.
     const solutionBatch1 = findNextSolutionBatch(treeBalance1, BigInt(180), []);
     assert(solutionBatch1 != null);
-    expect(solutionBatch1.map((utxo) => utxo.txid)).to.deep.equal(['c', 'b']);
+    expect(solutionBatch1.map((utxo) => utxo.txid)).to.deep.equal(['d', 'e', 'a', 'b', 'c']);
 
     // More than balance. Exclude txids.
     const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(180), ['a', 'b']);
     assert(solutionBatch2 != null);
-    expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['c', 'e']);
+    expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['d', 'e', 'c']);
 
     // Less than balance. Exclude txids.
-    const solutionBatch3 = findNextSolutionBatch(treeBalance1, BigInt(10), ['a', 'b']);
+    const solutionBatch3 = findNextSolutionBatch(treeBalance1, BigInt(9), ['a', 'b']);
     assert(solutionBatch3 != null);
-    expect(solutionBatch3.map((utxo) => utxo.txid)).to.deep.equal(['c']);
+    expect(solutionBatch3.map((utxo) => utxo.txid)).to.deep.equal(['d']);
 
-    // Less than balance. Exact match would be 4 UTXOs, which is not an allowed Nullifer count. Most optimal would be b + c.
-    const solutionBatch4 = findNextSolutionBatch(treeBalance1, BigInt(120), []);
+    // Less than balance. Most optimal is 4 UTXOs to consolidate balances.
+    const solutionBatch4 = findNextSolutionBatch(treeBalance1, BigInt(90), []);
     assert(solutionBatch4 != null);
-    expect(solutionBatch4.map((utxo) => utxo.txid)).to.deep.equal(['c', 'b']);
+    expect(solutionBatch4.map((utxo) => utxo.txid)).to.deep.equal(['d', 'e', 'a', 'b']);
 
     // No utxos available.
     const solutionBatch5 = findNextSolutionBatch(treeBalance1, BigInt(120), [
@@ -161,9 +164,9 @@ describe('Solutions/Complex Solutions', () => {
     expect(solutionBatch6).to.equal(undefined);
   });
 
-  it('Should create next solution batch from utxos (9)', async () => {
+  it('Should create next solution batch from utxos (11)', async () => {
     const treeBalance1: TreeBalance = {
-      balance: BigInt(450),
+      balance: BigInt(660),
       tokenData,
       utxos: [
         await createMockTXO('a', BigInt(30)),
@@ -175,28 +178,32 @@ describe('Solutions/Complex Solutions', () => {
         await createMockTXO('g', BigInt(70)),
         await createMockTXO('h', BigInt(80)),
         await createMockTXO('i', BigInt(90)),
+        await createMockTXO('j', BigInt(100)),
+        await createMockTXO('k', BigInt(110)),
       ],
     };
 
-    // More than balance. No excluded txids.
+    // Case 1: More than balance. No excluded txids.
     const solutionBatch1 = findNextSolutionBatch(treeBalance1, BigInt(500), []);
     assert(solutionBatch1 != null);
     expect(solutionBatch1.map((utxo) => utxo.txid)).to.deep.equal([
-      'i',
-      'h',
-      'g',
-      'f',
-      'c',
-      'b',
-      'a',
+      'd',
       'e',
-      // NOTE: no "d" which is the smallest.
+      'a',
+      'b',
+      'c',
+      'f',
+      'g',
+      'h',
+      'i',
+      'j',
+      // NOTE: no "k" which is the largest and #11, but we only include 10 UTXOs per batch.
     ]);
 
-    // Less than balance. Exclude biggest utxo.
-    const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(48), ['i']);
+    // Case 2: Less than balance. Exclude smallest utxo.
+    const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(58), ['d']);
     assert(solutionBatch2 != null);
-    expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['h']);
+    expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['e', 'a', 'b']);
   });
 
   it('Should create spending solution groups for various outputs', async () => {
@@ -222,6 +229,7 @@ describe('Solutions/Complex Solutions', () => {
         await createMockTXO('g', BigInt(70)),
         await createMockTXO('h', BigInt(80)),
         await createMockTXO('i', BigInt(90)),
+        await createMockTXO('j', BigInt(0)),
       ],
     };
 
@@ -229,9 +237,9 @@ describe('Solutions/Complex Solutions', () => {
 
     // Case 1.
     const remainingOutputs1: TransactNote[] = [
-      await createMockNote(addressData1, BigInt(80)),
-      await createMockNote(addressData2, BigInt(70)),
-      await createMockNote(addressData3, BigInt(60)),
+      await createMockNote(addressData1, 79n),
+      await createMockNote(addressData2, 70n),
+      await createMockNote(addressData3, 60n),
     ];
     const spendingSolutionGroups1 = createSpendingSolutionGroupsForOutput(
       tokenData,
@@ -240,21 +248,21 @@ describe('Solutions/Complex Solutions', () => {
       remainingOutputs1,
       [],
     );
-    // Ensure the 80 output was removed.
+    // Ensure the 79n output was removed.
     expect(remainingOutputs1.map((note) => note.value)).to.deep.equal([BigInt(70), BigInt(60)]);
     const extractedData1 = extractSpendingSolutionGroupsData(spendingSolutionGroups1);
     expect(extractedData1).to.deep.equal([
       {
-        utxoTxids: ['aa', 'ab'],
-        utxoValues: [20n, 0n],
+        utxoTxids: ['aa'],
+        utxoValues: [20n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
         tokenData,
       },
       {
-        utxoTxids: ['i'],
-        utxoValues: [90n],
-        outputValues: [60n],
+        utxoTxids: ['d', 'e', 'a'], // 60 total
+        utxoValues: [10n, 20n, 30n],
+        outputValues: [59n],
         outputAddressDatas: [addressData1],
         tokenData,
       },
@@ -273,20 +281,20 @@ describe('Solutions/Complex Solutions', () => {
       remainingOutputs2,
       [],
     );
-    // Ensure the 80 output was removed.
+    // Ensure the 150 output was removed.
     expect(remainingOutputs2.map((note) => note.value)).to.deep.equal([BigInt(70), BigInt(60)]);
     const extractedData2 = extractSpendingSolutionGroupsData(spendingSolutionGroups2);
     expect(extractedData2).to.deep.equal([
       {
-        utxoTxids: ['aa', 'ab'],
-        utxoValues: [20n, 0n],
+        utxoTxids: ['aa'],
+        utxoValues: [20n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
         tokenData,
       },
       {
-        utxoTxids: ['i', 'h'],
-        utxoValues: [90n, 80n],
+        utxoTxids: ['d', 'e', 'a', 'b', 'c'],
+        utxoValues: [10n, 20n, 30n, 40n, 50n], // 150 total
         outputValues: [130n],
         outputAddressDatas: [addressData1],
         tokenData,
@@ -294,6 +302,8 @@ describe('Solutions/Complex Solutions', () => {
     ]);
 
     // Case 3.
+    // totalRequired exceeds tree balance, which should be caught earlier in the process (Balance Too Low error when originally creating tx batch).
+    // If we hit this case, there is a consolidate balance error.
     const remainingOutputs3: TransactNote[] = [await createMockNote(addressData1, BigInt(500))];
     expect(() =>
       createSpendingSolutionGroupsForOutput(
@@ -303,9 +313,7 @@ describe('Solutions/Complex Solutions', () => {
         remainingOutputs3,
         [],
       ),
-    ).to.throw(
-      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
-    );
+    ).to.throw(CONSOLIDATE_BALANCE_ERROR);
   });
 
   it('Should create complex spending solution groups for transaction batch', async () => {
@@ -339,9 +347,9 @@ describe('Solutions/Complex Solutions', () => {
     // Case 1.
     const transactionBatch1 = new TransactionBatch(CHAIN);
     const outputs1: TransactNote[] = [
-      await createMockNote(addressData1, BigInt(80)),
-      await createMockNote(addressData2, BigInt(70)),
-      await createMockNote(addressData3, BigInt(60)),
+      await createMockNote(addressData1, 92n),
+      await createMockNote(addressData2, 70n),
+      await createMockNote(addressData3, 65n),
     ];
     outputs1.forEach((output) => transactionBatch1.addOutput(output));
     const tokenOutputs = outputs1; // filtered by token
@@ -353,30 +361,30 @@ describe('Solutions/Complex Solutions', () => {
     const extractedData1 = extractSpendingSolutionGroupsData(spendingSolutionGroups1);
     expect(extractedData1).to.deep.equal([
       {
-        utxoTxids: ['aa', 'ab'],
-        utxoValues: [20n, 0n],
+        utxoTxids: ['aa'],
+        utxoValues: [20n],
         outputValues: [20n],
         outputAddressDatas: [addressData1],
         tokenData,
       },
       {
-        utxoTxids: ['i'],
-        utxoValues: [90n],
-        outputValues: [60n],
+        utxoTxids: ['d', 'e', 'a', 'b'],
+        utxoValues: [10n, 20n, 30n, 40n], // 100 total
+        outputValues: [72n],
         outputAddressDatas: [addressData1],
         tokenData,
       },
       {
-        utxoTxids: ['h'],
-        utxoValues: [80n],
+        utxoTxids: ['g'],
+        utxoValues: [70n], // 70 total - exact match
         outputValues: [70n],
         outputAddressDatas: [addressData2],
         tokenData,
       },
       {
-        utxoTxids: ['g'],
-        utxoValues: [70n],
-        outputValues: [60n],
+        utxoTxids: ['c', 'f'],
+        utxoValues: [50n, 60n], // 110 total
+        outputValues: [65n],
         outputAddressDatas: [addressData3],
         tokenData,
       },

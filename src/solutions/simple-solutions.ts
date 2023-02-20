@@ -1,13 +1,9 @@
 import { TXO, TreeBalance } from '../models';
-import { isValidNullifierCount, MAX_NULLIFIERS } from './nullifiers';
-import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
-
-export const shouldAddMoreUTXOsToConsolidateBalances = (utxoCount: number) =>
-  !isValidNullifierCount(utxoCount) && utxoCount < MAX_NULLIFIERS;
+import { isValidNullifierCount } from './nullifiers';
+import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from './utxos';
 
 const shouldAddMoreUTXOs = (utxos: TXO[], totalRequired: bigint) =>
-  calculateTotalSpend(utxos) < totalRequired ||
-  shouldAddMoreUTXOsToConsolidateBalances(utxos.length);
+  calculateTotalSpend(utxos) < totalRequired;
 
 export function findExactSolutionsOverTargetValue(
   treeBalance: TreeBalance,
@@ -16,10 +12,11 @@ export function findExactSolutionsOverTargetValue(
   // If this tree doesn't have enough to cover this transaction, return false
   if (treeBalance.balance < totalRequired) return [];
 
-  const filteredUTXOs = treeBalance.utxos;
+  // Remove utxos with 0 value.
+  const filteredUTXOs: TXO[] = filterZeroUTXOs(treeBalance.utxos);
 
-  // Sort UTXOs by size
-  sortUTXOsBySize(filteredUTXOs);
+  // Sort UTXOs by smallest size
+  sortUTXOsByAscendingValue(filteredUTXOs);
 
   // Accumulate UTXOs until we hit the target value
   const utxos: TXO[] = [];

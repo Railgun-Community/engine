@@ -167,6 +167,8 @@ class Transaction {
       pathIndices.push(BigInt(utxo.position));
     }
 
+    const allOutputs: (TransactNote | UnshieldNote)[] = [...this.tokenOutputs];
+
     // Calculate change amount
     const totalIn = utxos.reduce((left, right) => left + right.note.value, BigInt(0));
 
@@ -174,26 +176,26 @@ class Transaction {
       this.tokenOutputs.reduce((left, right) => left + right.value, BigInt(0)) + this.unshieldValue;
 
     const change = totalIn - totalOut;
-    if (change < 0) {
+    if (change < 0n) {
       throw new Error('Negative change value - transaction not possible.');
     }
 
-    const allOutputs: (TransactNote | UnshieldNote)[] = [...this.tokenOutputs];
-
-    // Create change output
-    allOutputs.push(
-      TransactNote.createTransfer(
-        wallet.addressKeys, // Receiver
-        wallet.addressKeys, // Sender
-        randomHex(16),
-        change,
-        this.tokenData,
-        senderViewingKeys,
-        true, // showSenderAddressToRecipient
-        OutputType.Change,
-        undefined, // memoText
-      ),
-    );
+    if (change > 0n) {
+      // Add change output
+      allOutputs.push(
+        TransactNote.createTransfer(
+          wallet.addressKeys, // Receiver
+          wallet.addressKeys, // Sender
+          randomHex(16),
+          change,
+          this.tokenData,
+          senderViewingKeys,
+          true, // showSenderAddressToRecipient
+          OutputType.Change,
+          undefined, // memoText
+        ),
+      );
+    }
 
     // Push unshield output if unshield is requested
     if (this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && this.unshieldNote) {

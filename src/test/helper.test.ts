@@ -4,6 +4,7 @@ import { HDKey } from 'ethereum-cryptography/hdkey';
 import artifacts from '@railgun-community/test-artifacts';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { Nullifier } from '../models/formatted-types';
 import {
   AccumulatedEvents,
@@ -73,10 +74,7 @@ export const awaitMultipleScans = async (
   return Promise.resolve();
 };
 
-export const getEthersWallet = (
-  mnemonic: string,
-  provider: ethers.providers.JsonRpcProvider,
-): ethers.Wallet => {
+export const getEthersWallet = (mnemonic: string, provider: JsonRpcProvider): ethers.Wallet => {
   const node = HDKey.fromMasterSeed(mnemonicToSeedSync(mnemonic)).derive(WALLET_PATH);
   const wallet = new ethers.Wallet(bytesToHex(node.privateKey as Uint8Array), provider);
   return wallet;

@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
 import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
 import { config } from '../../../test/config.test';
@@ -50,7 +51,7 @@ import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-let provider: ethers.providers.JsonRpcProvider;
+let provider: JsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
 let ethersWallet: ethers.Wallet;
@@ -83,7 +84,7 @@ describe('Railgun Smart Wallet', function runTests() {
       return;
     }
 
-    provider = new ethers.providers.JsonRpcProvider(config.rpc);
+    provider = new JsonRpcProvider(config.rpc);
     chain = {
       type: ChainType.EVM,
       id: (await provider.getNetwork()).chainId,

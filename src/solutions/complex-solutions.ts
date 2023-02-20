@@ -1,10 +1,13 @@
 import { SpendingSolutionGroup, TXO } from '../models/txo-types';
 import { minBigInt } from '../utils/bigint';
 import { TreeBalance } from '../models/wallet-types';
-import { VALID_NULLIFIER_COUNTS, isValidNullifierCount } from './nullifiers';
-import { calculateTotalSpend, sortUTXOsBySize } from './utxos';
+import { VALID_INPUT_COUNTS, isValidNullifierCount } from './nullifiers';
+import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from './utxos';
 import { TransactNote } from '../note/transact-note';
 import { TokenData } from '../models';
+
+export const CONSOLIDATE_BALANCE_ERROR =
+  'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
 
 type SolutionSpendingGroupGenerator = (
   tree: number,
@@ -142,16 +145,14 @@ export const createSpendingSolutionGroupsForUnshield = (
  * eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of circuit outputs.
  */
 export const consolidateBalanceError = (): Error => {
-  throw new Error(
-    'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
-  );
+  throw new Error(CONSOLIDATE_BALANCE_ERROR);
 };
 
 /**
  * Finds next valid nullifier count above the current nullifier count.
  */
 export const nextNullifierTarget = (utxoCount: number): Optional<number> =>
-  VALID_NULLIFIER_COUNTS.find((n) => n > utxoCount);
+  VALID_INPUT_COUNTS.find((n) => n > utxoCount);
 
 export const shouldAddMoreUTXOsForSolutionBatch = (
   currentNullifierCount: number,
@@ -161,8 +162,7 @@ export const shouldAddMoreUTXOsForSolutionBatch = (
 ) => {
   if (currentSpend >= totalRequired) {
     // We've hit the target required.
-    // Keep adding nullifiers until the count is valid.
-    return !isValidNullifierCount(currentNullifierCount);
+    return false;
   }
 
   const nullifierTarget = nextNullifierTarget(currentNullifierCount);
@@ -181,24 +181,32 @@ export const shouldAddMoreUTXOsForSolutionBatch = (
   return true;
 };
 
+/**
+ * 1. Filter out UTXOs with value 0.
+ * 2. Use exact match UTXO for totalRequired value if it exists.
+ * 3. Sort by smallest UTXO ascending.
+ * 4. Add UTXOs to the batch until we hit the totalRequired value, or exceed the UTXO input count maximum.
+ */
 export function findNextSolutionBatch(
   treeBalance: TreeBalance,
   totalRequired: bigint,
   excludedUTXOIDs: string[],
 ): Optional<TXO[]> {
-  const filteredUTXOs = treeBalance.utxos.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
+  const removedZeroUTXOs = filterZeroUTXOs(treeBalance.utxos);
+  const filteredUTXOs = removedZeroUTXOs.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
   if (!filteredUTXOs.length) {
     // No more solutions in this tree.
     return undefined;
   }
 
-  // Sort UTXOs by size
-  sortUTXOsBySize(filteredUTXOs);
-
-  if (filteredUTXOs[0].note.value === 0n) {
-    // No valuable notes in this tree.
-    return undefined;
+  // Use exact match if it exists.
+  const exactMatch = filteredUTXOs.find((utxo) => utxo.note.value === totalRequired);
+  if (exactMatch) {
+    return [exactMatch];
   }
+
+  // Sort UTXOs by smallest size
+  sortUTXOsByAscendingValue(filteredUTXOs);
 
   // Accumulate UTXOs until we hit the target value
   const utxos: TXO[] = [];

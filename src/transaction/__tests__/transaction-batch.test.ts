@@ -3,11 +3,12 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { Commitment, CommitmentType, OutputType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { randomHex } from '../../utils/bytes';
 import { config } from '../../test/config.test';
-import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
+import { artifactsGetter, DECIMALS_18, mockQuickSync } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
@@ -16,6 +17,8 @@ import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
+import { CONSOLIDATE_BALANCE_ERROR } from '../../solutions/complex-solutions';
+import { RailgunEngine } from '../../railgun-engine';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -77,6 +80,16 @@ describe('Transaction/Transaction Batch', function run() {
     prover = new Prover(artifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
+
+    const provider = new JsonRpcProvider(config.rpc);
+    const engine = new RailgunEngine('Tx Batch Tests', memdown(), artifactsGetter, mockQuickSync);
+    await engine.loadNetwork(
+      chain,
+      config.contracts.proxy,
+      config.contracts.relayAdapt,
+      provider,
+      0,
+    );
     wallet.loadMerkletree(merkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
       return TransactNote.createTransfer(
@@ -154,9 +167,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(
-      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
-    );
+    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
   });
 
   it('Should validate transaction batch outputs w/ unshields', async () => {
@@ -239,9 +250,7 @@ describe('Transaction/Transaction Batch', function run() {
     });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(
-      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
-    );
+    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
 
     // TODO: Unhandled case: 8x3 circuit.
     // Fix by adding 8x3 circuit, or using change from one note for next output note.
@@ -258,9 +267,7 @@ describe('Transaction/Transaction Batch', function run() {
     });
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(
-      'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.',
-    );
+    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
   });
 
   this.afterAll(() => {
