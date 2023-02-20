@@ -386,7 +386,7 @@ describe('Relay Adapt', function test() {
 
     // 3. Create the cross contract calls.
     // Do nothing for now.
-    // TODO: Add an interaction via cross contract call.
+    // TODO: Add an NFT interaction via cross contract call.
     const crossContractCalls: PopulatedTransaction[] = [];
 
     // 4. Create shield inputs.
@@ -757,7 +757,6 @@ describe('Relay Adapt', function test() {
     );
 
     // 6. Get gas estimate from dummy txs.
-    // TODO: Add adaptID to dummy txs?
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
@@ -923,7 +922,6 @@ describe('Relay Adapt', function test() {
     );
 
     // 6. Get gas estimate from dummy txs.
-    // TODO: Add adaptID to dummy txs?
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
@@ -993,7 +991,7 @@ describe('Relay Adapt', function test() {
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
-    // TODO: These are the incorrect assertions, if the tx is fully reverted.
+    // TODO: These are the incorrect assertions, if the tx is fully reverted. This requires a callbacks upgrade to contract.
     // For now, it is partially reverted. Unshield/shield fees are still charged.
     // This caps the loss of funds at 0.5% + Relayer fee.
 

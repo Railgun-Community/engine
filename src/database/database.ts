@@ -6,7 +6,6 @@ import { BytesData, Ciphertext } from '../models/formatted-types';
 import { chunk, combine, hexlify } from '../utils/bytes';
 import { aes } from '../utils/encryption';
 
-// TODO: Remove JSON encoding and standardize everything as msgpack
 export type Encoding =
   | 'utf8'
   | 'json'

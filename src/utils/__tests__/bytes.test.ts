@@ -3,8 +3,8 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import {
   arrayify,
+  assertBytesWithinRange,
   ByteLength,
-  checkBytes,
   chunk,
   combine,
   formatToByteLength,
@@ -286,7 +286,7 @@ describe('Utils/Bytes', () => {
     const invalidVectors = stringVectors.slice(2);
     invalidVectors.forEach((vector) => {
       expect(() => toUTF8String(vector.hex)).to.throw(/Invalid/);
-      expect(() => checkBytes(vector.utf8)).to.throw(/Invalid/);
+      expect(() => assertBytesWithinRange(vector.utf8)).to.throw(/Invalid/);
       expect(() => fromUTF8String(vector.utf8)).to.throw(/Invalid/);
     });
   });

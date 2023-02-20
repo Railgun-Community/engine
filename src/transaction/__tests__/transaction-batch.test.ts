@@ -236,25 +236,6 @@ describe('Transaction/Transaction Batch', function run() {
       shieldValue,
     ]);
 
-    // TODO: Unhandled case.
-    // Fix by using change from one note for the next output note... and so on.
-    transactionBatch.resetOutputs();
-    transactionBatch.resetUnshieldData();
-    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
-    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
-    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
-    transactionBatch.addUnshieldData({
-      toAddress: ethersWallet.address,
-      value: shieldValue + 1n,
-      tokenData,
-    });
-    await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
-
-    // TODO: Unhandled case: 8x3 circuit.
-    // Fix by adding 8x3 circuit, or using change from one note for next output note.
-    // Or... fix logic to create a number of 2x2 and 2x3 circuits.
     await merkletree.queueLeaves(1, 0, [shieldLeaf('g'), shieldLeaf('h')]);
     await merkletree.updateTrees();
     transactionBatch.resetOutputs();
@@ -263,6 +244,25 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addUnshieldData({
       toAddress: ethersWallet.address,
       value: shieldValue * 5n,
+      tokenData,
+    });
+    // TODO: This should fail given new x3 circuits.
+    await expect(
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
+    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
+    expect(false).to.be.true('', 'Expect failure');
+
+    // TODO: Unhandled case for large number of output receivers.
+    // Fix by using change from one note for the next output receiver... and so on.
+    // Ie. Multiple receivers per circuit
+    transactionBatch.resetOutputs();
+    transactionBatch.resetUnshieldData();
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue + 1n,
       tokenData,
     });
     await expect(

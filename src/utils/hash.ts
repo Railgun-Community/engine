@@ -1,4 +1,5 @@
-import { utils as ethersutils } from 'ethers';
+// TODO: Remove reliance on ethers utils
+import { utils as ethersUtils } from 'ethers';
 import { BytesData } from '../models/formatted-types';
 import { arrayify } from './bytes';
 
@@ -8,12 +9,11 @@ import { arrayify } from './bytes';
  * @returns hash
  */
 function sha256(preImage: BytesData): string {
-  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
   const preImageFormatted = arrayify(preImage);
 
   // Hash and return
-  return ethersutils.sha256(preImageFormatted).slice(2);
+  return ethersUtils.sha256(preImageFormatted).slice(2);
 }
 
 /**
@@ -22,12 +22,11 @@ function sha256(preImage: BytesData): string {
  * @returns hash
  */
 function sha512(preImage: BytesData): string {
-  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
   const preImageFormatted = arrayify(preImage);
 
   // Hash and return
-  return ethersutils.sha512(preImageFormatted).slice(2);
+  return ethersUtils.sha512(preImageFormatted).slice(2);
 }
 
 /**
@@ -37,14 +36,13 @@ function sha512(preImage: BytesData): string {
  * @returns hmac
  */
 function sha512HMAC(key: BytesData, data: BytesData): string {
-  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
   const keyFormatted = arrayify(key);
   const dataFormatted = arrayify(data);
 
   // Hash HMAC and return
-  return ethersutils
-    .computeHmac(ethersutils.SupportedAlgorithm.sha512, keyFormatted, dataFormatted)
+  return ethersUtils
+    .computeHmac(ethersUtils.SupportedAlgorithm.sha512, keyFormatted, dataFormatted)
     .slice(2);
 }
 
@@ -54,12 +52,11 @@ function sha512HMAC(key: BytesData, data: BytesData): string {
  * @returns hash
  */
 function keccak256(preImage: BytesData): string {
-  // TODO: Remove reliance on ethers utils
   // Convert to bytes array
   const preImageFormatted = arrayify(preImage);
 
   // Hash and return
-  return ethersutils.keccak256(preImageFormatted).slice(2);
+  return ethersUtils.keccak256(preImageFormatted).slice(2);
 }
 
 export { sha256, sha512, sha512HMAC, keccak256 };

@@ -58,7 +58,8 @@
     "@typescript-eslint/no-unsafe-argument": 1,
     "@typescript-eslint/no-unsafe-assignment": 1,
     "@typescript-eslint/no-non-null-assertion": 2,
-    "import/no-extraneous-dependencies": 0
+    "import/no-extraneous-dependencies": 0,
+    "no-warning-comments": 1
   },
   "ignorePatterns": [
     "dist/*"

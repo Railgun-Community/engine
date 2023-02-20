@@ -142,7 +142,11 @@ export const createSpendingSolutionGroupsForUnshield = (
 /**
  * Wallet has appropriate balance in aggregate, but no solutions remain.
  * This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
- * eg. Out of a 225 balance (200 and 25), sending 75 each to 3 people becomes difficult, because of the constraints on the number of circuit outputs.
+ *
+ * Example: Out of a 600 balance (550 and 50), sending 100 each to 6 people becomes difficult, because of the constraints on the number of circuit outputs.
+ * This would require a 1x6 for the 550 note, and a 1x1 for the 50 note. We do not support a 1x6 circuit.
+ * TODO: A possible fix is to update the logic the 1x6 output sends as a 1x10 with 4 null (value 0) outputs.
+ * This would be the way to support large multi-receiver transactions.
  */
 export const consolidateBalanceError = (): Error => {
   throw new Error(CONSOLIDATE_BALANCE_ERROR);

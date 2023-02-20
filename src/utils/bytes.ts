@@ -190,8 +190,8 @@ function padToLength(data: BytesData, length: number, side: 'left' | 'right' = '
  * @returns reversed bytes
  */
 function reverseBytes(data: ArrayLike<number> | string): typeof data {
-  // TODO: Allow reversing number bytes
-  // TODO: Conditional type return or overload so passed param and return are same type
+  // TODO: Allow reversing number bytes.
+  // Use Conditional type return or overload so passed param and return are same type.
   if (typeof data === 'string') {
     // Split to bytes array, reverse, join, and return
     return data.split(/(..)/g).reverse().join('');
@@ -206,7 +206,7 @@ function reverseBytes(data: ArrayLike<number> | string): typeof data {
  * @param string - string to check
  * @throws if invalid character found
  */
-function checkBytes(string: string) {
+function assertBytesWithinRange(string: string) {
   string.split('').forEach((char) => {
     if (char.charCodeAt(0) > 0xd800) {
       throw new Error('Invalid Unicode codepoint > 0xD800');
@@ -222,7 +222,7 @@ function checkBytes(string: string) {
 function toUTF8String(data: BytesData): string {
   // TODO: Remove reliance on Buffer
   const string = new TextDecoder().decode(Buffer.from(arrayify(data)));
-  checkBytes(string);
+  assertBytesWithinRange(string);
   return string;
 }
 
@@ -232,7 +232,7 @@ function toUTF8String(data: BytesData): string {
  * @param encoding - string encoding to use
  */
 function fromUTF8String(string: string): string {
-  checkBytes(string);
+  assertBytesWithinRange(string);
   // Return hexlified string
   return hexlify(new TextEncoder().encode(string));
 }
@@ -376,7 +376,7 @@ export {
   numberify,
   padToLength,
   reverseBytes,
-  checkBytes,
+  assertBytesWithinRange,
   toUTF8String,
   fromUTF8String,
   chunk,
