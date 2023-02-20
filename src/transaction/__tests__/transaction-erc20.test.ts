@@ -606,9 +606,12 @@ describe('Transaction/ERC20', function test() {
 
     transactionBatch.addOutput(await makeNote());
     transactionBatch.addOutput(await makeNote());
+    transactionBatch.addOutput(await makeNote());
+    transactionBatch.addOutput(await makeNote());
+    transactionBatch.addOutput(await makeNote());
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith('Can not add more than 2 outputs.');
+    ).to.eventually.be.rejectedWith('Can not add more than 4 outputs.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(

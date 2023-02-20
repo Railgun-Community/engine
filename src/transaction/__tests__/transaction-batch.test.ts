@@ -17,8 +17,8 @@ import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
-import { CONSOLIDATE_BALANCE_ERROR } from '../../solutions/complex-solutions';
 import { RailgunEngine } from '../../railgun-engine';
+import { CONSOLIDATE_BALANCE_ERROR } from '../../solutions/complex-solutions';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -39,8 +39,7 @@ const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
 const random = randomHex(16);
 
-type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
-let makeNote: makeNoteFn;
+let makeNote: (value?: bigint) => Promise<TransactNote>;
 
 const shieldLeaf = (txid: string): Commitment => ({
   commitmentType: CommitmentType.LegacyGeneratedCommitment,
@@ -130,9 +129,9 @@ describe('Transaction/Transaction Batch', function run() {
       testEncryptionKey,
       () => {},
     );
-    expect(txs.length).to.equal(4);
-    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
-    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
+    expect(txs.length).to.equal(2);
+    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
+    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
@@ -158,13 +157,31 @@ describe('Transaction/Transaction Batch', function run() {
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
-    expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
+    expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
+    const txs3 = await transactionBatch.generateTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    expect(txs3.length).to.equal(1);
+    expect(txs3.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
+    expect(txs3.map((tx) => tx.commitments.length)).to.deep.equal([5]);
+    expect(txs3.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([0n]);
+
+    // TODO: Unhandled case for large number of output receivers.
+    // Fix by using change from one note for the next output receiver... and so on.
+    // Ie. Multiple receivers per circuit
+    transactionBatch.resetOutputs();
+    transactionBatch.resetUnshieldData();
+    transactionBatch.addOutput(await makeNote(5n * shieldValue + 1n)); // Should use all 6 notes, with a large 'change' output.
+    transactionBatch.addOutput(await makeNote(1n)); // Can't add another note, because all are used up.
     await expect(
       transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
@@ -182,14 +199,12 @@ describe('Transaction/Transaction Batch', function run() {
       testEncryptionKey,
       () => {},
     );
-    expect(txs.length).to.equal(4);
-    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 2, 2, 1]);
-    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2]);
+    expect(txs.length).to.equal(2);
+    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
+    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
     expect(txs.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([
       shieldValue,
-      2n * shieldValue,
-      2n * shieldValue,
-      shieldValue,
+      5n * shieldValue,
     ]);
 
     transactionBatch.resetOutputs();
@@ -226,7 +241,7 @@ describe('Transaction/Transaction Batch', function run() {
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
-    expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([2, 2, 2, 2, 2, 2]);
+    expect(txs2.map((tx) => tx.commitments.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
     expect(txs2.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([
       0n,
       0n,
@@ -246,15 +261,17 @@ describe('Transaction/Transaction Batch', function run() {
       value: shieldValue * 5n,
       tokenData,
     });
-    // TODO: This should fail given new x3 circuits.
-    await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
-    expect(false).to.be.true('', 'Expect failure');
+    const txs3 = await transactionBatch.generateTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    expect(txs3.length).to.equal(1);
+    expect(txs3.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
+    expect(txs3.map((tx) => tx.commitments.length)).to.deep.equal([2]);
+    expect(txs3.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([5n * shieldValue]);
 
-    // TODO: Unhandled case for large number of output receivers.
-    // Fix by using change from one note for the next output receiver... and so on.
-    // Ie. Multiple receivers per circuit
     transactionBatch.resetOutputs();
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
@@ -265,9 +282,16 @@ describe('Transaction/Transaction Batch', function run() {
       value: shieldValue + 1n,
       tokenData,
     });
-    await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
+    const txs4 = await transactionBatch.generateTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    expect(txs4.length).to.equal(1);
+    expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
+    expect(txs4.map((tx) => tx.commitments.length)).to.deep.equal([5]);
+    expect(txs4.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([shieldValue + 1n]);
   });
 
   this.afterAll(() => {

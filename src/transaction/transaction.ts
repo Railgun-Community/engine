@@ -64,8 +64,8 @@ class Transaction {
     tokenOutputs: TransactNote[],
     adaptID: AdaptID,
   ) {
-    if (tokenOutputs.length > 2) {
-      throw new Error('Can not add more than 2 outputs.');
+    if (tokenOutputs.length > 4) {
+      throw new Error('Can not add more than 4 outputs.');
     }
 
     this.chain = chain;
@@ -142,7 +142,9 @@ class Transaction {
     const senderViewingKeys = wallet.getViewingKeyPair();
 
     // Check if there's too many outputs
-    if (this.tokenOutputs.length > 2) throw new Error('Too many transaction outputs');
+    if (this.tokenOutputs.length > 5) {
+      throw new Error('Too many transaction outputs.');
+    }
 
     // Get values
     const nullifiers: bigint[] = [];
