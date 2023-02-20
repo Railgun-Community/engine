@@ -1,7 +1,7 @@
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, nToHex } from '../utils/bytes';
 import {
-  ArtifactsGetter,
+  ArtifactGetter,
   FormattedCircuitInputs,
   PrivateInputs,
   Proof,
@@ -51,12 +51,12 @@ export type Groth16 = {
 export type ProverProgressCallback = (progress: number) => void;
 
 export class Prover {
-  private artifactsGetter: ArtifactsGetter;
+  private artifactGetter: ArtifactGetter;
 
   private groth16: Optional<Groth16>;
 
-  constructor(artifactsGetter: ArtifactsGetter) {
-    this.artifactsGetter = artifactsGetter;
+  constructor(artifactGetter: ArtifactGetter) {
+    this.artifactGetter = artifactGetter;
   }
 
   /**
@@ -160,7 +160,7 @@ export class Prover {
     }
 
     // Fetch artifacts
-    const artifacts = await this.artifactsGetter(publicInputs);
+    const artifacts = await this.artifactGetter(publicInputs);
 
     // Return output of groth16 verify
     const publicSignals: bigint[] = [
@@ -186,7 +186,7 @@ export class Prover {
   async dummyProve(publicInputs: PublicInputs): Promise<Proof> {
     // Pull artifacts to make sure we have valid artifacts for this number of inputs.
     // Note that the artifacts are not used in the dummy proof.
-    await this.artifactsGetter(publicInputs);
+    await this.artifactGetter(publicInputs);
     return Prover.zeroProof;
   }
 
@@ -202,7 +202,7 @@ export class Prover {
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
     progressCallback(5);
-    const artifacts = await this.artifactsGetter(publicInputs);
+    const artifacts = await this.artifactGetter(publicInputs);
     if (!artifacts.wasm && !artifacts.dat) {
       throw new Error('Requires WASM or DAT prover artifact');
     }

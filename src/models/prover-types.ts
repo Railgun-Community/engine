@@ -1,12 +1,5 @@
 import { BigNumberish } from 'ethers';
 
-export type Artifacts = {
-  zkey: ArrayLike<number>;
-  wasm: Optional<ArrayLike<number>>;
-  dat: Optional<ArrayLike<number>>;
-  vkey: object;
-};
-
 export const enum Circuits {
   OneTwo,
   OneThree,
@@ -73,6 +66,4 @@ export type FormattedCircuitInputs = {
   valueOut: bigint[];
 };
 
-// eslint-disable-next-line no-unused-vars
-// export type ArtifactsGetter = (Circuits) => Promise<Artifacts>;
-export type ArtifactsGetter = (publicInputs: PublicInputs) => Promise<Artifacts>;
+export type ArtifactGetter = (publicInputs: PublicInputs) => Promise<Artifact>;

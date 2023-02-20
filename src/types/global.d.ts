@@ -17,5 +17,24 @@ declare module 'circomlibjs' {
   export function poseidon(inputs: bigint[]): bigint;
 }
 
+declare type Artifact = {
+  zkey: ArrayLike<number>;
+  wasm: Optional<ArrayLike<number>>;
+  dat: Optional<ArrayLike<number>>;
+  vkey: object;
+};
+
+declare module 'railgun-community-circuit-artifacts' {
+  type ArtifactListMetadata = {
+    nullifiers: number;
+    commitments: number;
+  }[];
+
+  export function getArtifact(nullifiers: number, commitments: number): Artifact;
+
+  export function getVKey(nullifiers: number, commitments: number): string;
+
+  export function listArtifacts(): ArtifactListMetadata;
+}
+
 declare module 'snarkjs';
-declare module '@railgun-community/test-artifacts';

@@ -10,7 +10,7 @@ import { config } from '../test/config.test';
 import { abi as erc721Abi } from '../test/test-erc721-abi.test';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import {
-  artifactsGetter,
+  artifactGetter,
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
@@ -78,7 +78,7 @@ describe('RailgunEngine', function test() {
   this.timeout(240000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine('Test Wallet', memdown(), artifactsGetter, mockQuickSync);
+    engine = new RailgunEngine('Test Wallet', memdown(), artifactGetter, mockQuickSync);
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {

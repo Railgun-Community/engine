@@ -1,7 +1,7 @@
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
-// eslint-disable-next-line import/no-extraneous-dependencies
-import artifacts from '@railgun-community/test-artifacts';
+// eslint-disable-next-line import/no-unresolved
+import artifacts from 'railgun-community-circuit-artifacts';
 import { ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { JsonRpcProvider } from '@ethersproject/providers';
@@ -22,19 +22,25 @@ export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 const WALLET_PATH = "m/44'/60'/0'/0/0";
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-export const artifactsGetter = (inputs: PublicInputs) => {
-  if (
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    !artifacts[inputs.nullifiers.length] ||
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    !artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length]
-  ) {
+export const artifactGetter = async (inputs: PublicInputs) => {
+  const nullifiers = inputs.nullifiers.length;
+  const commitments = inputs.commitmentsOut.length;
+  if (!artifactExists(nullifiers, commitments)) {
     throw new Error(
       `No artifacts for inputs: ${inputs.nullifiers.length}-${inputs.commitmentsOut.length}`,
     );
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  return artifacts[inputs.nullifiers.length][inputs.commitmentsOut.length];
+  return artifacts.getArtifact(nullifiers, commitments);
+};
+
+export const artifactExists = (nullifiers: number, commitments: number): boolean => {
+  const artifactList = artifacts.listArtifacts();
+  const found = artifactList.find((artifactMetadata) => {
+    return (
+      artifactMetadata.nullifiers === nullifiers && artifactMetadata.commitments === commitments
+    );
+  });
+  return found != null;
 };
 
 export const mockQuickSync: QuickSync = (

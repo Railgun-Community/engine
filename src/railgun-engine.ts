@@ -24,7 +24,7 @@ import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
-import { ArtifactsGetter } from './models/prover-types';
+import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
 
 class RailgunEngine extends EventEmitter {
@@ -48,14 +48,14 @@ class RailgunEngine extends EventEmitter {
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
    * @param leveldown - abstract-leveldown compatible store
-   * @param artifactsGetter - async function to retrieve artifacts, engine doesn't handle caching
+   * @param artifactGetter - async function to retrieve artifacts, engine doesn't handle caching
    * @param quickSync - quick sync function to speed up sync
    * @param engineDebugger - log and error callbacks for verbose logging
    */
   constructor(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
-    artifactsGetter: ArtifactsGetter,
+    artifactGetter: ArtifactGetter,
     quickSync?: QuickSync,
     engineDebugger?: EngineDebugger,
     skipMerkletreeScans?: boolean,
@@ -64,7 +64,7 @@ class RailgunEngine extends EventEmitter {
 
     WalletInfo.setWalletSource(walletSource);
     this.db = new Database(leveldown);
-    this.prover = new Prover(artifactsGetter);
+    this.prover = new Prover(artifactGetter);
     this.quickSync = quickSync;
     if (engineDebugger) {
       EngineDebug.init(engineDebugger);

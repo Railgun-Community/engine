@@ -14,7 +14,11 @@ const aes = {
       // If types are strings, convert to bytes array
       const plaintextFormatted = plaintext.map((block) => new Uint8Array(arrayify(block)));
       const keyFormatted = new Uint8Array(arrayify(key));
-      if (keyFormatted.byteLength !== 32) throw new Error('Invalid key length');
+      if (keyFormatted.byteLength !== 32) {
+        throw new Error(
+          `Invalid key length. Expected 32 bytes. Received ${keyFormatted.byteLength} bytes.`,
+        );
+      }
 
       const iv = randomHex(16);
       const ivFormatted = new Uint8Array(arrayify(iv));
@@ -89,8 +93,11 @@ const aes = {
       // If types are strings, convert to bytes array
       const plaintextFormatted = plaintext.map((block) => new Uint8Array(arrayify(block)));
       const keyFormatted = new Uint8Array(arrayify(key));
-
-      if (keyFormatted.byteLength !== 32) throw new Error('Invalid key length');
+      if (keyFormatted.byteLength !== 32) {
+        throw new Error(
+          `Invalid key length. Expected 32 bytes. Received ${keyFormatted.byteLength} bytes.`,
+        );
+      }
 
       const iv = randomHex(16);
       const ivFormatted = new Uint8Array(arrayify(iv));

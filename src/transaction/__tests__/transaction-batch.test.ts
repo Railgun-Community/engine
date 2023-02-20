@@ -8,7 +8,7 @@ import { Commitment, CommitmentType, OutputType } from '../../models/formatted-t
 import { Chain, ChainType } from '../../models/engine-types';
 import { randomHex } from '../../utils/bytes';
 import { config } from '../../test/config.test';
-import { artifactsGetter, DECIMALS_18, mockQuickSync } from '../../test/helper.test';
+import { artifactGetter, DECIMALS_18, mockQuickSync } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
@@ -77,12 +77,12 @@ describe('Transaction/Transaction Batch', function run() {
       undefined, // creationBlockNumbers
     );
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
-    prover = new Prover(artifactsGetter);
+    prover = new Prover(artifactGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
 
     const provider = new JsonRpcProvider(config.rpc);
-    const engine = new RailgunEngine('Tx Batch Tests', memdown(), artifactsGetter, mockQuickSync);
+    const engine = new RailgunEngine('Tx Batch Tests', memdown(), artifactGetter, mockQuickSync);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,

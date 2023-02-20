@@ -11,7 +11,7 @@ import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
 import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
-import { artifactsGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
+import { artifactGetter, awaitMultipleScans, awaitScan } from '../../../test/helper.test';
 import { NFTTokenData, OutputType } from '../../../models/formatted-types';
 import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
 import { ERC20, TestERC721 } from '../../../typechain-types';
@@ -60,7 +60,7 @@ describe('Relay Adapt', function test() {
   this.timeout(45000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine('TestWalletAdapt', memdown(), artifactsGetter, undefined);
+    engine = new RailgunEngine('TestWalletAdapt', memdown(), artifactGetter, undefined);
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);

@@ -22,7 +22,7 @@ import {
   signEDDSA,
   verifyEDDSA,
 } from '../../utils/keys-utils';
-import { artifactsGetter, DECIMALS_18 } from '../../test/helper.test';
+import { artifactGetter, DECIMALS_18 } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
@@ -97,7 +97,7 @@ describe('Transaction/ERC20', function test() {
     );
     WalletInfo.setWalletSource('erc20 Wallet');
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
-    prover = new Prover(artifactsGetter);
+    prover = new Prover(artifactGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
     wallet.loadMerkletree(merkletree);
