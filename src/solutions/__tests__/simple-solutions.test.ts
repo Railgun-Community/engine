@@ -36,5 +36,12 @@ describe('Solutions/Simple Solutions', () => {
         ).not.to.throw();
       });
     });
+
+    // Other artifact combinations
+    expect(() => testArtifactsGetter.assertArtifactExists(11, 1)).not.to.throw();
+    expect(() => testArtifactsGetter.assertArtifactExists(12, 1)).not.to.throw();
+    expect(() => testArtifactsGetter.assertArtifactExists(13, 1)).not.to.throw();
+    expect(() => testArtifactsGetter.assertArtifactExists(1, 10)).not.to.throw();
+    expect(() => testArtifactsGetter.assertArtifactExists(1, 13)).not.to.throw();
   });
 });
