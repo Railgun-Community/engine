@@ -74,7 +74,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 let testShield: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Railgun Smart Wallet', function runTests() {
-  this.timeout(60000);
+  this.timeout(10000);
 
   beforeEach(async () => {
     engine = new RailgunEngine('Test Proxy', memdown(), testArtifactsGetter, undefined);

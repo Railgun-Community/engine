@@ -256,7 +256,7 @@ describe('RailgunEngine', function test() {
       tokenData,
     });
 
-    // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
+    // Add output for mock Relayer
     transactionBatch.addOutput(
       TransactNote.createTransfer(
         wallet2.addressKeys,
@@ -363,6 +363,96 @@ describe('RailgunEngine', function test() {
     ]);
   }).timeout(90000);
 
+  it('[HH] Should shield, max-unshield without relayer, and pull formatted spend/receive transaction history', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    const initialBalance = await wallet.getBalance(chain, tokenAddress);
+    expect(initialBalance).to.equal(undefined);
+
+    const address = wallet.getAddress(chain);
+    await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
+
+    const balance = await wallet.getBalance(chain, tokenAddress);
+    expect(balance).to.equal(BigInt('109725000000000000000000'));
+
+    const tokenData = getTokenDataERC20(tokenAddress);
+
+    // Create transaction
+    const transactionBatch = new TransactionBatch(chain);
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: BigInt('109725000000000000000000'),
+      tokenData,
+    });
+
+    const transactions = await transactionBatch.generateTransactions(
+      engine.prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    expect(transactions.length).to.equal(1);
+    expect(transactions[0].nullifiers.length).to.equal(1);
+    expect(transactions[0].commitments.length).to.equal(1);
+    const transact = await railgunSmartWalletContract.transact(transactions);
+
+    const transactTx = await ethersWallet.sendTransaction(transact);
+    await transactTx.wait();
+    await promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan');
+
+    const newBalance = await wallet.getBalance(chain, tokenAddress);
+    expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
+
+    // check the transactions log
+    const history = await wallet.getTransactionHistory(chain);
+    expect(history.length).to.equal(2);
+
+    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+
+    // Make sure nullifier events map to completed txid.
+    const nullifiers = transactions.map((transaction) => transaction.nullifiers).flat() as string[];
+    const completedTxid = await engine.getCompletedTxidFromNullifiers(chain, nullifiers);
+    expect(completedTxid).to.equal(transactTx.hash);
+
+    // Check first output: Shield (receive only).
+    expect(history[0].receiveTokenAmounts).deep.eq([
+      {
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
+        amount: BigInt('109725000000000000000000'),
+        memoText: undefined,
+        senderAddress: undefined,
+      },
+    ]);
+    expect(history[0].transferTokenAmounts).deep.eq([]);
+    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].changeTokenAmounts).deep.eq([]);
+    expect(history[0].unshieldTokenAmounts).deep.eq([]);
+
+    // Check second output: Unshield (relayer fee + change).
+    // NOTE: No receive token amounts should be logged by history.
+    expect(history[1].receiveTokenAmounts).deep.eq(
+      [],
+      "Receive amount should be filtered out - it's the same as change output.",
+    );
+    expect(history[1].transferTokenAmounts).deep.eq([]);
+    expect(history[1].relayerFeeTokenAmount).eq(undefined);
+    expect(history[1].changeTokenAmounts).deep.eq([]); // No change output
+    expect(history[1].unshieldTokenAmounts).deep.eq([
+      {
+        tokenData: getTokenDataERC20(tokenAddress),
+        tokenHash: tokenFormatted,
+        amount: BigInt('109450687500000000000000'), // balance minus fee
+        recipientAddress: ethersWallet.address,
+        memoText: undefined,
+        senderAddress: undefined,
+      },
+    ]);
+  }).timeout(90000);
+
   it('[HH] Should shield, transfer and update balance, and pull formatted spend/receive transaction history', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
@@ -403,7 +493,7 @@ describe('RailgunEngine', function test() {
 
     const relayerMemoText = 'A short memo with only 32 chars.';
 
-    // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
+    // Add output for mock Relayer
     transactionBatch.addOutput(
       TransactNote.createTransfer(
         wallet2.addressKeys,
@@ -627,7 +717,7 @@ describe('RailgunEngine', function test() {
 
     const tokenDataRelayerFee = getTokenDataERC20(token.address);
 
-    // Add output for mock Relayer (artifacts require 2+ outputs, including unshield)
+    // Add output for mock Relayer
     transactionBatch.addOutput(
       TransactNote.createTransfer(
         wallet2.addressKeys,
@@ -663,7 +753,6 @@ describe('RailgunEngine', function test() {
     const relayerFeeTokenData = getTokenDataERC20(tokenAddress);
     const relayerFeeTokenHash = getTokenDataHash(relayerFeeTokenData);
 
-    // Check first output: Shield (receive only).
     expect(historyAfterTransfer[3].receiveTokenAmounts).deep.eq([]);
     expect(historyAfterTransfer[3].transferTokenAmounts).deep.eq([
       {

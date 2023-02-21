@@ -44,6 +44,7 @@ import {
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ENGINE_V3_START_BLOCK_NUMBERS_EVM } from '../../utils';
 import { Chain, ChainType } from '../../models/engine-types';
+import { RailgunSmartWallet_LegacyShield_PreMar23 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 90;
@@ -169,6 +170,7 @@ class RailgunSmartWalletContract extends EventEmitter {
         startPosition: BigNumber,
         commitments: CommitmentPreimageStructOutput[],
         shieldCiphertext: ShieldCiphertextStructOutput[],
+        fees: BigNumber[],
         event: Event,
       ) => {
         const args: ShieldEventObject = {
@@ -176,6 +178,7 @@ class RailgunSmartWalletContract extends EventEmitter {
           startPosition,
           commitments,
           shieldCiphertext,
+          fees,
         };
         await commitmentListener(formatShieldEvent(args, event.transactionHash, event.blockNumber));
       },
@@ -234,7 +237,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       const events = await promiseTimeout(
         this.contract.queryFilter(eventFilter, startBlock, endBlock),
         EVENTS_SCAN_TIMEOUT,
-      ).catch((err) => {
+      ).catch(() => {
         throw new Error(`Timed out after ${EVENTS_SCAN_TIMEOUT}`);
       });
       return events;
@@ -285,6 +288,7 @@ class RailgunSmartWalletContract extends EventEmitter {
 
     let currentStartBlock = startBlock;
 
+    // Current live events
     const eventFilterNullified = this.contract.filters.Nullified();
     const eventFilterShield = this.contract.filters.Shield();
     const eventFilterTransact = this.contract.filters.Transact();
@@ -298,6 +302,12 @@ class RailgunSmartWalletContract extends EventEmitter {
       legacyEventsContract.filters.GeneratedCommitmentBatch();
     const legacyEventFilterEncryptedCommitmentBatch =
       legacyEventsContract.filters.CommitmentBatch();
+
+    // This type includes legacy Shield event types and filters, from before the Mar 2023 update.
+    const legacyShieldEventContract = this
+      .contract as unknown as RailgunSmartWallet_LegacyShield_PreMar23;
+    // TODO: Use legacy event shield at certain block number.
+    const eventFilter_LegacyShield_PreMar23 = legacyShieldEventContract.filters.Shield();
 
     EngineDebug.log(
       `[Chain ${this.chain.type}:${this.chain.id}]: Scanning historical events from block ${currentStartBlock} to ${latestBlock}`,

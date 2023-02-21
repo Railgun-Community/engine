@@ -4,7 +4,7 @@ import { Database } from '../database/database';
 import { Chain } from '../models/engine-types';
 import { TokenData } from '../models/formatted-types';
 import { getTokenDataERC20, serializeTokenData } from '../note/note-util';
-import { TokenDataStructOutput } from '../typechain-types/contracts/logic/RailgunLogic';
+import { TokenDataStructOutput } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ByteLength, formatToByteLength, fromUTF8String } from '../utils';
 
 // 12 empty bytes.

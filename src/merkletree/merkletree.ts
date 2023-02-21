@@ -237,7 +237,7 @@ class MerkleTree {
    * @param {string} nullifier - nullifier to check
    * @returns txid of spend transaction if spent, else undefined
    */
-  async getStoredNullifier(nullifier: string): Promise<Optional<string>> {
+  async getStoredNullifierTxid(nullifier: string): Promise<Optional<string>> {
     // Return if nullifier is set
     let txid: Optional<string>;
     const latestTree = await this.latestTree();

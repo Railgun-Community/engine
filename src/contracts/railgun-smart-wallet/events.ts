@@ -1,3 +1,4 @@
+import { BigNumber } from '@ethersproject/bignumber';
 import {
   CommitmentCiphertext,
   CommitmentType,
@@ -8,12 +9,6 @@ import {
 import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import EngineDebug from '../../debugger/debugger';
 import {
-  NullifiedEvent,
-  ShieldEvent,
-  TransactEvent,
-  UnshieldEvent,
-} from '../../typechain-types/contracts/logic/RailgunLogic';
-import {
   CommitmentEvent,
   EventsListener,
   EventsNullifierListener,
@@ -23,10 +18,14 @@ import {
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
+  NullifiedEvent,
   NullifiedEventObject,
   ShieldCiphertextStructOutput,
+  ShieldEvent,
   ShieldEventObject,
+  TransactEvent,
   TransactEventObject,
+  UnshieldEvent,
   UnshieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
@@ -39,6 +38,7 @@ export function formatShieldCommitments(
   preImages: CommitmentPreimageStructOutput[],
   shieldCiphertext: ShieldCiphertextStructOutput[],
   blockNumber: number,
+  fees: BigNumber[],
 ): ShieldCommitment[] {
   const shieldCommitments = preImages.map((commitmentPreImage, index) => {
     const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
@@ -59,6 +59,7 @@ export function formatShieldCommitments(
       preImage,
       encryptedBundle: shieldCiphertext[index].encryptedBundle,
       shieldKey: shieldCiphertext[index].shieldKey,
+      fees,
     };
     return commitment;
   });
@@ -70,7 +71,7 @@ export function formatShieldEvent(
   transactionHash: string,
   blockNumber: number,
 ): CommitmentEvent {
-  const { treeNumber, startPosition, commitments, shieldCiphertext } = shieldEventArgs;
+  const { treeNumber, startPosition, commitments, shieldCiphertext, fees } = shieldEventArgs;
   if (
     treeNumber == null ||
     startPosition == null ||
@@ -87,6 +88,7 @@ export function formatShieldEvent(
     commitments,
     shieldCiphertext,
     blockNumber,
+    fees,
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),

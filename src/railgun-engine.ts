@@ -576,13 +576,13 @@ class RailgunEngine extends EventEmitter {
     const merkletree = this.getMerkletreeForChain(chain);
 
     const firstNullifier = nullifiers[0];
-    const firstTxid = await merkletree.getStoredNullifier(firstNullifier);
+    const firstTxid = await merkletree.getStoredNullifierTxid(firstNullifier);
     if (!firstTxid) {
       return undefined;
     }
 
     const otherTxids: Optional<string>[] = await Promise.all(
-      nullifiers.slice(1).map(merkletree.getStoredNullifier),
+      nullifiers.slice(1).map(merkletree.getStoredNullifierTxid),
     );
 
     const matchingTxids = otherTxids.filter((txid) => txid === firstTxid);

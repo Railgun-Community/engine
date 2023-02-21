@@ -12,20 +12,16 @@ import type {
   PopulatedTransaction,
   Signer,
   utils,
-} from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+} from 'ethers';
+import type { FunctionFragment, Result, EventFragment } from '@ethersproject/abi';
+import type { Listener, Provider } from '@ethersproject/providers';
 import type {
   TypedEventFilter,
   TypedEvent,
   TypedListener,
   OnEvent,
   PromiseOrValue,
-} from "../../common";
+} from '../../common';
 
 export type TokenDataStruct = {
   tokenType: PromiseOrValue<BigNumberish>;
@@ -45,32 +41,32 @@ export type CommitmentPreimageStruct = {
   value: PromiseOrValue<BigNumberish>;
 };
 
-export type CommitmentPreimageStructOutput = [
-  string,
-  TokenDataStructOutput,
-  BigNumber
-] & { npk: string; token: TokenDataStructOutput; value: BigNumber };
+export type CommitmentPreimageStructOutput = [string, TokenDataStructOutput, BigNumber] & {
+  npk: string;
+  token: TokenDataStructOutput;
+  value: BigNumber;
+};
 
 export type ShieldCiphertextStruct = {
   encryptedBundle: [
     PromiseOrValue<BytesLike>,
     PromiseOrValue<BytesLike>,
-    PromiseOrValue<BytesLike>
+    PromiseOrValue<BytesLike>,
   ];
   shieldKey: PromiseOrValue<BytesLike>;
 };
 
-export type ShieldCiphertextStructOutput = [
-  [string, string, string],
-  string
-] & { encryptedBundle: [string, string, string]; shieldKey: string };
+export type ShieldCiphertextStructOutput = [[string, string, string], string] & {
+  encryptedBundle: [string, string, string];
+  shieldKey: string;
+};
 
 export type CommitmentCiphertextStruct = {
   ciphertext: [
     PromiseOrValue<BytesLike>,
     PromiseOrValue<BytesLike>,
     PromiseOrValue<BytesLike>,
-    PromiseOrValue<BytesLike>
+    PromiseOrValue<BytesLike>,
   ];
   blindedSenderViewingKey: PromiseOrValue<BytesLike>;
   blindedReceiverViewingKey: PromiseOrValue<BytesLike>;
@@ -83,7 +79,7 @@ export type CommitmentCiphertextStructOutput = [
   string,
   string,
   string,
-  string
+  string,
 ] & {
   ciphertext: [string, string, string, string];
   blindedSenderViewingKey: string;
@@ -107,10 +103,10 @@ export type G2PointStruct = {
   y: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>];
 };
 
-export type G2PointStructOutput = [
-  [BigNumber, BigNumber],
-  [BigNumber, BigNumber]
-] & { x: [BigNumber, BigNumber]; y: [BigNumber, BigNumber] };
+export type G2PointStructOutput = [[BigNumber, BigNumber], [BigNumber, BigNumber]] & {
+  x: [BigNumber, BigNumber];
+  y: [BigNumber, BigNumber];
+};
 
 export type VerifyingKeyStruct = {
   artifactsIPFSHash: PromiseOrValue<string>;
@@ -127,7 +123,7 @@ export type VerifyingKeyStructOutput = [
   G2PointStructOutput,
   G2PointStructOutput,
   G2PointStructOutput,
-  G1PointStructOutput[]
+  G1PointStructOutput[],
 ] & {
   artifactsIPFSHash: string;
   alpha1: G1PointStructOutput;
@@ -154,7 +150,7 @@ export type BoundParamsStructOutput = [
   BigNumber,
   string,
   string,
-  CommitmentCiphertextStructOutput[]
+  CommitmentCiphertextStructOutput[],
 ] & {
   treeNumber: number;
   minGasPrice: BigNumber;
@@ -174,7 +170,7 @@ export type SnarkProofStruct = {
 export type SnarkProofStructOutput = [
   G1PointStructOutput,
   G2PointStructOutput,
-  G1PointStructOutput
+  G1PointStructOutput,
 ] & { a: G1PointStructOutput; b: G2PointStructOutput; c: G1PointStructOutput };
 
 export type TransactionStruct = {
@@ -192,7 +188,7 @@ export type TransactionStructOutput = [
   string[],
   string[],
   BoundParamsStructOutput,
-  CommitmentPreimageStructOutput
+  CommitmentPreimageStructOutput,
 ] & {
   proof: SnarkProofStructOutput;
   merkleRoot: string;
@@ -204,406 +200,268 @@ export type TransactionStructOutput = [
 
 export interface RailgunLogicInterface extends utils.Interface {
   functions: {
-    "ZERO_VALUE()": FunctionFragment;
-    "addToBlocklist(address[])": FunctionFragment;
-    "addVector(uint256)": FunctionFragment;
-    "changeFee(uint120,uint120,uint256)": FunctionFragment;
-    "changeTreasury(address)": FunctionFragment;
-    "checkSafetyVectors()": FunctionFragment;
-    "getFee(uint136,bool,uint120)": FunctionFragment;
-    "getInsertionTreeNumberAndStartingIndex(uint256)": FunctionFragment;
-    "getTokenID((uint8,address,uint256))": FunctionFragment;
-    "getVerificationKey(uint256,uint256)": FunctionFragment;
-    "hashBoundParams((uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]))": FunctionFragment;
-    "hashCommitment((bytes32,(uint8,address,uint256),uint120))": FunctionFragment;
-    "hashLeftRight(bytes32,bytes32)": FunctionFragment;
-    "initializeRailgunLogic(address,uint120,uint120,uint256,address)": FunctionFragment;
-    "lastEventBlock()": FunctionFragment;
-    "merkleRoot()": FunctionFragment;
-    "nextLeafIndex()": FunctionFragment;
-    "nftFee()": FunctionFragment;
-    "nullifiers(uint256,bytes32)": FunctionFragment;
-    "owner()": FunctionFragment;
-    "removeFromBlocklist(address[])": FunctionFragment;
-    "removeVector(uint256)": FunctionFragment;
-    "renounceOwnership()": FunctionFragment;
-    "rootHistory(uint256,bytes32)": FunctionFragment;
-    "setVerificationKey(uint256,uint256,(string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]))": FunctionFragment;
-    "shieldFee()": FunctionFragment;
-    "snarkSafetyVector(uint256)": FunctionFragment;
-    "sumCommitments((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[])": FunctionFragment;
-    "tokenBlocklist(address)": FunctionFragment;
-    "tokenIDMapping(bytes32)": FunctionFragment;
-    "transferOwnership(address)": FunctionFragment;
-    "treasury()": FunctionFragment;
-    "treeNumber()": FunctionFragment;
-    "unshieldFee()": FunctionFragment;
-    "validateCommitmentPreimage((bytes32,(uint8,address,uint256),uint120))": FunctionFragment;
-    "validateTransaction((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120)))": FunctionFragment;
-    "verify((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120)))": FunctionFragment;
-    "verifyProof((string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]),((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256[])": FunctionFragment;
-    "zeros(uint256)": FunctionFragment;
+    'ZERO_VALUE()': FunctionFragment;
+    'addToBlocklist(address[])': FunctionFragment;
+    'addVector(uint256)': FunctionFragment;
+    'changeFee(uint120,uint120,uint256)': FunctionFragment;
+    'changeTreasury(address)': FunctionFragment;
+    'checkSafetyVectors()': FunctionFragment;
+    'getFee(uint136,bool,uint120)': FunctionFragment;
+    'getInsertionTreeNumberAndStartingIndex(uint256)': FunctionFragment;
+    'getTokenID((uint8,address,uint256))': FunctionFragment;
+    'getVerificationKey(uint256,uint256)': FunctionFragment;
+    'hashBoundParams((uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]))': FunctionFragment;
+    'hashCommitment((bytes32,(uint8,address,uint256),uint120))': FunctionFragment;
+    'hashLeftRight(bytes32,bytes32)': FunctionFragment;
+    'initializeRailgunLogic(address,uint120,uint120,uint256,address)': FunctionFragment;
+    'lastEventBlock()': FunctionFragment;
+    'merkleRoot()': FunctionFragment;
+    'nextLeafIndex()': FunctionFragment;
+    'nftFee()': FunctionFragment;
+    'nullifiers(uint256,bytes32)': FunctionFragment;
+    'owner()': FunctionFragment;
+    'removeFromBlocklist(address[])': FunctionFragment;
+    'removeVector(uint256)': FunctionFragment;
+    'renounceOwnership()': FunctionFragment;
+    'rootHistory(uint256,bytes32)': FunctionFragment;
+    'setVerificationKey(uint256,uint256,(string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]))': FunctionFragment;
+    'shieldFee()': FunctionFragment;
+    'snarkSafetyVector(uint256)': FunctionFragment;
+    'sumCommitments((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120))[])': FunctionFragment;
+    'tokenBlocklist(address)': FunctionFragment;
+    'tokenIDMapping(bytes32)': FunctionFragment;
+    'transferOwnership(address)': FunctionFragment;
+    'treasury()': FunctionFragment;
+    'treeNumber()': FunctionFragment;
+    'unshieldFee()': FunctionFragment;
+    'validateCommitmentPreimage((bytes32,(uint8,address,uint256),uint120))': FunctionFragment;
+    'validateTransaction((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120)))': FunctionFragment;
+    'verify((((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),bytes32,bytes32[],bytes32[],(uint16,uint72,uint8,uint64,address,bytes32,(bytes32[4],bytes32,bytes32,bytes,bytes)[]),(bytes32,(uint8,address,uint256),uint120)))': FunctionFragment;
+    'verifyProof((string,(uint256,uint256),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256[2],uint256[2]),(uint256,uint256)[]),((uint256,uint256),(uint256[2],uint256[2]),(uint256,uint256)),uint256[])': FunctionFragment;
+    'zeros(uint256)': FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "ZERO_VALUE"
-      | "addToBlocklist"
-      | "addVector"
-      | "changeFee"
-      | "changeTreasury"
-      | "checkSafetyVectors"
-      | "getFee"
-      | "getInsertionTreeNumberAndStartingIndex"
-      | "getTokenID"
-      | "getVerificationKey"
-      | "hashBoundParams"
-      | "hashCommitment"
-      | "hashLeftRight"
-      | "initializeRailgunLogic"
-      | "lastEventBlock"
-      | "merkleRoot"
-      | "nextLeafIndex"
-      | "nftFee"
-      | "nullifiers"
-      | "owner"
-      | "removeFromBlocklist"
-      | "removeVector"
-      | "renounceOwnership"
-      | "rootHistory"
-      | "setVerificationKey"
-      | "shieldFee"
-      | "snarkSafetyVector"
-      | "sumCommitments"
-      | "tokenBlocklist"
-      | "tokenIDMapping"
-      | "transferOwnership"
-      | "treasury"
-      | "treeNumber"
-      | "unshieldFee"
-      | "validateCommitmentPreimage"
-      | "validateTransaction"
-      | "verify"
-      | "verifyProof"
-      | "zeros"
+      | 'ZERO_VALUE'
+      | 'addToBlocklist'
+      | 'addVector'
+      | 'changeFee'
+      | 'changeTreasury'
+      | 'checkSafetyVectors'
+      | 'getFee'
+      | 'getInsertionTreeNumberAndStartingIndex'
+      | 'getTokenID'
+      | 'getVerificationKey'
+      | 'hashBoundParams'
+      | 'hashCommitment'
+      | 'hashLeftRight'
+      | 'initializeRailgunLogic'
+      | 'lastEventBlock'
+      | 'merkleRoot'
+      | 'nextLeafIndex'
+      | 'nftFee'
+      | 'nullifiers'
+      | 'owner'
+      | 'removeFromBlocklist'
+      | 'removeVector'
+      | 'renounceOwnership'
+      | 'rootHistory'
+      | 'setVerificationKey'
+      | 'shieldFee'
+      | 'snarkSafetyVector'
+      | 'sumCommitments'
+      | 'tokenBlocklist'
+      | 'tokenIDMapping'
+      | 'transferOwnership'
+      | 'treasury'
+      | 'treeNumber'
+      | 'unshieldFee'
+      | 'validateCommitmentPreimage'
+      | 'validateTransaction'
+      | 'verify'
+      | 'verifyProof'
+      | 'zeros',
   ): FunctionFragment;
 
+  encodeFunctionData(functionFragment: 'ZERO_VALUE', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "ZERO_VALUE",
-    values?: undefined
+    functionFragment: 'addToBlocklist',
+    values: [PromiseOrValue<string>[]],
   ): string;
+  encodeFunctionData(functionFragment: 'addVector', values: [PromiseOrValue<BigNumberish>]): string;
   encodeFunctionData(
-    functionFragment: "addToBlocklist",
-    values: [PromiseOrValue<string>[]]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "addVector",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "changeFee",
+    functionFragment: 'changeFee',
     values: [
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>
-    ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "changeTreasury",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "checkSafetyVectors",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getFee",
-    values: [
       PromiseOrValue<BigNumberish>,
-      PromiseOrValue<boolean>,
-      PromiseOrValue<BigNumberish>
-    ]
+    ],
+  ): string;
+  encodeFunctionData(functionFragment: 'changeTreasury', values: [PromiseOrValue<string>]): string;
+  encodeFunctionData(functionFragment: 'checkSafetyVectors', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'getFee',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<boolean>, PromiseOrValue<BigNumberish>],
   ): string;
   encodeFunctionData(
-    functionFragment: "getInsertionTreeNumberAndStartingIndex",
-    values: [PromiseOrValue<BigNumberish>]
+    functionFragment: 'getInsertionTreeNumberAndStartingIndex',
+    values: [PromiseOrValue<BigNumberish>],
+  ): string;
+  encodeFunctionData(functionFragment: 'getTokenID', values: [TokenDataStruct]): string;
+  encodeFunctionData(
+    functionFragment: 'getVerificationKey',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>],
+  ): string;
+  encodeFunctionData(functionFragment: 'hashBoundParams', values: [BoundParamsStruct]): string;
+  encodeFunctionData(
+    functionFragment: 'hashCommitment',
+    values: [CommitmentPreimageStruct],
   ): string;
   encodeFunctionData(
-    functionFragment: "getTokenID",
-    values: [TokenDataStruct]
+    functionFragment: 'hashLeftRight',
+    values: [PromiseOrValue<BytesLike>, PromiseOrValue<BytesLike>],
   ): string;
   encodeFunctionData(
-    functionFragment: "getVerificationKey",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "hashBoundParams",
-    values: [BoundParamsStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "hashCommitment",
-    values: [CommitmentPreimageStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "hashLeftRight",
-    values: [PromiseOrValue<BytesLike>, PromiseOrValue<BytesLike>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "initializeRailgunLogic",
+    functionFragment: 'initializeRailgunLogic',
     values: [
       PromiseOrValue<string>,
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<BigNumberish>,
       PromiseOrValue<BigNumberish>,
-      PromiseOrValue<string>
-    ]
+      PromiseOrValue<string>,
+    ],
+  ): string;
+  encodeFunctionData(functionFragment: 'lastEventBlock', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'merkleRoot', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'nextLeafIndex', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'nftFee', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'nullifiers',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BytesLike>],
+  ): string;
+  encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'removeFromBlocklist',
+    values: [PromiseOrValue<string>[]],
   ): string;
   encodeFunctionData(
-    functionFragment: "lastEventBlock",
-    values?: undefined
+    functionFragment: 'removeVector',
+    values: [PromiseOrValue<BigNumberish>],
+  ): string;
+  encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'rootHistory',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BytesLike>],
   ): string;
   encodeFunctionData(
-    functionFragment: "merkleRoot",
-    values?: undefined
+    functionFragment: 'setVerificationKey',
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>, VerifyingKeyStruct],
+  ): string;
+  encodeFunctionData(functionFragment: 'shieldFee', values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: 'snarkSafetyVector',
+    values: [PromiseOrValue<BigNumberish>],
+  ): string;
+  encodeFunctionData(functionFragment: 'sumCommitments', values: [TransactionStruct[]]): string;
+  encodeFunctionData(functionFragment: 'tokenBlocklist', values: [PromiseOrValue<string>]): string;
+  encodeFunctionData(
+    functionFragment: 'tokenIDMapping',
+    values: [PromiseOrValue<BytesLike>],
   ): string;
   encodeFunctionData(
-    functionFragment: "nextLeafIndex",
-    values?: undefined
+    functionFragment: 'transferOwnership',
+    values: [PromiseOrValue<string>],
   ): string;
-  encodeFunctionData(functionFragment: "nftFee", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'treasury', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'treeNumber', values?: undefined): string;
+  encodeFunctionData(functionFragment: 'unshieldFee', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "nullifiers",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BytesLike>]
+    functionFragment: 'validateCommitmentPreimage',
+    values: [CommitmentPreimageStruct],
   ): string;
-  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(functionFragment: 'validateTransaction', values: [TransactionStruct]): string;
+  encodeFunctionData(functionFragment: 'verify', values: [TransactionStruct]): string;
   encodeFunctionData(
-    functionFragment: "removeFromBlocklist",
-    values: [PromiseOrValue<string>[]]
+    functionFragment: 'verifyProof',
+    values: [VerifyingKeyStruct, SnarkProofStruct, PromiseOrValue<BigNumberish>[]],
   ): string;
-  encodeFunctionData(
-    functionFragment: "removeVector",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "renounceOwnership",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "rootHistory",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BytesLike>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setVerificationKey",
-    values: [
-      PromiseOrValue<BigNumberish>,
-      PromiseOrValue<BigNumberish>,
-      VerifyingKeyStruct
-    ]
-  ): string;
-  encodeFunctionData(functionFragment: "shieldFee", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "snarkSafetyVector",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "sumCommitments",
-    values: [TransactionStruct[]]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "tokenBlocklist",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "tokenIDMapping",
-    values: [PromiseOrValue<BytesLike>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "transferOwnership",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(functionFragment: "treasury", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "treeNumber",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "unshieldFee",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "validateCommitmentPreimage",
-    values: [CommitmentPreimageStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "validateTransaction",
-    values: [TransactionStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verify",
-    values: [TransactionStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verifyProof",
-    values: [
-      VerifyingKeyStruct,
-      SnarkProofStruct,
-      PromiseOrValue<BigNumberish>[]
-    ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "zeros",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
+  encodeFunctionData(functionFragment: 'zeros', values: [PromiseOrValue<BigNumberish>]): string;
 
-  decodeFunctionResult(functionFragment: "ZERO_VALUE", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'ZERO_VALUE', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'addToBlocklist', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'addVector', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'changeFee', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'changeTreasury', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'checkSafetyVectors', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'getFee', data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "addToBlocklist",
-    data: BytesLike
+    functionFragment: 'getInsertionTreeNumberAndStartingIndex',
+    data: BytesLike,
   ): Result;
-  decodeFunctionResult(functionFragment: "addVector", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "changeFee", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "changeTreasury",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "checkSafetyVectors",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "getFee", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "getInsertionTreeNumberAndStartingIndex",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "getTokenID", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "getVerificationKey",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashBoundParams",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashCommitment",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashLeftRight",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "initializeRailgunLogic",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "lastEventBlock",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "nextLeafIndex",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "nftFee", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "nullifiers", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "removeFromBlocklist",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "removeVector",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "renounceOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "rootHistory",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setVerificationKey",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "shieldFee", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "snarkSafetyVector",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "sumCommitments",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "tokenBlocklist",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "tokenIDMapping",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "transferOwnership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "treasury", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "treeNumber", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "unshieldFee",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "validateCommitmentPreimage",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "validateTransaction",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "verifyProof",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "zeros", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'getTokenID', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'getVerificationKey', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'hashBoundParams', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'hashCommitment', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'hashLeftRight', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'initializeRailgunLogic', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'lastEventBlock', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'merkleRoot', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'nextLeafIndex', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'nftFee', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'nullifiers', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'removeFromBlocklist', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'removeVector', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'rootHistory', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'setVerificationKey', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'shieldFee', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'snarkSafetyVector', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'sumCommitments', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'tokenBlocklist', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'tokenIDMapping', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'treeNumber', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'unshieldFee', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'validateCommitmentPreimage', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'validateTransaction', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'verify', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'verifyProof', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: 'zeros', data: BytesLike): Result;
 
   events: {
-    "AddToBlocklist(address)": EventFragment;
-    "FeeChange(uint256,uint256,uint256)": EventFragment;
-    "Initialized(uint8)": EventFragment;
-    "Nullified(uint16,bytes32[])": EventFragment;
-    "OwnershipTransferred(address,address)": EventFragment;
-    "RemoveFromBlocklist(address)": EventFragment;
-    "Shield(uint256,uint256,tuple[],tuple[])": EventFragment;
-    "Transact(uint256,uint256,bytes32[],tuple[])": EventFragment;
-    "TreasuryChange(address)": EventFragment;
-    "Unshield(address,tuple,uint256,uint256)": EventFragment;
-    "VerifyingKeySet(uint256,uint256,tuple)": EventFragment;
+    'AddToBlocklist(address)': EventFragment;
+    'FeeChange(uint256,uint256,uint256)': EventFragment;
+    'Initialized(uint8)': EventFragment;
+    'Nullified(uint16,bytes32[])': EventFragment;
+    'OwnershipTransferred(address,address)': EventFragment;
+    'RemoveFromBlocklist(address)': EventFragment;
+    'Shield(uint256,uint256,tuple[],tuple[],uint256[])': EventFragment;
+    'Transact(uint256,uint256,bytes32[],tuple[])': EventFragment;
+    'TreasuryChange(address)': EventFragment;
+    'Unshield(address,tuple,uint256,uint256)': EventFragment;
+    'VerifyingKeySet(uint256,uint256,tuple)': EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "AddToBlocklist"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "FeeChange"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Nullified"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "RemoveFromBlocklist"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Shield"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Transact"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "TreasuryChange"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Unshield"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "VerifyingKeySet"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'AddToBlocklist'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'FeeChange'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Initialized'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Nullified'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'RemoveFromBlocklist'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Shield'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Transact'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'TreasuryChange'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'Unshield'): EventFragment;
+  getEvent(nameOrSignatureOrTopic: 'VerifyingKeySet'): EventFragment;
 }
 
 export interface AddToBlocklistEventObject {
   token: string;
 }
-export type AddToBlocklistEvent = TypedEvent<
-  [string],
-  AddToBlocklistEventObject
->;
+export type AddToBlocklistEvent = TypedEvent<[string], AddToBlocklistEventObject>;
 
 export type AddToBlocklistEventFilter = TypedEventFilter<AddToBlocklistEvent>;
 
@@ -612,10 +470,7 @@ export interface FeeChangeEventObject {
   unshieldFee: BigNumber;
   nftFee: BigNumber;
 }
-export type FeeChangeEvent = TypedEvent<
-  [BigNumber, BigNumber, BigNumber],
-  FeeChangeEventObject
->;
+export type FeeChangeEvent = TypedEvent<[BigNumber, BigNumber, BigNumber], FeeChangeEventObject>;
 
 export type FeeChangeEventFilter = TypedEventFilter<FeeChangeEvent>;
 
@@ -630,10 +485,7 @@ export interface NullifiedEventObject {
   treeNumber: number;
   nullifier: string[];
 }
-export type NullifiedEvent = TypedEvent<
-  [number, string[]],
-  NullifiedEventObject
->;
+export type NullifiedEvent = TypedEvent<[number, string[]], NullifiedEventObject>;
 
 export type NullifiedEventFilter = TypedEventFilter<NullifiedEvent>;
 
@@ -646,32 +498,29 @@ export type OwnershipTransferredEvent = TypedEvent<
   OwnershipTransferredEventObject
 >;
 
-export type OwnershipTransferredEventFilter =
-  TypedEventFilter<OwnershipTransferredEvent>;
+export type OwnershipTransferredEventFilter = TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface RemoveFromBlocklistEventObject {
   token: string;
 }
-export type RemoveFromBlocklistEvent = TypedEvent<
-  [string],
-  RemoveFromBlocklistEventObject
->;
+export type RemoveFromBlocklistEvent = TypedEvent<[string], RemoveFromBlocklistEventObject>;
 
-export type RemoveFromBlocklistEventFilter =
-  TypedEventFilter<RemoveFromBlocklistEvent>;
+export type RemoveFromBlocklistEventFilter = TypedEventFilter<RemoveFromBlocklistEvent>;
 
 export interface ShieldEventObject {
   treeNumber: BigNumber;
   startPosition: BigNumber;
   commitments: CommitmentPreimageStructOutput[];
   shieldCiphertext: ShieldCiphertextStructOutput[];
+  fees: BigNumber[];
 }
 export type ShieldEvent = TypedEvent<
   [
     BigNumber,
     BigNumber,
     CommitmentPreimageStructOutput[],
-    ShieldCiphertextStructOutput[]
+    ShieldCiphertextStructOutput[],
+    BigNumber[],
   ],
   ShieldEventObject
 >;
@@ -694,10 +543,7 @@ export type TransactEventFilter = TypedEventFilter<TransactEvent>;
 export interface TreasuryChangeEventObject {
   treasury: string;
 }
-export type TreasuryChangeEvent = TypedEvent<
-  [string],
-  TreasuryChangeEventObject
->;
+export type TreasuryChangeEvent = TypedEvent<[string], TreasuryChangeEventObject>;
 
 export type TreasuryChangeEventFilter = TypedEventFilter<TreasuryChangeEvent>;
 
@@ -736,16 +582,14 @@ export interface RailgunLogic extends BaseContract {
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined
+    toBlock?: string | number | undefined,
   ): Promise<Array<TEvent>>;
 
   listeners<TEvent extends TypedEvent>(
-    eventFilter?: TypedEventFilter<TEvent>
+    eventFilter?: TypedEventFilter<TEvent>,
   ): Array<TypedListener<TEvent>>;
   listeners(eventName?: string): Array<Listener>;
-  removeAllListeners<TEvent extends TypedEvent>(
-    eventFilter: TypedEventFilter<TEvent>
-  ): this;
+  removeAllListeners<TEvent extends TypedEvent>(eventFilter: TypedEventFilter<TEvent>): this;
   removeAllListeners(eventName?: string): this;
   off: OnEvent<this>;
   on: OnEvent<this>;
@@ -757,67 +601,64 @@ export interface RailgunLogic extends BaseContract {
 
     addToBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     addVector(
       vector: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     changeFee(
       _shieldFee: PromiseOrValue<BigNumberish>,
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     changeTreasury(
       _treasury: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     checkSafetyVectors(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     getFee(
       _amount: PromiseOrValue<BigNumberish>,
       _isInclusive: PromiseOrValue<boolean>,
       _feeBP: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber, BigNumber]>;
 
     getInsertionTreeNumberAndStartingIndex(
       _newCommitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber, BigNumber]>;
 
-    getTokenID(
-      _tokenData: TokenDataStruct,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
+    getTokenID(_tokenData: TokenDataStruct, overrides?: CallOverrides): Promise<[string]>;
 
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[VerifyingKeyStructOutput]>;
 
     hashBoundParams(
       _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber]>;
 
     hashCommitment(
       _commitmentPreimage: CommitmentPreimageStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[string]>;
 
     hashLeftRight(
       _left: PromiseOrValue<BytesLike>,
       _right: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[string]>;
 
     initializeRailgunLogic(
@@ -826,7 +667,7 @@ export interface RailgunLogic extends BaseContract {
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
       _owner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     lastEventBlock(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -840,58 +681,55 @@ export interface RailgunLogic extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
     removeFromBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     removeVector(
       vector: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     shieldFee(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     snarkSafetyVector(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
     sumCommitments(
       _transactions: TransactionStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber]>;
 
-    tokenBlocklist(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    tokenBlocklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<[boolean]>;
 
     tokenIDMapping(
       arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<
       [number, string, BigNumber] & {
         tokenType: number;
@@ -902,7 +740,7 @@ export interface RailgunLogic extends BaseContract {
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<ContractTransaction>;
 
     treasury(overrides?: CallOverrides): Promise<[string]>;
@@ -913,97 +751,85 @@ export interface RailgunLogic extends BaseContract {
 
     validateCommitmentPreimage(
       _note: CommitmentPreimageStruct,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
+      overrides?: CallOverrides,
+    ): Promise<[boolean, string]>;
 
     validateTransaction(
       _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
+      overrides?: CallOverrides,
+    ): Promise<[boolean, string]>;
 
-    verify(
-      _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<[boolean]>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[boolean]>;
 
-    zeros(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
+    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<[string]>;
   };
 
   ZERO_VALUE(overrides?: CallOverrides): Promise<string>;
 
   addToBlocklist(
     _tokens: PromiseOrValue<string>[],
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   addVector(
     vector: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   changeFee(
     _shieldFee: PromiseOrValue<BigNumberish>,
     _unshieldFee: PromiseOrValue<BigNumberish>,
     _nftFee: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   changeTreasury(
     _treasury: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   checkSafetyVectors(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   getFee(
     _amount: PromiseOrValue<BigNumberish>,
     _isInclusive: PromiseOrValue<boolean>,
     _feeBP: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<[BigNumber, BigNumber]>;
 
   getInsertionTreeNumberAndStartingIndex(
     _newCommitments: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<[BigNumber, BigNumber]>;
 
-  getTokenID(
-    _tokenData: TokenDataStruct,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  getTokenID(_tokenData: TokenDataStruct, overrides?: CallOverrides): Promise<string>;
 
   getVerificationKey(
     _nullifiers: PromiseOrValue<BigNumberish>,
     _commitments: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<VerifyingKeyStructOutput>;
 
-  hashBoundParams(
-    _boundParams: BoundParamsStruct,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+  hashBoundParams(_boundParams: BoundParamsStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
   hashCommitment(
     _commitmentPreimage: CommitmentPreimageStruct,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<string>;
 
   hashLeftRight(
     _left: PromiseOrValue<BytesLike>,
     _right: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<string>;
 
   initializeRailgunLogic(
@@ -1012,7 +838,7 @@ export interface RailgunLogic extends BaseContract {
     _unshieldFee: PromiseOrValue<BigNumberish>,
     _nftFee: PromiseOrValue<BigNumberish>,
     _owner: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   lastEventBlock(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1026,58 +852,52 @@ export interface RailgunLogic extends BaseContract {
   nullifiers(
     arg0: PromiseOrValue<BigNumberish>,
     arg1: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
   removeFromBlocklist(
     _tokens: PromiseOrValue<string>[],
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   removeVector(
     vector: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   renounceOwnership(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   rootHistory(
     arg0: PromiseOrValue<BigNumberish>,
     arg1: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
   setVerificationKey(
     _nullifiers: PromiseOrValue<BigNumberish>,
     _commitments: PromiseOrValue<BigNumberish>,
     _verifyingKey: VerifyingKeyStruct,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   shieldFee(overrides?: CallOverrides): Promise<BigNumber>;
 
   snarkSafetyVector(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
-  sumCommitments(
-    _transactions: TransactionStruct[],
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+  sumCommitments(_transactions: TransactionStruct[], overrides?: CallOverrides): Promise<BigNumber>;
 
-  tokenBlocklist(
-    arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
+  tokenBlocklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<boolean>;
 
   tokenIDMapping(
     arg0: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<
     [number, string, BigNumber] & {
       tokenType: number;
@@ -1088,7 +908,7 @@ export interface RailgunLogic extends BaseContract {
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
+    overrides?: Overrides & { from?: PromiseOrValue<string> },
   ): Promise<ContractTransaction>;
 
   treasury(overrides?: CallOverrides): Promise<string>;
@@ -1099,55 +919,40 @@ export interface RailgunLogic extends BaseContract {
 
   validateCommitmentPreimage(
     _note: CommitmentPreimageStruct,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
+    overrides?: CallOverrides,
+  ): Promise<[boolean, string]>;
 
   validateTransaction(
     _transaction: TransactionStruct,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
+    overrides?: CallOverrides,
+  ): Promise<[boolean, string]>;
 
-  verify(
-    _transaction: TransactionStruct,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
+  verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<boolean>;
 
   verifyProof(
     _verifyingKey: VerifyingKeyStruct,
     _proof: SnarkProofStruct,
     _inputs: PromiseOrValue<BigNumberish>[],
-    overrides?: CallOverrides
+    overrides?: CallOverrides,
   ): Promise<boolean>;
 
-  zeros(
-    arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<string>;
 
   callStatic: {
     ZERO_VALUE(overrides?: CallOverrides): Promise<string>;
 
-    addToBlocklist(
-      _tokens: PromiseOrValue<string>[],
-      overrides?: CallOverrides
-    ): Promise<void>;
+    addToBlocklist(_tokens: PromiseOrValue<string>[], overrides?: CallOverrides): Promise<void>;
 
-    addVector(
-      vector: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    addVector(vector: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<void>;
 
     changeFee(
       _shieldFee: PromiseOrValue<BigNumberish>,
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
-    changeTreasury(
-      _treasury: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    changeTreasury(_treasury: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
 
     checkSafetyVectors(overrides?: CallOverrides): Promise<void>;
 
@@ -1155,39 +960,33 @@ export interface RailgunLogic extends BaseContract {
       _amount: PromiseOrValue<BigNumberish>,
       _isInclusive: PromiseOrValue<boolean>,
       _feeBP: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber, BigNumber]>;
 
     getInsertionTreeNumberAndStartingIndex(
       _newCommitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<[BigNumber, BigNumber]>;
 
-    getTokenID(
-      _tokenData: TokenDataStruct,
-      overrides?: CallOverrides
-    ): Promise<string>;
+    getTokenID(_tokenData: TokenDataStruct, overrides?: CallOverrides): Promise<string>;
 
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<VerifyingKeyStructOutput>;
 
-    hashBoundParams(
-      _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    hashBoundParams(_boundParams: BoundParamsStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     hashCommitment(
       _commitmentPreimage: CommitmentPreimageStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<string>;
 
     hashLeftRight(
       _left: PromiseOrValue<BytesLike>,
       _right: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<string>;
 
     initializeRailgunLogic(
@@ -1196,7 +995,7 @@ export interface RailgunLogic extends BaseContract {
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
       _owner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     lastEventBlock(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1210,56 +1009,50 @@ export interface RailgunLogic extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
     removeFromBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
-    removeVector(
-      vector: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    removeVector(vector: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<void>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<void>;
 
     shieldFee(overrides?: CallOverrides): Promise<BigNumber>;
 
     snarkSafetyVector(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
     sumCommitments(
       _transactions: TransactionStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    tokenBlocklist(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+    tokenBlocklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<boolean>;
 
     tokenIDMapping(
       arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<
       [number, string, BigNumber] & {
         tokenType: number;
@@ -1268,10 +1061,7 @@ export interface RailgunLogic extends BaseContract {
       }
     >;
 
-    transferOwnership(
-      newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
+    transferOwnership(newOwner: PromiseOrValue<string>, overrides?: CallOverrides): Promise<void>;
 
     treasury(overrides?: CallOverrides): Promise<string>;
 
@@ -1281,127 +1071,105 @@ export interface RailgunLogic extends BaseContract {
 
     validateCommitmentPreimage(
       _note: CommitmentPreimageStruct,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+      overrides?: CallOverrides,
+    ): Promise<[boolean, string]>;
 
     validateTransaction(
       _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+      overrides?: CallOverrides,
+    ): Promise<[boolean, string]>;
 
-    verify(
-      _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
+    verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<boolean>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<boolean>;
 
-    zeros(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<string>;
+    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
-    "AddToBlocklist(address)"(
-      token?: PromiseOrValue<string> | null
-    ): AddToBlocklistEventFilter;
-    AddToBlocklist(
-      token?: PromiseOrValue<string> | null
-    ): AddToBlocklistEventFilter;
+    'AddToBlocklist(address)'(token?: PromiseOrValue<string> | null): AddToBlocklistEventFilter;
+    AddToBlocklist(token?: PromiseOrValue<string> | null): AddToBlocklistEventFilter;
 
-    "FeeChange(uint256,uint256,uint256)"(
+    'FeeChange(uint256,uint256,uint256)'(
       shieldFee?: null,
       unshieldFee?: null,
-      nftFee?: null
+      nftFee?: null,
     ): FeeChangeEventFilter;
-    FeeChange(
-      shieldFee?: null,
-      unshieldFee?: null,
-      nftFee?: null
-    ): FeeChangeEventFilter;
+    FeeChange(shieldFee?: null, unshieldFee?: null, nftFee?: null): FeeChangeEventFilter;
 
-    "Initialized(uint8)"(version?: null): InitializedEventFilter;
+    'Initialized(uint8)'(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
 
-    "Nullified(uint16,bytes32[])"(
-      treeNumber?: null,
-      nullifier?: null
-    ): NullifiedEventFilter;
+    'Nullified(uint16,bytes32[])'(treeNumber?: null, nullifier?: null): NullifiedEventFilter;
     Nullified(treeNumber?: null, nullifier?: null): NullifiedEventFilter;
 
-    "OwnershipTransferred(address,address)"(
+    'OwnershipTransferred(address,address)'(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null
+      newOwner?: PromiseOrValue<string> | null,
     ): OwnershipTransferredEventFilter;
     OwnershipTransferred(
       previousOwner?: PromiseOrValue<string> | null,
-      newOwner?: PromiseOrValue<string> | null
+      newOwner?: PromiseOrValue<string> | null,
     ): OwnershipTransferredEventFilter;
 
-    "RemoveFromBlocklist(address)"(
-      token?: PromiseOrValue<string> | null
+    'RemoveFromBlocklist(address)'(
+      token?: PromiseOrValue<string> | null,
     ): RemoveFromBlocklistEventFilter;
-    RemoveFromBlocklist(
-      token?: PromiseOrValue<string> | null
-    ): RemoveFromBlocklistEventFilter;
+    RemoveFromBlocklist(token?: PromiseOrValue<string> | null): RemoveFromBlocklistEventFilter;
 
-    "Shield(uint256,uint256,tuple[],tuple[])"(
+    'Shield(uint256,uint256,tuple[],tuple[],uint256[])'(
       treeNumber?: null,
       startPosition?: null,
       commitments?: null,
-      shieldCiphertext?: null
+      shieldCiphertext?: null,
+      fees?: null,
     ): ShieldEventFilter;
     Shield(
       treeNumber?: null,
       startPosition?: null,
       commitments?: null,
-      shieldCiphertext?: null
+      shieldCiphertext?: null,
+      fees?: null,
     ): ShieldEventFilter;
 
-    "Transact(uint256,uint256,bytes32[],tuple[])"(
+    'Transact(uint256,uint256,bytes32[],tuple[])'(
       treeNumber?: null,
       startPosition?: null,
       hash?: null,
-      ciphertext?: null
+      ciphertext?: null,
     ): TransactEventFilter;
     Transact(
       treeNumber?: null,
       startPosition?: null,
       hash?: null,
-      ciphertext?: null
+      ciphertext?: null,
     ): TransactEventFilter;
 
-    "TreasuryChange(address)"(treasury?: null): TreasuryChangeEventFilter;
+    'TreasuryChange(address)'(treasury?: null): TreasuryChangeEventFilter;
     TreasuryChange(treasury?: null): TreasuryChangeEventFilter;
 
-    "Unshield(address,tuple,uint256,uint256)"(
+    'Unshield(address,tuple,uint256,uint256)'(
       to?: null,
       token?: null,
       amount?: null,
-      fee?: null
+      fee?: null,
     ): UnshieldEventFilter;
-    Unshield(
-      to?: null,
-      token?: null,
-      amount?: null,
-      fee?: null
-    ): UnshieldEventFilter;
+    Unshield(to?: null, token?: null, amount?: null, fee?: null): UnshieldEventFilter;
 
-    "VerifyingKeySet(uint256,uint256,tuple)"(
+    'VerifyingKeySet(uint256,uint256,tuple)'(
       nullifiers?: null,
       commitments?: null,
-      verifyingKey?: null
+      verifyingKey?: null,
     ): VerifyingKeySetEventFilter;
     VerifyingKeySet(
       nullifiers?: null,
       commitments?: null,
-      verifyingKey?: null
+      verifyingKey?: null,
     ): VerifyingKeySetEventFilter;
   };
 
@@ -1410,67 +1178,61 @@ export interface RailgunLogic extends BaseContract {
 
     addToBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     addVector(
       vector: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     changeFee(
       _shieldFee: PromiseOrValue<BigNumberish>,
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     changeTreasury(
       _treasury: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     checkSafetyVectors(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     getFee(
       _amount: PromiseOrValue<BigNumberish>,
       _isInclusive: PromiseOrValue<boolean>,
       _feeBP: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     getInsertionTreeNumberAndStartingIndex(
       _newCommitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    getTokenID(
-      _tokenData: TokenDataStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    getTokenID(_tokenData: TokenDataStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    hashBoundParams(
-      _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    hashBoundParams(_boundParams: BoundParamsStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     hashCommitment(
       _commitmentPreimage: CommitmentPreimageStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     hashLeftRight(
       _left: PromiseOrValue<BytesLike>,
       _right: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     initializeRailgunLogic(
@@ -1479,7 +1241,7 @@ export interface RailgunLogic extends BaseContract {
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
       _owner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     lastEventBlock(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1493,63 +1255,57 @@ export interface RailgunLogic extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
     removeFromBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     removeVector(
       vector: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     shieldFee(overrides?: CallOverrides): Promise<BigNumber>;
 
     snarkSafetyVector(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     sumCommitments(
       _transactions: TransactionStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    tokenBlocklist(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    tokenBlocklist(arg0: PromiseOrValue<string>, overrides?: CallOverrides): Promise<BigNumber>;
 
-    tokenIDMapping(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    tokenIDMapping(arg0: PromiseOrValue<BytesLike>, overrides?: CallOverrides): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<BigNumber>;
 
     treasury(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1560,30 +1316,24 @@ export interface RailgunLogic extends BaseContract {
 
     validateCommitmentPreimage(
       _note: CommitmentPreimageStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
     validateTransaction(
       _transaction: TransactionStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    verify(
-      _transaction: TransactionStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    verify(_transaction: TransactionStruct, overrides?: CallOverrides): Promise<BigNumber>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<BigNumber>;
 
-    zeros(
-      arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    zeros(arg0: PromiseOrValue<BigNumberish>, overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -1591,67 +1341,67 @@ export interface RailgunLogic extends BaseContract {
 
     addToBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     addVector(
       vector: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     changeFee(
       _shieldFee: PromiseOrValue<BigNumberish>,
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     changeTreasury(
       _treasury: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     checkSafetyVectors(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     getFee(
       _amount: PromiseOrValue<BigNumberish>,
       _isInclusive: PromiseOrValue<boolean>,
       _feeBP: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     getInsertionTreeNumberAndStartingIndex(
       _newCommitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     getTokenID(
       _tokenData: TokenDataStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     getVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     hashBoundParams(
       _boundParams: BoundParamsStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     hashCommitment(
       _commitmentPreimage: CommitmentPreimageStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     hashLeftRight(
       _left: PromiseOrValue<BytesLike>,
       _right: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     initializeRailgunLogic(
@@ -1660,7 +1410,7 @@ export interface RailgunLogic extends BaseContract {
       _unshieldFee: PromiseOrValue<BigNumberish>,
       _nftFee: PromiseOrValue<BigNumberish>,
       _owner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     lastEventBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -1674,63 +1424,63 @@ export interface RailgunLogic extends BaseContract {
     nullifiers(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     removeFromBlocklist(
       _tokens: PromiseOrValue<string>[],
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     removeVector(
       vector: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     rootHistory(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     setVerificationKey(
       _nullifiers: PromiseOrValue<BigNumberish>,
       _commitments: PromiseOrValue<BigNumberish>,
       _verifyingKey: VerifyingKeyStruct,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     shieldFee(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     snarkSafetyVector(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     sumCommitments(
       _transactions: TransactionStruct[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     tokenBlocklist(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     tokenIDMapping(
       arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
+      overrides?: Overrides & { from?: PromiseOrValue<string> },
     ): Promise<PopulatedTransaction>;
 
     treasury(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -1741,29 +1491,29 @@ export interface RailgunLogic extends BaseContract {
 
     validateCommitmentPreimage(
       _note: CommitmentPreimageStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     validateTransaction(
       _transaction: TransactionStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     verify(
       _transaction: TransactionStruct,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     verifyProof(
       _verifyingKey: VerifyingKeyStruct,
       _proof: SnarkProofStruct,
       _inputs: PromiseOrValue<BigNumberish>[],
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
 
     zeros(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: CallOverrides,
     ): Promise<PopulatedTransaction>;
   };
 }

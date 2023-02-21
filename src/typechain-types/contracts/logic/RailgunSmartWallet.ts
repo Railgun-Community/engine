@@ -605,7 +605,7 @@ export interface RailgunSmartWalletInterface extends utils.Interface {
     "Nullified(uint16,bytes32[])": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "RemoveFromBlocklist(address)": EventFragment;
-    "Shield(uint256,uint256,tuple[],tuple[])": EventFragment;
+    "Shield(uint256,uint256,tuple[],tuple[],uint256[])": EventFragment;
     "Transact(uint256,uint256,bytes32[],tuple[])": EventFragment;
     "TreasuryChange(address)": EventFragment;
     "Unshield(address,tuple,uint256,uint256)": EventFragment;
@@ -693,13 +693,15 @@ export interface ShieldEventObject {
   startPosition: BigNumber;
   commitments: CommitmentPreimageStructOutput[];
   shieldCiphertext: ShieldCiphertextStructOutput[];
+  fees: BigNumber[];
 }
 export type ShieldEvent = TypedEvent<
   [
     BigNumber,
     BigNumber,
     CommitmentPreimageStructOutput[],
-    ShieldCiphertextStructOutput[]
+    ShieldCiphertextStructOutput[],
+    BigNumber[]
   ],
   ShieldEventObject
 >;
@@ -952,12 +954,12 @@ export interface RailgunSmartWallet extends BaseContract {
     validateCommitmentPreimage(
       _note: CommitmentPreimageStruct,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean, string]>;
 
     validateTransaction(
       _transaction: TransactionStruct,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean, string]>;
 
     verify(
       _transaction: TransactionStruct,
@@ -1148,12 +1150,12 @@ export interface RailgunSmartWallet extends BaseContract {
   validateCommitmentPreimage(
     _note: CommitmentPreimageStruct,
     overrides?: CallOverrides
-  ): Promise<boolean>;
+  ): Promise<[boolean, string]>;
 
   validateTransaction(
     _transaction: TransactionStruct,
     overrides?: CallOverrides
-  ): Promise<boolean>;
+  ): Promise<[boolean, string]>;
 
   verify(
     _transaction: TransactionStruct,
@@ -1340,12 +1342,12 @@ export interface RailgunSmartWallet extends BaseContract {
     validateCommitmentPreimage(
       _note: CommitmentPreimageStruct,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<[boolean, string]>;
 
     validateTransaction(
       _transaction: TransactionStruct,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<[boolean, string]>;
 
     verify(
       _transaction: TransactionStruct,
@@ -1409,17 +1411,19 @@ export interface RailgunSmartWallet extends BaseContract {
       token?: PromiseOrValue<string> | null
     ): RemoveFromBlocklistEventFilter;
 
-    "Shield(uint256,uint256,tuple[],tuple[])"(
+    "Shield(uint256,uint256,tuple[],tuple[],uint256[])"(
       treeNumber?: null,
       startPosition?: null,
       commitments?: null,
-      shieldCiphertext?: null
+      shieldCiphertext?: null,
+      fees?: null
     ): ShieldEventFilter;
     Shield(
       treeNumber?: null,
       startPosition?: null,
       commitments?: null,
-      shieldCiphertext?: null
+      shieldCiphertext?: null,
+      fees?: null
     ): ShieldEventFilter;
 
     "Transact(uint256,uint256,bytes32[],tuple[])"(

@@ -165,7 +165,7 @@ class Transaction {
       const merkleProof = await merkletree.getMerkleProof(this.spendingTree, utxo.position);
       pathElements.push(merkleProof.elements.map((element) => hexToBigInt(element)));
 
-      // Push path indicies
+      // Push path indices
       pathIndices.push(BigInt(utxo.position));
     }
 
@@ -182,7 +182,8 @@ class Transaction {
       throw new Error('Negative change value - transaction not possible.');
     }
 
-    if (change > 0n) {
+    const requiresChangeOutput = change > 0n;
+    if (requiresChangeOutput) {
       // Add change output
       allOutputs.push(
         TransactNote.createTransfer(
@@ -200,7 +201,8 @@ class Transaction {
     }
 
     // Push unshield output if unshield is requested
-    if (this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && this.unshieldNote) {
+    const hasUnshield = this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && this.unshieldNote;
+    if (hasUnshield) {
       allOutputs.push(this.unshieldNote);
     }
 

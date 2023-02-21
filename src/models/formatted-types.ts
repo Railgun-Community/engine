@@ -1,3 +1,4 @@
+import { BigNumber } from '@ethersproject/bignumber';
 import BN from 'bn.js';
 
 export type BytesData = ArrayLike<number> | string | BN;
@@ -119,6 +120,7 @@ export type ShieldCommitment = {
   encryptedBundle: [string, string, string];
   shieldKey: string;
   blockNumber: number;
+  fees: Optional<BigNumber[]>;
 };
 
 export type TransactCommitment = {

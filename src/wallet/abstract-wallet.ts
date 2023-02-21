@@ -9,7 +9,7 @@ import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
 import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../key-derivation/wallet-node';
 import { MerkleTree } from '../merkletree/merkletree';
-import { EngineEvent, WalletScannedEventData } from '../models/event-types';
+import { EngineEvent, UnshieldStoredEvent, WalletScannedEventData } from '../models/event-types';
 import {
   BytesData,
   Ciphertext,
@@ -601,7 +601,7 @@ abstract class AbstractWallet extends EventEmitter {
         // If this UTXO hasn't already been marked as spent, check if it has
         if (!txo.spendtxid) {
           // Get nullifier
-          const storedNullifier = await merkletree.getStoredNullifier(txo.nullifier);
+          const storedNullifier = await merkletree.getStoredNullifierTxid(txo.nullifier);
 
           // If it's nullified write spend txid to wallet storage
           if (storedNullifier) {
@@ -769,8 +769,43 @@ abstract class AbstractWallet extends EventEmitter {
     return TransactionHistoryItemVersion.UpdatedNov2022;
   }
 
+  private async getAllUnshieldEventsFromSpentNullifiers(
+    chain: Chain,
+  ): Promise<UnshieldStoredEvent[]> {
+    const merkletree = this.getMerkletreeForChain(chain);
+    const TXOs = await this.TXOs(chain);
+
+    const unshieldEvents: UnshieldStoredEvent[] = [];
+
+    await Promise.all(
+      TXOs.map(async ({ note, position: leafIndex }) => {
+        if (note.value === 0n) {
+          return;
+        }
+
+        const nullifierHex = nToHex(
+          TransactNote.getNullifier(this.nullifyingKey, leafIndex),
+          ByteLength.UINT_256,
+        );
+        const nullifierTxid = await merkletree.getStoredNullifierTxid(nullifierHex);
+        if (!nullifierTxid) {
+          return;
+        }
+
+        // Nullifier exists. Find unshield events from txid.
+        unshieldEvents.push(...(await merkletree.getUnshieldEvents(nullifierTxid)));
+      }),
+    );
+
+    return unshieldEvents;
+  }
+
   async getTransactionSpendHistory(chain: Chain): Promise<TransactionHistoryEntrySpent[]> {
-    const sentCommitments = await this.getSentCommitments(chain);
+    const [allUnshieldEvents, sentCommitments] = await Promise.all([
+      this.getAllUnshieldEventsFromSpentNullifiers(chain),
+      this.getSentCommitments(chain),
+    ]);
+
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
     await Promise.all(
@@ -812,6 +847,28 @@ abstract class AbstractWallet extends EventEmitter {
         txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
       }),
     );
+
+    // Add remaining unshield events to txidTransactionMap
+    allUnshieldEvents.forEach((unshieldEvent) => {
+      const tokenAddress = unshieldEvent.tokenAddress.toLowerCase();
+      if (txidTransactionMap[unshieldEvent.txid]) {
+        const existingUnshieldEvents = txidTransactionMap[unshieldEvent.txid].unshieldEvents;
+        const existingUnshieldTokens = existingUnshieldEvents.map((existingUnshieldEvent) =>
+          existingUnshieldEvent.tokenAddress.toLowerCase(),
+        );
+        if (existingUnshieldTokens.includes(tokenAddress)) {
+          // Token already added to unshieldEvents.
+          return;
+        }
+        txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
+      }
+      txidTransactionMap[unshieldEvent.txid] = {
+        txid: unshieldEvent.txid,
+        unshieldEvents: [unshieldEvent],
+        tokenAmounts: [],
+        version: TransactionHistoryItemVersion.UpdatedNov2022,
+      };
+    });
 
     const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =
       Object.values(txidTransactionMap);

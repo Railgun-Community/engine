@@ -559,9 +559,9 @@ describe('MerkleTree', () => {
   }).timeout(1000);
 
   it('Should store nullifiers', async () => {
-    expect(await merkletree.getStoredNullifier('00')).to.equal(undefined);
+    expect(await merkletree.getStoredNullifierTxid('00')).to.equal(undefined);
     await merkletree.nullify([{ nullifier: '00', treeNumber: 0, txid: '01', blockNumber: 0 }]);
-    expect(await merkletree.getStoredNullifier('00')).to.equal('01');
+    expect(await merkletree.getStoredNullifierTxid('00')).to.equal('01');
   }).timeout(1000);
 
   it('Should store and retrieve unshield events', async () => {
