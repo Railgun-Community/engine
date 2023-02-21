@@ -19,6 +19,7 @@ import {
 } from '../../../utils/bytes';
 import { awaitScan, DECIMALS_18, testArtifactsGetter } from '../../../test/helper.test';
 import {
+  CommitmentType,
   Nullifier,
   OutputType,
   TokenType,
@@ -77,7 +78,16 @@ describe('Railgun Smart Wallet', function runTests() {
   this.timeout(10000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine('Test Proxy', memdown(), testArtifactsGetter, undefined);
+    engine = new RailgunEngine(
+      'Test RSW',
+      memdown(),
+      testArtifactsGetter,
+      undefined, // quickSync
+      undefined, // engineDebugger
+      undefined, // skipMerkletreeScans
+      {}, // tempEngineV3NewShieldEventBlockNumbersEVM
+    );
+
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
@@ -348,8 +358,9 @@ describe('Railgun Smart Wallet', function runTests() {
 
     // Event should have been scanned by historical event scan.
 
-    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
-      hexlify(txResponseTransact.transactionHash),
+    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
+    expect((resultEvent as unknown as CommitmentEvent).commitments[0].commitmentType).to.equal(
+      CommitmentType.TransactCommitment,
     );
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
@@ -583,7 +594,7 @@ describe('Railgun Smart Wallet', function runTests() {
     ).to.deep.equal({
       outputType: OutputType.RelayerFee,
       senderRandom: MEMO_SENDER_RANDOM_NULL,
-      walletSource: 'test proxy',
+      walletSource: 'test rsw',
     });
     expect(
       Memo.decryptNoteAnnotationData(
@@ -593,7 +604,7 @@ describe('Railgun Smart Wallet', function runTests() {
     ).to.deep.equal({
       outputType: OutputType.Change,
       senderRandom: MEMO_SENDER_RANDOM_NULL,
-      walletSource: 'test proxy',
+      walletSource: 'test rsw',
     });
   }).timeout(120000);
 

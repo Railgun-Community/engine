@@ -1,4 +1,3 @@
-import { BigNumber } from '@ethersproject/bignumber';
 import BN from 'bn.js';
 
 export type BytesData = ArrayLike<number> | string | BN;
@@ -73,6 +72,7 @@ export type NoteSerialized = {
   recipientAddress: string;
   senderAddress: Optional<string>;
   memoText: Optional<string>;
+  shieldFee: Optional<string>;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
@@ -120,7 +120,7 @@ export type ShieldCommitment = {
   encryptedBundle: [string, string, string];
   shieldKey: string;
   blockNumber: number;
-  fees: Optional<BigNumber[]>;
+  fee: Optional<string>;
 };
 
 export type TransactCommitment = {

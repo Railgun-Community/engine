@@ -60,7 +60,16 @@ describe('Relay Adapt', function test() {
   this.timeout(45000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine('TestWalletAdapt', memdown(), testArtifactsGetter, undefined);
+    engine = new RailgunEngine(
+      'TestRelayAdapt',
+      memdown(),
+      testArtifactsGetter,
+      undefined, // quickSync
+      undefined, // engineDebugger
+      undefined, // skipMerkletreeScans
+      {}, // tempEngineV3NewShieldEventBlockNumbersEVM
+    );
+
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);

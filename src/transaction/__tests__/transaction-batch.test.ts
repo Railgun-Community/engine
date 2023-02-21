@@ -88,7 +88,11 @@ describe('Transaction/Transaction Batch', function run() {
       memdown(),
       testArtifactsGetter,
       mockQuickSync,
+      undefined, // engineDebugger
+      undefined, // skipMerkletreeScans
+      {}, // tempEngineV3NewShieldEventBlockNumbersEVM
     );
+
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,
@@ -317,6 +321,10 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   this.afterAll(() => {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      return;
+    }
+
     // Clean up database
     wallet.unloadMerkletree(merkletree.chain);
     db.close();

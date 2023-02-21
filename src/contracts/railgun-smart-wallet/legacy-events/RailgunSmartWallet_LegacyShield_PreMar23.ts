@@ -13,12 +13,6 @@ export type TokenDataStructOutput_LegacyShield_PreMar23 = [number, string, BigNu
   tokenSubID: BigNumber;
 };
 
-export type CommitmentPreimageStruct = {
-  npk: PromiseOrValue<BytesLike>;
-  token: TokenDataStruct_LegacyShield_PreMar23;
-  value: PromiseOrValue<BigNumberish>;
-};
-
 export type CommitmentPreimageStructOutput_LegacyShield_PreMar23 = [
   string,
   TokenDataStructOutput_LegacyShield_PreMar23,
@@ -46,23 +40,24 @@ export type ShieldCiphertextStructOutput_LegacyShield_PreMar23 = [
   shieldKey: string;
 };
 
-export interface ShieldEventObject {
+export interface ShieldEventObject_LegacyShield_PreMar23 {
   treeNumber: BigNumber;
   startPosition: BigNumber;
   commitments: CommitmentPreimageStructOutput_LegacyShield_PreMar23[];
   shieldCiphertext: ShieldCiphertextStructOutput_LegacyShield_PreMar23[];
 }
-export type ShieldEvent = TypedEvent<
+export type ShieldEvent_LegacyShield_PreMar23 = TypedEvent<
   [
     BigNumber,
     BigNumber,
     CommitmentPreimageStructOutput_LegacyShield_PreMar23[],
     ShieldCiphertextStructOutput_LegacyShield_PreMar23[],
   ],
-  ShieldEventObject
+  ShieldEventObject_LegacyShield_PreMar23
 >;
 
-export type ShieldEventFilter = TypedEventFilter<ShieldEvent>;
+export type ShieldEventFilter_LegacyShield_PreMar23 =
+  TypedEventFilter<ShieldEvent_LegacyShield_PreMar23>;
 
 export interface RailgunSmartWallet_LegacyShield_PreMar23 extends BaseContract {
   queryFilter<TEvent extends TypedEvent>(
@@ -77,6 +72,6 @@ export interface RailgunSmartWallet_LegacyShield_PreMar23 extends BaseContract {
       startPosition?: null,
       commitments?: null,
       shieldCiphertext?: null,
-    ): ShieldEventFilter;
+    ): ShieldEventFilter_LegacyShield_PreMar23;
   };
 }

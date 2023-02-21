@@ -105,7 +105,12 @@ describe('Transaction/ERC20', function test() {
     // Load fake contract
     ContractStore.railgunSmartWalletContracts[chain.type] = [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
-      new RailgunSmartWalletContract(config.contracts.proxy, null as unknown as Provider, chain);
+      new RailgunSmartWalletContract(
+        config.contracts.proxy,
+        null as unknown as Provider,
+        chain,
+        {}, // tempEngineV3NewShieldEventBlockNumbersEVM
+      );
 
     tokenDataGetter = new TokenDataGetter(db, chain);
 

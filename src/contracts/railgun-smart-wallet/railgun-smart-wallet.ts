@@ -18,6 +18,7 @@ import {
   formatUnshieldEvent,
   processNullifiedEvents,
   processShieldEvents,
+  processShieldEvents_LegacyShield_PreMar23,
   processTransactEvents,
   processUnshieldEvents,
 } from './events';
@@ -57,12 +58,19 @@ class RailgunSmartWalletContract extends EventEmitter {
 
   readonly chain: Chain;
 
+  private tempEngineV3NewShieldEventBlockNumbersEVM: { [chainID: number]: number };
+
   /**
    * Connect to Railgun instance on network
    * @param railgunSmartWalletContractAddress - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(railgunSmartWalletContractAddress: string, provider: Provider, chain: Chain) {
+  constructor(
+    railgunSmartWalletContractAddress: string,
+    provider: Provider,
+    chain: Chain,
+    tempEngineV3NewShieldEventBlockNumbersEVM: { [chainID: number]: number },
+  ) {
     super();
     this.address = railgunSmartWalletContractAddress;
     this.contract = new Contract(
@@ -71,6 +79,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       provider,
     ) as RailgunSmartWallet;
     this.chain = chain;
+    this.tempEngineV3NewShieldEventBlockNumbersEVM = tempEngineV3NewShieldEventBlockNumbersEVM;
   }
 
   /**
@@ -180,7 +189,9 @@ class RailgunSmartWalletContract extends EventEmitter {
           shieldCiphertext,
           fees,
         };
-        await commitmentListener(formatShieldEvent(args, event.transactionHash, event.blockNumber));
+        await commitmentListener(
+          formatShieldEvent(args, event.transactionHash, event.blockNumber, fees),
+        );
       },
     );
 
@@ -270,6 +281,13 @@ class RailgunSmartWalletContract extends EventEmitter {
     return 0;
   }
 
+  private getEngineV3NewShieldEventBlockNumber(chain: Chain) {
+    if (chain.type === ChainType.EVM && this.tempEngineV3NewShieldEventBlockNumbersEVM[chain.id]) {
+      return this.tempEngineV3NewShieldEventBlockNumbersEVM[chain.id];
+    }
+    return 0;
+  }
+
   /**
    * Gets historical events from block
    * @param startBlock - block to scan from
@@ -285,14 +303,17 @@ class RailgunSmartWalletContract extends EventEmitter {
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     const engineV3StartBlockNumber = RailgunSmartWalletContract.getEngineV3StartBlockNumber(chain);
+    const engineV3NewShieldEventBlockNumber = this.getEngineV3NewShieldEventBlockNumber(chain);
 
     let currentStartBlock = startBlock;
 
-    // Current live events
+    // Current live events - post v3 update
     const eventFilterNullified = this.contract.filters.Nullified();
-    const eventFilterShield = this.contract.filters.Shield();
     const eventFilterTransact = this.contract.filters.Transact();
     const eventFilterUnshield = this.contract.filters.Unshield();
+
+    // Current live Shield - Mar 2023
+    const eventFilterShield = this.contract.filters.Shield();
 
     // This type includes legacy event types and filters, from before the v3 update.
     // We need to scan prior commitments from these past events, before engineV3StartBlockNumber.
@@ -306,7 +327,6 @@ class RailgunSmartWalletContract extends EventEmitter {
     // This type includes legacy Shield event types and filters, from before the Mar 2023 update.
     const legacyShieldEventContract = this
       .contract as unknown as RailgunSmartWallet_LegacyShield_PreMar23;
-    // TODO: Use legacy event shield at certain block number.
     const eventFilter_LegacyShield_PreMar23 = legacyShieldEventContract.filters.Shield();
 
     EngineDebug.log(
@@ -318,8 +338,10 @@ class RailgunSmartWalletContract extends EventEmitter {
 
       const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
       const withinLegacyEventRange = currentStartBlock <= engineV3StartBlockNumber;
-      const withinNewEventRange = endBlock >= engineV3StartBlockNumber;
-      if (withinLegacyEventRange && withinNewEventRange) {
+      const withinV3EventRange = endBlock >= engineV3StartBlockNumber;
+      const withinLegacyV3ShieldEventRange = currentStartBlock <= engineV3NewShieldEventBlockNumber;
+      const withinNewV3ShieldEventRange = endBlock >= engineV3NewShieldEventBlockNumber;
+      if (withinLegacyEventRange && withinV3EventRange) {
         EngineDebug.log(
           `[Chain ${this.chain.type}:${this.chain.id}]: Changing from legacy events to new events...`,
         );
@@ -333,13 +355,36 @@ class RailgunSmartWalletContract extends EventEmitter {
         );
       }
 
-      if (withinNewEventRange) {
-        // Standard Events.
-        const [eventsNullifiers, eventsShield, eventsTransact, eventsUnshield] =
+      if (withinV3EventRange) {
+        // Shield events.
+        if (withinLegacyV3ShieldEventRange) {
+          // Legacy V3 Shield Event - Pre March 2023.
+          // eslint-disable-next-line no-await-in-loop
+          const eventsShield = await this.scanEvents(
+            eventFilter_LegacyShield_PreMar23,
+            currentStartBlock,
+            endBlock,
+          );
+          // eslint-disable-next-line no-await-in-loop
+          await processShieldEvents_LegacyShield_PreMar23(eventsListener, eventsShield);
+        }
+        if (withinNewV3ShieldEventRange) {
+          // New V3 Shield Event - After March 2023.
+          // eslint-disable-next-line no-await-in-loop
+          const eventsShield = await this.scanEvents(
+            eventFilterShield,
+            currentStartBlock,
+            endBlock,
+          );
+          // eslint-disable-next-line no-await-in-loop
+          await processShieldEvents(eventsListener, eventsShield);
+        }
+
+        // Standard commitments and nullifiers.
+        const [eventsNullifiers, eventsTransact, eventsUnshield] =
           // eslint-disable-next-line no-await-in-loop
           await Promise.all([
             this.scanEvents(eventFilterNullified, currentStartBlock, endBlock),
-            this.scanEvents(eventFilterShield, currentStartBlock, endBlock),
             this.scanEvents(eventFilterTransact, currentStartBlock, endBlock),
             this.scanEvents(eventFilterUnshield, currentStartBlock, endBlock),
           ]);
@@ -347,7 +392,6 @@ class RailgunSmartWalletContract extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
           processNullifiedEvents(eventsNullifierListener, eventsNullifiers),
-          processShieldEvents(eventsListener, eventsShield),
           processTransactEvents(eventsListener, eventsTransact),
           processUnshieldEvents(eventsUnshieldListener, eventsUnshield),
         ]);

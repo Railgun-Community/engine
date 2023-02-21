@@ -29,6 +29,10 @@ import {
   UnshieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
+import {
+  ShieldEventObject_LegacyShield_PreMar23,
+  ShieldEvent_LegacyShield_PreMar23,
+} from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
 
 /**
  * Parse event data for database
@@ -38,7 +42,7 @@ export function formatShieldCommitments(
   preImages: CommitmentPreimageStructOutput[],
   shieldCiphertext: ShieldCiphertextStructOutput[],
   blockNumber: number,
-  fees: BigNumber[],
+  fees: Optional<BigNumber[]>,
 ): ShieldCommitment[] {
   const shieldCommitments = preImages.map((commitmentPreImage, index) => {
     const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
@@ -59,7 +63,7 @@ export function formatShieldCommitments(
       preImage,
       encryptedBundle: shieldCiphertext[index].encryptedBundle,
       shieldKey: shieldCiphertext[index].shieldKey,
-      fees,
+      fee: fees ? fees[index].toHexString() : undefined,
     };
     return commitment;
   });
@@ -67,11 +71,12 @@ export function formatShieldCommitments(
 }
 
 export function formatShieldEvent(
-  shieldEventArgs: ShieldEventObject,
+  shieldEventArgs: ShieldEventObject | ShieldEventObject_LegacyShield_PreMar23,
   transactionHash: string,
   blockNumber: number,
+  fees: Optional<BigNumber[]>,
 ): CommitmentEvent {
-  const { treeNumber, startPosition, commitments, shieldCiphertext, fees } = shieldEventArgs;
+  const { treeNumber, startPosition, commitments, shieldCiphertext } = shieldEventArgs;
   if (
     treeNumber == null ||
     startPosition == null ||
@@ -191,7 +196,22 @@ export async function processShieldEvents(
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
-      return eventsListener(formatShieldEvent(args, transactionHash, blockNumber));
+      const { fees } = args;
+      return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
+    }),
+  );
+}
+
+export async function processShieldEvents_LegacyShield_PreMar23(
+  eventsListener: EventsListener,
+  events: ShieldEvent_LegacyShield_PreMar23[],
+): Promise<void> {
+  const filtered = events.filter((event) => event.args);
+  await Promise.all(
+    filtered.map(async (event) => {
+      const { args, transactionHash, blockNumber } = event;
+      const fees: Optional<BigNumber[]> = undefined;
+      return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
     }),
   );
 }

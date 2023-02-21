@@ -53,8 +53,12 @@ export type TransactionHistoryTokenAmount = {
 export type TransactionHistoryTransferTokenAmount = TransactionHistoryTokenAmount & {
   recipientAddress: string;
 };
+export type TransactionHistoryUnshieldTokenAmount = TransactionHistoryTransferTokenAmount & {
+  unshieldFee: string;
+};
 export type TransactionHistoryReceiveTokenAmount = TransactionHistoryTokenAmount & {
   senderAddress: Optional<string>;
+  shieldFee: Optional<string>;
 };
 export type TransactionHistoryEntryReceived = {
   txid: string;
@@ -65,7 +69,7 @@ export type TransactionHistoryEntrySpent = {
   transferTokenAmounts: TransactionHistoryTransferTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
-  unshieldTokenAmounts: TransactionHistoryTransferTokenAmount[];
+  unshieldTokenAmounts: TransactionHistoryUnshieldTokenAmount[];
   version: number;
 };
 export type TransactionHistoryEntry = TransactionHistoryEntrySpent &
@@ -81,9 +85,4 @@ export enum TransactionHistoryItemVersion {
   Legacy = 1, // No noteAnnotationData on spent notes
   UpdatedAug2022 = 2, // Adds noteAnnotationData for spent notes (outputType)
   UpdatedNov2022 = 3, // Adds unshields and possible sender for received notes
-}
-
-export enum NoteType {
-  Receiver = 'Receiver',
-  Spender = 'Spender',
 }

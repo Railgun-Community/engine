@@ -78,6 +78,9 @@ export class TransactNote {
 
   readonly memoText: Optional<string>;
 
+  // Only used during serialization/storage of ShieldCommitments.
+  readonly shieldFee: Optional<string>;
+
   /**
    * Create Note object from values
    * @param {BigInt} receiverAddressData - recipient wallet address data
@@ -93,6 +96,7 @@ export class TransactNote {
     tokenData: TokenData,
     annotationData: string,
     memoText: Optional<string>,
+    shieldFee: Optional<string>,
   ) {
     assertValidNoteRandom(random);
 
@@ -111,6 +115,7 @@ export class TransactNote {
     this.hash = this.getHash();
     this.annotationData = annotationData;
     this.memoText = memoText;
+    this.shieldFee = shieldFee;
   }
 
   static createTransfer(
@@ -142,6 +147,7 @@ export class TransactNote {
       tokenData,
       annotationData,
       memoText,
+      undefined, // shieldFee
     );
   }
 
@@ -402,6 +408,7 @@ export class TransactNote {
         tokenData,
         annotationData,
         memoText,
+        undefined, // shieldFee
       );
     }
 
@@ -435,6 +442,7 @@ export class TransactNote {
       tokenData,
       annotationData,
       memoText,
+      undefined, // shieldFee
     );
   }
 
@@ -445,6 +453,7 @@ export class TransactNote {
       value: nToHex(BigInt(this.value), ByteLength.UINT_128, prefix),
       random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
       annotationData: this.annotationData,
+      shieldFee: this.shieldFee || undefined,
     };
   }
 
@@ -453,7 +462,7 @@ export class TransactNote {
    * @returns serialized note
    */
   serialize(prefix?: boolean): NoteSerialized {
-    const { npk, token, value, random, annotationData } = this.formatFields(prefix);
+    const { npk, token, value, random, annotationData, shieldFee } = this.formatFields(prefix);
     return {
       npk,
       token,
@@ -463,6 +472,7 @@ export class TransactNote {
       recipientAddress: encodeAddress(this.receiverAddressData),
       senderAddress: this.senderAddressData ? encodeAddress(this.senderAddressData) : undefined,
       memoText: this.memoText,
+      shieldFee,
     };
   }
 
@@ -517,6 +527,7 @@ export class TransactNote {
       tokenData,
       noteData.annotationData,
       noteData.memoText || undefined,
+      noteData.shieldFee || undefined,
     );
   }
 
@@ -550,6 +561,7 @@ export class TransactNote {
       tokenData,
       annotationData,
       noteData.memoText || undefined,
+      undefined, // shieldFee
     );
   }
 
@@ -572,6 +584,7 @@ export class TransactNote {
       this.tokenData,
       this.annotationData,
       this.memoText,
+      this.shieldFee,
     );
   }
 }

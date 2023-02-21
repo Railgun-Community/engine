@@ -312,7 +312,12 @@ describe('Note/TransactNote', () => {
     // Load fake contract
     ContractStore.railgunSmartWalletContracts[chain.type] = [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
-      new RailgunSmartWalletContract(config.contracts.proxy, null as unknown as Provider, chain);
+      new RailgunSmartWalletContract(
+        config.contracts.proxy,
+        null as unknown as Provider,
+        chain,
+        {}, // tempEngineV3NewShieldEventBlockNumbersEVM
+      );
 
     tokenDataGetter = new TokenDataGetter(db, chain);
   });
@@ -463,7 +468,6 @@ describe('Note/TransactNote', () => {
   });
 
   it('Should calculate nullifiers', () => {
-    // TODO-VECTORS: Vector needs confirming.
     const nullifierVectors = [
       {
         privateKey: '08ad9143ae793cdfe94b77e4e52bc4e9f13666966cffa395e3d412ea4e20480f',

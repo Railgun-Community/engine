@@ -54,6 +54,7 @@ import {
   TransactionHistoryItemVersion,
   TransactionHistoryTokenAmount,
   TransactionHistoryTransferTokenAmount,
+  TransactionHistoryUnshieldTokenAmount,
   ViewOnlyWalletData,
   WalletData,
   WalletDetails,
@@ -396,6 +397,7 @@ abstract class AbstractWallet extends EventEmitter {
             recipientAddress: walletAddress,
             senderAddress: undefined,
             memoText: undefined,
+            shieldFee: commitment.fee,
           };
 
           noteReceive = await TransactNote.deserialize(
@@ -749,6 +751,7 @@ abstract class AbstractWallet extends EventEmitter {
         amount: note.value,
         memoText: note.memoText,
         senderAddress: note.getSenderAddress(),
+        shieldFee: note.shieldFee,
       });
     });
 
@@ -898,7 +901,7 @@ abstract class AbstractWallet extends EventEmitter {
           }
         });
 
-        const unshieldTokenAmounts: TransactionHistoryTransferTokenAmount[] = unshieldEvents.map(
+        const unshieldTokenAmounts: TransactionHistoryUnshieldTokenAmount[] = unshieldEvents.map(
           (unshieldEvent) => {
             const tokenData = serializeTokenData(
               unshieldEvent.tokenAddress,
@@ -913,6 +916,7 @@ abstract class AbstractWallet extends EventEmitter {
               memoText: undefined,
               recipientAddress: unshieldEvent.toAddress,
               senderAddress: undefined,
+              unshieldFee: unshieldEvent.fee,
             };
           },
         );

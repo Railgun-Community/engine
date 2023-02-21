@@ -1,6 +1,6 @@
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { JsonRpcProvider } from '@ethersproject/providers';
@@ -78,7 +78,15 @@ describe('RailgunEngine', function test() {
   this.timeout(240000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine('Test Wallet', memdown(), testArtifactsGetter, mockQuickSync);
+    engine = new RailgunEngine(
+      'Test Wallet',
+      memdown(),
+      testArtifactsGetter,
+      mockQuickSync,
+      undefined, // engineDebugger
+      undefined, // skipMerkletreeScans
+      {}, // tempEngineV3NewShieldEventBlockNumbersEVM
+    );
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
@@ -312,6 +320,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
+        shieldFee: BigNumber.from('275000000000000000000').toHexString(),
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -359,6 +368,7 @@ describe('RailgunEngine', function test() {
         recipientAddress: ethersWallet.address,
         memoText: undefined,
         senderAddress: undefined,
+        unshieldFee: BigNumber.from('750000000000000000').toHexString(),
       },
     ]);
   }).timeout(90000);
@@ -425,6 +435,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
+        shieldFee: BigNumber.from('275000000000000000000').toHexString(),
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -449,6 +460,7 @@ describe('RailgunEngine', function test() {
         recipientAddress: ethersWallet.address,
         memoText: undefined,
         senderAddress: undefined,
+        unshieldFee: BigNumber.from('274312500000000000000').toHexString(),
       },
     ]);
   }).timeout(90000);
@@ -544,6 +556,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
+        shieldFee: BigNumber.from('275000000000000000000').toHexString(),
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -608,6 +621,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt(10),
         memoText,
         senderAddress: wallet.getAddress(),
+        shieldFee: undefined,
       },
       {
         tokenData: getTokenDataERC20(tokenAddress),
@@ -615,6 +629,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt(1),
         memoText: relayerMemoText,
         senderAddress: undefined,
+        shieldFee: undefined,
       },
     ]);
     expect(history2[0].transferTokenAmounts).deep.eq([]);
@@ -664,6 +679,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt(1),
         memoText: undefined,
         senderAddress: undefined,
+        shieldFee: '0x00',
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -804,6 +820,7 @@ describe('RailgunEngine', function test() {
         recipientAddress: ethersWallet.address,
         memoText: undefined,
         senderAddress: undefined,
+        unshieldFee: '0x00',
       },
     ]);
   }).timeout(90000);
