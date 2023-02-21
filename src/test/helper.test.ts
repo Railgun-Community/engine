@@ -1,3 +1,4 @@
+/// <reference types="../types/global" />
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
 // eslint-disable-next-line import/no-unresolved

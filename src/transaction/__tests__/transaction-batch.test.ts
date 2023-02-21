@@ -77,6 +77,10 @@ describe('Transaction/Transaction Batch', function run() {
     );
     ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
 
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      return;
+    }
+
     const provider = new JsonRpcProvider(config.rpc);
 
     const engine = new RailgunEngine(
@@ -129,7 +133,12 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch = new TransactionBatch(chain);
   });
 
-  it('Should validate transaction batch outputs', async () => {
+  it('[HH] Should validate transaction batch outputs', async function test() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
     const txs = await transactionBatch.generateTransactions(
       prover,
@@ -195,7 +204,12 @@ describe('Transaction/Transaction Batch', function run() {
     ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
   });
 
-  it('Should validate transaction batch outputs w/ unshields', async () => {
+  it('[HH] Should validate transaction batch outputs w/ unshields', async function test() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
     transactionBatch.addUnshieldData({
       toAddress: ethersWallet.address,
       value: shieldValue * 6n,
