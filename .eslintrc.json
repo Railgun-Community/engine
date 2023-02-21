@@ -60,7 +60,8 @@
     "@typescript-eslint/no-unsafe-assignment": 1,
     "@typescript-eslint/no-non-null-assertion": 2,
     "import/no-extraneous-dependencies": 0,
-    "no-warning-comments": 1
+    "no-warning-comments": 1,
+    "@typescript-eslint/no-duplicate-enum-values": 1
   },
   "ignorePatterns": [
     "dist/*"
