@@ -346,12 +346,13 @@ export class TransactionBatch {
   private static logDummySpendingSolutionGroupsSummary(
     spendingSolutionGroups: SpendingSolutionGroup[],
   ) {
-    const spendingSolutionGroupsSummaries: string[] = [];
-    spendingSolutionGroups.forEach((spendingSolutionGroup) => {
-      const nullifiers = spendingSolutionGroup.utxos.length;
-      const commitments = spendingSolutionGroup.tokenOutputs.length;
-      return `${nullifiers}x${commitments}`;
-    });
+    const spendingSolutionGroupsSummaries: string[] = spendingSolutionGroups.map(
+      (spendingSolutionGroup) => {
+        const nullifiers = spendingSolutionGroup.utxos.length;
+        const commitments = spendingSolutionGroup.tokenOutputs.length;
+        return `${nullifiers}x${commitments}`;
+      },
+    );
     EngineDebug.log(
       `Dummy spending solution groups - circuits ${spendingSolutionGroupsSummaries.join(', ')}`,
     );
