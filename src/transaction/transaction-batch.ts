@@ -149,6 +149,8 @@ export class TransactionBatch {
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired > tokenBalance) {
       EngineDebug.log(`Token balance too low: token hash ${tokenHash}`);
+      EngineDebug.log(`totalRequired: ${totalRequired}`);
+      EngineDebug.log(`tokenBalance: ${tokenBalance}`);
       switch (tokenData.tokenType) {
         case TokenType.ERC20:
           throw new Error(`RAILGUN private token balance too low for ${tokenData.tokenAddress}.`);

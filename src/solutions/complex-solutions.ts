@@ -5,6 +5,7 @@ import { VALID_INPUT_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from './utxos';
 import { TransactNote } from '../note/transact-note';
 import { TokenData } from '../models';
+import EngineDebug from '../debugger/debugger';
 
 export const CONSOLIDATE_BALANCE_ERROR =
   'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
@@ -15,6 +16,19 @@ type SolutionSpendingGroupGenerator = (
   utxos: TXO[],
 ) => SpendingSolutionGroup;
 
+const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
+  EngineDebug.log('treeSortedBalances metadata:');
+  treeSortedBalances.forEach((treeBalance) => {
+    EngineDebug.log(`Token: ${treeBalance.tokenData.tokenAddress}`);
+    EngineDebug.log(`Total balance: ${treeBalance.balance.toString()}`);
+    EngineDebug.log(
+      `UTXOs: ${filterZeroUTXOs(treeBalance.utxos)
+        .map((utxo) => utxo.note.value.toString())
+        .join(', ')}`,
+    );
+  });
+};
+
 const createSpendingSolutionsForValue = (
   treeSortedBalances: TreeBalance[],
   value: bigint,
@@ -22,6 +36,11 @@ const createSpendingSolutionsForValue = (
   spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator,
   updateOutputsCallback?: (amountLeft: bigint) => void,
 ) => {
+  EngineDebug.log('createSpendingSolutionsForValue');
+  EngineDebug.log(`totalRequired: ${value.toString()}`);
+  EngineDebug.log(`excludedUTXOIDs: ${excludedUTXOIDs.join(', ')}`);
+  logTreeSortedBalancesMetadata(treeSortedBalances);
+
   let amountLeft = value;
 
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
