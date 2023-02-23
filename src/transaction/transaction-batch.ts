@@ -343,6 +343,27 @@ export class TransactionBatch {
     return Promise.all(proofPromises);
   }
 
+  private static logDummySpendingSolutionGroupsSummary(
+    spendingSolutionGroups: SpendingSolutionGroup[],
+  ) {
+    const spendingSolutionGroupsSummaries: string[] = [];
+    spendingSolutionGroups.forEach((spendingSolutionGroup) => {
+      const nullifiers = spendingSolutionGroup.utxos.length;
+      const commitments = spendingSolutionGroup.tokenOutputs.length;
+      return `${nullifiers}x${commitments}`;
+    });
+    EngineDebug.log(
+      `Dummy spending solution groups - circuits ${spendingSolutionGroupsSummaries.join(', ')}`,
+    );
+    EngineDebug.log(
+      stringifySafe(
+        serializeExtractedSpendingSolutionGroupsData(
+          extractSpendingSolutionGroupsData(spendingSolutionGroups),
+        ),
+      ),
+    );
+  }
+
   /**
    * Generate dummy proofs and return serialized transactions
    * @param wallet - wallet to spend from
@@ -355,14 +376,7 @@ export class TransactionBatch {
     encryptionKey: string,
   ): Promise<TransactionStruct[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(wallet);
-    EngineDebug.log(`Dummy spending solution groups:`);
-    EngineDebug.log(
-      stringifySafe(
-        serializeExtractedSpendingSolutionGroupsData(
-          extractSpendingSolutionGroupsData(spendingSolutionGroups),
-        ),
-      ),
-    );
+    TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 
     const proofPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
       (spendingSolutionGroup) => {
