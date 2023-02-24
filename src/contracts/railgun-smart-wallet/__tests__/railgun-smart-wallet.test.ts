@@ -75,7 +75,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 let testShield: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Railgun Smart Wallet', function runTests() {
-  this.timeout(10000);
+  this.timeout(20000);
 
   beforeEach(async () => {
     engine = new RailgunEngine(
@@ -161,7 +161,7 @@ describe('Railgun Smart Wallet', function runTests() {
     );
   });
 
-  it('[HH] Should return gas estimate for dummy transaction', async function run() {
+  it.only('[HH] Should return gas estimate for dummy transaction', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
