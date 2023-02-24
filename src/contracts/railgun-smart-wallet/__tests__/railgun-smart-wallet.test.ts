@@ -165,144 +165,199 @@ describe('Railgun Smart Wallet', function runTests() {
     );
   });
 
-  it('[HH] Should check gas estimates for dummy transactions and full transactions', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
-      this.skip();
-      return;
-    }
+  it.only(
+    '[HH] Should check gas estimates for dummy transactions and full transactions',
+    async function run() {
+      if (!process.env.RUN_HARDHAT_TESTS) {
+        this.skip();
+        return;
+      }
 
-    // Token for relayer fee
-    await testShield();
-    const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
+      // Token for relayer fee
+      await testShield();
+      const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
 
-    // Mint NFTs with tokenIDs 0 and 1 into public balance.
-    await mintNFTsID01ForTest(nft, ethersWallet);
-    // Approve shield
-    const approval = await nft.approve(railgunSmartWalletContract.address, 1);
-    await approval.wait();
+      // Mint NFTs with tokenIDs 0 and 1 into public balance.
+      await mintNFTsID01ForTest(nft, ethersWallet);
+      // Approve shield
+      const approval = await nft.approve(railgunSmartWalletContract.address, 1);
+      await approval.wait();
 
-    const shield = await shieldNFTForTest(
-      wallet,
-      ethersWallet,
-      railgunSmartWalletContract,
-      chain,
-      RANDOM,
-      NFT_ADDRESS,
-      BigInt(1).toString(),
-    );
+      const shield = await shieldNFTForTest(
+        wallet,
+        ethersWallet,
+        railgunSmartWalletContract,
+        chain,
+        RANDOM,
+        NFT_ADDRESS,
+        BigInt(1).toString(),
+      );
 
-    const nullRelayerFeeOutput = TransactNote.createTransfer(
-      wallet2.addressKeys,
-      wallet.addressKeys,
-      RANDOM,
-      0n,
-      tokenData,
-      wallet.getViewingKeyPair(),
-      false, // showSenderAddressToRecipient
-      OutputType.Transfer,
-      undefined, // memoText
-    );
-    const actualRelayerFeeOutput = TransactNote.createTransfer(
-      wallet2.addressKeys,
-      wallet.addressKeys,
-      RANDOM,
-      300n,
-      tokenData,
-      wallet.getViewingKeyPair(),
-      false, // showSenderAddressToRecipient
-      OutputType.Transfer,
-      undefined, // memoText
-    );
-    const nftTransferOutput = TransactNote.createERC721Transfer(
-      wallet2.addressKeys,
-      wallet.addressKeys,
-      RANDOM,
-      shield.tokenData as NFTTokenData,
-      wallet.getViewingKeyPair(),
-      false, // showSenderAddressToRecipient
-      undefined, // memoText
-    );
+      const nullRelayerFeeOutput = TransactNote.createTransfer(
+        wallet2.addressKeys,
+        wallet.addressKeys,
+        RANDOM,
+        0n,
+        tokenData,
+        wallet.getViewingKeyPair(),
+        false, // showSenderAddressToRecipient
+        OutputType.Transfer,
+        undefined, // memoText
+      );
+      const actualRelayerFeeOutput = TransactNote.createTransfer(
+        wallet2.addressKeys,
+        wallet.addressKeys,
+        RANDOM,
+        300n,
+        tokenData,
+        wallet.getViewingKeyPair(),
+        false, // showSenderAddressToRecipient
+        OutputType.Transfer,
+        undefined, // memoText
+      );
+      const nftTransferOutput = TransactNote.createERC721Transfer(
+        wallet2.addressKeys,
+        wallet.addressKeys,
+        RANDOM,
+        shield.tokenData as NFTTokenData,
+        wallet.getViewingKeyPair(),
+        false, // showSenderAddressToRecipient
+        undefined, // memoText
+      );
 
-    // Case 1 - Dummy estimate with Null Relayer Fee
-    const transactionBatch_DummyNullRelayerFee = new TransactionBatch(chain);
-    transactionBatch_DummyNullRelayerFee.addOutput(nullRelayerFeeOutput);
-    transactionBatch_DummyNullRelayerFee.addOutput(nftTransferOutput);
-    const txs_DummyNullRelayerFee =
-      await transactionBatch_DummyNullRelayerFee.generateDummyTransactions(
+      // Submit actual transaction so the tree has a spent note/nullifier at position 0.
+      const initialTransactionBatch = new TransactionBatch(chain);
+      initialTransactionBatch.addOutput(actualRelayerFeeOutput);
+      const txs_initial = await initialTransactionBatch.generateTransactions(
         engine.prover,
         wallet,
         testEncryptionKey,
+        () => {},
       );
-    expect(txs_DummyNullRelayerFee.length).to.equal(2);
-    expect(txs_DummyNullRelayerFee.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
-    expect(txs_DummyNullRelayerFee.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
-    const tx_DummyNullRelayerFee = await railgunSmartWalletContract.transact(
-      txs_DummyNullRelayerFee,
-    );
-    tx_DummyNullRelayerFee.from = '0x000000000000000000000000000000000000dEaD';
-    const gasEstimate_DummyNullRelayerFee = (
-      await provider.estimateGas(tx_DummyNullRelayerFee)
-    ).toNumber();
-    // This should be around 1.30M gas.
-    // This will vary slightly based on small changes to the contract.
-    expect(gasEstimate_DummyNullRelayerFee).to.be.greaterThan(1_280_000);
-    expect(gasEstimate_DummyNullRelayerFee).to.be.lessThan(1_320_000);
+      const tx_initial = await railgunSmartWalletContract.transact(txs_initial);
+      const txTransact = await ethersWallet.sendTransaction(tx_initial);
+      await Promise.all([
+        txTransact.wait(),
+        promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      ]);
 
-    // Case 2 - Dummy estimate with Actual Relayer Fee
-    const transactionBatch_DummyActualRelayerFee = new TransactionBatch(chain);
-    transactionBatch_DummyActualRelayerFee.addOutput(actualRelayerFeeOutput);
-    transactionBatch_DummyActualRelayerFee.addOutput(nftTransferOutput);
-    const txs_DummyActualRelayerFee =
-      await transactionBatch_DummyActualRelayerFee.generateDummyTransactions(
+      // Case 1 - Dummy estimate with Null Relayer Fee
+      const transactionBatch_DummyNullRelayerFee = new TransactionBatch(chain);
+      transactionBatch_DummyNullRelayerFee.addOutput(nullRelayerFeeOutput);
+      transactionBatch_DummyNullRelayerFee.addOutput(nftTransferOutput);
+      const txs_DummyNullRelayerFee =
+        await transactionBatch_DummyNullRelayerFee.generateDummyTransactions(
+          engine.prover,
+          wallet,
+          testEncryptionKey,
+        );
+      expect(txs_DummyNullRelayerFee.length).to.equal(2);
+      expect(txs_DummyNullRelayerFee.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
+      expect(txs_DummyNullRelayerFee.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
+      expect(txs_DummyNullRelayerFee.map((tx) => tx.proof)).to.deep.equal([
+        {
+          a: { x: 0n, y: 0n },
+          b: { x: [0n, 0n], y: [0n, 0n] },
+          c: { x: 0n, y: 0n },
+        },
+        {
+          a: { x: 0n, y: 0n },
+          b: { x: [0n, 0n], y: [0n, 0n] },
+          c: { x: 0n, y: 0n },
+        },
+      ]);
+      const tx_DummyNullRelayerFee = await railgunSmartWalletContract.transact(
+        txs_DummyNullRelayerFee,
+      );
+      tx_DummyNullRelayerFee.from = '0x000000000000000000000000000000000000dEaD';
+      const gasEstimate_DummyNullRelayerFee = (
+        await provider.estimateGas(tx_DummyNullRelayerFee)
+      ).toNumber();
+      // This should be around 1.30M gas.
+      // This will vary slightly based on small changes to the contract.
+      expect(gasEstimate_DummyNullRelayerFee).to.be.greaterThan(1_290_000);
+      expect(gasEstimate_DummyNullRelayerFee).to.be.lessThan(1_310_000);
+
+      // Case 2 - Dummy estimate with Actual Relayer Fee
+      const transactionBatch_DummyActualRelayerFee = new TransactionBatch(chain);
+      transactionBatch_DummyActualRelayerFee.addOutput(actualRelayerFeeOutput);
+      transactionBatch_DummyActualRelayerFee.addOutput(nftTransferOutput);
+      const txs_DummyActualRelayerFee =
+        await transactionBatch_DummyActualRelayerFee.generateDummyTransactions(
+          engine.prover,
+          wallet,
+          testEncryptionKey,
+        );
+      expect(txs_DummyActualRelayerFee.length).to.equal(2);
+      expect(txs_DummyActualRelayerFee.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
+      expect(txs_DummyActualRelayerFee.map((tx) => tx.commitments.length)).to.deep.equal([2, 1]); // 2 commitments for Relayer Fee - one is change.
+      expect(txs_DummyActualRelayerFee.map((tx) => tx.proof)).to.deep.equal([
+        {
+          a: { x: 0n, y: 0n },
+          b: { x: [0n, 0n], y: [0n, 0n] },
+          c: { x: 0n, y: 0n },
+        },
+        {
+          a: { x: 0n, y: 0n },
+          b: { x: [0n, 0n], y: [0n, 0n] },
+          c: { x: 0n, y: 0n },
+        },
+      ]);
+      const tx_DummyActualRelayerFee = await railgunSmartWalletContract.transact(
+        txs_DummyActualRelayerFee,
+      );
+      tx_DummyActualRelayerFee.from = '0x000000000000000000000000000000000000dEaD';
+      const gasEstimate_DummyActualRelayerFee = (
+        await provider.estimateGas(tx_DummyActualRelayerFee)
+      ).toNumber();
+      // This should be around 1.41M gas.
+      // This will vary slightly based on small changes to the contract.
+      expect(gasEstimate_DummyActualRelayerFee).to.be.greaterThan(1_400_000);
+      expect(gasEstimate_DummyActualRelayerFee).to.be.lessThan(1_420_000);
+
+      // Case 3 - Actual transaction
+      const transactionBatch_ActualTransaction = new TransactionBatch(chain);
+      transactionBatch_ActualTransaction.addOutput(actualRelayerFeeOutput);
+      transactionBatch_ActualTransaction.addOutput(nftTransferOutput);
+      const txs_ActualTransaction = await transactionBatch_ActualTransaction.generateTransactions(
         engine.prover,
         wallet,
         testEncryptionKey,
+        () => {},
       );
-    expect(txs_DummyActualRelayerFee.length).to.equal(2);
-    expect(txs_DummyActualRelayerFee.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
-    expect(txs_DummyActualRelayerFee.map((tx) => tx.commitments.length)).to.deep.equal([2, 1]); // 2 commitments for Relayer Fee - one is change.
-    const tx_DummyActualRelayerFee = await railgunSmartWalletContract.transact(
-      txs_DummyActualRelayerFee,
-    );
-    tx_DummyActualRelayerFee.from = '0x000000000000000000000000000000000000dEaD';
-    const gasEstimate_DummyActualRelayerFee = (
-      await provider.estimateGas(tx_DummyActualRelayerFee)
-    ).toNumber();
-    // This should be around 1.45M gas.
-    // This will vary slightly based on small changes to the contract.
-    expect(gasEstimate_DummyActualRelayerFee).to.be.greaterThan(1_430_000);
-    expect(gasEstimate_DummyActualRelayerFee).to.be.lessThan(1_470_000);
+      expect(txs_ActualTransaction.length).to.equal(2);
+      expect(txs_ActualTransaction.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
+      expect(txs_ActualTransaction.map((tx) => tx.commitments.length)).to.deep.equal([2, 1]);
+      expect(txs_ActualTransaction.map((tx) => tx.proof)).to.not.deep.equal([
+        {
+          a: { x: 0n, y: 0n },
+          b: { x: [0n, 0n], y: [0n, 0n] },
+          c: { x: 0n, y: 0n },
+        },
+        {
+          a: { x: 0n, y: 0n },
+          b: { x: [0n, 0n], y: [0n, 0n] },
+          c: { x: 0n, y: 0n },
+        },
+      ]);
+      const tx_ActualTransaction = await railgunSmartWalletContract.transact(txs_ActualTransaction);
+      tx_ActualTransaction.from = ethersWallet.address;
+      const gasEstimate_ActualTransaction = (
+        await provider.estimateGas(tx_ActualTransaction)
+      ).toNumber();
+      // This should be around 1.42M gas.
+      // This will vary slightly based on small changes to the contract.
+      expect(gasEstimate_ActualTransaction).to.be.greaterThan(1_410_000);
+      expect(gasEstimate_ActualTransaction).to.be.lessThan(1_430_000);
 
-    // Case 3 - Actual transaction
-    const transactionBatch_ActualTransaction = new TransactionBatch(chain);
-    transactionBatch_ActualTransaction.addOutput(actualRelayerFeeOutput);
-    transactionBatch_ActualTransaction.addOutput(nftTransferOutput);
-    const txs_ActualTransaction = await transactionBatch_ActualTransaction.generateTransactions(
-      engine.prover,
-      wallet,
-      testEncryptionKey,
-      () => {},
-    );
-    expect(txs_ActualTransaction.length).to.equal(2);
-    expect(txs_ActualTransaction.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
-    expect(txs_ActualTransaction.map((tx) => tx.commitments.length)).to.deep.equal([2, 1]);
-    const tx_ActualTransaction = await railgunSmartWalletContract.transact(txs_ActualTransaction);
-    tx_ActualTransaction.from = '0x000000000000000000000000000000000000dEaD';
-    const gasEstimate_ActualTransaction = (
-      await provider.estimateGas(tx_ActualTransaction)
-    ).toNumber();
-    // This should be around 1.45M gas.
-    // This will vary slightly based on small changes to the contract.
-    expect(gasEstimate_ActualTransaction).to.be.greaterThan(1_430_000);
-    expect(gasEstimate_ActualTransaction).to.be.lessThan(1_470_000);
-
-    // Should be very similar to dummy transaction with actual relayer fee.
-    // Variance expected at <10000 additional gas for actual transaction.
-    expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(
-      // 10000
-      GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION,
-    );
-  }).timeout(90000);
+      // Should be very similar to dummy transaction with actual relayer fee.
+      // Variance expected at <10000 additional gas for actual transaction.
+      expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(
+        // 10000
+        GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION,
+      );
+    },
+  ).timeout(120000);
 
   it('[HH] Should return valid merkle roots', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {

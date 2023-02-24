@@ -6,7 +6,7 @@ import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from 
 import { TransactNote } from '../note/transact-note';
 import { TokenData } from '../models';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, formatToByteLength } from '../utils';
+import { ByteLength, formatToByteLength, randomHex } from '../utils';
 
 export const CONSOLIDATE_BALANCE_ERROR =
   'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
@@ -39,7 +39,7 @@ const createNullUTXO = (): TXO => {
   const nullTxid = formatToByteLength('0x00', ByteLength.UINT_256, true);
   return {
     tree: 0,
-    position: 0,
+    position: 100000, // out of bounds position - so we don't have collisions on nullifiers
     spendtxid: false,
     note: nullTransactNote,
     txid: nullTxid,
