@@ -19,7 +19,8 @@
   },
   "plugins": [
     "@typescript-eslint",
-    "es"
+    "es",
+    "no-only-tests"
   ],
   "rules": {
     "import/prefer-default-export": 0,
@@ -61,7 +62,8 @@
     "@typescript-eslint/no-non-null-assertion": 2,
     "import/no-extraneous-dependencies": 0,
     "no-warning-comments": 1,
-    "@typescript-eslint/no-duplicate-enum-values": 1
+    "@typescript-eslint/no-duplicate-enum-values": 1,
+    "no-only-tests/no-only-tests": 1
   },
   "ignorePatterns": [
     "dist/*"
