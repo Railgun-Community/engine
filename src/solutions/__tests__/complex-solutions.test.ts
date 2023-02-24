@@ -247,8 +247,25 @@ describe('Solutions/Complex Solutions', () => {
     // Ensure the 0n output was removed.
     expect(remainingOutputs0.map((note) => note.value)).to.deep.equal([]);
     const extractedData0 = extractSpendingSolutionGroupsData(spendingSolutionGroups0);
-    // TODO: When we add null UTXO for 0n value note, we will have the null output tx
-    expect(extractedData0).to.deep.equal([]);
+    expect(extractedData0).to.deep.equal([
+      {
+        outputAddressDatas: [
+          {
+            chain: CHAIN,
+            masterPublicKey: 0n,
+            viewingPublicKey: new Uint8Array([
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0,
+            ]),
+            version: 1,
+          },
+        ],
+        utxoValues: [0n],
+        outputValues: [0n],
+        tokenData,
+        utxoTxids: ['0x0000000000000000000000000000000000000000000000000000000000000000'],
+      },
+    ]);
 
     // Case 1.
     const remainingOutputs1: TransactNote[] = [

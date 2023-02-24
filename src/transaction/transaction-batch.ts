@@ -24,6 +24,8 @@ import { TreeBalance } from '../models';
 import { TransactionStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { getTokenDataHash } from '../note/note-util';
 
+export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 10000;
+
 export class TransactionBatch {
   private adaptID: AdaptID = {
     contract: '0x0000000000000000000000000000000000000000',

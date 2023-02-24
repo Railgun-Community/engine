@@ -20,6 +20,7 @@ import {
   formatToByteLength,
   hexlify,
   hexToBigInt,
+  nToBytes,
   nToHex,
   randomHex,
 } from '../utils/bytes';
@@ -585,6 +586,27 @@ export class TransactNote {
       this.annotationData,
       this.memoText,
       this.shieldFee,
+    );
+  }
+
+  /**
+   * TransactNote with value 0n. All other fields are placeholders.
+   * The circuit will ignore fields if input note value is 0.
+   */
+  static createNullNote(): TransactNote {
+    const nullAddressData: AddressData = {
+      masterPublicKey: 0n,
+      viewingPublicKey: nToBytes(0n, ByteLength.UINT_256),
+    };
+    return new TransactNote(
+      nullAddressData,
+      undefined, // senderAddressData
+      randomHex(16),
+      0n, // value
+      getTokenDataERC20('0x00'),
+      '', // annotationData
+      undefined, // memoText
+      undefined, // shieldFee
     );
   }
 }

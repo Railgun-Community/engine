@@ -223,11 +223,10 @@ describe('Transaction/Transaction Batch', function run() {
       testEncryptionKey,
       () => {},
     );
-    // TODO: When we add null UTXO for 0n value note, we will have 1 output tx.
-    expect(txs0.length).to.equal(0);
-    expect(txs0.map((tx) => tx.nullifiers.length)).to.deep.equal([]);
-    expect(txs0.map((tx) => tx.commitments.length)).to.deep.equal([]);
-    expect(txs0.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([]);
+    expect(txs0.length).to.equal(1);
+    expect(txs0.map((tx) => tx.nullifiers.length)).to.deep.equal([1]);
+    expect(txs0.map((tx) => tx.commitments.length)).to.deep.equal([1]);
+    expect(txs0.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([0n]);
 
     transactionBatch.resetOutputs();
     transactionBatch.resetUnshieldData();

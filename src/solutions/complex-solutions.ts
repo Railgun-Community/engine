@@ -6,6 +6,7 @@ import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from 
 import { TransactNote } from '../note/transact-note';
 import { TokenData } from '../models';
 import EngineDebug from '../debugger/debugger';
+import { ByteLength, formatToByteLength } from '../utils';
 
 export const CONSOLIDATE_BALANCE_ERROR =
   'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
@@ -29,6 +30,22 @@ const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   });
 };
 
+/**
+ * UTXO with value 0n. All other fields are placeholders.
+ * The circuit will ignore fields if value is 0.
+ */
+const createNullUTXO = (): TXO => {
+  const nullTransactNote = TransactNote.createNullNote();
+  const nullTxid = formatToByteLength('0x00', ByteLength.UINT_256, true);
+  return {
+    tree: 0,
+    position: 0,
+    spendtxid: false,
+    note: nullTransactNote,
+    txid: nullTxid,
+  };
+};
+
 const createSpendingSolutionsForValue = (
   treeSortedBalances: TreeBalance[],
   value: bigint,
@@ -41,7 +58,6 @@ const createSpendingSolutionsForValue = (
   EngineDebug.log(`excludedUTXOIDs: ${excludedUTXOIDs.join(', ')}`);
   logTreeSortedBalancesMetadata(treeSortedBalances);
 
-  // Helpful for selecting Relayer Fee with recursive gas estimator.
   if (value === 0n) {
     if (updateOutputsCallback) {
       updateOutputsCallback(0n);
@@ -49,14 +65,11 @@ const createSpendingSolutionsForValue = (
 
     // Create a 0-value spending solution group.
     // This is used when simulating a circuit transaction, without requiring an input note.
-
-    // TODO: Add NULL UTXO group if value is 0n.
-    // const tree = 0;
-    // const utxos: TXO[] = [NULL_UTXO];
-    // const nullSpendingSolutionGroup = spendingSolutionGroupGenerator(tree, value, utxos);
-    // return [nullSpendingSolutionGroup];
-
-    return [];
+    // Helpful for initial dummy Relayer Fee with recursive gas estimator.
+    const nullUtxo = createNullUTXO();
+    const utxos = [nullUtxo];
+    const nullSpendingSolutionGroup = spendingSolutionGroupGenerator(nullUtxo.tree, value, utxos);
+    return [nullSpendingSolutionGroup];
   }
 
   let amountLeft = value;
