@@ -214,21 +214,38 @@ describe('Transaction/Transaction Batch', function run() {
       return;
     }
 
-    transactionBatch.addUnshieldData({
-      toAddress: ethersWallet.address,
-      value: shieldValue * 6n,
-      tokenData,
-    });
-    const txs = await transactionBatch.generateTransactions(
+    transactionBatch.resetOutputs();
+    transactionBatch.resetUnshieldData();
+    transactionBatch.addOutput(await makeNote(0n));
+    const txs0 = await transactionBatch.generateTransactions(
       prover,
       wallet,
       testEncryptionKey,
       () => {},
     );
-    expect(txs.length).to.equal(2);
-    expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
-    expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
-    expect(txs.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([
+    // TODO: When we add null UTXO for 0n value note, we will have 1 output tx.
+    expect(txs0.length).to.equal(0);
+    expect(txs0.map((tx) => tx.nullifiers.length)).to.deep.equal([]);
+    expect(txs0.map((tx) => tx.commitments.length)).to.deep.equal([]);
+    expect(txs0.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([]);
+
+    transactionBatch.resetOutputs();
+    transactionBatch.resetUnshieldData();
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: shieldValue * 6n,
+      tokenData,
+    });
+    const txs1 = await transactionBatch.generateTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    expect(txs1.length).to.equal(2);
+    expect(txs1.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
+    expect(txs1.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
+    expect(txs1.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([
       shieldValue,
       5n * shieldValue,
     ]);

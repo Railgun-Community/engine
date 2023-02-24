@@ -143,6 +143,7 @@ class Transaction {
 
     // Check if there's too many outputs
     if (this.tokenOutputs.length > 5) {
+      // TODO: Support circuits 1x10 and 1x13.
       throw new Error('Too many transaction outputs.');
     }
 

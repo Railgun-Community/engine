@@ -35,18 +35,36 @@ const createSpendingSolutionsForValue = (
   excludedUTXOIDs: string[],
   spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator,
   updateOutputsCallback?: (amountLeft: bigint) => void,
-) => {
+): SpendingSolutionGroup[] => {
   EngineDebug.log('createSpendingSolutionsForValue');
   EngineDebug.log(`totalRequired: ${value.toString()}`);
   EngineDebug.log(`excludedUTXOIDs: ${excludedUTXOIDs.join(', ')}`);
   logTreeSortedBalancesMetadata(treeSortedBalances);
+
+  // Helpful for selecting Relayer Fee with recursive gas estimator.
+  if (value === 0n) {
+    if (updateOutputsCallback) {
+      updateOutputsCallback(0n);
+    }
+
+    // Create a 0-value spending solution group.
+    // This is used when simulating a circuit transaction, without requiring an input note.
+
+    // TODO: Add NULL UTXO group if value is 0n.
+    // const tree = 0;
+    // const utxos: TXO[] = [NULL_UTXO];
+    // const nullSpendingSolutionGroup = spendingSolutionGroupGenerator(tree, value, utxos);
+    // return [nullSpendingSolutionGroup];
+
+    return [];
+  }
 
   let amountLeft = value;
 
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
   treeSortedBalances.forEach((treeBalance, tree) => {
-    while (amountLeft > 0) {
+    while (amountLeft > 0n) {
       const utxos = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDs);
       if (!utxos) {
         // No more solutions in this tree.
@@ -73,14 +91,14 @@ const createSpendingSolutionsForValue = (
         updateOutputsCallback(amountLeft);
       }
 
-      if (amountLeft < 0) {
+      if (amountLeft < 0n) {
         // Break out from the forEach loop, and continue with next output.
         return;
       }
     }
   });
 
-  if (amountLeft > 0) {
+  if (amountLeft > 0n) {
     // Could not find enough solutions.
     throw consolidateBalanceError();
   }
@@ -106,7 +124,7 @@ export const createSpendingSolutionGroupsForOutput = (
       spendingTree: tree,
       utxos,
       tokenOutputs: [solutionOutput],
-      unshieldValue: BigInt(0),
+      unshieldValue: 0n,
       tokenData,
     };
   };
@@ -115,7 +133,7 @@ export const createSpendingSolutionGroupsForOutput = (
     // Remove the "used" output note.
     remainingOutputs.splice(0, 1);
 
-    if (amountLeft > 0) {
+    if (amountLeft > 0n) {
       // Add another remaining output note for any Amount Left.
       remainingOutputs.unshift(tokenOutput.newProcessingNoteWithValue(amountLeft));
     }

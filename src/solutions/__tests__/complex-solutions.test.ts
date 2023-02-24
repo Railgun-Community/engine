@@ -235,6 +235,21 @@ describe('Solutions/Complex Solutions', () => {
 
     const sortedTreeBalances = [treeBalance0, treeBalance1];
 
+    // Case 0.
+    const remainingOutputs0: TransactNote[] = [await createMockNote(addressData1, 0n)];
+    const spendingSolutionGroups0 = createSpendingSolutionGroupsForOutput(
+      tokenData,
+      sortedTreeBalances,
+      remainingOutputs0[0],
+      remainingOutputs0,
+      [],
+    );
+    // Ensure the 0n output was removed.
+    expect(remainingOutputs0.map((note) => note.value)).to.deep.equal([]);
+    const extractedData0 = extractSpendingSolutionGroupsData(spendingSolutionGroups0);
+    // TODO: When we add null UTXO for 0n value note, we will have the null output tx
+    expect(extractedData0).to.deep.equal([]);
+
     // Case 1.
     const remainingOutputs1: TransactNote[] = [
       await createMockNote(addressData1, 79n),
