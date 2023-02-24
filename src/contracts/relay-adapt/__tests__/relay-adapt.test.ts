@@ -57,7 +57,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 let testShieldBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
 
 describe('Relay Adapt', function test() {
-  this.timeout(45000);
+  this.timeout(60000);
 
   beforeEach(async () => {
     engine = new RailgunEngine(

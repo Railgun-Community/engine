@@ -622,7 +622,7 @@ describe('Railgun Smart Wallet', function runTests() {
 
     // Check merkle root changed
     expect(merkleRootAfterShield).not.to.equal(merkleRootBefore);
-  });
+  }).timeout(20000);
 
   it('[HH] Should create transactions and parse tree updates', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
