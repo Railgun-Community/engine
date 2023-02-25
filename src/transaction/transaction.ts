@@ -65,6 +65,7 @@ class Transaction {
     adaptID: AdaptID,
   ) {
     if (tokenOutputs.length > 4) {
+      // Leave room for optional 5th change output.
       throw new Error('Can not add more than 4 outputs.');
     }
 
@@ -141,8 +142,8 @@ class Transaction {
     const nullifyingKey = wallet.getNullifyingKey();
     const senderViewingKeys = wallet.getViewingKeyPair();
 
-    // Check if there's too many outputs
-    if (this.tokenOutputs.length > 5) {
+    if (this.tokenOutputs.length > 4) {
+      // Leave room for optional 5th change output.
       // TODO: Support circuits 1x10 and 1x13.
       throw new Error('Too many transaction outputs.');
     }
