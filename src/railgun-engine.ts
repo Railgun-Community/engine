@@ -591,7 +591,7 @@ class RailgunEngine extends EventEmitter {
     }
 
     const otherTxids: Optional<string>[] = await Promise.all(
-      nullifiers.slice(1).map(merkletree.getStoredNullifierTxid),
+      nullifiers.slice(1).map((nullifier) => merkletree.getStoredNullifierTxid(nullifier)),
     );
 
     const matchingTxids = otherTxids.filter((txid) => txid === firstTxid);
