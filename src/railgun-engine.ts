@@ -305,12 +305,14 @@ class RailgunEngine extends EventEmitter {
     this.emitScanUpdateEvent(chain, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid merkletree.
-    let startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
+    const startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
     const lastSyncedBlock = await this.getLastSyncedBlock(chain);
-    EngineDebug.log(`last synced block: ${lastSyncedBlock}`);
-    if (lastSyncedBlock && lastSyncedBlock > startScanningBlockSlowScan) {
-      startScanningBlockSlowScan = lastSyncedBlock;
-    }
+    EngineDebug.log(`lastSyncedBlock: ${lastSyncedBlock}`);
+    // NOTE: We aren't currently using lastSyncedBlock, as this can get out-of-sync with the last valid commitment block.
+    // Always run slow-sync from the last valid block, just in case.
+    // if (lastSyncedBlock && lastSyncedBlock > startScanningBlockSlowScan) {
+    //   startScanningBlockSlowScan = lastSyncedBlock;
+    // }
     EngineDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
 
     const latestBlock = await railgunSmartWalletContract.contract.provider.getBlockNumber();
