@@ -501,6 +501,7 @@ class RailgunEngine extends EventEmitter {
     };
     const nullifierListener = async (nullifiers: Nullifier[]) => {
       await this.nullifierListener(chain, nullifiers);
+      await this.scanAllWallets(chain, undefined);
     };
     const unshieldListener = async (unshields: UnshieldStoredEvent[]) => {
       await this.unshieldListener(chain, unshields);
