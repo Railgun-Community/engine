@@ -358,7 +358,9 @@ export class TransactionBatch {
       },
     );
     EngineDebug.log(
-      `Dummy spending solution groups - circuits ${spendingSolutionGroupsSummaries.join(', ')}`,
+      `Dummy spending solution groups - circuits ${spendingSolutionGroupsSummaries.join(
+        ', ',
+      )} (excluding unshields)`,
     );
     EngineDebug.log(
       stringifySafe(
