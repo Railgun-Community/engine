@@ -19,7 +19,11 @@ import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunSmartWalletContract } from '../../railgun-smart-wallet/railgun-smart-wallet';
-import { RelayAdaptContract } from '../relay-adapt';
+import {
+  MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
+  MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT,
+  RelayAdaptContract,
+} from '../relay-adapt';
 import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
 import { TransactNote } from '../../../note/transact-note';
 import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
@@ -425,8 +429,12 @@ describe('Relay Adapt', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
+    );
+    expect(gasEstimate.toNumber()).to.be.lessThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    );
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -615,8 +623,12 @@ describe('Relay Adapt', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
+    );
+    expect(gasEstimate.toNumber()).to.be.lessThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    );
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -774,8 +786,12 @@ describe('Relay Adapt', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
+    );
+    expect(gasEstimate.toNumber()).to.be.lessThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    );
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
@@ -939,8 +955,12 @@ describe('Relay Adapt', function test() {
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(2_420_000);
-    expect(gasEstimate.toNumber()).to.be.lessThan(2_500_000);
+    expect(gasEstimate.toNumber()).to.be.greaterThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
+    );
+    expect(gasEstimate.toNumber()).to.be.lessThan(
+      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    );
 
     // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({

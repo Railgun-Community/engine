@@ -349,12 +349,15 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(gasEstimate_ActualTransaction).to.be.lessThan(1_430_000);
 
     // Should be very similar to dummy transaction with actual relayer fee.
-    // Variance expected at ~7500 additional gas for actual transaction. (7146, also tested at 7194 with multi-circuit in the field)
+    // Variance expected at ~7500 additional gas for actual transaction. (we've seen 7121, also tested at 7146 and 7194 with multi-circuit in the field)
     expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(
       // 7500
       GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION,
     );
-    expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.equal(7146);
+    expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.greaterThan(
+      7100,
+    );
+    expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(7200);
   }).timeout(120000);
 
   it('[HH] Should return valid merkle roots', async function run() {
