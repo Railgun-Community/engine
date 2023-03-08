@@ -8,11 +8,11 @@
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts; tsc --noEmit; tsc -p tsconfig.test.json --noEmit",
-    "test": "npm run compile-test && env NODE_ENV=test mocha 'src/**/__tests__/*.test.ts'",
+    "test": "yarn compile-test && env NODE_ENV=test mocha 'src/**/__tests__/*.test.ts'",
     "test-hardhat": "env NODE_ENV=test RUN_HARDHAT_TESTS=1 npm test",
-    "compile": "npm run clean && tsc",
-    "compile-test": "npm run clean && tsc -p tsconfig.test.json",
-    "prepack": "npm install && npm run compile",
+    "compile": "yarn clean && tsc",
+    "compile-test": "yarn clean && tsc -p tsconfig.test.json",
+    "prepack": "yarn && yarn compile",
     "release": "mkdir -p release && npm pack && mv *.tgz ./release"
   },
   "files": [
