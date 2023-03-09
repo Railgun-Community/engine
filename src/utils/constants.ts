@@ -30,10 +30,10 @@ export const ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM: {
   [chainID: number]: number;
 } = {
   1: 16790263,
-  5: 8625000, // TODO: Goerli
+  5: 8625125,
   56: 26313947,
   137: 40143539,
   42161: 68196853,
   80001: 32311023,
-  421613: 10585000, // TODO: Arbitrum-Goerli
+  421613: 10585000, // TODO: Need precise Arbitrum-Goerli block number
 };
