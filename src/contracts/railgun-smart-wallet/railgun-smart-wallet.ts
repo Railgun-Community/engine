@@ -43,7 +43,10 @@ import {
   TransactionStruct,
   UnshieldEventObject,
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
-import { ENGINE_V3_START_BLOCK_NUMBERS_EVM } from '../../utils';
+import {
+  ENGINE_V3_START_BLOCK_NUMBERS_EVM,
+  ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM,
+} from '../../utils';
 import { Chain, ChainType } from '../../models/engine-types';
 import { RailgunSmartWallet_LegacyShield_PreMar23 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
 
@@ -58,19 +61,12 @@ class RailgunSmartWalletContract extends EventEmitter {
 
   readonly chain: Chain;
 
-  private tempEngineV3NewShieldEventBlockNumbersEVM: { [chainID: number]: number };
-
   /**
    * Connect to Railgun instance on network
    * @param railgunSmartWalletContractAddress - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(
-    railgunSmartWalletContractAddress: string,
-    provider: Provider,
-    chain: Chain,
-    tempEngineV3NewShieldEventBlockNumbersEVM: { [chainID: number]: number },
-  ) {
+  constructor(railgunSmartWalletContractAddress: string, provider: Provider, chain: Chain) {
     super();
     this.address = railgunSmartWalletContractAddress;
     this.contract = new Contract(
@@ -79,7 +75,6 @@ class RailgunSmartWalletContract extends EventEmitter {
       provider,
     ) as RailgunSmartWallet;
     this.chain = chain;
-    this.tempEngineV3NewShieldEventBlockNumbersEVM = tempEngineV3NewShieldEventBlockNumbersEVM;
   }
 
   /**
@@ -275,15 +270,15 @@ class RailgunSmartWalletContract extends EventEmitter {
   }
 
   private static getEngineV3StartBlockNumber(chain: Chain) {
-    if (chain.type === ChainType.EVM && ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id]) {
-      return ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id];
+    if (chain.type === ChainType.EVM) {
+      return ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id] || 0;
     }
     return 0;
   }
 
-  private getEngineV3NewShieldEventBlockNumber(chain: Chain) {
-    if (chain.type === ChainType.EVM && this.tempEngineV3NewShieldEventBlockNumbersEVM[chain.id]) {
-      return this.tempEngineV3NewShieldEventBlockNumbersEVM[chain.id];
+  private static getEngineV3ShieldEventUpdate030923BlockNumber(chain: Chain) {
+    if (chain.type === ChainType.EVM) {
+      return ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM[chain.id] || 0;
     }
     return 0;
   }
@@ -303,7 +298,8 @@ class RailgunSmartWalletContract extends EventEmitter {
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
     const engineV3StartBlockNumber = RailgunSmartWalletContract.getEngineV3StartBlockNumber(chain);
-    const engineV3NewShieldEventBlockNumber = this.getEngineV3NewShieldEventBlockNumber(chain);
+    const engineV3ShieldEventUpdate030923BlockNumber =
+      RailgunSmartWalletContract.getEngineV3ShieldEventUpdate030923BlockNumber(chain);
 
     let currentStartBlock = startBlock;
 
@@ -339,8 +335,9 @@ class RailgunSmartWalletContract extends EventEmitter {
       const endBlock = Math.min(latestBlock, currentStartBlock + SCAN_CHUNKS);
       const withinLegacyEventRange = currentStartBlock <= engineV3StartBlockNumber;
       const withinV3EventRange = endBlock >= engineV3StartBlockNumber;
-      const withinLegacyV3ShieldEventRange = currentStartBlock <= engineV3NewShieldEventBlockNumber;
-      const withinNewV3ShieldEventRange = endBlock >= engineV3NewShieldEventBlockNumber;
+      const withinLegacyV3ShieldEventRange =
+        currentStartBlock <= engineV3ShieldEventUpdate030923BlockNumber;
+      const withinNewV3ShieldEventRange = endBlock >= engineV3ShieldEventUpdate030923BlockNumber;
       if (withinLegacyEventRange && withinV3EventRange) {
         EngineDebug.log(
           `[Chain ${this.chain.type}:${this.chain.id}]: Changing from legacy events to new events...`,

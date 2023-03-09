@@ -89,7 +89,6 @@ describe('Railgun Smart Wallet', function runTests() {
       undefined, // quickSync
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
-      {}, // tempEngineV3NewShieldEventBlockNumbersEVM
     );
 
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);

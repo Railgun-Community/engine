@@ -90,7 +90,6 @@ describe('Transaction/Transaction Batch', function run() {
       mockQuickSync,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
-      {}, // tempEngineV3NewShieldEventBlockNumbersEVM
     );
 
     await engine.loadNetwork(

@@ -6,7 +6,7 @@ import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from 
 import { TransactNote } from '../note/transact-note';
 import { TokenData } from '../models';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, formatToByteLength, randomHex } from '../utils';
+import { ByteLength, formatToByteLength } from '../utils';
 
 export const CONSOLIDATE_BALANCE_ERROR =
   'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
