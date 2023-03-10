@@ -412,7 +412,11 @@ describe('Railgun Smart Wallet', function runTests() {
     let startingBlock = await provider.getBlockNumber();
 
     // Add a secondary listener.
-    railgunSmartWalletContract.treeUpdates(eventsListener, nullifiersListener, unshieldListener);
+    railgunSmartWalletContract.setTreeUpdateListeners(
+      eventsListener,
+      nullifiersListener,
+      unshieldListener,
+    );
 
     // Subscribe to Nullified event
     const resultNullifiers2: Nullifier[] = [];
@@ -578,7 +582,7 @@ describe('Railgun Smart Wallet', function runTests() {
     }
 
     let result!: CommitmentEvent;
-    railgunSmartWalletContract.treeUpdates(
+    railgunSmartWalletContract.setTreeUpdateListeners(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
@@ -627,7 +631,7 @@ describe('Railgun Smart Wallet', function runTests() {
     }
 
     let result!: CommitmentEvent;
-    railgunSmartWalletContract.treeUpdates(
+    railgunSmartWalletContract.setTreeUpdateListeners(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },
@@ -689,7 +693,7 @@ describe('Railgun Smart Wallet', function runTests() {
     const merkleRootAfterShield = await railgunSmartWalletContract.merkleRoot();
 
     let result!: CommitmentEvent;
-    railgunSmartWalletContract.treeUpdates(
+    railgunSmartWalletContract.setTreeUpdateListeners(
       async (commitmentEvent: CommitmentEvent) => {
         result = commitmentEvent;
       },

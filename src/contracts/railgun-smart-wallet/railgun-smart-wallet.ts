@@ -143,7 +143,7 @@ class RailgunSmartWalletContract extends EventEmitter {
    * @param eventsNullifierListener - nullifier listener callback
    * @param eventsUnshieldListener - unshield listener callback
    */
-  treeUpdates(
+  setTreeUpdateListeners(
     commitmentListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
     eventsUnshieldListener: EventsUnshieldListener,

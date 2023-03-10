@@ -495,7 +495,7 @@ class RailgunEngine extends EventEmitter {
     const unshieldListener = async (unshields: UnshieldStoredEvent[]) => {
       await this.unshieldListener(chain, unshields);
     };
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id].treeUpdates(
+    ContractStore.railgunSmartWalletContracts[chain.type][chain.id].setTreeUpdateListeners(
       eventsListener,
       nullifierListener,
       unshieldListener,
@@ -511,22 +511,24 @@ class RailgunEngine extends EventEmitter {
       ContractStore.railgunSmartWalletContracts[chain.type] &&
       ContractStore.railgunSmartWalletContracts[chain.id]
     ) {
+      // Unload merkletrees from wallets
+      Object.values(this.wallets).forEach((wallet) => {
+        wallet.unloadMerkletree(chain);
+      });
+
+      // Unload merkletrees from wallets
+      Object.values(this.wallets).forEach((wallet) => {
+        wallet.unloadMerkletree(chain);
+      });
+
       // Unload listeners
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id].unload();
 
-      // Unload merkletrees from wallets
-      Object.values(this.wallets).forEach((wallet) => {
-        wallet.unloadMerkletree(chain);
-      });
-
-      // Unload merkletrees from wallets
-      Object.values(this.wallets).forEach((wallet) => {
-        wallet.unloadMerkletree(chain);
-      });
-
-      // Delete contract and merkle tree objects
+      // Delete contracts
       delete ContractStore.railgunSmartWalletContracts[chain.id][chain.type];
       delete ContractStore.relayAdaptContracts[chain.id][chain.type];
+
+      // Delete merkletree
       delete this.merkletrees[chain.id][chain.type];
     }
   }
