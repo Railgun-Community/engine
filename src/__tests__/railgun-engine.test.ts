@@ -412,7 +412,7 @@ describe('RailgunEngine', function test() {
     const transactTx = await ethersWallet.sendTransaction(transact);
     await Promise.all([
       transactTx.wait(),
-      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
     ]);
 
     const newBalance = await wallet.getBalance(chain, tokenAddress);
