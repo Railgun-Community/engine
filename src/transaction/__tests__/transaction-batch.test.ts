@@ -207,7 +207,7 @@ describe('Transaction/Transaction Batch', function run() {
     ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
   });
 
-  it.only('[HH] Should validate transaction batch outputs w/ unshields', async function test() {
+  it('[HH] Should validate transaction batch outputs w/ unshields', async function test() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

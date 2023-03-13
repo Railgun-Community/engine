@@ -49,15 +49,19 @@ import {
 } from '../../utils';
 import { Chain, ChainType } from '../../models/engine-types';
 import { RailgunSmartWallet_LegacyShield_PreMar23 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
+import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json';
+import ABIRailgunLogic_LegacyEvents from './legacy-events/RailgunLogic_LegacyEvents.json';
 
 const SCAN_CHUNKS = 499;
-const MAX_SCAN_RETRIES = 90;
+const MAX_SCAN_RETRIES = 30;
 const EVENTS_SCAN_TIMEOUT = 5000;
 
 class RailgunSmartWalletContract extends EventEmitter {
   readonly contract: RailgunSmartWallet;
 
   readonly address: string;
+
+  readonly provider: Provider;
 
   readonly chain: Chain;
 
@@ -74,6 +78,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       ABIRailgunSmartWallet,
       provider,
     ) as RailgunSmartWallet;
+    this.provider = provider;
     this.chain = chain;
   }
 
@@ -283,6 +288,17 @@ class RailgunSmartWalletContract extends EventEmitter {
     return 0;
   }
 
+  private createLegacyPreV3Contract(): LegacyRailgunLogic {
+    return new Contract(this.address, ABIRailgunLogic_LegacyEvents) as LegacyRailgunLogic;
+  }
+
+  private createLegacyPreMar23Contract(): RailgunSmartWallet_LegacyShield_PreMar23 {
+    return new Contract(
+      this.address,
+      ABIRailgunSmartWallet_Legacy_PreMar23,
+    ) as RailgunSmartWallet_LegacyShield_PreMar23;
+  }
+
   /**
    * Gets historical events from block
    * @param startBlock - block to scan from
@@ -313,7 +329,7 @@ class RailgunSmartWalletContract extends EventEmitter {
 
     // This type includes legacy event types and filters, from before the v3 update.
     // We need to scan prior commitments from these past events, before engineV3StartBlockNumber.
-    const legacyEventsContract = this.contract as unknown as LegacyRailgunLogic;
+    const legacyEventsContract = this.createLegacyPreV3Contract();
     const legacyEventFilterNullifiers = legacyEventsContract.filters.Nullifiers();
     const legacyEventFilterGeneratedCommitmentBatch =
       legacyEventsContract.filters.GeneratedCommitmentBatch();
@@ -321,8 +337,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       legacyEventsContract.filters.CommitmentBatch();
 
     // This type includes legacy Shield event types and filters, from before the Mar 2023 update.
-    const legacyShieldEventContract = this
-      .contract as unknown as RailgunSmartWallet_LegacyShield_PreMar23;
+    const legacyShieldEventContract = this.createLegacyPreMar23Contract();
     const eventFilter_LegacyShield_PreMar23 = legacyShieldEventContract.filters.Shield();
 
     EngineDebug.log(

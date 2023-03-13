@@ -1,4 +1,5 @@
 import { BigNumber } from '@ethersproject/bignumber';
+import { Interface } from '@ethersproject/abi';
 import {
   CommitmentCiphertext,
   CommitmentType,
@@ -33,6 +34,7 @@ import {
   ShieldEventObject_LegacyShield_PreMar23,
   ShieldEvent_LegacyShield_PreMar23,
 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
+import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json';
 
 /**
  * Parse event data for database
@@ -193,6 +195,9 @@ export async function processShieldEvents(
   events: ShieldEvent[],
 ): Promise<void> {
   const filtered = events.filter((event) => event.args);
+  if (events.length !== filtered.length) {
+    throw new Error('Args required for Shield events');
+  }
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
@@ -206,7 +211,25 @@ export async function processShieldEvents_LegacyShield_PreMar23(
   eventsListener: EventsListener,
   events: ShieldEvent_LegacyShield_PreMar23[],
 ): Promise<void> {
+  // NOTE: Legacy "Shield" event of the same name conflicts with the current ABI's Shield event.
+  // It seems that the first ABI to load, with "Shield" event, for a given contract address,
+  // sets a cached version of the ABI interface.
+  // So, we need to custom-decode the legacy Shield event here.
+
+  const iface = new Interface(
+    ABIRailgunSmartWallet_Legacy_PreMar23.filter((fragment) => fragment.type === 'event'),
+  );
+  // eslint-disable-next-line no-restricted-syntax
+  for (const event of events) {
+    const args = iface.decodeEventLog('Shield', event.data);
+    event.args = args as any;
+  }
+
   const filtered = events.filter((event) => event.args);
+  if (events.length !== filtered.length) {
+    throw new Error('Args required for Legacy Shield events');
+  }
+
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
@@ -221,6 +244,9 @@ export async function processTransactEvents(
   events: TransactEvent[],
 ): Promise<void> {
   const filtered = events.filter((event) => event.args);
+  if (events.length !== filtered.length) {
+    throw new Error('Args required for Transact events');
+  }
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
@@ -236,6 +262,9 @@ export async function processUnshieldEvents(
   const unshields: UnshieldStoredEvent[] = [];
 
   const filtered = events.filter((event) => event.args);
+  if (events.length !== filtered.length) {
+    throw new Error('Args required for Unshield events');
+  }
   filtered.forEach((event) => {
     const { args, transactionHash, blockNumber } = event;
     unshields.push(formatUnshieldEvent(args, transactionHash, blockNumber));
@@ -270,6 +299,10 @@ export async function processNullifiedEvents(
   const nullifiers: Nullifier[] = [];
 
   const filtered = events.filter((event) => event.args);
+  if (events.length !== filtered.length) {
+    throw new Error('Args required for Nullified events');
+  }
+
   filtered.forEach((event) => {
     const { args, transactionHash, blockNumber } = event;
     nullifiers.push(...formatNullifiedEvents(args, transactionHash, blockNumber));
