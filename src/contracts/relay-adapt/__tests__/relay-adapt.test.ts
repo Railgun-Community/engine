@@ -312,7 +312,7 @@ describe('Relay Adapt', function test() {
       ),
     );
 
-    const awaiterScan = awaitScan(wallet, chain);
+    const awaiterScan = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),

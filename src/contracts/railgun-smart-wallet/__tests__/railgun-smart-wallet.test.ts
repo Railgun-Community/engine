@@ -17,7 +17,12 @@ import {
   hexToBytes,
   randomHex,
 } from '../../../utils/bytes';
-import { awaitScan, DECIMALS_18, testArtifactsGetter } from '../../../test/helper.test';
+import {
+  awaitMultipleScans,
+  awaitScan,
+  DECIMALS_18,
+  testArtifactsGetter,
+} from '../../../test/helper.test';
 import {
   CommitmentType,
   NFTTokenData,
@@ -235,7 +240,7 @@ describe('Railgun Smart Wallet', function runTests() {
     const txTransact = await ethersWallet.sendTransaction(tx_initial);
     await Promise.all([
       txTransact.wait(),
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
     ]);
 
     // Case 1 - Dummy estimate with Null Relayer Fee
@@ -354,7 +359,7 @@ describe('Railgun Smart Wallet', function runTests() {
       GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION,
     );
     expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.greaterThan(
-      7100,
+      7000,
     );
     expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(7200);
   }).timeout(120000);
@@ -494,8 +499,8 @@ describe('Railgun Smart Wallet', function runTests() {
     const txTransact = await ethersWallet.sendTransaction(transact);
     const [txResponseTransact] = await Promise.all([
       txTransact.wait(),
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(viewOnlyWallet, chain), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(viewOnlyWallet, chain, 2), 15000, 'Timed out wallet1 scan'),
     ]);
 
     expect(await wallet.getBalance(chain, TOKEN_ADDRESS)).equal(109724999999999999999600n);

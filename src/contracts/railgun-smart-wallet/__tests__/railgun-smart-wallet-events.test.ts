@@ -79,8 +79,8 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
     let foundShieldEvents = 0;
     await railgunSmartWalletContract.getHistoricalEvents(
       chain,
-      16819480,
-      16819500,
+      16820930,
+      16820940,
       async () => {
         foundShieldEvents += 1;
       },

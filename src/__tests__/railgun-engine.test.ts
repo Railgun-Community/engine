@@ -10,6 +10,7 @@ import { config } from '../test/config.test';
 import { abi as erc721Abi } from '../test/test-erc721-abi.test';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import {
+  awaitMultipleScans,
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
@@ -289,8 +290,8 @@ describe('RailgunEngine', function test() {
     const transactTx = await ethersWallet.sendTransaction(transact);
     await transactTx.wait();
     await Promise.all([
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
 
     // BALANCE = shielded amount - 300(decimals) - 1
@@ -411,7 +412,7 @@ describe('RailgunEngine', function test() {
     const transactTx = await ethersWallet.sendTransaction(transact);
     await Promise.all([
       transactTx.wait(),
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
     ]);
 
     const newBalance = await wallet.getBalance(chain, tokenAddress);
@@ -532,8 +533,8 @@ describe('RailgunEngine', function test() {
     const transactTx = await ethersWallet.sendTransaction(transact);
     await transactTx.wait();
     await Promise.all([
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
 
     // BALANCE = shielded amount - 300(decimals) - 1
@@ -760,8 +761,8 @@ describe('RailgunEngine', function test() {
     const transactTx = await ethersWallet.sendTransaction(transact);
     await transactTx.wait();
     await Promise.all([
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitScan(wallet2, chain), 15000, 'Timed out wallet2 scan'),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 4), 15000, 'Timed out wallet1 scan'),
+      promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
 
     const historyAfterTransfer = await wallet.getTransactionHistory(chain);
@@ -769,6 +770,12 @@ describe('RailgunEngine', function test() {
 
     const relayerFeeTokenData = getTokenDataERC20(tokenAddress);
     const relayerFeeTokenHash = getTokenDataHash(relayerFeeTokenData);
+
+    expect(historyAfterTransfer.length).to.equal(4, 'Expected 4 history records');
+    expect(historyAfterTransfer[3].transferTokenAmounts.length).to.equal(
+      1,
+      'Expected at least 1 transfer',
+    );
 
     expect(historyAfterTransfer[3].receiveTokenAmounts).deep.eq([]);
     expect(historyAfterTransfer[3].transferTokenAmounts).deep.eq([
