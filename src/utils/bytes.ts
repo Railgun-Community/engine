@@ -243,7 +243,7 @@ function fromUTF8String(string: string): string {
  * @param size - size of chunks
  * @returns chunked data
  */
-function chunk(data: BytesData, size = 32): string[] {
+function chunk(data: BytesData, size = ByteLength.UINT_256): string[] {
   // Convert to hex string
   const dataFormatted = hexlify(data);
 
