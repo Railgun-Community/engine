@@ -46,16 +46,20 @@ const createNullUTXO = (): TXO => {
   };
 };
 
+const getUTXOIDPosition = (utxo: TXO): string => {
+  return `${utxo.txid}-${utxo.position}`;
+};
+
 const createSpendingSolutionsForValue = (
   treeSortedBalances: TreeBalance[],
   value: bigint,
-  excludedUTXOIDs: string[],
+  excludedUTXOIDPositions: string[],
   spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator,
   updateOutputsCallback?: (amountLeft: bigint) => void,
 ): SpendingSolutionGroup[] => {
   EngineDebug.log('createSpendingSolutionsForValue');
   EngineDebug.log(`totalRequired: ${value.toString()}`);
-  EngineDebug.log(`excludedUTXOIDs: ${excludedUTXOIDs.join(', ')}`);
+  EngineDebug.log(`excludedUTXOIDPositions: ${excludedUTXOIDPositions.join(', ')}`);
   logTreeSortedBalancesMetadata(treeSortedBalances);
 
   if (value === 0n) {
@@ -78,14 +82,14 @@ const createSpendingSolutionsForValue = (
 
   treeSortedBalances.forEach((treeBalance, tree) => {
     while (amountLeft > 0n) {
-      const utxos = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDs);
+      const utxos = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDPositions);
       if (!utxos) {
         // No more solutions in this tree.
         break;
       }
 
       // Don't allow these UTXOs to be used twice.
-      excludedUTXOIDs.push(...utxos.map((utxo) => utxo.txid));
+      excludedUTXOIDPositions.push(...utxos.map(getUTXOIDPosition));
 
       // Decrement amount left by total spend in UTXOs.
       const totalSpend = calculateTotalSpend(utxos);
@@ -124,7 +128,7 @@ export const createSpendingSolutionGroupsForOutput = (
   treeSortedBalances: TreeBalance[],
   tokenOutput: TransactNote,
   remainingOutputs: TransactNote[],
-  excludedUTXOIDs: string[],
+  excludedUTXOIDPositions: string[],
 ): SpendingSolutionGroup[] => {
   const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
     tree: number,
@@ -155,7 +159,7 @@ export const createSpendingSolutionGroupsForOutput = (
   return createSpendingSolutionsForValue(
     treeSortedBalances,
     tokenOutput.value,
-    excludedUTXOIDs,
+    excludedUTXOIDPositions,
     spendingSolutionGroupGenerator,
     updateOutputsCallback,
   );
@@ -165,7 +169,7 @@ export const createSpendingSolutionGroupsForUnshield = (
   tokenData: TokenData,
   treeSortedBalances: TreeBalance[],
   unshieldValue: bigint,
-  excludedUTXOIDs: string[],
+  excludedUTXOIDPositions: string[],
 ): SpendingSolutionGroup[] => {
   const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
     tree: number,
@@ -184,7 +188,7 @@ export const createSpendingSolutionGroupsForUnshield = (
   return createSpendingSolutionsForValue(
     treeSortedBalances,
     unshieldValue,
-    excludedUTXOIDs,
+    excludedUTXOIDPositions,
     spendingSolutionGroupGenerator,
   );
 };
@@ -244,10 +248,12 @@ export const shouldAddMoreUTXOsForSolutionBatch = (
 export function findNextSolutionBatch(
   treeBalance: TreeBalance,
   totalRequired: bigint,
-  excludedUTXOIDs: string[],
+  excludedUTXOIDPositions: string[],
 ): Optional<TXO[]> {
   const removedZeroUTXOs = filterZeroUTXOs(treeBalance.utxos);
-  const filteredUTXOs = removedZeroUTXOs.filter((utxo) => !excludedUTXOIDs.includes(utxo.txid));
+  const filteredUTXOs = removedZeroUTXOs.filter(
+    (utxo) => !excludedUTXOIDPositions.includes(getUTXOIDPosition(utxo)),
+  );
   if (!filteredUTXOs.length) {
     // No more solutions in this tree.
     return undefined;

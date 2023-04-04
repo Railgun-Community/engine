@@ -255,7 +255,7 @@ export class TransactionBatch {
   ): SpendingSolutionGroup[] {
     const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
-    const excludedUTXOIDs: string[] = [];
+    const excludedUTXOIDPositions: string[] = [];
     const remainingTokenOutputs = [...tokenOutputs];
 
     while (remainingTokenOutputs.length > 0) {
@@ -265,7 +265,7 @@ export class TransactionBatch {
         treeSortedBalances,
         tokenOutput,
         remainingTokenOutputs,
-        excludedUTXOIDs,
+        excludedUTXOIDPositions,
       );
       if (!outputSpendingSolutionGroups.length) {
         break;
@@ -284,7 +284,7 @@ export class TransactionBatch {
         tokenData,
         treeSortedBalances,
         this.unshieldTotal(tokenHash),
-        excludedUTXOIDs,
+        excludedUTXOIDPositions,
       );
 
       if (!unshieldSpendingSolutionGroups.length) {

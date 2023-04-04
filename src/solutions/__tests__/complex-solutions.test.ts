@@ -31,6 +31,8 @@ const addressData3 = RailgunEngine.decodeAddress(
   '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
 );
 
+const MOCK_POSITION = 2;
+
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
 
@@ -62,7 +64,13 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
 
 const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
   const note = await createMockNote(addressData1, value);
-  return { txid, note } as TXO;
+  return {
+    txid,
+    note,
+    position: MOCK_POSITION,
+    tree: 0,
+    spendtxid: false,
+  };
 };
 
 describe('Solutions/Complex Solutions', () => {
@@ -128,12 +136,12 @@ describe('Solutions/Complex Solutions', () => {
     expect(solutionBatch1.map((utxo) => utxo.txid)).to.deep.equal(['d', 'e', 'a', 'b', 'c']);
 
     // More than balance. Exclude txids.
-    const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(180), ['a', 'b']);
+    const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(180), ['a-2', 'b-2']);
     assert(solutionBatch2 != null);
     expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['d', 'e', 'c']);
 
     // Less than balance. Exclude txids.
-    const solutionBatch3 = findNextSolutionBatch(treeBalance1, BigInt(9), ['a', 'b']);
+    const solutionBatch3 = findNextSolutionBatch(treeBalance1, BigInt(9), ['a-2', 'b-2']);
     assert(solutionBatch3 != null);
     expect(solutionBatch3.map((utxo) => utxo.txid)).to.deep.equal(['d']);
 
@@ -144,22 +152,22 @@ describe('Solutions/Complex Solutions', () => {
 
     // No utxos available.
     const solutionBatch5 = findNextSolutionBatch(treeBalance1, BigInt(120), [
-      'a',
-      'b',
-      'c',
-      'd',
-      'e',
-      'f',
+      'a-2',
+      'b-2',
+      'c-2',
+      'd-2',
+      'e-2',
+      'f-2',
     ]);
     expect(solutionBatch5).to.equal(undefined);
 
     // Only a 0 txo available.
     const solutionBatch6 = findNextSolutionBatch(treeBalance1, BigInt(120), [
-      'a',
-      'b',
-      'c',
-      'd',
-      'e',
+      'a-2',
+      'b-2',
+      'c-2',
+      'd-2',
+      'e-2',
     ]);
     expect(solutionBatch6).to.equal(undefined);
   });
@@ -201,7 +209,7 @@ describe('Solutions/Complex Solutions', () => {
     ]);
 
     // Case 2: Less than balance. Exclude smallest utxo.
-    const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(58), ['d']);
+    const solutionBatch2 = findNextSolutionBatch(treeBalance1, BigInt(58), ['d-2']);
     assert(solutionBatch2 != null);
     expect(solutionBatch2.map((utxo) => utxo.txid)).to.deep.equal(['e', 'a', 'b']);
   });

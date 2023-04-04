@@ -76,10 +76,10 @@ export class Memo {
       throw new Error('Metadata field 0 must be 16 bytes.');
     }
 
-    const metadataField1 = new Array<string>(32).fill('0').join(''); // 32 zeroes
+    const metadataField1 = new Array<string>(30).fill('0').join(''); // 32 zeroes
 
     let metadataField2 = WalletInfo.getEncodedWalletSource();
-    while (metadataField2.length < 32) {
+    while (metadataField2.length < 30) {
       metadataField2 = `0${metadataField2}`;
     }
 
