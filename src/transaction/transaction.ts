@@ -145,7 +145,7 @@ class Transaction {
     if (this.tokenOutputs.length > 4) {
       // Leave room for optional 5th change output.
       // TODO: Support circuits 1x10 and 1x13.
-      throw new Error('Too many transaction outputs.');
+      throw new Error('Cannot create a transaction with >4 non-change outputs.');
     }
 
     // Get values
@@ -332,6 +332,15 @@ class Transaction {
     );
 
     // Calculate proof
+    if (
+      inputs.valueIn.length === 1 &&
+      inputs.valueOut.length === 1 &&
+      inputs.valueIn[0] === 0n &&
+      inputs.valueOut[0] === 0n
+    ) {
+      throw new Error('Cannot prove transaction with null (zero value) inputs and outputs.');
+    }
+
     const { proof } = await prover.prove(publicInputs, inputs, progressCallback);
 
     return Transaction.generateTransaction(

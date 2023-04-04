@@ -4,18 +4,11 @@ import { TreeBalance } from '../models/wallet-types';
 import { VALID_INPUT_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from './utxos';
 import { TransactNote } from '../note/transact-note';
-import { TokenData } from '../models';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, formatToByteLength } from '../utils';
 
 export const CONSOLIDATE_BALANCE_ERROR =
   'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
-
-type SolutionSpendingGroupGenerator = (
-  tree: number,
-  solutionValue: bigint,
-  utxos: TXO[],
-) => SpendingSolutionGroup;
 
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
@@ -30,18 +23,44 @@ const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   });
 };
 
+const createSpendingSolutionGroup = (
+  output: TransactNote,
+  tree: number,
+  solutionValue: bigint,
+  utxos: TXO[],
+  isUnshield: boolean,
+): SpendingSolutionGroup => {
+  if (isUnshield) {
+    return {
+      spendingTree: tree,
+      utxos,
+      tokenOutputs: [],
+      unshieldValue: solutionValue,
+      tokenData: output.tokenData,
+    };
+  }
+
+  const solutionOutput = output.newProcessingNoteWithValue(solutionValue);
+  return {
+    spendingTree: tree,
+    utxos,
+    tokenOutputs: [solutionOutput],
+    unshieldValue: 0n,
+    tokenData: output.tokenData,
+  };
+};
+
 /**
  * UTXO with value 0n. All other fields are placeholders.
  * The circuit will ignore fields if value is 0.
  */
-const createNullUTXO = (): TXO => {
-  const nullTransactNote = TransactNote.createNullNote();
+const createNullUTXO = (nullNote: TransactNote): TXO => {
   const nullTxid = formatToByteLength('0x00', ByteLength.UINT_256, true);
   return {
     tree: 0,
     position: 100000, // out of bounds position - so we don't have collisions on nullifiers
     spendtxid: false,
-    note: nullTransactNote,
+    note: nullNote,
     txid: nullTxid,
   };
 };
@@ -50,39 +69,64 @@ const getUTXOIDPosition = (utxo: TXO): string => {
   return `${utxo.txid}-${utxo.position}`;
 };
 
-const createSpendingSolutionsForValue = (
+const replaceOrRemoveRemainingOutput = (remainingOutputs: TransactNote[], amountToFill: bigint) => {
+  // Remove the "used" output note.
+  const [deletedOutput] = remainingOutputs.splice(0, 1);
+
+  // Insert another remaining output note for any Amount Left.
+  if (amountToFill > 0n) {
+    remainingOutputs.splice(0, 0, deletedOutput.newProcessingNoteWithValue(amountToFill));
+  }
+};
+
+export const createSpendingSolutionsForValue = (
   treeSortedBalances: TreeBalance[],
-  value: bigint,
+  remainingOutputs: TransactNote[],
   excludedUTXOIDPositions: string[],
-  spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator,
-  updateOutputsCallback?: (amountLeft: bigint) => void,
+  isUnshield: boolean,
 ): SpendingSolutionGroup[] => {
+  // Primary output to find UTXOs for.
+  const primaryOutput = remainingOutputs[0];
+
+  // Secondary output is used as the backup note for any change.
+  const secondaryOutput = remainingOutputs.length > 1 ? remainingOutputs[1] : undefined;
+
+  const { value } = primaryOutput;
+
   EngineDebug.log('createSpendingSolutionsForValue');
   EngineDebug.log(`totalRequired: ${value.toString()}`);
   EngineDebug.log(`excludedUTXOIDPositions: ${excludedUTXOIDPositions.join(', ')}`);
   logTreeSortedBalancesMetadata(treeSortedBalances);
 
   if (value === 0n) {
-    if (updateOutputsCallback) {
-      updateOutputsCallback(0n);
-    }
+    replaceOrRemoveRemainingOutput(
+      remainingOutputs,
+      0n, // value
+    );
 
     // Create a 0-value spending solution group.
     // This is used when simulating a circuit transaction, without requiring an input note.
     // Helpful for initial dummy Relayer Fee with recursive gas estimator.
-    const nullUtxo = createNullUTXO();
+    const nullNote = primaryOutput.newProcessingNoteWithValue(0n);
+    const nullUtxo = createNullUTXO(nullNote);
     const utxos = [nullUtxo];
-    const nullSpendingSolutionGroup = spendingSolutionGroupGenerator(nullUtxo.tree, value, utxos);
+    const nullSpendingSolutionGroup = createSpendingSolutionGroup(
+      nullNote,
+      nullUtxo.tree,
+      nullNote.value,
+      utxos,
+      isUnshield,
+    );
     return [nullSpendingSolutionGroup];
   }
 
-  let amountLeft = value;
+  let amountToFill = value;
 
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
   treeSortedBalances.forEach((treeBalance, tree) => {
-    while (amountLeft > 0n) {
-      const utxos = findNextSolutionBatch(treeBalance, amountLeft, excludedUTXOIDPositions);
+    while (amountToFill > 0n) {
+      const utxos = findNextSolutionBatch(treeBalance, amountToFill, excludedUTXOIDPositions);
       if (!utxos) {
         // No more solutions in this tree.
         break;
@@ -95,115 +139,61 @@ const createSpendingSolutionsForValue = (
       const totalSpend = calculateTotalSpend(utxos);
 
       // Solution Value is the smaller of Solution spend value, or required output value.
-      const solutionValue = minBigInt(totalSpend, amountLeft);
+      const solutionValue = minBigInt(totalSpend, amountToFill);
 
       // Generate spending solution group, which will be used to create a Transaction.
-      const spendingSolutionGroup = spendingSolutionGroupGenerator(tree, solutionValue, utxos);
+      const spendingSolutionGroup = createSpendingSolutionGroup(
+        primaryOutput,
+        tree,
+        solutionValue,
+        utxos,
+        isUnshield,
+      );
       spendingSolutionGroups.push(spendingSolutionGroup);
 
-      amountLeft -= totalSpend;
+      amountToFill -= totalSpend;
 
-      // For "outputs" search only, we iteratively search through and update an array of output notes.
-      if (updateOutputsCallback) {
-        updateOutputsCallback(amountLeft);
-      }
+      replaceOrRemoveRemainingOutput(
+        remainingOutputs,
+        amountToFill, // value
+      );
 
-      if (amountLeft < 0n) {
-        // Break out from the forEach loop, and continue with next output.
+      if (amountToFill <= 0n) {
+        // Use any remaining change to fill the secondary output.
+        const change = 0n - amountToFill;
+        if (change > 0n && secondaryOutput && !isUnshield) {
+          let secondaryNoteValue: bigint;
+          let finalAmountToFill: bigint;
+          if (secondaryOutput.value < change) {
+            secondaryNoteValue = secondaryOutput.value;
+            finalAmountToFill = 0n;
+          } else {
+            secondaryNoteValue = change;
+            finalAmountToFill = secondaryOutput.value - change;
+          }
+          const secondaryNote = secondaryOutput.newProcessingNoteWithValue(secondaryNoteValue);
+
+          const finalSpendingSolutionGroup =
+            spendingSolutionGroups[spendingSolutionGroups.length - 1];
+          finalSpendingSolutionGroup.tokenOutputs.push(secondaryNote);
+
+          // NOTE: Primary output is already removed from remainingOutputs.
+          // This will remove the secondary output, or update the value.
+          replaceOrRemoveRemainingOutput(remainingOutputs, finalAmountToFill);
+        }
+
+        // Break out from the forEach loop, and continue Solution search with next output.
         return;
       }
     }
   });
 
-  if (amountLeft > 0n) {
+  if (amountToFill > 0n) {
     // Could not find enough solutions.
-    throw consolidateBalanceError();
+    throw new Error('Balance too low: requires additional UTXOs to satisfy spending solution.');
   }
 
   return spendingSolutionGroups;
-};
-
-export const createSpendingSolutionGroupsForOutput = (
-  tokenData: TokenData,
-  treeSortedBalances: TreeBalance[],
-  tokenOutput: TransactNote,
-  remainingOutputs: TransactNote[],
-  excludedUTXOIDPositions: string[],
-): SpendingSolutionGroup[] => {
-  const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
-    tree: number,
-    solutionValue: bigint,
-    utxos: TXO[],
-  ): SpendingSolutionGroup => {
-    const solutionOutput = tokenOutput.newProcessingNoteWithValue(solutionValue);
-
-    return {
-      spendingTree: tree,
-      utxos,
-      tokenOutputs: [solutionOutput],
-      unshieldValue: 0n,
-      tokenData,
-    };
-  };
-
-  const updateOutputsCallback = (amountLeft: bigint) => {
-    // Remove the "used" output note.
-    remainingOutputs.splice(0, 1);
-
-    if (amountLeft > 0n) {
-      // Add another remaining output note for any Amount Left.
-      remainingOutputs.unshift(tokenOutput.newProcessingNoteWithValue(amountLeft));
-    }
-  };
-
-  return createSpendingSolutionsForValue(
-    treeSortedBalances,
-    tokenOutput.value,
-    excludedUTXOIDPositions,
-    spendingSolutionGroupGenerator,
-    updateOutputsCallback,
-  );
-};
-
-export const createSpendingSolutionGroupsForUnshield = (
-  tokenData: TokenData,
-  treeSortedBalances: TreeBalance[],
-  unshieldValue: bigint,
-  excludedUTXOIDPositions: string[],
-): SpendingSolutionGroup[] => {
-  const spendingSolutionGroupGenerator: SolutionSpendingGroupGenerator = (
-    tree: number,
-    solutionValue: bigint,
-    utxos: TXO[],
-  ): SpendingSolutionGroup => {
-    return {
-      spendingTree: tree,
-      utxos,
-      tokenOutputs: [],
-      unshieldValue: solutionValue,
-      tokenData,
-    };
-  };
-
-  return createSpendingSolutionsForValue(
-    treeSortedBalances,
-    unshieldValue,
-    excludedUTXOIDPositions,
-    spendingSolutionGroupGenerator,
-  );
-};
-
-/**
- * Wallet has appropriate balance in aggregate, but no solutions remain.
- * This means these UTXOs were already excluded, which can only occur in multi-send situations with multiple destination addresses.
- *
- * Example: Out of a 600 balance (550 and 50), sending 100 each to 6 people becomes difficult, because of the constraints on the number of circuit outputs.
- * This would require a 1x6 for the 550 note, and a 1x1 for the 50 note. We do not support a 1x6 circuit.
- * TODO: A possible fix is to update the logic the 1x6 output sends as a 1x10 with 4 null (value 0) outputs.
- * This would be the way to support large multi-receiver transactions.
- */
-export const consolidateBalanceError = (): Error => {
-  throw new Error(CONSOLIDATE_BALANCE_ERROR);
 };
 
 /**
@@ -245,11 +235,11 @@ export const shouldAddMoreUTXOsForSolutionBatch = (
  * 3. Sort by smallest UTXO ascending.
  * 4. Add UTXOs to the batch until we hit the totalRequired value, or exceed the UTXO input count maximum.
  */
-export function findNextSolutionBatch(
+export const findNextSolutionBatch = (
   treeBalance: TreeBalance,
   totalRequired: bigint,
   excludedUTXOIDPositions: string[],
-): Optional<TXO[]> {
+): Optional<TXO[]> => {
   const removedZeroUTXOs = filterZeroUTXOs(treeBalance.utxos);
   const filteredUTXOs = removedZeroUTXOs.filter(
     (utxo) => !excludedUTXOIDPositions.includes(getUTXOIDPosition(utxo)),
@@ -260,6 +250,7 @@ export function findNextSolutionBatch(
   }
 
   // Use exact match if it exists.
+  // TODO: Use exact matches from any tree, not just the first tree examined.
   const exactMatch = filteredUTXOs.find((utxo) => utxo.note.value === totalRequired);
   if (exactMatch) {
     return [exactMatch];
@@ -288,4 +279,4 @@ export function findNextSolutionBatch(
   }
 
   return utxos;
-}
+};

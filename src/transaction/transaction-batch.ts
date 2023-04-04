@@ -5,11 +5,7 @@ import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
 import { AdaptID, TokenData, TokenType } from '../models/formatted-types';
-import {
-  consolidateBalanceError,
-  createSpendingSolutionGroupsForOutput,
-  createSpendingSolutionGroupsForUnshield,
-} from '../solutions/complex-solutions';
+import { createSpendingSolutionsForValue } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import EngineDebug from '../debugger/debugger';
 import {
@@ -259,36 +255,37 @@ export class TransactionBatch {
     const remainingTokenOutputs = [...tokenOutputs];
 
     while (remainingTokenOutputs.length > 0) {
-      const tokenOutput = remainingTokenOutputs[0];
-      const outputSpendingSolutionGroups = createSpendingSolutionGroupsForOutput(
-        tokenData,
+      const transactSpendingSolutionGroups = createSpendingSolutionsForValue(
         treeSortedBalances,
-        tokenOutput,
         remainingTokenOutputs,
         excludedUTXOIDPositions,
+        false, // isUnshield
       );
-      if (!outputSpendingSolutionGroups.length) {
+      if (!transactSpendingSolutionGroups.length) {
         break;
       }
-      spendingSolutionGroups.push(...outputSpendingSolutionGroups);
+      spendingSolutionGroups.push(...transactSpendingSolutionGroups);
     }
 
     if (remainingTokenOutputs.length > 0) {
-      // Could not find enough solutions.
-      throw consolidateBalanceError();
+      throw new Error('Could not find enough UTXOs to satisfy transfer.');
     }
 
     const tokenHash = getTokenDataHash(tokenData);
     if (this.unshieldDataMap[tokenHash]) {
-      const unshieldSpendingSolutionGroups = createSpendingSolutionGroupsForUnshield(
-        tokenData,
+      const value = this.unshieldTotal(tokenHash);
+      const nullUnshieldNote = TransactNote.createNullUnshieldNote(tokenData, value);
+      const unshieldTokenOutputs: TransactNote[] = [nullUnshieldNote];
+
+      const unshieldSpendingSolutionGroups = createSpendingSolutionsForValue(
         treeSortedBalances,
-        this.unshieldTotal(tokenHash),
+        unshieldTokenOutputs,
         excludedUTXOIDPositions,
+        true, // isUnshield
       );
 
       if (!unshieldSpendingSolutionGroups.length) {
-        throw consolidateBalanceError();
+        throw new Error('Could not find enough UTXOs to satisfy unshield.');
       }
 
       spendingSolutionGroups.push(...unshieldSpendingSolutionGroups);

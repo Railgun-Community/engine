@@ -2,7 +2,7 @@ import { assert, expect } from 'chai';
 import { randomBytes } from 'ethers/lib/utils';
 import {
   CONSOLIDATE_BALANCE_ERROR,
-  createSpendingSolutionGroupsForOutput,
+  createSpendingSolutionsForValue,
   findNextSolutionBatch,
   nextNullifierTarget,
   shouldAddMoreUTXOsForSolutionBatch,
@@ -73,7 +73,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
   };
 };
 
-describe('Solutions/Complex Solutions', () => {
+describe.only('Solutions/Complex Solutions', () => {
   it('Should get valid next nullifier targets', () => {
     expect(nextNullifierTarget(0)).to.equal(1);
     expect(nextNullifierTarget(1)).to.equal(2);
@@ -245,12 +245,11 @@ describe('Solutions/Complex Solutions', () => {
 
     // Case 0.
     const remainingOutputs0: TransactNote[] = [await createMockNote(addressData1, 0n)];
-    const spendingSolutionGroups0 = createSpendingSolutionGroupsForOutput(
-      tokenData,
+    const spendingSolutionGroups0 = createSpendingSolutionsForValue(
       sortedTreeBalances,
-      remainingOutputs0[0],
       remainingOutputs0,
       [],
+      false, // isUnshield
     );
     // Ensure the 0n output was removed.
     expect(remainingOutputs0.map((note) => note.value)).to.deep.equal([]);
@@ -281,15 +280,15 @@ describe('Solutions/Complex Solutions', () => {
       await createMockNote(addressData2, 70n),
       await createMockNote(addressData3, 60n),
     ];
-    const spendingSolutionGroups1 = createSpendingSolutionGroupsForOutput(
-      tokenData,
+    const spendingSolutionGroups1 = createSpendingSolutionsForValue(
       sortedTreeBalances,
-      remainingOutputs1[0],
       remainingOutputs1,
       [],
+      false, // isUnshield
     );
     // Ensure the 79n output was removed.
-    expect(remainingOutputs1.map((note) => note.value)).to.deep.equal([BigInt(70), BigInt(60)]);
+    // 69n output is 70n - 1n ... change from secondary output.
+    expect(remainingOutputs1.map((note) => note.value)).to.deep.equal([69n, 60n]);
     const extractedData1 = extractSpendingSolutionGroupsData(spendingSolutionGroups1);
     expect(extractedData1).to.deep.equal([
       {
@@ -302,8 +301,8 @@ describe('Solutions/Complex Solutions', () => {
       {
         utxoTxids: ['d', 'e', 'a'], // 60 total
         utxoValues: [10n, 20n, 30n],
-        outputValues: [59n],
-        outputAddressDatas: [addressData1],
+        outputValues: [59n, 1n],
+        outputAddressDatas: [addressData1, addressData2],
         tokenData,
       },
     ]);
@@ -314,15 +313,14 @@ describe('Solutions/Complex Solutions', () => {
       await createMockNote(addressData2, BigInt(70)),
       await createMockNote(addressData3, BigInt(60)),
     ];
-    const spendingSolutionGroups2 = createSpendingSolutionGroupsForOutput(
-      tokenData,
+    const spendingSolutionGroups2 = createSpendingSolutionsForValue(
       sortedTreeBalances,
-      remainingOutputs2[0],
       remainingOutputs2,
       [],
+      false, // isUnshield
     );
     // Ensure the 150 output was removed.
-    expect(remainingOutputs2.map((note) => note.value)).to.deep.equal([BigInt(70), BigInt(60)]);
+    expect(remainingOutputs2.map((note) => note.value)).to.deep.equal([50n, 60n]);
     const extractedData2 = extractSpendingSolutionGroupsData(spendingSolutionGroups2);
     expect(extractedData2).to.deep.equal([
       {
@@ -335,8 +333,8 @@ describe('Solutions/Complex Solutions', () => {
       {
         utxoTxids: ['d', 'e', 'a', 'b', 'c'],
         utxoValues: [10n, 20n, 30n, 40n, 50n], // 150 total
-        outputValues: [130n],
-        outputAddressDatas: [addressData1],
+        outputValues: [130n, 20n],
+        outputAddressDatas: [addressData1, addressData2],
         tokenData,
       },
     ]);
@@ -346,24 +344,23 @@ describe('Solutions/Complex Solutions', () => {
     // If we hit this case, there is a consolidate balance error.
     const remainingOutputs3: TransactNote[] = [await createMockNote(addressData1, BigInt(500))];
     expect(() =>
-      createSpendingSolutionGroupsForOutput(
-        tokenData,
+      createSpendingSolutionsForValue(
         sortedTreeBalances,
-        remainingOutputs3[0],
         remainingOutputs3,
         [],
+        false, // isUnshield
       ),
-    ).to.throw(CONSOLIDATE_BALANCE_ERROR);
+    ).to.throw('Balance too low: requires additional UTXOs to satisfy spending solution.');
   });
 
   it('Should create complex spending solution groups for transaction batch', async () => {
     const treeBalance0: TreeBalance = {
-      balance: BigInt(20),
+      balance: BigInt(100),
       tokenData,
       utxos: [
         await createMockTXO('aa', BigInt(20)),
         await createMockTXO('ab', BigInt(0)),
-        await createMockTXO('ac', BigInt(0)),
+        await createMockTXO('ac', BigInt(80)), // 80 on this one to test a perfect match
       ],
     };
     const treeBalance1: TreeBalance = {
@@ -387,6 +384,7 @@ describe('Solutions/Complex Solutions', () => {
     // Case 1.
     const transactionBatch1 = new TransactionBatch(CHAIN);
     const outputs1: TransactNote[] = [
+      await createMockNote(addressData1, 80n),
       await createMockNote(addressData1, 92n),
       await createMockNote(addressData2, 70n),
       await createMockNote(addressData3, 65n),
@@ -401,6 +399,13 @@ describe('Solutions/Complex Solutions', () => {
     const extractedData1 = extractSpendingSolutionGroupsData(spendingSolutionGroups1);
     expect(extractedData1).to.deep.equal([
       {
+        utxoTxids: ['ac'],
+        utxoValues: [80n], // exact match
+        outputValues: [80n],
+        outputAddressDatas: [addressData1],
+        tokenData,
+      },
+      {
         utxoTxids: ['aa'],
         utxoValues: [20n],
         outputValues: [20n],
@@ -410,21 +415,21 @@ describe('Solutions/Complex Solutions', () => {
       {
         utxoTxids: ['d', 'e', 'a', 'b'],
         utxoValues: [10n, 20n, 30n, 40n], // 100 total
-        outputValues: [72n],
-        outputAddressDatas: [addressData1],
+        outputValues: [72n, 28n],
+        outputAddressDatas: [addressData1, addressData2],
         tokenData,
       },
       {
-        utxoTxids: ['g'],
-        utxoValues: [70n], // 70 total - exact match
-        outputValues: [70n],
-        outputAddressDatas: [addressData2],
+        utxoTxids: ['c'],
+        utxoValues: [50n],
+        outputValues: [42n, 8n],
+        outputAddressDatas: [addressData2, addressData3],
         tokenData,
       },
       {
-        utxoTxids: ['c', 'f'],
-        utxoValues: [50n, 60n], // 110 total
-        outputValues: [65n],
+        utxoTxids: ['f'],
+        utxoValues: [60n],
+        outputValues: [57n],
         outputAddressDatas: [addressData3],
         tokenData,
       },

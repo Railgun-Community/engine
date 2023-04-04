@@ -15,6 +15,13 @@ export function findExactSolutionsOverTargetValue(
   // Remove utxos with 0 value.
   const filteredUTXOs: TXO[] = filterZeroUTXOs(treeBalance.utxos);
 
+  // Use exact match if it exists.
+  // TODO: Use exact matches from any tree, not just the first tree examined.
+  const exactMatch = filteredUTXOs.find((utxo) => utxo.note.value === totalRequired);
+  if (exactMatch) {
+    return [exactMatch];
+  }
+
   // Sort UTXOs by smallest size
   sortUTXOsByAscendingValue(filteredUTXOs);
 

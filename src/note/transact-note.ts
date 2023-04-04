@@ -590,10 +590,10 @@ export class TransactNote {
   }
 
   /**
-   * TransactNote with value 0n. All other fields are placeholders.
-   * The circuit will ignore fields if input note value is 0.
+   * TransactNote with tokenData and value, for a mimic Unshield Note during solution processing.
+   * All other fields are placeholders.
    */
-  static createNullNote(): TransactNote {
+  static createNullUnshieldNote(tokenData: TokenData, value: bigint): TransactNote {
     const nullAddressData: AddressData = {
       masterPublicKey: 0n,
       viewingPublicKey: nToBytes(0n, ByteLength.UINT_256),
@@ -602,8 +602,8 @@ export class TransactNote {
       nullAddressData,
       undefined, // senderAddressData
       randomHex(16),
-      0n, // value
-      getTokenDataERC20('0x00'),
+      value,
+      tokenData,
       '', // annotationData
       undefined, // memoText
       undefined, // shieldFee

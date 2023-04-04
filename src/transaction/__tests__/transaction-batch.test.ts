@@ -18,7 +18,6 @@ import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { RailgunEngine } from '../../railgun-engine';
-import { CONSOLIDATE_BALANCE_ERROR } from '../../solutions/complex-solutions';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -195,16 +194,21 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs3.map((tx) => tx.commitments.length)).to.deep.equal([5]);
     expect(txs3.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([0n]);
 
-    // TODO: Unhandled case for large number of output receivers.
-    // Fix by using change from one note for the next output receiver... and so on.
-    // Ie. Multiple receivers per circuit
+    // Ex: large number of output receivers per circuit
+    // The solutions should use change from one note for the next output receiver... and so on.
     transactionBatch.resetOutputs();
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(5n * shieldValue + 1n)); // Should use all 6 notes, with a large 'change' output.
     transactionBatch.addOutput(await makeNote(1n)); // Can't add another note, because all are used up.
-    await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
-    ).to.eventually.be.rejectedWith(CONSOLIDATE_BALANCE_ERROR);
+    const txs4 = await transactionBatch.generateTransactions(
+      prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
+    expect(txs4.map((tx) => tx.commitments.length)).to.deep.equal([1, 3]);
+    expect(txs4.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([0n, 0n]);
   });
 
   it('[HH] Should validate transaction batch outputs w/ unshields', async function test() {
@@ -213,10 +217,16 @@ describe('Transaction/Transaction Batch', function run() {
       return;
     }
 
-    // TODO: This is failing (because 1:1 circuit with null input, output?)
-    // transactionBatch.resetOutputs();
-    // transactionBatch.resetUnshieldData();
-    // transactionBatch.addOutput(await makeNote(0n));
+    transactionBatch.resetOutputs();
+    transactionBatch.resetUnshieldData();
+    transactionBatch.addOutput(await makeNote(0n));
+    await expect(
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
+    ).to.eventually.be.rejectedWith(
+      'Cannot prove transaction with null (zero value) inputs and outputs.',
+      'Null input, null output notes should fail.',
+    );
+    // If this case is ever fixed, we can use these assertions instead:
     // const txs0 = await transactionBatch.generateTransactions(
     //   prover,
     //   wallet,
