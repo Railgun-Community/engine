@@ -7,9 +7,6 @@ import { TransactNote } from '../note/transact-note';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, formatToByteLength } from '../utils';
 
-export const CONSOLIDATE_BALANCE_ERROR =
-  'This transaction requires a complex circuit for multi-sending, which is not supported by RAILGUN at this time. Select a different Relayer fee token or send tokens to a single address to resolve.';
-
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
   treeSortedBalances.forEach((treeBalance) => {

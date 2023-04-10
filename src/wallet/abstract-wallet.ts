@@ -674,6 +674,21 @@ abstract class AbstractWallet extends EventEmitter {
     );
   }
 
+  private static getPossibleChangeTokenAmounts(
+    historyItem: TransactionHistoryEntry,
+  ): TransactionHistoryTokenAmount[] {
+    switch (historyItem.version) {
+      case TransactionHistoryItemVersion.Unknown:
+      case TransactionHistoryItemVersion.Legacy:
+        // Legacy versions don't have change token amounts.
+        return historyItem.transferTokenAmounts;
+      case TransactionHistoryItemVersion.UpdatedAug2022:
+      case TransactionHistoryItemVersion.UpdatedNov2022:
+        return historyItem.changeTokenAmounts;
+    }
+    throw new Error('Unrecognized history item version');
+  }
+
   /**
    * Gets transactions history
    * @param chain - chain type/id to get transaction history for
@@ -696,7 +711,8 @@ abstract class AbstractWallet extends EventEmitter {
       history.forEach((existingHistoryItem) => {
         if (receiveItem.txid === existingHistoryItem.txid) {
           alreadyExistsInHistory = true;
-          const { changeTokenAmounts } = existingHistoryItem;
+          const changeTokenAmounts =
+            AbstractWallet.getPossibleChangeTokenAmounts(existingHistoryItem);
           receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
             const matchingChangeOutput = changeTokenAmounts.find(
               (ta) =>

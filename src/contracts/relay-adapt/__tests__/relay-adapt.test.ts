@@ -328,7 +328,7 @@ describe('Relay Adapt', function test() {
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
-    // TODO: Fix this assertion. How much gas is used?
+    // TODO: Fix this test assertion. How much gas is used?
     // const postEthBalance = await ethersWallet.getBalance();
     // expect(preEthBalance.toBigInt() - txReceipt.gasUsed.toBigInt() + 300n).to.equal(
     //   postEthBalance.toBigInt(),
@@ -398,7 +398,7 @@ describe('Relay Adapt', function test() {
 
     // 3. Create the cross contract calls.
     // Do nothing for now.
-    // TODO: Add an NFT interaction via cross contract call.
+    // TODO: Add a test NFT interaction via cross contract call.
     const crossContractCalls: PopulatedTransaction[] = [];
 
     // 4. Create shield inputs.

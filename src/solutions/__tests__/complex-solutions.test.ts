@@ -1,7 +1,6 @@
 import { assert, expect } from 'chai';
 import { randomBytes } from 'ethers/lib/utils';
 import {
-  CONSOLIDATE_BALANCE_ERROR,
   createSpendingSolutionsForValue,
   findNextSolutionBatch,
   nextNullifierTarget,
