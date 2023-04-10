@@ -872,9 +872,9 @@ abstract class AbstractWallet extends EventEmitter {
           noteAnnotationData,
           memoText: note.memoText,
         };
-        const isTransfer =
-          !noteAnnotationData || noteAnnotationData.outputType === OutputType.Transfer;
-        if (isTransfer) {
+        const isNonLegacyTransfer =
+          noteAnnotationData && noteAnnotationData.outputType === OutputType.Transfer;
+        if (isNonLegacyTransfer) {
           (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
             note.receiverAddressData,
           );
