@@ -719,7 +719,23 @@ abstract class AbstractWallet extends EventEmitter {
                 ta.tokenHash === receiveTokenAmount.tokenHash &&
                 ta.amount === receiveTokenAmount.amount,
             );
-            if (!matchingChangeOutput) {
+            if (
+              matchingChangeOutput &&
+              [
+                TransactionHistoryItemVersion.Unknown,
+                TransactionHistoryItemVersion.Legacy,
+              ].includes(existingHistoryItem.version)
+            ) {
+              // Remove change output (stored in transferTokenAmounts in legacy history items)
+              // Move to change outputs
+              const index = existingHistoryItem.transferTokenAmounts.findIndex(
+                (ta) =>
+                  ta.tokenHash === receiveTokenAmount.tokenHash &&
+                  ta.amount === receiveTokenAmount.amount,
+              );
+              existingHistoryItem.transferTokenAmounts.splice(index, 1);
+              existingHistoryItem.changeTokenAmounts.push(matchingChangeOutput);
+            } else if (!matchingChangeOutput) {
               // Receive token amount is not a "change" output.
               // Add it to the history item.
               existingHistoryItem.receiveTokenAmounts.push(receiveTokenAmount);
