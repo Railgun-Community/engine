@@ -31,3 +31,4 @@ release/
 corpus
 crash-*
 *.tgz
+.turbo
