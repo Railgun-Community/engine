@@ -1,8 +1,9 @@
 name: Changesets
 on:
   push:
-    branches:
-      - release dao/mono
+    branches: [main, release]
+  pull_request:
+    branches: [main]
 env:
   CI: true
   PNPM_CACHE_FOLDER: .pnpm-store
