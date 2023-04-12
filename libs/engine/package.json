@@ -1,6 +1,6 @@
 {
   "name": "@railgun-community/engine",
-  "version": "4.2.5-test",
+  "version": "4.2.6",
   "description": "Wallet framework for RAILGUN smart contracts and private balances on Ethereum and more.",
   "author": "RAILGUN Contributors",
   "license": "MIT",
@@ -80,7 +80,7 @@
     "mocha": "^10.0.0",
     "nyc": "^15.1.0",
     "prettier": "^2.7.1",
-    "railgun-community-circuit-artifacts": "https://npm.railgun.org/railgun-community-circuit-artifacts-0.0.1.tgz",
+    "railgun-community-circuit-artifacts": "https://npm-railgun.b-cdn.net/railgun-community-circuit-artifacts-0.0.1.tgz",
     "rimraf": "^3.0.2",
     "snarkjs": "^0.5.0",
     "ts-node": "^10.9.1",
