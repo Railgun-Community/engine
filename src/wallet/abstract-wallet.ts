@@ -890,12 +890,12 @@ abstract class AbstractWallet extends EventEmitter {
       const tokenAddress = unshieldEvent.tokenAddress.toLowerCase();
       if (txidTransactionMap[unshieldEvent.txid]) {
         const existingUnshieldEvents = txidTransactionMap[unshieldEvent.txid].unshieldEvents;
-        const existingUnshieldTokens = existingUnshieldEvents.map((existingUnshieldEvent) =>
-          existingUnshieldEvent.tokenAddress.toLowerCase(),
+        const existingUnshieldToken = existingUnshieldEvents.find(
+          (token) => token.tokenAddress.toLowerCase() === tokenAddress,
         );
-        if (existingUnshieldTokens.includes(tokenAddress)) {
-          // TODO: Add amount.
-          // Token already added to unshieldEvents.
+        if (existingUnshieldToken) {
+          // Add amount to existing unshield event.
+          existingUnshieldToken.amount += unshieldEvent.amount;
           return;
         }
         txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
