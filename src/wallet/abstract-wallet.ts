@@ -4,6 +4,7 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
+import { BigNumber } from '@ethersproject/bignumber';
 import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
@@ -895,7 +896,9 @@ abstract class AbstractWallet extends EventEmitter {
         );
         if (existingUnshieldToken) {
           // Add amount to existing unshield event.
-          existingUnshieldToken.amount += unshieldEvent.amount;
+          existingUnshieldToken.amount = BigNumber.from(existingUnshieldToken.amount)
+            .add(unshieldEvent.amount)
+            .toHexString();
           return;
         }
         txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
