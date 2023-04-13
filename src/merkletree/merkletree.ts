@@ -570,7 +570,7 @@ class MerkleTree {
 
     if (this.processingWriteQueueTrees[treeIndex]) {
       EngineDebug.log(
-        '[processWriteQueueForTree] Already processing writeQueue. Killing re-process.',
+        `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}] Already processing writeQueue. Killing re-process.`,
       );
       return;
     }
@@ -585,6 +585,8 @@ class MerkleTree {
 
       currentTreeLength = await this.getTreeLength(treeIndex);
 
+      const processWriteQueuePrefix = `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}]`;
+
       try {
         const processedAny = await this.processWriteQueue(
           treeIndex,
@@ -592,12 +594,12 @@ class MerkleTree {
           processingGroupSize,
         );
         if (!processedAny) {
-          EngineDebug.log('[processWriteQueueForTree] No more events to process.');
+          EngineDebug.log(`${processWriteQueuePrefix} No more events to process.`);
           break;
         }
       } catch (err) {
         if (!(err instanceof Error)) {
-          EngineDebug.log('[processWriteQueueForTree] Unknown error found.');
+          EngineDebug.log(`${processWriteQueuePrefix} Unknown error found.`);
           return;
         }
         const ignoreInTests = true;
@@ -606,19 +608,19 @@ class MerkleTree {
           const nextProcessingGroupSize = MerkleTree.nextProcessingGroupSize(processingGroupSize);
           if (nextProcessingGroupSize) {
             EngineDebug.log(
-              `[processWriteQueueForTree] Invalid merkleroot found. Processing with group size ${nextProcessingGroupSize}.`,
+              `${processWriteQueuePrefix} Invalid merkleroot found. Processing with group size ${nextProcessingGroupSize}.`,
             );
             processingGroupSize = nextProcessingGroupSize;
           } else {
             EngineDebug.log(
-              '[processWriteQueueForTree] Unable to process more events. Invalid merkleroot found.',
+              `${processWriteQueuePrefix} Unable to process more events. Invalid merkleroot found.`,
             );
             break;
           }
         } else {
           // Unknown error.
           EngineDebug.log(
-            '[processWriteQueueForTree] Unable to process more events. Unknown error.',
+            `${processWriteQueuePrefix} Unable to process more events. Unknown error.`,
           );
           break;
         }
@@ -669,7 +671,9 @@ class MerkleTree {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
     if (!nextCommitmentGroup) {
-      EngineDebug.log(`[processWriteQueue] No commitment group for index ${currentTreeLength}`);
+      EngineDebug.log(
+        `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
+      );
       return false;
     }
 
@@ -719,7 +723,9 @@ class MerkleTree {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
-    EngineDebug.log(`[queueLeaves] treeLength ${treeLength}, startingIndex ${startingIndex}`);
+    EngineDebug.log(
+      `[queueLeaves: ${this.chain.type}:${this.chain.id}] treeLength ${treeLength}, startingIndex ${startingIndex}`,
+    );
 
     // Ensure write queue for tree exists
     if (!this.writeQueue[tree]) {

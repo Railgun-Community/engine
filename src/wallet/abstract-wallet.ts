@@ -894,6 +894,7 @@ abstract class AbstractWallet extends EventEmitter {
           existingUnshieldEvent.tokenAddress.toLowerCase(),
         );
         if (existingUnshieldTokens.includes(tokenAddress)) {
+          // TODO: Add amount.
           // Token already added to unshieldEvents.
           return;
         }
