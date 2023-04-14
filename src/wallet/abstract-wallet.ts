@@ -651,7 +651,10 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get spent commitments for
    * @returns SentCommitment list
    */
-  async getSentCommitments(chain: Chain, startingBlock?: number): Promise<SentCommitment[]> {
+  async getSentCommitments(
+    chain: Chain,
+    startingBlock: Optional<number>,
+  ): Promise<SentCommitment[]> {
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletSentCommitmentDBPrefix(chain);
@@ -715,7 +718,7 @@ abstract class AbstractWallet extends EventEmitter {
    */
   async getTransactionHistory(
     chain: Chain,
-    startingBlock?: number,
+    startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntry[]> {
     const TXOs = await this.TXOs(chain);
     const filteredTXOs = AbstractWallet.filterTXOsByBlockNumber(TXOs, startingBlock);
@@ -784,7 +787,7 @@ abstract class AbstractWallet extends EventEmitter {
     return history;
   }
 
-  private static filterTXOsByBlockNumber(txos: TXO[], startingBlock?: number) {
+  private static filterTXOsByBlockNumber(txos: TXO[], startingBlock: Optional<number>) {
     if (startingBlock == null) {
       return txos;
     }
@@ -896,7 +899,7 @@ abstract class AbstractWallet extends EventEmitter {
   async getTransactionSpendHistory(
     chain: Chain,
     filteredTXOs: TXO[],
-    startingBlock?: number,
+    startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntrySpent[]> {
     const [allUnshieldEvents, sentCommitments] = await Promise.all([
       this.getAllUnshieldEventsFromSpentNullifiers(chain, filteredTXOs),

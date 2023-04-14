@@ -302,7 +302,7 @@ describe('RailgunEngine', function test() {
     expect(newBalance2).to.equal(BigInt(1));
 
     // check the transactions log
-    const history = await wallet.getTransactionHistory(chain);
+    const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);
 
     const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
@@ -423,7 +423,7 @@ describe('RailgunEngine', function test() {
     expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
 
     // check the transactions log
-    const history = await wallet.getTransactionHistory(chain);
+    const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);
 
     const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
@@ -549,7 +549,7 @@ describe('RailgunEngine', function test() {
     expect(newBalance2).to.equal(BigInt(11));
 
     // check the transactions log
-    const history = await wallet.getTransactionHistory(chain);
+    const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);
 
     const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
@@ -618,7 +618,7 @@ describe('RailgunEngine', function test() {
     ]);
     expect(history[1].unshieldTokenAmounts).deep.eq([]);
 
-    const history2 = await wallet2.getTransactionHistory(chain);
+    const history2 = await wallet2.getTransactionHistory(chain, undefined);
     expect(history2.length).to.equal(1);
     expect(history2[0].receiveTokenAmounts).deep.eq([
       {
@@ -668,7 +668,7 @@ describe('RailgunEngine', function test() {
       '1',
     );
 
-    const history = await wallet.getTransactionHistory(chain);
+    const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(1);
 
     const tokenDataNFT0 = getTokenDataNFT(nft.address, TokenType.ERC721, BigInt(0).toString());
@@ -769,7 +769,7 @@ describe('RailgunEngine', function test() {
       promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
 
-    const historyAfterTransfer = await wallet.getTransactionHistory(chain);
+    const historyAfterTransfer = await wallet.getTransactionHistory(chain, undefined);
     expect(historyAfterTransfer.length).to.equal(4);
 
     const relayerFeeTokenData = getTokenDataERC20(tokenAddress);

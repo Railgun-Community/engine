@@ -317,7 +317,7 @@ export class TransactNote {
     isSentNote: boolean,
     isLegacyDecryption: boolean,
     tokenDataGetter: TokenDataGetter,
-    blockNumber: number,
+    blockNumber: Optional<number>,
   ): Promise<TransactNote> {
     const ciphertextDataWithMemoText = [...noteCiphertext.data, memo];
     const fullCiphertext: Ciphertext = {
@@ -376,7 +376,7 @@ export class TransactNote {
     isSentNote: boolean,
     isLegacyDecryption: boolean,
     tokenDataGetter: TokenDataGetter,
-    blockNumber: number,
+    blockNumber: Optional<number>,
   ) {
     // Decrypted Values:
     // 0: Master Public Key (Encoded)
