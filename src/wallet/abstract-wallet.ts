@@ -821,6 +821,7 @@ abstract class AbstractWallet extends EventEmitter {
       if (!txidTransactionMap[txid]) {
         txidTransactionMap[txid] = {
           txid,
+          blockNumber: note.blockNumber,
           receiveTokenAmounts: [],
         };
       }
@@ -912,6 +913,7 @@ abstract class AbstractWallet extends EventEmitter {
         if (!txidTransactionMap[txid]) {
           txidTransactionMap[txid] = {
             txid,
+            blockNumber: note.blockNumber,
             tokenAmounts: [],
             unshieldEvents: [],
             version: AbstractWallet.getTransactionHistoryItemVersion(
@@ -950,6 +952,7 @@ abstract class AbstractWallet extends EventEmitter {
         // There is no commitment (or tokenAmounts) for this kind of unshield transaction.
         txidTransactionMap[unshieldEvent.txid] = {
           txid: unshieldEvent.txid,
+          blockNumber: unshieldEvent.blockNumber,
           unshieldEvents: [unshieldEvent],
           tokenAmounts: [],
           version: TransactionHistoryItemVersion.UpdatedNov2022,
@@ -976,7 +979,7 @@ abstract class AbstractWallet extends EventEmitter {
       Object.values(txidTransactionMap);
 
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
-      ({ txid, tokenAmounts, unshieldEvents, version }) => {
+      ({ txid, blockNumber, tokenAmounts, unshieldEvents, version }) => {
         const transferTokenAmounts: TransactionHistoryTransferTokenAmount[] = [];
         let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
@@ -1022,6 +1025,7 @@ abstract class AbstractWallet extends EventEmitter {
 
         const historyEntry: TransactionHistoryEntrySpent = {
           txid,
+          blockNumber,
           transferTokenAmounts,
           relayerFeeTokenAmount,
           changeTokenAmounts,
