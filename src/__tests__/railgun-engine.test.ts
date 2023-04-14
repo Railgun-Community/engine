@@ -371,6 +371,10 @@ describe('RailgunEngine', function test() {
         unshieldFee: BigNumber.from('750000000000000000').toHexString(),
       },
     ]);
+
+    // Check that no history exists for a high starting block.
+    const historyHighStartingBlock = await wallet.getTransactionHistory(chain, 10000000);
+    expect(historyHighStartingBlock.length).to.equal(0);
   }).timeout(90000);
 
   it('[HH] Should shield, max-unshield without relayer, and pull formatted spend/receive transaction history', async function run() {

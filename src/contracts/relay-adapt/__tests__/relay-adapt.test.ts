@@ -673,7 +673,7 @@ describe('Relay Adapt', function test() {
     );
 
     // Perform scans: Unshield and Shield
-    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
     await expect(scansAwaiter).to.be.fulfilled;
@@ -836,7 +836,7 @@ describe('Relay Adapt', function test() {
     );
 
     // Perform scans: Unshield and Shield
-    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
@@ -1002,7 +1002,7 @@ describe('Relay Adapt', function test() {
     );
 
     // Perform scans: Unshield and Shield
-    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
     await expect(scansAwaiter).to.be.fulfilled;

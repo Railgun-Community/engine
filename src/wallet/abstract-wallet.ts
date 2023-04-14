@@ -275,6 +275,7 @@ abstract class AbstractWallet extends EventEmitter {
     isSentNote: boolean,
     isLegacyDecryption: boolean,
     tokenDataGetter: TokenDataGetter,
+    blockNumber: number,
   ): Promise<Optional<TransactNote>> {
     try {
       const decrypted = await TransactNote.decrypt(
@@ -289,6 +290,7 @@ abstract class AbstractWallet extends EventEmitter {
         isSentNote,
         isLegacyDecryption,
         tokenDataGetter,
+        blockNumber,
       );
       return decrypted;
     } catch (err) {
@@ -353,6 +355,7 @@ abstract class AbstractWallet extends EventEmitter {
             false, // isSentNote
             false, // isLegacyDecryption
             tokenDataGetter,
+            leaf.blockNumber,
           );
           serializedNoteReceive = noteReceive ? noteReceive.serialize() : undefined;
         }
@@ -372,6 +375,7 @@ abstract class AbstractWallet extends EventEmitter {
             true, // isSentNote
             false, // isLegacyDecryption
             tokenDataGetter,
+            leaf.blockNumber,
           );
           serializedNoteSend = noteSend ? noteSend.serialize() : undefined;
         }
@@ -399,6 +403,7 @@ abstract class AbstractWallet extends EventEmitter {
             senderAddress: undefined,
             memoText: undefined,
             shieldFee: commitment.fee,
+            blockNumber: leaf.blockNumber,
           };
 
           noteReceive = await TransactNote.deserialize(
@@ -436,6 +441,7 @@ abstract class AbstractWallet extends EventEmitter {
             false, // isSentNote
             true, // isLegacyDecryption
             tokenDataGetter,
+            leaf.blockNumber,
           );
           serializedNoteReceive = noteReceive
             ? noteReceive.serializeLegacy(viewingPrivateKey)
@@ -454,6 +460,7 @@ abstract class AbstractWallet extends EventEmitter {
             true, // isSentNote
             true, // isLegacyDecryption
             tokenDataGetter,
+            leaf.blockNumber,
           );
           serializedNoteSend = noteSend ? noteSend.serializeLegacy(viewingPrivateKey) : undefined;
         }
@@ -469,6 +476,7 @@ abstract class AbstractWallet extends EventEmitter {
           recipientAddress: walletAddress,
           memoField: [],
           memoText: undefined,
+          blockNumber: leaf.blockNumber,
         };
         try {
           noteReceive = await TransactNote.deserialize(
@@ -643,7 +651,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get spent commitments for
    * @returns SentCommitment list
    */
-  async getSentCommitments(chain: Chain): Promise<SentCommitment[]> {
+  async getSentCommitments(chain: Chain, startingBlock?: number): Promise<SentCommitment[]> {
     const vpk = this.getViewingKeyPair().privateKey;
 
     const namespace = this.getWalletSentCommitmentDBPrefix(chain);
@@ -652,8 +660,9 @@ abstract class AbstractWallet extends EventEmitter {
 
     const tokenDataGetter = this.createTokenDataGetter(chain);
 
-    // Calculate spent commitments
-    return Promise.all(
+    const sentCommitments: SentCommitment[] = [];
+
+    await Promise.all(
       keySplits.map(async (keySplit) => {
         const data = (await this.db.get(keySplit)) as BytesData;
         const sentCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
@@ -663,16 +672,25 @@ abstract class AbstractWallet extends EventEmitter {
 
         const note = await TransactNote.deserialize(sentCommitment.decrypted, vpk, tokenDataGetter);
 
-        return {
+        if (!note.blockNumber) {
+          return;
+        }
+        if (startingBlock != null && note.blockNumber < startingBlock) {
+          return;
+        }
+
+        sentCommitments.push({
           tree,
           position,
           txid: sentCommitment.txid,
           note,
           noteAnnotationData: sentCommitment.noteExtraData,
           isLegacyTransactNote: TransactNote.isLegacyTransactNote(sentCommitment.decrypted),
-        };
+        });
       }),
     );
+
+    return sentCommitments;
   }
 
   private static getPossibleChangeTokenAmounts(
@@ -695,9 +713,17 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get transaction history for
    * @returns history
    */
-  async getTransactionHistory(chain: Chain): Promise<TransactionHistoryEntry[]> {
-    const receiveHistory = await this.getTransactionReceiveHistory(chain);
-    const spendHistory = await this.getTransactionSpendHistory(chain);
+  async getTransactionHistory(
+    chain: Chain,
+    startingBlock?: number,
+  ): Promise<TransactionHistoryEntry[]> {
+    const TXOs = await this.TXOs(chain);
+    const filteredTXOs = AbstractWallet.filterTXOsByBlockNumber(TXOs, startingBlock);
+
+    const [receiveHistory, spendHistory] = await Promise.all([
+      AbstractWallet.getTransactionReceiveHistory(filteredTXOs),
+      this.getTransactionSpendHistory(chain, filteredTXOs, startingBlock),
+    ]);
 
     const history: TransactionHistoryEntry[] = spendHistory.map((sendItem) => ({
       ...sendItem,
@@ -758,16 +784,37 @@ abstract class AbstractWallet extends EventEmitter {
     return history;
   }
 
+  private static filterTXOsByBlockNumber(txos: TXO[], startingBlock?: number) {
+    if (startingBlock == null) {
+      return txos;
+    }
+
+    let hasShownNoBlockNumbersError = false;
+    return txos.filter((txo) => {
+      if (!txo.note.blockNumber) {
+        if (!hasShownNoBlockNumbersError) {
+          // This will occur for legacy scanned notes.
+          // New notes will have block number, and will optimize the history response.
+          EngineDebug.error(new Error('No blockNumbers for TXOs'));
+          hasShownNoBlockNumbersError = true;
+        }
+        return true;
+      }
+      return txo.note.blockNumber >= startingBlock;
+    });
+  }
+
   /**
    * Gets transactions history for "received" transactions
    * @param chain - chain type/id to get balances for
    * @returns history
    */
-  async getTransactionReceiveHistory(chain: Chain): Promise<TransactionHistoryEntryReceived[]> {
-    const TXOs = await this.TXOs(chain);
+  static async getTransactionReceiveHistory(
+    filteredTXOs: TXO[],
+  ): Promise<TransactionHistoryEntryReceived[]> {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
-    TXOs.forEach(({ txid, note }) => {
+    filteredTXOs.forEach(({ txid, note }) => {
       if (note.value === 0n) {
         return;
       }
@@ -807,14 +854,13 @@ abstract class AbstractWallet extends EventEmitter {
 
   private async getAllUnshieldEventsFromSpentNullifiers(
     chain: Chain,
+    filteredTXOs: TXO[],
   ): Promise<UnshieldStoredEvent[]> {
     const merkletree = this.getMerkletreeForChain(chain);
-    const TXOs = await this.TXOs(chain);
-
     const unshieldEvents: UnshieldStoredEvent[] = [];
 
     await Promise.all(
-      TXOs.map(async ({ spendtxid, note }) => {
+      filteredTXOs.map(async ({ spendtxid, note }) => {
         if (note.value === 0n) {
           return;
         }
@@ -846,10 +892,14 @@ abstract class AbstractWallet extends EventEmitter {
     );
   }
 
-  async getTransactionSpendHistory(chain: Chain): Promise<TransactionHistoryEntrySpent[]> {
+  async getTransactionSpendHistory(
+    chain: Chain,
+    filteredTXOs: TXO[],
+    startingBlock?: number,
+  ): Promise<TransactionHistoryEntrySpent[]> {
     const [allUnshieldEvents, sentCommitments] = await Promise.all([
-      this.getAllUnshieldEventsFromSpentNullifiers(chain),
-      this.getSentCommitments(chain),
+      this.getAllUnshieldEventsFromSpentNullifiers(chain, filteredTXOs),
+      this.getSentCommitments(chain, startingBlock),
     ]);
 
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};

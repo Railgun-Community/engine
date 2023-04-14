@@ -73,6 +73,7 @@ export type NoteSerialized = {
   senderAddress: Optional<string>;
   memoText: Optional<string>;
   shieldFee: Optional<string>;
+  blockNumber: Optional<number>;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
@@ -84,6 +85,7 @@ export type LegacyNoteSerialized = {
   memoField: string[];
   recipientAddress: string;
   memoText: Optional<string>;
+  blockNumber: Optional<number>;
 };
 
 export type MerkleProof = {

@@ -241,6 +241,8 @@ describe('Transaction/ERC20', function test() {
 
     const memoText = 'Some Memo Text';
 
+    const blockNumber = 5;
+
     const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
@@ -259,6 +261,10 @@ describe('Transaction/ERC20', function test() {
       senderRandom,
       wallet.getViewingKeyPair().privateKey,
     );
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - required to set readonly blockNumber
+    note.blockNumber = blockNumber;
 
     assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
     const blindingKeys = getNoteBlindingKeys(
@@ -310,6 +316,7 @@ describe('Transaction/ERC20', function test() {
       true, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
+      blockNumber,
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -318,6 +325,7 @@ describe('Transaction/ERC20', function test() {
       Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
     ).to.deep.equal(noteAnnotationData);
     expect(senderDecrypted.memoText).to.equal(memoText);
+    expect(senderDecrypted.blockNumber).to.equal(blockNumber);
 
     const receiverDecrypted = await TransactNote.decrypt(
       wallet2.addressKeys,
@@ -331,11 +339,13 @@ describe('Transaction/ERC20', function test() {
       false, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
+      blockNumber,
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.equal(undefined);
     expect(receiverDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
     expect(receiverDecrypted.memoText).to.equal(memoText);
+    expect(receiverDecrypted.blockNumber).to.equal(blockNumber);
   });
 
   it('Should generate ciphertext decryptable by sender and recipient - no memo', async () => {
@@ -428,6 +438,7 @@ describe('Transaction/ERC20', function test() {
       true, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
+      100, // blockNumber
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -449,6 +460,7 @@ describe('Transaction/ERC20', function test() {
       false, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
+      100, // blockNumber
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.equal(undefined);
@@ -539,6 +551,7 @@ describe('Transaction/ERC20', function test() {
       true, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
+      100, // blockNumber
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -560,6 +573,7 @@ describe('Transaction/ERC20', function test() {
       false, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
+      100, // blockNumber
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
