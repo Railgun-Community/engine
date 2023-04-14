@@ -295,8 +295,9 @@ class RailgunSmartWalletContract extends EventEmitter {
    */
   async getHistoricalEvents(
     chain: Chain,
-    startBlock: number,
+    initialStartBlock: number,
     latestBlock: number,
+    getNextStartBlockFromValidMerkletree: () => Promise<number>,
     eventsListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
     eventsUnshieldListener: EventsUnshieldListener,
@@ -306,7 +307,13 @@ class RailgunSmartWalletContract extends EventEmitter {
     const engineV3ShieldEventUpdate030923BlockNumber =
       RailgunSmartWalletContract.getEngineV3ShieldEventUpdate030923BlockNumber(chain);
 
-    let currentStartBlock = startBlock;
+    // TODO: Possible data integrity issue in using commitment block numbers.
+    // Unshields and Nullifiers are scanned from the latest commitment block.
+    // Unshields/Nullifiers are not validated using the same merkleroot validation.
+    // If we miss an unshield/nullifier for some reason, we won't pick it up .
+    // For missed unshields, this will affect the way transaction history is displayed (no balance impact).
+    // For missed nullifiers, this will incorrectly show a balance for a spent note.
+    let currentStartBlock = initialStartBlock;
 
     // Current live events - post v3 update
     const eventFilterNullified = this.contract.filters.Nullified();
@@ -339,6 +346,8 @@ class RailgunSmartWalletContract extends EventEmitter {
       `[Chain ${this.chain.type}:${this.chain.id}]: Scanning historical events from block ${currentStartBlock} to ${latestBlock}`,
     );
 
+    let startBlockForNext10000 = initialStartBlock;
+
     while (currentStartBlock < latestBlock) {
       // Process chunks of blocks at a time
 
@@ -354,7 +363,7 @@ class RailgunSmartWalletContract extends EventEmitter {
         );
       }
 
-      if ((currentStartBlock - startBlock) % 10000 === 0) {
+      if ((currentStartBlock - startBlockForNext10000) % 10000 === 0) {
         EngineDebug.log(
           `[Chain ${this.chain.type}:${this.chain.id}]: Scanning next 10,000 events (${
             withinLegacyEventRange ? 'legacy' : 'v3'
@@ -431,7 +440,28 @@ class RailgunSmartWalletContract extends EventEmitter {
       // eslint-disable-next-line no-await-in-loop
       await setLastSyncedBlock(endBlock);
 
-      currentStartBlock += SCAN_CHUNKS + 1;
+      const nextStartBlockFromCurrentBlock = currentStartBlock + SCAN_CHUNKS + 1;
+      const nextStartBlockFromLatestValidMerkletreeEntry =
+        // eslint-disable-next-line no-await-in-loop
+        await getNextStartBlockFromValidMerkletree();
+
+      // Choose greater of:
+      // 1. currentStartBlock + scan chunk size
+      // 2. Latest verified merkletree block
+      // This optimizes the slow scan in case quicksync returns a single invalid merkleroot for a given block.
+      // The other data is queued for merkletree, and will validate and enter the merkletree, providing a new starting block.
+      // This skips slow scan for those intermediary blocks.
+      if (nextStartBlockFromLatestValidMerkletreeEntry > nextStartBlockFromCurrentBlock) {
+        currentStartBlock = nextStartBlockFromLatestValidMerkletreeEntry;
+        startBlockForNext10000 = nextStartBlockFromLatestValidMerkletreeEntry;
+        EngineDebug.log(
+          `[Chain ${this.chain.type}:${this.chain.id}]: Skipping ${
+            nextStartBlockFromCurrentBlock - nextStartBlockFromLatestValidMerkletreeEntry
+          } already processed/validated blocks from QuickSync...`,
+        );
+      } else {
+        currentStartBlock = nextStartBlockFromCurrentBlock;
+      }
     }
 
     EngineDebug.log(`[Chain ${this.chain.type}:${this.chain.id}]: Finished historical event scan`);

@@ -188,7 +188,7 @@ class RailgunEngine extends EventEmitter {
     return startScanningBlock;
   }
 
-  private async performQuickSync(chain: Chain, endProgress: number) {
+  private async performQuickSync(chain: Chain, endProgress: number, retryCount = 0) {
     if (!this.quickSync) {
       return;
     }
@@ -247,6 +247,10 @@ class RailgunEngine extends EventEmitter {
       if (!(err instanceof Error)) {
         throw err;
       }
+      if (retryCount < 1) {
+        await this.performQuickSync(chain, endProgress, retryCount + 1);
+        return;
+      }
       EngineDebug.error(err);
     }
   }
@@ -257,6 +261,17 @@ class RailgunEngine extends EventEmitter {
       progress,
     };
     this.emit(EngineEvent.MerkletreeHistoryScanUpdate, updateData);
+  }
+
+  async getNextStartingBlockSlowScan(chain: Chain): Promise<number> {
+    // Get updated start-scanning block from new valid merkletree.
+    let startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
+    const lastSyncedBlock = await this.getLastSyncedBlock(chain);
+    EngineDebug.log(`lastSyncedBlock: ${lastSyncedBlock}`);
+    if (lastSyncedBlock && lastSyncedBlock > startScanningBlockSlowScan) {
+      startScanningBlockSlowScan = lastSyncedBlock;
+    }
+    return startScanningBlockSlowScan;
   }
 
   /**
@@ -301,13 +316,10 @@ class RailgunEngine extends EventEmitter {
     this.emitScanUpdateEvent(chain, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid merkletree.
-    let startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
-    const lastSyncedBlock = await this.getLastSyncedBlock(chain);
-    EngineDebug.log(`lastSyncedBlock: ${lastSyncedBlock}`);
-    if (lastSyncedBlock && lastSyncedBlock > startScanningBlockSlowScan) {
-      startScanningBlockSlowScan = lastSyncedBlock;
-    }
-    EngineDebug.log(`startScanningBlockSlowScan: ${startScanningBlockSlowScan}`);
+    const startScanningBlockSlowScan = await this.getNextStartingBlockSlowScan(chain);
+    EngineDebug.log(
+      `startScanningBlockSlowScan: ${startScanningBlockSlowScan} (note: continously updated during scan)`,
+    );
 
     const latestBlock = await railgunSmartWalletContract.contract.provider.getBlockNumber();
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
@@ -319,6 +331,7 @@ class RailgunEngine extends EventEmitter {
         chain,
         startScanningBlockSlowScan,
         latestBlock,
+        () => this.getNextStartingBlockSlowScan(chain),
         async ({ startPosition, treeNumber, commitments }: CommitmentEvent) => {
           await this.commitmentListener(
             chain,

@@ -49,6 +49,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       chain,
       15834900,
       15834950,
+      async () => 15834900,
       async () => {
         foundShieldEvents += 1;
       },
@@ -65,6 +66,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       chain,
       16748340,
       16748380,
+      async () => 16748340,
       async () => {
         foundShieldEvents += 1;
       },
@@ -81,6 +83,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       chain,
       16820930,
       16820940,
+      async () => 16820930,
       async () => {
         foundShieldEvents += 1;
       },
