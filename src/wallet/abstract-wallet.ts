@@ -814,26 +814,36 @@ abstract class AbstractWallet extends EventEmitter {
     const unshieldEvents: UnshieldStoredEvent[] = [];
 
     await Promise.all(
-      TXOs.map(async ({ note, position: leafIndex }) => {
+      TXOs.map(async ({ spendtxid, note }) => {
         if (note.value === 0n) {
           return;
         }
-
-        const nullifierHex = nToHex(
-          TransactNote.getNullifier(this.nullifyingKey, leafIndex),
-          ByteLength.UINT_256,
-        );
-        const nullifierTxid = await merkletree.getStoredNullifierTxid(nullifierHex);
-        if (!nullifierTxid) {
+        if (!spendtxid) {
           return;
         }
 
         // Nullifier exists. Find unshield events from txid.
-        unshieldEvents.push(...(await merkletree.getUnshieldEvents(nullifierTxid)));
+        const unshieldEventsForNullifier = await merkletree.getUnshieldEvents(spendtxid);
+        const filteredEventsForNullifier = unshieldEventsForNullifier.filter(
+          (event) =>
+            unshieldEvents.find((existingUnshieldEvent) =>
+              AbstractWallet.compareUnshieldEvents(existingUnshieldEvent, event),
+            ) == null,
+        );
+        unshieldEvents.push(...filteredEventsForNullifier);
       }),
     );
 
     return unshieldEvents;
+  }
+
+  private static compareUnshieldEvents(a: UnshieldStoredEvent, b: UnshieldStoredEvent): boolean {
+    return (
+      a.txid === b.txid &&
+      a.tokenAddress.toLowerCase() === b.tokenAddress.toLowerCase() &&
+      a.tokenSubID === b.tokenSubID &&
+      a.toAddress === b.toAddress
+    );
   }
 
   async getTransactionSpendHistory(chain: Chain): Promise<TransactionHistoryEntrySpent[]> {
@@ -861,10 +871,6 @@ abstract class AbstractWallet extends EventEmitter {
           };
         }
 
-        // Get possible unshield event for this transaction.
-        const merkletree = this.getMerkletreeForChain(chain);
-        txidTransactionMap[txid].unshieldEvents = await merkletree.getUnshieldEvents(txid);
-
         const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
         const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
           tokenHash,
@@ -886,29 +892,34 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    // Add remaining unshield events to txidTransactionMap
+    // Add unshield events to txidTransactionMap
     allUnshieldEvents.forEach((unshieldEvent) => {
-      const tokenAddress = unshieldEvent.tokenAddress.toLowerCase();
-      if (txidTransactionMap[unshieldEvent.txid]) {
-        const existingUnshieldEvents = txidTransactionMap[unshieldEvent.txid].unshieldEvents;
-        const existingUnshieldToken = existingUnshieldEvents.find(
-          (token) => token.tokenAddress.toLowerCase() === tokenAddress,
-        );
-        if (existingUnshieldToken) {
-          // Add amount to existing unshield event.
-          existingUnshieldToken.amount = BigNumber.from(existingUnshieldToken.amount)
-            .add(unshieldEvent.amount)
-            .toHexString();
-          return;
-        }
-        txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
+      const foundUnshieldTransactionInTransactCommitments = txidTransactionMap[unshieldEvent.txid];
+      if (!foundUnshieldTransactionInTransactCommitments) {
+        // This will occur on a self-signed unshield.
+        // There is no commitment (or tokenAmounts) for this kind of unshield transaction.
+        txidTransactionMap[unshieldEvent.txid] = {
+          txid: unshieldEvent.txid,
+          unshieldEvents: [unshieldEvent],
+          tokenAmounts: [],
+          version: TransactionHistoryItemVersion.UpdatedNov2022,
+        };
+        return;
       }
-      txidTransactionMap[unshieldEvent.txid] = {
-        txid: unshieldEvent.txid,
-        unshieldEvents: [unshieldEvent],
-        tokenAmounts: [],
-        version: TransactionHistoryItemVersion.UpdatedNov2022,
-      };
+
+      // Unshield event exists. Add to its amount rather than creating a new event.
+      // Multiple unshields of the same token can occur in cases of complex circuits. (More than 10 inputs to the unshield).
+      const existingUnshieldEvent = txidTransactionMap[unshieldEvent.txid].unshieldEvents.find(
+        (existingEvent) => AbstractWallet.compareUnshieldEvents(existingEvent, unshieldEvent),
+      );
+      if (existingUnshieldEvent) {
+        // Add amount to existing unshield event.
+        existingUnshieldEvent.amount = BigNumber.from(existingUnshieldEvent.amount)
+          .add(unshieldEvent.amount)
+          .toHexString();
+        return;
+      }
+      txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
     });
 
     const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =
