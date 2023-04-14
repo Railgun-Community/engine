@@ -84,52 +84,28 @@ type CachedStoredSendCommitment = {
   storedSendCommitment: StoredSendCommitment;
 };
 
-abstract class AbstractWallet extends EventEmitter {
-  protected readonly db: Database;
-
-  readonly id: string;
-
-  readonly viewingKeyPair: ViewingKeyPair;
-
-  readonly masterPublicKey: bigint;
-
-  private readonly spendingPublicKey: SpendingPublicKey;
-
-  readonly nullifyingKey: bigint;
-
-  readonly merkletrees: MerkleTree[][] = [];
-
-  private creationBlockNumbers: Optional<number[][]>;
+class CommitmentStore {
+  private walletID: string;
 
   private cachedReceiveCommitments: Optional<CachedStoredReceiveCommitment[]>;
 
   private cachedSendCommitments: Optional<CachedStoredSendCommitment[]>;
+
+  readonly merkletrees: MerkleTree[][] = [];
 
   /**
    * Create Wallet controller
    * @param id - wallet ID
    * @param db - database
    */
-  constructor(
-    id: string,
-    db: Database,
-    viewingKeyPair: ViewingKeyPair,
-    spendingPublicKey: SpendingPublicKey,
-    creationBlockNumbers: Optional<number[][]>,
-  ) {
+  constructor(walletID: string) {
     super();
 
-    this.id = hexlify(id);
-    this.db = db;
-    this.viewingKeyPair = viewingKeyPair;
-    this.spendingPublicKey = spendingPublicKey;
-    this.nullifyingKey = poseidon([BigInt(hexlify(this.viewingKeyPair.privateKey, true))]);
-    this.masterPublicKey = WalletNode.getMasterPublicKey(spendingPublicKey, this.nullifyingKey);
-    this.creationBlockNumbers = creationBlockNumbers;
+    this.walletID = walletID;
   }
 
   /**
-   * Loads merkle tree into wallet
+   * Loads merkle tree
    * @param merkletree - merkletree to load
    */
   loadMerkletree(merkletree: MerkleTree) {
@@ -1455,4 +1431,4 @@ abstract class AbstractWallet extends EventEmitter {
   }
 }
 
-export { AbstractWallet };
+export { CommitmentStore };

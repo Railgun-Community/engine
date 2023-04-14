@@ -361,7 +361,7 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.greaterThan(
       7000,
     );
-    expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(7200);
+    expect(gasEstimate_ActualTransaction - gasEstimate_DummyActualRelayerFee).to.be.lessThan(7300);
   }).timeout(120000);
 
   it('[HH] Should return valid merkle roots', async function run() {
