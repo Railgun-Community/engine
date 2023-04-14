@@ -353,7 +353,7 @@ class RailgunEngine extends EventEmitter {
             chain,
             progress:
               postQuickSyncProgress +
-              ((1 - postQuickSyncProgress) * scannedBlocks) / totalBlocksToScan, // From 50% -> 100%
+              ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan, // From 50% -> 95%
           };
           this.emit(EngineEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
           await this.setLastSyncedBlock(syncedBlock, chain);
@@ -362,6 +362,9 @@ class RailgunEngine extends EventEmitter {
 
       // Final scan after all leaves added.
       await this.scanAllWallets(chain, undefined);
+
+      this.emitScanUpdateEvent(chain, 1.0); // 100%
+
       const scanCompleteData: MerkletreeHistoryScanEventData = { chain };
       this.emit(EngineEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       merkletree.isScanning = false;
