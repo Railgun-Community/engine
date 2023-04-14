@@ -720,6 +720,7 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntry[]> {
+    // TODO: Filter txo DB query by providing tree and position.
     const TXOs = await this.TXOs(chain);
     const filteredTXOs = AbstractWallet.filterTXOsByBlockNumber(TXOs, startingBlock);
 
