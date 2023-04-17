@@ -127,11 +127,7 @@ class RailgunEngine extends EventEmitter {
     if (!unshields.length) {
       return;
     }
-    EngineDebug.log(
-      `engine.unshieldListener[${chain.type}:${chain.id}] ${JSON.stringify(
-        unshields.map((unshield) => unshield.txid),
-      )}`,
-    );
+    EngineDebug.log(`engine.unshieldListener[${chain.type}:${chain.id}] ${unshields.length}`);
     const merkletree = this.getMerkletreeForChain(chain);
     await merkletree.addUnshieldEvents(unshields);
   }
@@ -356,6 +352,12 @@ class RailgunEngine extends EventEmitter {
               ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan, // From 50% -> 95%
           };
           this.emit(EngineEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
+
+          if (merkletree.hasAnyInvalidMerkleroot()) {
+            // Do not save lastSyncedBlock in case of merkleroot error.
+            // This will force a scan from the last valid commitment on next run.
+            return;
+          }
           await this.setLastSyncedBlock(syncedBlock, chain);
         },
       );
@@ -394,8 +396,9 @@ class RailgunEngine extends EventEmitter {
   /**
    * Clears stored merkletree leaves and wallet balances, and re-scans fully.
    * @param chain - chain type/id to rescan
+   * @param forceRescanDevOnly - can corrupt an existing scan, so only recommended in extreme cases (DEV only)
    */
-  async fullRescanMerkletreesAndWallets(chain: Chain) {
+  async fullRescanMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
     const hasMerkletree = this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id];
     if (!hasMerkletree) {
       const err = new Error(
@@ -405,7 +408,7 @@ class RailgunEngine extends EventEmitter {
       throw err;
     }
     const merkletree = this.getMerkletreeForChain(chain);
-    if (merkletree.isScanning) {
+    if (merkletree.isScanning && !forceRescanDevOnly) {
       const err = new Error(`Full rescan already in progress.`);
       EngineDebug.error(err);
       throw err;

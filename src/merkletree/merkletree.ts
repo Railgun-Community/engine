@@ -45,6 +45,11 @@ export const MERKLE_ZERO_VALUE: string = formatToByteLength(
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
 
+type InvalidMerklerootDetails = {
+  position: number;
+  blockNumber: number;
+};
+
 // Optimization: process leaves for a many commitment groups before checking merkleroot against contract.
 // If merkleroot is invalid, scan leaves as medium batches, and individually as a final backup.
 enum CommitmentProcessingGroupSize {
@@ -77,6 +82,8 @@ class MerkleTree {
   public isScanning = false;
 
   private processingWriteQueueTrees: { [tree: number]: boolean } = {};
+
+  invalidMerklerootDetailsByTree: { [tree: number]: InvalidMerklerootDetails } = {};
 
   /**
    * Create MerkleTree controller from database
@@ -546,7 +553,13 @@ class MerkleTree {
 
     const rootNode = hashWriteGroup[TREE_DEPTH][0];
     const validRoot = await this.rootValidator(tree, rootNode);
-    if (!validRoot) {
+
+    const lastLeafIndex = startIndex + leaves.length - 1;
+
+    if (validRoot) {
+      this.removeInvalidMerklerootDetailsIfNecessary(tree, lastLeafIndex);
+    } else {
+      this.updateInvalidMerklerootDetails(tree, lastLeafIndex, leaves[lastLeafIndex].blockNumber);
       throw new Error(
         `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
       );
@@ -554,6 +567,42 @@ class MerkleTree {
 
     // If new root is valid, write to DB.
     await this.writeTreeToDB(tree, hashWriteGroup, commitmentWriteGroup);
+  }
+
+  updateInvalidMerklerootDetails(
+    tree: number,
+    lastKnownInvalidLeafIndex: number,
+    lastKnownInvalidLeafBlockNumber: number,
+  ) {
+    const invalidMerklerootDetails: Optional<InvalidMerklerootDetails> =
+      this.invalidMerklerootDetailsByTree[tree];
+    if (invalidMerklerootDetails) {
+      if (invalidMerklerootDetails.position < lastKnownInvalidLeafIndex) {
+        return;
+      }
+    }
+
+    // Update invalid merkleroot details
+    this.invalidMerklerootDetailsByTree[tree] = {
+      position: lastKnownInvalidLeafIndex,
+      blockNumber: lastKnownInvalidLeafBlockNumber,
+    };
+  }
+
+  removeInvalidMerklerootDetailsIfNecessary(tree: number, lastValidLeafIndex: number) {
+    const invalidMerklerootDetails: Optional<InvalidMerklerootDetails> =
+      this.invalidMerklerootDetailsByTree[tree];
+    if (!invalidMerklerootDetails) {
+      return;
+    }
+    if (invalidMerklerootDetails.position > lastValidLeafIndex) {
+      return;
+    }
+    delete this.invalidMerklerootDetailsByTree[tree];
+  }
+
+  hasAnyInvalidMerkleroot() {
+    return Object.keys(this.invalidMerklerootDetailsByTree).length > 0;
   }
 
   private async processWriteQueueForTree(treeIndex: number): Promise<void> {
@@ -723,10 +772,6 @@ class MerkleTree {
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 
-    EngineDebug.log(
-      `[queueLeaves: ${this.chain.type}:${this.chain.id}] treeLength ${treeLength}, startingIndex ${startingIndex}`,
-    );
-
     // Ensure write queue for tree exists
     if (!this.writeQueue[tree]) {
       this.writeQueue[tree] = [];
@@ -735,6 +780,10 @@ class MerkleTree {
     if (treeLength <= startingIndex) {
       // If starting index is greater or equal to tree length, insert to queue
       this.writeQueue[tree][startingIndex] = leaves;
+
+      EngineDebug.log(
+        `[queueLeaves: ${this.chain.type}:${this.chain.id}] treeLength ${treeLength}, startingIndex ${startingIndex}`,
+      );
     }
   }
 

@@ -670,6 +670,48 @@ describe('MerkleTree', () => {
     expect(await merkletree.latestTree()).to.equal(1);
   }).timeout(1000);
 
+  it('Should store, update and remove invalid merkleroot details', async () => {
+    const tree = 0;
+    const blockNumber = 10000000;
+
+    // Add invalid merkleroot details (position 100)
+    merkletree.updateInvalidMerklerootDetails(tree, 100, blockNumber);
+    expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
+      position: 100,
+      blockNumber,
+    });
+
+    // Update invalid merkleroot details (position 50)
+    merkletree.updateInvalidMerklerootDetails(tree, 50, blockNumber);
+    expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
+      position: 50,
+      blockNumber,
+    });
+
+    // Try to remove merkleroot details (position 30) - no effect
+    merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 30);
+    expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
+      position: 50,
+      blockNumber,
+    });
+
+    // Try to remove merkleroot details (tree 1) - no effect
+    merkletree.removeInvalidMerklerootDetailsIfNecessary(1, 30);
+    expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
+      position: 50,
+      blockNumber,
+    });
+
+    // Check has invalid merkleroot
+    expect(merkletree.hasAnyInvalidMerkleroot()).to.equal(true);
+
+    // Remove merkleroot details
+    merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 100);
+
+    // Check has invalid merkleroot
+    expect(merkletree.hasAnyInvalidMerkleroot()).to.equal(false);
+  }).timeout(1000);
+
   afterEach(() => {
     // Clean up database
     db.close();
