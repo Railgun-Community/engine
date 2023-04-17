@@ -581,16 +581,13 @@ class MerkleTree {
     const rootNode = hashWriteGroup[TREE_DEPTH][0];
     const validRoot = await this.rootValidator(tree, rootNode);
 
-    const lastLeafIndex = startIndex + leaves.length - 1;
+    const leafIndex = leaves.length - 1;
+    const lastLeafIndex = startIndex + leafIndex;
 
     if (validRoot) {
       await this.removeInvalidMerklerootDetailsIfNecessary(tree, lastLeafIndex);
     } else {
-      await this.updateInvalidMerklerootDetails(
-        tree,
-        lastLeafIndex,
-        leaves[lastLeafIndex].blockNumber,
-      );
+      await this.updateInvalidMerklerootDetails(tree, lastLeafIndex, leaves[leafIndex].blockNumber);
       throw new Error(
         `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
       );
