@@ -86,6 +86,9 @@ class MerkleTree {
 
   invalidMerklerootDetailsByTree: { [tree: number]: InvalidMerklerootDetails } = {};
 
+  private cachedNodeHashes: { [tree: number]: { [level: number]: { [index: number]: string } } } =
+    {};
+
   /**
    * Create MerkleTree controller from database
    * @param db - database object to use
@@ -349,12 +352,30 @@ class MerkleTree {
    * @returns node
    */
   async getNodeHash(tree: number, level: number, index: number): Promise<string> {
+    if (
+      this.cachedNodeHashes[tree] &&
+      this.cachedNodeHashes[tree][level] &&
+      this.cachedNodeHashes[tree][level][index]
+    ) {
+      return this.cachedNodeHashes[tree][level][index];
+    }
     try {
-      const node = (await this.db.get(this.getNodeHashDBPath(tree, level, index))) as string;
-      return node;
+      const hash = (await this.db.get(this.getNodeHashDBPath(tree, level, index))) as string;
+      this.cacheNodeHash(tree, level, index, hash);
+      return hash;
     } catch {
       return this.zeros[level];
     }
+  }
+
+  private cacheNodeHash(tree: number, level: number, index: number, hash: string) {
+    if (!this.cachedNodeHashes[tree]) {
+      this.cachedNodeHashes[tree] = {};
+    }
+    if (!this.cachedNodeHashes[tree][level]) {
+      this.cachedNodeHashes[tree][level] = {};
+    }
+    this.cachedNodeHashes[tree][level][index] = hash;
   }
 
   async getMetadataFromStorage(): Promise<void> {
@@ -444,6 +465,7 @@ class MerkleTree {
 
   async clearLeavesFromDB(): Promise<void> {
     await this.db.clearNamespace(this.getChainDBPrefix());
+    this.cachedNodeHashes = {};
     this.treeLengths = [];
   }
 
@@ -482,6 +504,7 @@ class MerkleTree {
           key: this.getNodeHashDBPath(treeIndex, level, index).join(':'),
           value: node,
         });
+        this.cacheNodeHash(treeIndex, level, index, node);
       });
     });
 
