@@ -139,12 +139,13 @@ class RailgunEngine extends EventEmitter {
     const { provider } = railgunSmartWalletContract.contract;
 
     // Get latest tree
-    const latestTree = await merkletree.latestTree();
+    const firstInvalidMerklerootTree = merkletree.getFirstInvalidMerklerootTree();
+    const searchTree = firstInvalidMerklerootTree || (await merkletree.latestTree());
 
     // Get latest synced event
-    const treeLength = await merkletree.getTreeLength(latestTree);
+    const treeLength = await merkletree.getTreeLength(searchTree);
 
-    EngineDebug.log(`scanHistory: latestTree ${latestTree}, treeLength ${treeLength}`);
+    EngineDebug.log(`scanHistory: searchTree ${searchTree}, treeLength ${treeLength}`);
 
     let startScanningBlock: Optional<number>;
 
@@ -152,7 +153,7 @@ class RailgunEngine extends EventEmitter {
     while (latestEventIndex >= 0 && !startScanningBlock) {
       // Get block number of last scanned event
       // eslint-disable-next-line no-await-in-loop
-      const latestEvent = await merkletree.getCommitment(latestTree, latestEventIndex);
+      const latestEvent = await merkletree.getCommitment(searchTree, latestEventIndex);
       if (latestEvent) {
         if (latestEvent.blockNumber) {
           startScanningBlock = latestEvent.blockNumber;
@@ -353,7 +354,7 @@ class RailgunEngine extends EventEmitter {
           };
           this.emit(EngineEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
 
-          if (merkletree.hasAnyInvalidMerkleroot()) {
+          if (merkletree.getFirstInvalidMerklerootTree() != null) {
             // Do not save lastSyncedBlock in case of merkleroot error.
             // This will force a scan from the last valid commitment on next run.
             return;

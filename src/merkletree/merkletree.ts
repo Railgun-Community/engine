@@ -601,8 +601,12 @@ class MerkleTree {
     delete this.invalidMerklerootDetailsByTree[tree];
   }
 
-  hasAnyInvalidMerkleroot() {
-    return Object.keys(this.invalidMerklerootDetailsByTree).length > 0;
+  getFirstInvalidMerklerootTree(): Optional<number> {
+    const invalidTrees = Object.keys(this.invalidMerklerootDetailsByTree);
+    if (!invalidTrees.length) {
+      return undefined;
+    }
+    return Number(invalidTrees.sort()[0]);
   }
 
   private async processWriteQueueForTree(treeIndex: number): Promise<void> {

@@ -703,13 +703,13 @@ describe('MerkleTree', () => {
     });
 
     // Check has invalid merkleroot
-    expect(merkletree.hasAnyInvalidMerkleroot()).to.equal(true);
+    expect(merkletree.getFirstInvalidMerklerootTree()).to.equal(tree);
 
     // Remove merkleroot details
     merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 100);
 
     // Check has invalid merkleroot
-    expect(merkletree.hasAnyInvalidMerkleroot()).to.equal(false);
+    expect(merkletree.getFirstInvalidMerklerootTree()).to.equal(undefined);
   }).timeout(1000);
 
   afterEach(() => {
