@@ -856,7 +856,7 @@ describe('RailgunEngine', function test() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    engine.unload();
+    await engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });

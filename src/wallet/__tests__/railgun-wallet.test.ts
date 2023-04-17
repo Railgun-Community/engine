@@ -33,7 +33,7 @@ describe('Wallet', () => {
   beforeEach(async () => {
     // Create database and wallet
     db = new Database(memdown());
-    merkletree = new MerkleTree(db, chain, async () => true);
+    merkletree = await MerkleTree.create(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -164,10 +164,10 @@ describe('Wallet', () => {
     expect(wallet.getAddress({ type: ChainType.EVM, id: 4 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7unpd9kxwatwq3ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5n8cwxy',
     );
-    expect(wallet.getAddress({ type: 1, id: 0 })).to.equal(
+    expect(wallet.getAddress({ type: 1 as ChainType, id: 0 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7umpd9kxwatwqpma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5knt45s',
     );
-    expect(wallet.getAddress({ type: 1, id: 1 })).to.equal(
+    expect(wallet.getAddress({ type: 1 as ChainType, id: 1 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7umpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5vv72h8',
     );
   });
@@ -270,9 +270,9 @@ describe('Wallet', () => {
   //   ).to.equal(10);
   // }).timeout(60000);
 
-  afterEach(() => {
+  afterEach(async () => {
     // Clean up database
     wallet.unloadMerkletree(merkletree.chain);
-    db.close();
+    await db.close();
   });
 });

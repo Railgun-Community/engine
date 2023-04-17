@@ -30,6 +30,7 @@ const TREE_DEPTH = 16;
 
 type TreeMetadata = {
   scannedHeight: number;
+  invalidMerklerootDetails: InvalidMerklerootDetails | null;
 };
 export type MerkletreesMetadata = {
   trees: { [tree: number]: TreeMetadata };
@@ -91,7 +92,7 @@ class MerkleTree {
    * @param chain - Chain type/id
    * @param rootValidator - root validator callback
    */
-  constructor(db: Database, chain: Chain, rootValidator: RootValidator) {
+  private constructor(db: Database, chain: Chain, rootValidator: RootValidator) {
     // Set passed values
     this.db = db;
     this.chain = chain;
@@ -105,6 +106,16 @@ class MerkleTree {
     for (let level = 1; level <= TREE_DEPTH; level += 1) {
       this.zeros[level] = MerkleTree.hashLeftRight(this.zeros[level - 1], this.zeros[level - 1]);
     }
+  }
+
+  static async create(
+    db: Database,
+    chain: Chain,
+    rootValidator: RootValidator,
+  ): Promise<MerkleTree> {
+    const merkleTree = new MerkleTree(db, chain, rootValidator);
+    await merkleTree.getMetadataFromStorage();
+    return merkleTree;
   }
 
   /**
@@ -346,6 +357,22 @@ class MerkleTree {
     }
   }
 
+  async getMetadataFromStorage(): Promise<void> {
+    const storedMetadata = await this.getMerkletreesMetadata();
+    if (!storedMetadata) {
+      return;
+    }
+    const trees = Object.keys(storedMetadata.trees).map((tree) => Number(tree));
+    trees.forEach((tree) => {
+      const treeMetadata = storedMetadata.trees[tree];
+      this.treeLengths[tree] = treeMetadata.scannedHeight;
+      if (treeMetadata.invalidMerklerootDetails) {
+        this.invalidMerklerootDetailsByTree[tree] =
+          treeMetadata.invalidMerklerootDetails || undefined;
+      }
+    });
+  }
+
   /**
    * Gets merkletrees metadata
    * @returns metadata
@@ -374,7 +401,7 @@ class MerkleTree {
    * @returns tree length
    */
   async getTreeLength(treeIndex: number): Promise<number> {
-    if (this.treeLengths[treeIndex]) {
+    if (this.treeLengths[treeIndex] != null) {
       return this.treeLengths[treeIndex];
     }
 
@@ -385,20 +412,23 @@ class MerkleTree {
     }
 
     this.treeLengths[treeIndex] = await this.getTreeLengthFromDBCount(treeIndex);
-    if (this.treeLengths[treeIndex]) {
-      await this.updateStoredTreeLength(treeIndex, this.treeLengths[treeIndex]);
+    if (this.treeLengths[treeIndex] > 0) {
+      await this.updateStoredMerkletreesMetadata(treeIndex);
     }
+
     return this.treeLengths[treeIndex];
   }
 
-  async updateStoredTreeLength(treeIndex: number, treeLength: number): Promise<void> {
-    const merkletreesMetadata = (await this.getMerkletreesMetadata()) || {
-      trees: { [treeIndex]: { scannedHeight: 0 } },
+  async updateStoredMerkletreesMetadata(treeIndex: number): Promise<void> {
+    const treeLength = await this.getTreeLength(treeIndex);
+    const storedMerkletreesMetadata = await this.getMerkletreesMetadata();
+    const merkletreesMetadata: MerkletreesMetadata = storedMerkletreesMetadata || {
+      trees: {},
     };
-    merkletreesMetadata.trees[treeIndex] = merkletreesMetadata.trees[treeIndex] || {
-      scannedHeight: 0,
+    merkletreesMetadata.trees[treeIndex] = {
+      scannedHeight: treeLength,
+      invalidMerklerootDetails: this.invalidMerklerootDetailsByTree[treeIndex],
     };
-    merkletreesMetadata.trees[treeIndex].scannedHeight = treeLength;
     await this.storeMerkletreesMetadata(merkletreesMetadata);
   }
 
@@ -466,14 +496,11 @@ class MerkleTree {
     });
 
     // Batch write to DB
-    await Promise.all([
-      this.db.batch(nodeWriteBatch),
-      this.db.batch(commitmentWriteBatch, 'json'),
-      this.updateStoredTreeLength(treeIndex, newTreeLength),
-    ]);
+    await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(commitmentWriteBatch, 'json')]);
 
     // Update tree length
     this.treeLengths[treeIndex] = newTreeLength;
+    await this.updateStoredMerkletreesMetadata(treeIndex);
   }
 
   /**
@@ -557,9 +584,13 @@ class MerkleTree {
     const lastLeafIndex = startIndex + leaves.length - 1;
 
     if (validRoot) {
-      this.removeInvalidMerklerootDetailsIfNecessary(tree, lastLeafIndex);
+      await this.removeInvalidMerklerootDetailsIfNecessary(tree, lastLeafIndex);
     } else {
-      this.updateInvalidMerklerootDetails(tree, lastLeafIndex, leaves[lastLeafIndex].blockNumber);
+      await this.updateInvalidMerklerootDetails(
+        tree,
+        lastLeafIndex,
+        leaves[lastLeafIndex].blockNumber,
+      );
       throw new Error(
         `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
       );
@@ -569,7 +600,7 @@ class MerkleTree {
     await this.writeTreeToDB(tree, hashWriteGroup, commitmentWriteGroup);
   }
 
-  updateInvalidMerklerootDetails(
+  async updateInvalidMerklerootDetails(
     tree: number,
     lastKnownInvalidLeafIndex: number,
     lastKnownInvalidLeafBlockNumber: number,
@@ -587,9 +618,10 @@ class MerkleTree {
       position: lastKnownInvalidLeafIndex,
       blockNumber: lastKnownInvalidLeafBlockNumber,
     };
+    await this.updateStoredMerkletreesMetadata(tree);
   }
 
-  removeInvalidMerklerootDetailsIfNecessary(tree: number, lastValidLeafIndex: number) {
+  async removeInvalidMerklerootDetailsIfNecessary(tree: number, lastValidLeafIndex: number) {
     const invalidMerklerootDetails: Optional<InvalidMerklerootDetails> =
       this.invalidMerklerootDetailsByTree[tree];
     if (!invalidMerklerootDetails) {
@@ -599,6 +631,7 @@ class MerkleTree {
       return;
     }
     delete this.invalidMerklerootDetailsByTree[tree];
+    await this.updateStoredMerkletreesMetadata(tree);
   }
 
   getFirstInvalidMerklerootTree(): Optional<number> {

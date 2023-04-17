@@ -66,7 +66,7 @@ describe('Transaction/Transaction Batch', function run() {
       type: ChainType.EVM,
       id: 1,
     };
-    merkletree = new MerkleTree(db, chain, async () => true);
+    merkletree = await MerkleTree.create(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -346,13 +346,13 @@ describe('Transaction/Transaction Batch', function run() {
     expect(txs4.map((tx) => tx.unshieldPreimage.value)).to.deep.equal([shieldValue + 1n]);
   });
 
-  this.afterAll(() => {
+  this.afterAll(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
 
     // Clean up database
     wallet.unloadMerkletree(merkletree.chain);
-    db.close();
+    await db.close();
   });
 });

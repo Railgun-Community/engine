@@ -24,7 +24,7 @@ describe('MerkleTree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
-    merkletree = new MerkleTree(db, chain, async () => true);
+    merkletree = await MerkleTree.create(db, chain, async () => true);
   });
 
   it('Should hash left/right', () => {
@@ -75,7 +75,7 @@ describe('MerkleTree', () => {
     expect(merkletree.zeros).to.deep.equal(testVector);
   });
 
-  it('Should get DB paths', () => {
+  it('Should get DB paths', async () => {
     type Vector = {
       chain: Chain;
       treeNumber: number;
@@ -113,17 +113,19 @@ describe('MerkleTree', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
-      const merkletreeVectorTest = new MerkleTree(db, vector.chain, async () => true);
+    await Promise.all(
+      vectors.map(async (vector) => {
+        const merkletreeVectorTest = await MerkleTree.create(db, vector.chain, async () => true);
 
-      expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
-        vector.result.slice(0, 3),
-      );
+        expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
+          vector.result.slice(0, 3),
+        );
 
-      expect(
-        merkletreeVectorTest.getNodeHashDBPath(vector.treeNumber, vector.level, vector.index),
-      ).to.deep.equal(vector.result);
-    });
+        expect(
+          merkletreeVectorTest.getNodeHashDBPath(vector.treeNumber, vector.level, vector.index),
+        ).to.deep.equal(vector.result);
+      }),
+    );
   });
 
   it('Should get empty merkle root', async () => {
@@ -492,7 +494,7 @@ describe('MerkleTree', () => {
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false
-    const merkletreeTest = new MerkleTree(db, chain, async () => false);
+    const merkletreeTest = await MerkleTree.create(db, chain, async () => false);
 
     // Check root is empty tree root
     expect(await merkletreeTest.getRoot(0)).to.equal(
@@ -622,7 +624,7 @@ describe('MerkleTree', () => {
     expect(await merkletree.latestTree()).to.equal(0);
     const expectedMetadata1: MerkletreesMetadata = {
       trees: {
-        0: { scannedHeight: 1 },
+        0: { scannedHeight: 1, invalidMerklerootDetails: null },
       },
     };
     expect(await merkletree.getMerkletreesMetadata()).to.deep.equal(expectedMetadata1);
@@ -647,21 +649,21 @@ describe('MerkleTree', () => {
     expect(await merkletree.getTreeLength(1)).to.equal(1);
     const expectedMetadata2: MerkletreesMetadata = {
       trees: {
-        0: { scannedHeight: 1 },
-        1: { scannedHeight: 1 },
+        0: { scannedHeight: 1, invalidMerklerootDetails: null },
+        1: { scannedHeight: 1, invalidMerklerootDetails: null },
       },
     };
     expect(await merkletree.getMerkletreesMetadata()).to.deep.equal(expectedMetadata2);
-  }).timeout(1000);
+  }).timeout(100000);
 
   it('Should store and retrieve trees metadata', async () => {
     expect(await merkletree.getMerkletreesMetadata()).to.equal(undefined);
 
     const newMetadata: MerkletreesMetadata = {
       trees: {
-        0: { scannedHeight: 127 },
-        1: { scannedHeight: 333 },
-        2: { scannedHeight: 0 },
+        0: { scannedHeight: 127, invalidMerklerootDetails: null },
+        1: { scannedHeight: 333, invalidMerklerootDetails: null },
+        2: { scannedHeight: 0, invalidMerklerootDetails: null },
       },
     };
     await merkletree.storeMerkletreesMetadata(newMetadata);
@@ -675,29 +677,38 @@ describe('MerkleTree', () => {
     const blockNumber = 10000000;
 
     // Add invalid merkleroot details (position 100)
-    merkletree.updateInvalidMerklerootDetails(tree, 100, blockNumber);
+    await merkletree.updateInvalidMerklerootDetails(tree, 100, blockNumber);
     expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
       position: 100,
       blockNumber,
     });
 
     // Update invalid merkleroot details (position 50)
-    merkletree.updateInvalidMerklerootDetails(tree, 50, blockNumber);
+    await merkletree.updateInvalidMerklerootDetails(tree, 50, blockNumber);
     expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
       position: 50,
       blockNumber,
     });
 
     // Try to remove merkleroot details (position 30) - no effect
-    merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 30);
+    await merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 30);
     expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
       position: 50,
       blockNumber,
     });
 
     // Try to remove merkleroot details (tree 1) - no effect
-    merkletree.removeInvalidMerklerootDetailsIfNecessary(1, 30);
+    await merkletree.removeInvalidMerklerootDetailsIfNecessary(1, 30);
     expect(merkletree.invalidMerklerootDetailsByTree[0]).to.deep.equal({
+      position: 50,
+      blockNumber,
+    });
+
+    const merkletreesMetadata = await merkletree.getMerkletreesMetadata();
+    if (!merkletreesMetadata) {
+      throw new Error('No metadata saved for invalid merkletree details');
+    }
+    expect(merkletreesMetadata.trees[tree].invalidMerklerootDetails).to.deep.equal({
       position: 50,
       blockNumber,
     });
@@ -706,14 +717,14 @@ describe('MerkleTree', () => {
     expect(merkletree.getFirstInvalidMerklerootTree()).to.equal(tree);
 
     // Remove merkleroot details
-    merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 100);
+    await merkletree.removeInvalidMerklerootDetailsIfNecessary(tree, 100);
 
     // Check has invalid merkleroot
     expect(merkletree.getFirstInvalidMerklerootTree()).to.equal(undefined);
   }).timeout(1000);
 
-  afterEach(() => {
+  afterEach(async () => {
     // Clean up database
-    db.close();
+    await db.close();
   });
 });

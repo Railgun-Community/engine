@@ -123,8 +123,8 @@ describe('Database', () => {
     expect(await db.get(['01', '0c'])).to.equal('ac');
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // Clean up database
-    db.close();
+    await db.close();
   });
 });

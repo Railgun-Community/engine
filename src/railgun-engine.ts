@@ -478,7 +478,7 @@ class RailgunEngine extends EventEmitter {
     if (!this.merkletrees[chain.type]) {
       this.merkletrees[chain.type] = [];
     }
-    this.merkletrees[chain.type][chain.id] = new MerkleTree(this.db, chain, (tree, root) =>
+    this.merkletrees[chain.type][chain.id] = await MerkleTree.create(this.db, chain, (tree, root) =>
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id].validateRoot(tree, root),
     );
 
@@ -643,7 +643,7 @@ class RailgunEngine extends EventEmitter {
   /**
    * Unloads wallets, removes listeners and closes DB.
    */
-  unload() {
+  async unload() {
     // Unload chains
     ContractStore.railgunSmartWalletContracts.forEach((contractsForChainType, chainType) => {
       contractsForChainType.forEach((railgunSmartWalletContract, chainID) => {
@@ -658,7 +658,7 @@ class RailgunEngine extends EventEmitter {
       this.unloadWallet(walletID);
     });
 
-    this.db.close();
+    await this.db.close();
   }
 
   private loadWallet(wallet: AbstractWallet): void {

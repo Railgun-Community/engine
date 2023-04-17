@@ -87,7 +87,7 @@ describe('Transaction/ERC20', function test() {
       type: ChainType.EVM,
       id: 1,
     };
-    merkletree = new MerkleTree(db, chain, async () => true);
+    merkletree = await MerkleTree.create(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -747,9 +747,9 @@ describe('Transaction/ERC20', function test() {
     expect(txs[0].commitments.length).to.equal(2);
   });
 
-  this.afterAll(() => {
+  this.afterAll(async () => {
     // Clean up database
     wallet.unloadMerkletree(merkletree.chain);
-    db.close();
+    await db.close();
   });
 });
