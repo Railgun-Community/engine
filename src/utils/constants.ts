@@ -37,3 +37,8 @@ export const ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM: {
   80001: 32311023,
   421613: 10607748,
 };
+
+/**
+ * Increment to issue fresh merkletree rescan on next launch.
+ */
+export const CURRENT_MERKLETREE_HISTORY_VERSION = 2;

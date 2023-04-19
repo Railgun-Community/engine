@@ -232,7 +232,7 @@ class RailgunSmartWalletContract extends EventEmitter {
           fee,
         };
         await eventsUnshieldListener([
-          formatUnshieldEvent(args, event.transactionHash, event.blockNumber),
+          formatUnshieldEvent(args, event.transactionHash, event.blockNumber, event.logIndex),
         ]);
       },
     );

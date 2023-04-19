@@ -32,6 +32,7 @@ export type UnshieldStoredEvent = {
   amount: string;
   fee: string;
   blockNumber: number;
+  eventLogIndex: number;
 };
 
 export type AccumulatedEvents = {

@@ -953,12 +953,17 @@ abstract class AbstractWallet extends EventEmitter {
     const merkletree = this.getMerkletreeForChain(chain);
     const unshieldEvents: UnshieldStoredEvent[] = [];
 
+    const seenSpentTxids: string[] = [];
+
     await Promise.all(
       filteredTXOs.map(async ({ spendtxid, note }) => {
         if (note.value === 0n) {
           return;
         }
         if (!spendtxid) {
+          return;
+        }
+        if (seenSpentTxids.includes(spendtxid)) {
           return;
         }
 
@@ -971,6 +976,7 @@ abstract class AbstractWallet extends EventEmitter {
             ) == null,
         );
         unshieldEvents.push(...filteredEventsForNullifier);
+        seenSpentTxids.push(spendtxid);
       }),
     );
 
@@ -982,7 +988,9 @@ abstract class AbstractWallet extends EventEmitter {
       a.txid === b.txid &&
       a.tokenAddress.toLowerCase() === b.tokenAddress.toLowerCase() &&
       a.tokenSubID === b.tokenSubID &&
-      a.toAddress === b.toAddress
+      a.toAddress === b.toAddress &&
+      a.amount === b.amount &&
+      a.eventLogIndex === b.eventLogIndex
     );
   }
 

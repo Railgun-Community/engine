@@ -176,6 +176,7 @@ export function formatUnshieldEvent(
   unshieldEventArgs: UnshieldEventObject,
   transactionHash: string,
   blockNumber: number,
+  eventLogIndex: number,
 ): UnshieldStoredEvent {
   const { to, token, amount, fee } = unshieldEventArgs;
   return {
@@ -187,6 +188,7 @@ export function formatUnshieldEvent(
     amount: amount.toHexString(),
     fee: fee.toHexString(),
     blockNumber,
+    eventLogIndex,
   };
 }
 
@@ -267,7 +269,7 @@ export async function processUnshieldEvents(
   }
   filtered.forEach((event) => {
     const { args, transactionHash, blockNumber } = event;
-    unshields.push(formatUnshieldEvent(args, transactionHash, blockNumber));
+    unshields.push(formatUnshieldEvent(args, transactionHash, blockNumber, event.logIndex));
   });
 
   await eventsUnshieldListener(unshields);

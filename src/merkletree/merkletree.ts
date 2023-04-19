@@ -3,6 +3,7 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import { poseidon } from 'circomlibjs';
 import msgpack from 'msgpack-lite';
+import { BigNumber } from '@ethersproject/bignumber';
 import type { Database } from '../database/database';
 import {
   fromUTF8String,
@@ -13,7 +14,6 @@ import {
   nToHex,
   hexToBigInt,
   arrayify,
-  padToLength,
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
 import { BytesData, Commitment, MerkleProof, Nullifier } from '../models/formatted-types';
@@ -241,14 +241,14 @@ class MerkleTree {
    * @param txid - unshield txid to get path for
    * @returns database path
    */
-  getUnshieldEventsDBPath(txid: string, tokenAddress?: string): string[] {
+  getUnshieldEventsDBPath(txid: string, eventLogIndex?: number): string[] {
     const path = [
       ...this.getChainDBPrefix(),
       hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
       hexlify(txid),
     ];
-    if (tokenAddress != null) {
-      path.push(hexlify(padToLength(tokenAddress, 32)));
+    if (eventLogIndex != null) {
+      path.push(hexlify(BigNumber.from(eventLogIndex).toHexString()));
     }
     return path.map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
@@ -297,7 +297,7 @@ class MerkleTree {
     // Build write batch for nullifiers
     const writeBatch: PutBatch[] = unshields.map((unshield) => ({
       type: 'put',
-      key: this.getUnshieldEventsDBPath(unshield.txid, unshield.tokenAddress).join(':'),
+      key: this.getUnshieldEventsDBPath(unshield.txid, unshield.eventLogIndex).join(':'),
       value: unshield,
     }));
 

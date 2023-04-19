@@ -62,6 +62,7 @@
     "@typescript-eslint/no-non-null-assertion": 2,
     "@typescript-eslint/no-floating-promises": 2,
     "import/no-extraneous-dependencies": 0,
+    "import/order": 1,
     "no-warning-comments": 1,
     "@typescript-eslint/no-duplicate-enum-values": 1,
     "no-only-tests/no-only-tests": 1

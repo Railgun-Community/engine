@@ -26,6 +26,7 @@ import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
+import { CURRENT_MERKLETREE_HISTORY_VERSION } from './utils/constants';
 
 class RailgunEngine extends EventEmitter {
   readonly db;
@@ -295,6 +296,16 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
+
+    const merkletreeHistoryVersion = await this.getMerkletreeHistoryVersion(chain);
+    if (
+      !merkletreeHistoryVersion ||
+      merkletreeHistoryVersion < CURRENT_MERKLETREE_HISTORY_VERSION
+    ) {
+      await this.clearSyncedMerkletreeLeaves(chain);
+      await this.setMerkletreeHistoryVersion(chain, CURRENT_MERKLETREE_HISTORY_VERSION);
+    }
+
     const merkletree = this.getMerkletreeForChain(chain);
     const railgunSmartWalletContract =
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
@@ -359,7 +370,7 @@ class RailgunEngine extends EventEmitter {
             // This will force a scan from the last valid commitment on next run.
             return;
           }
-          await this.setLastSyncedBlock(syncedBlock, chain);
+          await this.setLastSyncedBlock(chain, syncedBlock);
         },
       );
 
@@ -553,7 +564,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  private static getLastSyncedBlockDBPrefix(chain?: Chain): string[] {
+  private static getLastSyncedBlockDBPrefix(chain: Chain): string[] {
     const path = [DatabaseNamespace.ChainSyncInfo, 'last_synced_block'];
     if (chain != null) path.push(getChainFullNetworkID(chain));
     return path;
@@ -561,10 +572,10 @@ class RailgunEngine extends EventEmitter {
 
   /**
    * Sets last synced block to resume syncing on next load.
-   * @param lastSyncedBlock - last synced block
    * @param chain - chain type/id to store value for
+   * @param lastSyncedBlock - last synced block
    */
-  setLastSyncedBlock(lastSyncedBlock: number, chain: Chain): Promise<void> {
+  setLastSyncedBlock(chain: Chain, lastSyncedBlock: number): Promise<void> {
     return this.db.put(RailgunEngine.getLastSyncedBlockDBPrefix(chain), lastSyncedBlock, 'utf8');
   }
 
@@ -576,6 +587,27 @@ class RailgunEngine extends EventEmitter {
   getLastSyncedBlock(chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getLastSyncedBlockDBPrefix(chain), 'utf8')
+      .then((val: string) => parseInt(val, 10))
+      .catch(() => Promise.resolve(undefined));
+  }
+
+  private static getMerkletreeHistoryVersionDBPrefix(chain?: Chain): string[] {
+    const path = [DatabaseNamespace.ChainSyncInfo, 'merkleetree_history_version'];
+    if (chain != null) path.push(getChainFullNetworkID(chain));
+    return path;
+  }
+
+  setMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+    return this.db.put(
+      RailgunEngine.getMerkletreeHistoryVersionDBPrefix(chain),
+      merkletreeHistoryVersion,
+      'utf8',
+    );
+  }
+
+  getMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+    return this.db
+      .get(RailgunEngine.getMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }

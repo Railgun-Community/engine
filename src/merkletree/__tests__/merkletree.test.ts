@@ -7,6 +7,7 @@ import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { MerkleTree, MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../merkletree';
 import { TOKEN_SUB_ID_NULL } from '../../models/transaction-constants';
+import { UnshieldStoredEvent } from '../../models';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -568,7 +569,7 @@ describe('MerkleTree', () => {
 
   it('Should store and retrieve unshield events', async () => {
     expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([]);
-    const unshieldA1 = {
+    const unshieldA1: UnshieldStoredEvent = {
       txid: '0',
       toAddress: '123',
       tokenType: 1,
@@ -577,9 +578,10 @@ describe('MerkleTree', () => {
       amount: '0x1234567890',
       fee: '0x7890',
       blockNumber: 0,
+      eventLogIndex: 0,
     };
-    const unshieldA2 = {
-      txid: '0',
+    const unshieldA2: UnshieldStoredEvent = {
+      txid: '1',
       toAddress: '123',
       tokenType: 1,
       tokenAddress: '0x1234',
@@ -587,20 +589,22 @@ describe('MerkleTree', () => {
       amount: '0x123456',
       fee: '0x7890',
       blockNumber: 0,
+      eventLogIndex: 0,
     };
-    const unshieldB1 = {
+    const unshieldB1: UnshieldStoredEvent = {
       txid: '1',
       toAddress: '123',
       tokenType: 1,
       tokenAddress: '0x1234',
       tokenSubID: '0x00',
-      amount: '0x654321',
+      amount: '0x123456',
       fee: '0x7890',
       blockNumber: 0,
+      eventLogIndex: 1,
     };
     await merkletree.addUnshieldEvents([unshieldA1, unshieldA2, unshieldB1]);
-    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA2, unshieldA1]);
-    expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldB1]);
+    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA2]);
+    expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldA1, unshieldB1]);
   });
 
   it('Should return latest tree', async () => {

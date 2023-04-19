@@ -1,6 +1,7 @@
 /// <reference types="../../../types/global" />
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import { BigNumber } from '@ethersproject/bignumber';
 import { ethers } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
@@ -57,6 +58,7 @@ import { getTokenDataERC20 } from '../../../note/note-util';
 import { TokenDataGetter } from '../../../token/token-data-getter';
 import { ContractStore } from '../../contract-store';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
+import { ShieldRequestStruct, TransactionHistoryReceiveTokenAmount } from '../../../models';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -541,6 +543,116 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
+  it.only('[HH] Should create 11 shields which generates 2 unshield events', async function run() {
+    if (!process.env.RUN_HARDHAT_TESTS) {
+      this.skip();
+      return;
+    }
+
+    const startingBlock = await provider.getBlockNumber();
+
+    const shieldInputs: ShieldRequestStruct[] = [];
+    for (let i = 0; i < 11; i += 1) {
+      const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, 100000000n, TOKEN_ADDRESS);
+      const shieldPrivateKey = hexToBytes(randomHex(32));
+      shieldInputs.push(
+        // eslint-disable-next-line no-await-in-loop
+        await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey),
+      );
+    }
+    const shieldTx = await railgunSmartWalletContract.generateShield(shieldInputs);
+
+    // Send shield on chain
+    const tx = await ethersWallet.sendTransaction(shieldTx);
+    await Promise.all([tx.wait(), awaitScan(wallet, chain)]);
+
+    const transactionBatch = new TransactionBatch(chain);
+
+    const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
+
+    transactionBatch.addUnshieldData({
+      toAddress: ethersWallet.address,
+      value: 1097250000n, // 11 * 100000000 * 0.9975
+      tokenData,
+    });
+    const serializedTxs = await transactionBatch.generateTransactions(
+      engine.prover,
+      wallet,
+      testEncryptionKey,
+      () => {},
+    );
+    const transact = await railgunSmartWalletContract.transact(serializedTxs);
+
+    // Send transact on chain
+    const txTransact = await ethersWallet.sendTransaction(transact);
+    await Promise.all([
+      txTransact.wait(),
+      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+    ]);
+
+    expect(await wallet.getBalance(chain, TOKEN_ADDRESS)).equal(0n);
+
+    const history = await wallet.getTransactionHistory(chain, startingBlock);
+
+    const tokenFormatted = formatToByteLength(TOKEN_ADDRESS, ByteLength.UINT_256, false);
+
+    expect(history.length).to.equal(2);
+
+    const singleShieldHistory: TransactionHistoryReceiveTokenAmount = {
+      tokenData: getTokenDataERC20(TOKEN_ADDRESS),
+      tokenHash: tokenFormatted,
+      amount: 99750000n, // 100000000 * 0.9975
+      memoText: undefined,
+      senderAddress: undefined,
+      shieldFee: BigNumber.from('250000').toHexString(), // 100000000 * 0.0025
+    };
+
+    // Check first output: Shield (receive only).
+    expect(history[0].receiveTokenAmounts).deep.eq([
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory,
+      singleShieldHistory, // x11
+    ]);
+    expect(history[0].transferTokenAmounts).deep.eq([]);
+    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].changeTokenAmounts).deep.eq([]);
+    expect(history[0].unshieldTokenAmounts).deep.eq([]);
+
+    // Check first output: Unshield.
+    expect(history[1].receiveTokenAmounts).deep.eq([]);
+    expect(history[1].transferTokenAmounts).deep.eq([]);
+    expect(history[1].relayerFeeTokenAmount).eq(undefined);
+    expect(history[1].changeTokenAmounts).deep.eq([]);
+    expect(history[1].unshieldTokenAmounts).deep.eq([
+      {
+        tokenData: getTokenDataERC20(TOKEN_ADDRESS),
+        tokenHash: tokenFormatted,
+        amount: 995006250n, // 1097250000n * 10/11 * 0.9975
+        recipientAddress: ethersWallet.address,
+        memoText: undefined,
+        senderAddress: undefined,
+        unshieldFee: BigNumber.from('2493750').toHexString(),
+      },
+      {
+        tokenData: getTokenDataERC20(TOKEN_ADDRESS),
+        tokenHash: tokenFormatted,
+        amount: 99500625n, // 1097250000n * 1/11 * 0.9975
+        recipientAddress: ethersWallet.address,
+        memoText: undefined,
+        senderAddress: undefined,
+        unshieldFee: BigNumber.from('249375').toHexString(), // 1097250000n * 1/11 * 0.9975
+      },
+    ]);
+  }).timeout(120000);
+
   it('[HH] Should scan and rescan history for events', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
@@ -788,7 +900,7 @@ describe('Railgun Smart Wallet', function runTests() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    engine.unload();
+    await engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });

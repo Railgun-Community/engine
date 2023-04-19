@@ -844,11 +844,26 @@ describe('RailgunEngine', function test() {
     };
     let lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setLastSyncedBlock(100, chainForSyncedBlock);
+    await engine.setLastSyncedBlock(chainForSyncedBlock, 100);
     lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setLastSyncedBlock(100000, chainForSyncedBlock);
+    await engine.setLastSyncedBlock(chainForSyncedBlock, 100000);
     lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
+    expect(lastSyncedBlock).to.equal(100000);
+  });
+
+  it('Should set/get merkletree history version', async () => {
+    const chainForSyncedBlock = {
+      type: ChainType.EVM,
+      id: 10010,
+    };
+    let lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
+    expect(lastSyncedBlock).to.equal(undefined);
+    await engine.setMerkletreeHistoryVersion(chainForSyncedBlock, 100);
+    lastSyncedBlock = await engine.getMerkletreeHistoryVersion(chainForSyncedBlock);
+    expect(lastSyncedBlock).to.equal(100);
+    await engine.setMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
+    lastSyncedBlock = await engine.getMerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
