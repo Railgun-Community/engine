@@ -74,7 +74,7 @@ export type TransactionHistoryEntrySpent = {
   changeTokenAmounts: TransactionHistoryTokenAmount[];
   relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
   unshieldTokenAmounts: TransactionHistoryUnshieldTokenAmount[];
-  version: number;
+  version: TransactionHistoryItemVersion;
 };
 export type TransactionHistoryEntry = TransactionHistoryEntrySpent &
   TransactionHistoryEntryReceived;
@@ -83,7 +83,7 @@ export type TransactionHistoryEntryPreprocessSpent = {
   timestamp: Optional<number>;
   blockNumber: Optional<number>;
   tokenAmounts: TransactionHistoryTokenAmount[];
-  version: number;
+  version: TransactionHistoryItemVersion;
   unshieldEvents: UnshieldStoredEvent[];
 };
 export enum TransactionHistoryItemVersion {
