@@ -543,7 +543,7 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(resultNullifiers.length).to.equal(1);
   }).timeout(120000);
 
-  it.only('[HH] Should create 11 shields which generates 2 unshield events', async function run() {
+  it('[HH] Should create 11 shields which generates 2 unshield events', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;

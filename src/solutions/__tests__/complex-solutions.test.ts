@@ -66,6 +66,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
   return {
     txid,
     note,
+    timestamp: undefined,
     position: MOCK_POSITION,
     tree: 0,
     spendtxid: false,

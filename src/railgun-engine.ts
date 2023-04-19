@@ -302,7 +302,7 @@ class RailgunEngine extends EventEmitter {
       !merkletreeHistoryVersion ||
       merkletreeHistoryVersion < CURRENT_MERKLETREE_HISTORY_VERSION
     ) {
-      await this.clearSyncedMerkletreeLeaves(chain);
+      await this.clearMerkletreeAndWallets(chain);
       await this.setMerkletreeHistoryVersion(chain, CURRENT_MERKLETREE_HISTORY_VERSION);
     }
 
@@ -405,6 +405,11 @@ class RailgunEngine extends EventEmitter {
     await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
 
+  async clearMerkletreeAndWallets(chain: Chain) {
+    await this.clearSyncedMerkletreeLeaves(chain);
+    await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chain)));
+  }
+
   /**
    * Clears stored merkletree leaves and wallet balances, and re-scans fully.
    * @param chain - chain type/id to rescan
@@ -427,8 +432,7 @@ class RailgunEngine extends EventEmitter {
     }
     this.emitScanUpdateEvent(chain, 0.01); // 1%
     merkletree.isScanning = true; // Don't allow scans while removing leaves.
-    await this.clearSyncedMerkletreeLeaves(chain);
-    await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chain)));
+    await this.clearMerkletreeAndWallets(chain);
     merkletree.isScanning = false; // Clear before calling scanHistory.
     await this.scanHistory(chain);
   }

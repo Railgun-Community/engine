@@ -114,23 +114,25 @@ export type CommitmentCiphertext = {
   memo: string;
 };
 
-export type ShieldCommitment = {
-  commitmentType: CommitmentType.ShieldCommitment;
+type CommitmentShared = {
+  commitmentType: CommitmentType;
   hash: string;
   txid: string;
+  blockNumber: number;
+  timestamp: Optional<number>;
+};
+
+export type ShieldCommitment = CommitmentShared & {
+  commitmentType: CommitmentType.ShieldCommitment;
   preImage: PreImage;
   encryptedBundle: [string, string, string];
   shieldKey: string;
-  blockNumber: number;
   fee: Optional<string>;
 };
 
-export type TransactCommitment = {
+export type TransactCommitment = CommitmentShared & {
   commitmentType: CommitmentType.TransactCommitment;
-  hash: string;
-  txid: string;
   ciphertext: CommitmentCiphertext;
-  blockNumber: number;
 };
 
 export type Commitment =
@@ -150,6 +152,7 @@ export type Nullifier = {
 export type StoredReceiveCommitment = {
   spendtxid: string | false;
   txid: string;
+  timestamp: Optional<number>;
   nullifier: string;
   decrypted: NoteSerialized | LegacyNoteSerialized;
   senderAddress: Optional<string>;
@@ -158,6 +161,7 @@ export type StoredReceiveCommitment = {
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type StoredSendCommitment = {
   txid: string;
+  timestamp: Optional<number>;
   decrypted: NoteSerialized | LegacyNoteSerialized;
   noteExtraData?: NoteAnnotationData;
   recipientAddress: string;
@@ -168,13 +172,10 @@ export type StoredSendCommitment = {
  * Need to support these for legacy notes.
  */
 
-export type LegacyGeneratedCommitment = {
+export type LegacyGeneratedCommitment = CommitmentShared & {
   commitmentType: CommitmentType.LegacyGeneratedCommitment;
-  hash: string;
-  txid: string;
   preImage: PreImage;
   encryptedRandom: [string, string];
-  blockNumber: number;
 };
 
 export type LegacyCommitmentCiphertext = {
@@ -183,10 +184,7 @@ export type LegacyCommitmentCiphertext = {
   memo: string[]; // bytes32[]
 };
 
-export type LegacyEncryptedCommitment = {
+export type LegacyEncryptedCommitment = CommitmentShared & {
   commitmentType: CommitmentType.LegacyEncryptedCommitment;
-  hash: string;
-  txid: string;
   ciphertext: LegacyCommitmentCiphertext;
-  blockNumber: number;
 };

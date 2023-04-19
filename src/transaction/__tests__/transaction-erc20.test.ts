@@ -67,6 +67,7 @@ const shieldLeaf: LegacyGeneratedCommitment = {
   commitmentType: CommitmentType.LegacyGeneratedCommitment,
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
   txid: '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
+  timestamp: undefined,
   preImage: {
     npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',
     token: getTokenDataERC20(tokenAddress),

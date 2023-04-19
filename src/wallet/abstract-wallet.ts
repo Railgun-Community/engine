@@ -527,6 +527,7 @@ abstract class AbstractWallet extends EventEmitter {
       const storedReceiveCommitment: StoredReceiveCommitment = {
         spendtxid: false,
         txid: leaf.txid,
+        timestamp: leaf.timestamp,
         nullifier: nToHex(nullifier, ByteLength.UINT_256),
         decrypted: noteReceive.serialize(),
         senderAddress: noteReceive.senderAddressData
@@ -549,6 +550,7 @@ abstract class AbstractWallet extends EventEmitter {
     if (noteSend && serializedNoteSend) {
       const storedSendCommitment: StoredSendCommitment = {
         txid: leaf.txid,
+        timestamp: leaf.timestamp,
         decrypted: serializedNoteSend,
         noteExtraData: Memo.decryptNoteAnnotationData(noteSend.annotationData, viewingPrivateKey),
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
@@ -735,6 +737,7 @@ abstract class AbstractWallet extends EventEmitter {
           tree,
           position,
           txid: txo.txid,
+          timestamp: txo.timestamp,
           spendtxid: txo.spendtxid,
           note,
         };
@@ -776,6 +779,7 @@ abstract class AbstractWallet extends EventEmitter {
           tree,
           position,
           txid: sentCommitment.txid,
+          timestamp: sentCommitment.timestamp,
           note,
           noteAnnotationData: sentCommitment.noteExtraData,
           isLegacyTransactNote: TransactNote.isLegacyTransactNote(sentCommitment.decrypted),
@@ -907,13 +911,14 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<TransactionHistoryEntryReceived[]> {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
-    filteredTXOs.forEach(({ txid, note }) => {
+    filteredTXOs.forEach(({ txid, timestamp, note }) => {
       if (note.value === 0n) {
         return;
       }
       if (!txidTransactionMap[txid]) {
         txidTransactionMap[txid] = {
           txid,
+          timestamp,
           blockNumber: note.blockNumber,
           receiveTokenAmounts: [],
         };
@@ -984,14 +989,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private static compareUnshieldEvents(a: UnshieldStoredEvent, b: UnshieldStoredEvent): boolean {
-    return (
-      a.txid === b.txid &&
-      a.tokenAddress.toLowerCase() === b.tokenAddress.toLowerCase() &&
-      a.tokenSubID === b.tokenSubID &&
-      a.toAddress === b.toAddress &&
-      a.amount === b.amount &&
-      a.eventLogIndex === b.eventLogIndex
-    );
+    return a.txid === b.txid && a.eventLogIndex === b.eventLogIndex;
   }
 
   async getTransactionSpendHistory(
@@ -1007,42 +1005,46 @@ abstract class AbstractWallet extends EventEmitter {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
     await Promise.all(
-      sentCommitments.map(async ({ txid, note, isLegacyTransactNote, noteAnnotationData }) => {
-        if (note.value === 0n) {
-          return;
-        }
-        if (!txidTransactionMap[txid]) {
-          txidTransactionMap[txid] = {
-            txid,
-            blockNumber: note.blockNumber,
-            tokenAmounts: [],
-            unshieldEvents: [],
-            version: AbstractWallet.getTransactionHistoryItemVersion(
-              noteAnnotationData,
-              isLegacyTransactNote,
-            ),
-          };
-        }
+      sentCommitments.map(
+        async ({ txid, timestamp, note, isLegacyTransactNote, noteAnnotationData }) => {
+          if (note.value === 0n) {
+            return;
+          }
+          if (!txidTransactionMap[txid]) {
+            txidTransactionMap[txid] = {
+              txid,
+              timestamp,
+              blockNumber: note.blockNumber,
+              tokenAmounts: [],
+              unshieldEvents: [],
+              version: AbstractWallet.getTransactionHistoryItemVersion(
+                noteAnnotationData,
+                isLegacyTransactNote,
+              ),
+            };
+          }
 
-        const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
-        const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
-          tokenHash,
-          tokenData: note.tokenData,
-          amount: note.value,
-          noteAnnotationData,
-          memoText: note.memoText,
-        };
-        const isNonLegacyTransfer =
-          !isLegacyTransactNote &&
-          noteAnnotationData &&
-          noteAnnotationData.outputType === OutputType.Transfer;
-        if (isNonLegacyTransfer) {
-          (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
-            note.receiverAddressData,
-          );
-        }
-        txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
-      }),
+          const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
+          const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount =
+            {
+              tokenHash,
+              tokenData: note.tokenData,
+              amount: note.value,
+              noteAnnotationData,
+              memoText: note.memoText,
+            };
+          const isNonLegacyTransfer =
+            !isLegacyTransactNote &&
+            noteAnnotationData &&
+            noteAnnotationData.outputType === OutputType.Transfer;
+          if (isNonLegacyTransfer) {
+            (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
+              note.receiverAddressData,
+            );
+          }
+          txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
+        },
+      ),
     );
 
     // Add unshield events to txidTransactionMap
@@ -1053,6 +1055,7 @@ abstract class AbstractWallet extends EventEmitter {
         // There is no commitment (or tokenAmounts) for this kind of unshield transaction.
         txidTransactionMap[unshieldEvent.txid] = {
           txid: unshieldEvent.txid,
+          timestamp: unshieldEvent.timestamp,
           blockNumber: unshieldEvent.blockNumber,
           unshieldEvents: [unshieldEvent],
           tokenAmounts: [],
@@ -1080,7 +1083,7 @@ abstract class AbstractWallet extends EventEmitter {
       Object.values(txidTransactionMap);
 
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
-      ({ txid, blockNumber, tokenAmounts, unshieldEvents, version }) => {
+      ({ txid, timestamp, blockNumber, tokenAmounts, unshieldEvents, version }) => {
         const transferTokenAmounts: TransactionHistoryTransferTokenAmount[] = [];
         let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
@@ -1126,6 +1129,7 @@ abstract class AbstractWallet extends EventEmitter {
 
         const historyEntry: TransactionHistoryEntrySpent = {
           txid,
+          timestamp,
           blockNumber,
           transferTokenAmounts,
           relayerFeeTokenAmount,

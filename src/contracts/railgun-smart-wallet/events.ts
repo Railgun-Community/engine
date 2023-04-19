@@ -61,6 +61,7 @@ export function formatShieldCommitments(
       commitmentType: CommitmentType.ShieldCommitment,
       hash: nToHex(noteHash, ByteLength.UINT_256),
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      timestamp: undefined,
       blockNumber,
       preImage,
       encryptedBundle: shieldCiphertext[index].encryptedBundle,
@@ -139,6 +140,7 @@ export function formatTransactCommitments(
       commitmentType: CommitmentType.TransactCommitment,
       hash: formatToByteLength(hash[index], ByteLength.UINT_256),
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      timestamp: undefined,
       blockNumber,
       ciphertext: formatCommitmentCiphertext(commitment),
     };
@@ -181,6 +183,7 @@ export function formatUnshieldEvent(
   const { to, token, amount, fee } = unshieldEventArgs;
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+    timestamp: undefined,
     toAddress: to,
     tokenType: token.tokenType,
     tokenAddress: token.tokenAddress,

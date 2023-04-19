@@ -62,11 +62,13 @@ export type TransactionHistoryReceiveTokenAmount = TransactionHistoryTokenAmount
 };
 export type TransactionHistoryEntryReceived = {
   txid: string;
+  timestamp: Optional<number>;
   blockNumber: Optional<number>;
   receiveTokenAmounts: TransactionHistoryReceiveTokenAmount[];
 };
 export type TransactionHistoryEntrySpent = {
   txid: string;
+  timestamp: Optional<number>;
   blockNumber: Optional<number>;
   transferTokenAmounts: TransactionHistoryTransferTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
@@ -78,6 +80,7 @@ export type TransactionHistoryEntry = TransactionHistoryEntrySpent &
   TransactionHistoryEntryReceived;
 export type TransactionHistoryEntryPreprocessSpent = {
   txid: string;
+  timestamp: Optional<number>;
   blockNumber: Optional<number>;
   tokenAmounts: TransactionHistoryTokenAmount[];
   version: number;

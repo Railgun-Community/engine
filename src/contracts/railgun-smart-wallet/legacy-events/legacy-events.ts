@@ -53,6 +53,7 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
       commitmentType: CommitmentType.LegacyGeneratedCommitment,
       hash: nToHex(noteHash, ByteLength.UINT_256),
       txid: transactionHash,
+      timestamp: undefined,
       blockNumber,
       preImage,
       encryptedRandom: randomFormatted[index],
@@ -128,6 +129,7 @@ export function formatLegacyCommitmentBatchCommitments(
       commitmentType: CommitmentType.LegacyEncryptedCommitment,
       hash: formatToByteLength(hash[index].toHexString(), ByteLength.UINT_256),
       txid: transactionHash,
+      timestamp: undefined,
       blockNumber,
       ciphertext: formatLegacyCommitmentCiphertext(commitment),
     };

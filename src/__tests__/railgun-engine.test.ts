@@ -146,6 +146,7 @@ describe('RailgunEngine', function test() {
       commitmentType: CommitmentType.LegacyGeneratedCommitment,
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
+      timestamp: undefined,
       preImage: {
         npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
         token: {
@@ -196,6 +197,7 @@ describe('RailgunEngine', function test() {
       commitmentType: CommitmentType.LegacyGeneratedCommitment,
       hash: '14308448bcb19ecff96805fe3d00afecf82b18fa6f8297b42cf2aadc23f412e6',
       txid: '0x0543be0699a7eac2b75f23b33d435aacaeb0061f63e336230bcc7559a1852f33',
+      timestamp: undefined,
       preImage: {
         npk: '0xc24ea33942c0fb9acce5dbada73137ad3257a6f2e1be8f309c1fe9afc5410a',
         token: {

@@ -43,6 +43,7 @@ let makeNote: (value?: bigint) => Promise<TransactNote>;
 const shieldLeaf = (txid: string): Commitment => ({
   commitmentType: CommitmentType.LegacyGeneratedCommitment,
   txid,
+  timestamp: undefined,
   hash: '10c139398677d31020ddf97e0c73239710c956a52a7ea082a1e84815582bfb5f',
   preImage: {
     npk: '1d73bae2faf4ff18e1cd22d22cb9c05bc08878dc8fa4907257ce1a7ad51933f7',

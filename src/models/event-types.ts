@@ -25,6 +25,7 @@ export type CommitmentEvent = {
 
 export type UnshieldStoredEvent = {
   txid: string;
+  timestamp: Optional<number>;
   toAddress: string;
   tokenType: number;
   tokenAddress: string;
