@@ -610,7 +610,7 @@ describe('MerkleTree', () => {
       eventLogIndex: 0,
       timestamp: undefined,
     };
-    const unshieldA2: UnshieldStoredEvent = {
+    const unshieldB1: UnshieldStoredEvent = {
       txid: '1',
       toAddress: '123',
       tokenType: 1,
@@ -622,7 +622,7 @@ describe('MerkleTree', () => {
       eventLogIndex: 0,
       timestamp: undefined,
     };
-    const unshieldB1: UnshieldStoredEvent = {
+    const unshieldB2: UnshieldStoredEvent = {
       txid: '1',
       toAddress: '123',
       tokenType: 1,
@@ -634,9 +634,9 @@ describe('MerkleTree', () => {
       eventLogIndex: 1,
       timestamp: undefined,
     };
-    await merkletree.addUnshieldEvents([unshieldA1, unshieldA2, unshieldB1]);
-    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA2]);
-    expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldA1, unshieldB1]);
+    await merkletree.addUnshieldEvents([unshieldA1, unshieldB1, unshieldB2]);
+    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA1]);
+    expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldB1, unshieldB2]);
   });
 
   it('Should return latest tree', async () => {
