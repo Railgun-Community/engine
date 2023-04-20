@@ -7,7 +7,7 @@ import { Database, DatabaseNamespace } from './database/database';
 import { MerkleTree } from './merkletree/merkletree';
 import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
-import { hexlify } from './utils/bytes';
+import { ByteLength, formatToByteLength, hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
@@ -97,6 +97,10 @@ class RailgunEngine extends EventEmitter {
     EngineDebug.log(
       `[commitmentListener: ${chain.type}:${chain.id}]: ${leaves.length} leaves at ${startingIndex}`,
     );
+    leaves.forEach((leaf) => {
+      // eslint-disable-next-line no-param-reassign
+      leaf.txid = formatToByteLength(leaf.txid, ByteLength.UINT_256, false);
+    });
     // Queue leaves to merkle tree
     const merkletree = this.getMerkletreeForChain(chain);
     await merkletree.queueLeaves(treeNumber, startingIndex, leaves);
@@ -115,6 +119,12 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
+    nullifiers.forEach((nullifier) => {
+      // eslint-disable-next-line no-param-reassign
+      nullifier.txid = formatToByteLength(nullifier.txid, ByteLength.UINT_256, false);
+      // eslint-disable-next-line no-param-reassign
+      nullifier.nullifier = formatToByteLength(nullifier.nullifier, ByteLength.UINT_256, false);
+    });
     const merkletree = this.getMerkletreeForChain(chain);
     await merkletree.nullify(nullifiers);
   }
@@ -129,6 +139,10 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     EngineDebug.log(`engine.unshieldListener[${chain.type}:${chain.id}] ${unshields.length}`);
+    unshields.forEach((unshield) => {
+      // eslint-disable-next-line no-param-reassign
+      unshield.txid = formatToByteLength(unshield.txid, ByteLength.UINT_256, false);
+    });
     const merkletree = this.getMerkletreeForChain(chain);
     await merkletree.addUnshieldEvents(unshields);
   }

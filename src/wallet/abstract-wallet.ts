@@ -971,6 +971,7 @@ abstract class AbstractWallet extends EventEmitter {
         if (seenSpentTxids.includes(spendtxid)) {
           return;
         }
+        seenSpentTxids.push(spendtxid);
 
         // Nullifier exists. Find unshield events from txid.
         const unshieldEventsForNullifier = await merkletree.getUnshieldEvents(spendtxid);
@@ -981,7 +982,6 @@ abstract class AbstractWallet extends EventEmitter {
             ) == null,
         );
         unshieldEvents.push(...filteredEventsForNullifier);
-        seenSpentTxids.push(spendtxid);
       }),
     );
 
