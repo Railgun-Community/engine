@@ -221,15 +221,12 @@ class RailgunEngine extends EventEmitter {
 
       this.emitScanUpdateEvent(chain, endProgress * 0.2); // 10% / 50%
 
-      // Pass unshield events to listener
       await this.unshieldListener(chain, unshieldEvents);
-
-      // Pass nullifier events to listener
       await this.nullifierListener(chain, nullifierEvents);
 
       this.emitScanUpdateEvent(chain, endProgress * 0.24); // 12% / 50%
 
-      // Pass events to commitments listener and wait for resolution
+      // Make sure commitments are scanned after Unshields and Nullifiers.
       await Promise.all(
         commitmentEvents.map(async (commitmentEvent) => {
           const { treeNumber, startPosition, commitments } = commitmentEvent;

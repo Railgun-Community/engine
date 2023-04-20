@@ -408,8 +408,8 @@ class RailgunSmartWalletContract extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
           processNullifiedEvents(eventsNullifierListener, eventsNullifiers),
-          processTransactEvents(eventsListener, eventsTransact),
           processUnshieldEvents(eventsUnshieldListener, eventsUnshield),
+          processTransactEvents(eventsListener, eventsTransact),
         ]);
       }
 
