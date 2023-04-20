@@ -101,9 +101,11 @@ abstract class AbstractWallet extends EventEmitter {
 
   private creationBlockNumbers: Optional<number[][]>;
 
-  private cachedReceiveCommitments: Optional<CachedStoredReceiveCommitment[]>;
+  // [type: [id: CachedStoredReceiveCommitment[]]]
+  private cachedReceiveCommitments: CachedStoredReceiveCommitment[][][] = [];
 
-  private cachedSendCommitments: Optional<CachedStoredSendCommitment[]>;
+  // [type: [id: CachedStoredSendCommitment[]]]
+  private cachedSendCommitments: CachedStoredSendCommitment[][][] = [];
 
   /**
    * Create Wallet controller
@@ -540,7 +542,7 @@ abstract class AbstractWallet extends EventEmitter {
         key: this.getWalletReceiveCommitmentDBPrefix(chain, tree, position).join(':'),
         value: msgpack.encode(storedReceiveCommitment),
       });
-      AbstractWallet.addCachedStoredCommitment(this.cachedReceiveCommitments, {
+      AbstractWallet.addCachedStoredCommitment(chain, this.cachedReceiveCommitments, {
         storedReceiveCommitment,
         tree,
         position,
@@ -561,7 +563,7 @@ abstract class AbstractWallet extends EventEmitter {
         key: this.getWalletSentCommitmentDBPrefix(chain, tree, position).join(':'),
         value: msgpack.encode(storedSendCommitment),
       });
-      AbstractWallet.addCachedStoredCommitment(this.cachedSendCommitments, {
+      AbstractWallet.addCachedStoredCommitment(chain, this.cachedSendCommitments, {
         storedSendCommitment,
         tree,
         position,
@@ -632,8 +634,11 @@ abstract class AbstractWallet extends EventEmitter {
   private async queryAllStoredReceiveCommitments(
     chain: Chain,
   ): Promise<CachedStoredReceiveCommitment[]> {
-    if (this.cachedReceiveCommitments) {
-      return this.cachedReceiveCommitments;
+    if (
+      this.cachedReceiveCommitments[chain.type] &&
+      this.cachedReceiveCommitments[chain.type][chain.id]
+    ) {
+      return this.cachedReceiveCommitments[chain.type][chain.id];
     }
 
     const namespace = this.getWalletDBPrefix(chain);
@@ -651,13 +656,19 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    this.cachedReceiveCommitments = dbStoredReceiveCommitments;
+    if (!this.cachedReceiveCommitments[chain.type]) {
+      this.cachedReceiveCommitments[chain.type] = [];
+    }
+    this.cachedReceiveCommitments[chain.type][chain.id] = dbStoredReceiveCommitments;
     return dbStoredReceiveCommitments;
   }
 
   private async queryAllStoredSendCommitments(chain: Chain): Promise<CachedStoredSendCommitment[]> {
-    if (this.cachedSendCommitments) {
-      return this.cachedSendCommitments;
+    if (
+      this.cachedSendCommitments[chain.type] &&
+      this.cachedSendCommitments[chain.type][chain.id]
+    ) {
+      return this.cachedSendCommitments[chain.type][chain.id];
     }
 
     const namespace = this.getWalletSentCommitmentDBPrefix(chain);
@@ -675,23 +686,29 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    this.cachedSendCommitments = dbStoredSendCommitments;
+    if (!this.cachedSendCommitments[chain.type]) {
+      this.cachedSendCommitments[chain.type] = [];
+    }
+    this.cachedSendCommitments[chain.type][chain.id] = dbStoredSendCommitments;
     return dbStoredSendCommitments;
   }
 
-  private static addCachedStoredCommitment<
-    Cache extends Optional<{ tree: number; position: number }[]>,
-  >(cache: Cache, cachedCommitment: CachedStoredReceiveCommitment | CachedStoredSendCommitment) {
-    if (!cache) {
+  private static addCachedStoredCommitment<Cache extends { tree: number; position: number }[][][]>(
+    chain: Chain,
+    commitmentCache: Cache,
+    cachedCommitment: CachedStoredReceiveCommitment | CachedStoredSendCommitment,
+  ) {
+    if (!commitmentCache[chain.type] || !commitmentCache[chain.type][chain.id]) {
       return;
     }
-    const found = cache.find((stored) => {
+    const cacheForChain = commitmentCache[chain.type][chain.id];
+    const found = cacheForChain.find((stored) => {
       return stored.tree === cachedCommitment.tree && stored.position === cachedCommitment.position;
     });
     if (found) {
       return;
     }
-    cache.push(cachedCommitment);
+    cacheForChain.push(cachedCommitment);
   }
 
   /**
