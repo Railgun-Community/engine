@@ -188,3 +188,8 @@ export type LegacyEncryptedCommitment = CommitmentShared & {
   commitmentType: CommitmentType.LegacyEncryptedCommitment;
   ciphertext: LegacyCommitmentCiphertext;
 };
+
+export type CommitmentSummary = {
+  commitmentCiphertext: CommitmentCiphertext;
+  commitmentHash: string;
+};

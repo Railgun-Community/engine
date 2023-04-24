@@ -108,10 +108,11 @@ export function formatShieldEvent(
 }
 
 export function formatCommitmentCiphertext(
-  commitment: CommitmentCiphertextStructOutput,
+  commitmentCiphertext: CommitmentCiphertextStructOutput,
 ): CommitmentCiphertext {
-  const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } = commitment;
-  const ciphertext = commitment.ciphertext.map(
+  const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } =
+    commitmentCiphertext;
+  const ciphertext = commitmentCiphertext.ciphertext.map(
     (el) => formatToByteLength(el, ByteLength.UINT_256), // 32 bytes each.
   );
   const ivTag = ciphertext[0];
