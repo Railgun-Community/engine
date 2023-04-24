@@ -657,7 +657,7 @@ class RailgunEngine extends EventEmitter {
 
     const matchingTxids = otherTxids.filter((txid) => txid === firstTxid);
     const allMatch = matchingTxids.length === nullifiers.length - 1;
-    return allMatch ? `0x${firstTxid}` : undefined;
+    return allMatch ? formatToByteLength(firstTxid, ByteLength.UINT_256, true) : undefined;
   }
 
   async scanAllWallets(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
