@@ -1,7 +1,7 @@
 import { poseidon } from 'circomlibjs';
 import { NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
-import { keccak256, SNARK_PRIME_BIGINT } from '../utils';
+import { SNARK_PRIME_BIGINT } from '../utils/constants';
 import {
   formatToByteLength,
   ByteLength,
@@ -13,6 +13,7 @@ import {
   hexToBytes,
   trim,
 } from '../utils/bytes';
+import { keccak256 } from '../utils/hash';
 
 export const ERC721_NOTE_VALUE = BigInt(1);
 

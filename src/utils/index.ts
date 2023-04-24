@@ -2,6 +2,7 @@ export * from './average';
 export * from './bigint';
 export * from './bytes';
 export * from './ciphertext';
+export * from './commitment';
 export * from './constants';
 export * from './ecies';
 export * from './encryption';
