@@ -11,6 +11,7 @@ import {
 } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
+import EngineDebug from '../../debugger/debugger';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -244,7 +245,11 @@ export class RelayAdaptContract {
         }
       }
     } catch (err) {
-      throw new Error('Relay Adapt parsing error.');
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      EngineDebug.error(err);
+      throw new Error(`Relay Adapt log parsing error: ${err.message}.`);
     }
     return undefined;
   }
