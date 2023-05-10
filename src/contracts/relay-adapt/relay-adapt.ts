@@ -12,6 +12,7 @@ import {
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 import EngineDebug from '../../debugger/debugger';
+import { BaseProvider } from '@ethersproject/providers';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -135,19 +136,35 @@ export class RelayAdaptContract {
     return orderedCallPromises;
   }
 
+  private static shouldRequireSuccessForCrossContractCalls(
+    isGasEstimate: boolean,
+    isRelayerTransaction: boolean,
+  ): boolean {
+    // If the cross contract calls (multicalls) fail, the Relayer Fee and Shields should continue to process.
+    // We should only !requireSuccess for production relayer transactions (not gas estimates).
+    const continueAfterMulticallFailure = isRelayerTransaction && !isGasEstimate;
+    return !continueAfterMulticallFailure;
+  }
+
   async getRelayAdaptParamsCrossContractCalls(
     dummyUnshieldTransactions: TransactionStruct[],
     crossContractCalls: PopulatedTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random: string,
+    isRelayerTransaction: boolean,
   ): Promise<string> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
       relayShieldRequests,
     );
 
-    // If the cross contract call fails, the Relayer Fee and Shields will continue to process.
-    const requireSuccess = false;
+    // Adapt params not required for gas estimates.
+    const isGasEstimate = false;
+
+    const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
+      isGasEstimate,
+      isRelayerTransaction,
+    );
 
     return RelayAdaptHelper.getRelayAdaptParams(
       dummyUnshieldTransactions,
@@ -163,14 +180,18 @@ export class RelayAdaptContract {
     crossContractCalls: PopulatedTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random31Bytes: string,
+    isGasEstimate: boolean,
+    isRelayerTransaction: boolean,
   ): Promise<PopulatedTransaction> {
     const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
       relayShieldRequests,
     );
 
-    // If the cross contract call fails, the Relayer Fee and Shields will continue to process.
-    const requireSuccess = false;
+    const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
+      isGasEstimate,
+      isRelayerTransaction,
+    );
 
     const populatedTransaction = await this.populateRelay(
       unshieldTransactions,
@@ -185,6 +206,47 @@ export class RelayAdaptContract {
     populatedTransaction.gasLimit = MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
 
     return populatedTransaction;
+  }
+
+  static async estimateGasWithErrorHandler(
+    provider: BaseProvider,
+    populatedTransaction: PopulatedTransaction,
+  ): Promise<BigNumber> {
+    try {
+      const gasEstimate = await provider.estimateGas(populatedTransaction);
+      return gasEstimate;
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      const { callFailedIndexString, errorMessage } =
+        RelayAdaptContract.extractCallFailedIndexAndErrorText(err.message);
+      throw new Error(
+        `RelayAdapt multicall failed at index ${callFailedIndexString} with ${errorMessage}`,
+      );
+    }
+  }
+
+  static extractCallFailedIndexAndErrorText(errMessage: string) {
+    try {
+      // Sample error text from ethers: `"data":{"message":"Error: VM Exception while processing transaction: reverted with custom error 'CallFailed(0, \"0x")\'\","data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"\}}}"`
+      const removedBackslashes = errMessage.replace(/\//g, '');
+      const prefixSplit = `"data":{"message":"Error: VM Exception while processing transaction: reverted with custom error '`;
+      const prefixSplitResult = removedBackslashes.split(prefixSplit)[1];
+      const splitResult = prefixSplitResult.split(`'",`);
+      const callFailedMessage = splitResult[0];
+      const dataMessage = splitResult[1].split(`}}`)[0];
+      const callFailedIndexString = callFailedMessage.split('(')[1].split(',')[0];
+      return {
+        callFailedIndexString,
+        errorMessage: `ABI-encoded revert message: ${dataMessage}`,
+      };
+    } catch (err) {
+      return {
+        callFailedIndexString: 'UNKNOWN',
+        errorMessage: `error: ${errMessage}`,
+      };
+    }
   }
 
   /**
@@ -257,12 +319,12 @@ export class RelayAdaptContract {
   private static customRelayAdaptErrorParse(log: TransactionReceiptLog): Optional<string> {
     // Force parse as bytes
     const decoded: Result = ethers.utils.defaultAbiCoder.decode(
-      ['tuple(uint256 callIndex, bytes revertReason)'],
+      ['uint256 callIndex', 'bytes revertReason'],
       log.data,
     );
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const revertReasonBytes: string = decoded[0][1];
+    const revertReasonBytes: string = decoded[1];
 
     // Map function to try parsing bytes as string
     const parsedError = this.parseCallResultError(revertReasonBytes);

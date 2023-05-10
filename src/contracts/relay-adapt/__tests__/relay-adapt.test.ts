@@ -32,6 +32,7 @@ import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { getTokenDataERC20 } from '../../../note/note-util';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
 import { UnshieldNoteNFT } from '../../../note';
+import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -410,24 +411,21 @@ describe('Relay Adapt', function test() {
       [nftTokenData], // shieldNFTsTokenData
     );
 
-    // 5. Generate relay adapt params from dummy transactions.
-    const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
-    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
-      dummyTransactions,
-      crossContractCalls,
-      relayShieldInputs,
-      random,
-    );
-
     // 6. Get gas estimate from dummy txs.
+    const gasEstimateRandom = randomHex(31);
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
       relayShieldInputs,
-      random,
+      gasEstimateRandom,
+      false, // isGasEstimate
+      true, // isRelayerTransaction
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
+    const gasEstimate = await RelayAdaptContract.estimateGasWithErrorHandler(
+      provider,
+      populatedTransactionGasEstimate,
+    );
     expect(gasEstimate.toNumber()).to.be.greaterThan(
       MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
     );
@@ -436,6 +434,15 @@ describe('Relay Adapt', function test() {
     );
 
     // 7. Create real transactions with relay adapt params.
+
+    const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
+    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
+      dummyTransactions,
+      crossContractCalls,
+      relayShieldInputs,
+      random,
+      true, // isRelayerTransaction
+    );
     transactionBatch.setAdaptID({
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
@@ -457,6 +464,8 @@ describe('Relay Adapt', function test() {
       crossContractCalls,
       relayShieldInputs,
       random,
+      false, // isGasEstimate
+      true, // isRelayerTransaction
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
     expect(gasEstimate.sub(gasEstimateFinal).abs().toNumber()).to.be.below(
@@ -604,24 +613,21 @@ describe('Relay Adapt', function test() {
       [], // shieldNFTsTokenData
     );
 
-    // 5. Generate relay adapt params from dummy transactions.
-    const random = randomHex(31);
-    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
-      dummyTransactions,
-      crossContractCalls,
-      relayShieldInputs,
-      random,
-    );
-
-    // 6. Get gas estimate from dummy txs.
+    // 5. Get gas estimate from dummy txs.
+    const randomGasEstimate = randomHex(31);
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
       relayShieldInputs,
-      random,
+      randomGasEstimate,
+      true, // isGasEstimate
+      true, // isRelayerTransaction
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
+    const gasEstimate = await RelayAdaptContract.estimateGasWithErrorHandler(
+      provider,
+      populatedTransactionGasEstimate,
+    );
     expect(gasEstimate.toNumber()).to.be.greaterThan(
       MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
     );
@@ -629,7 +635,15 @@ describe('Relay Adapt', function test() {
       MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
     );
 
-    // 7. Create real transactions with relay adapt params.
+    // 6. Create real transactions with relay adapt params.
+    const random = randomHex(31);
+    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
+      dummyTransactions,
+      crossContractCalls,
+      relayShieldInputs,
+      random,
+      true, // isRelayerTransaction
+    );
     transactionBatch.setAdaptID({
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
@@ -645,12 +659,14 @@ describe('Relay Adapt', function test() {
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
-    // 8. Generate real relay transaction for cross contract call.
+    // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
       relayShieldInputs,
       random,
+      false, // isGasEstimate
+      true, // isRelayerTransaction
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
 
@@ -662,7 +678,7 @@ describe('Relay Adapt', function test() {
     // Add 20% to gasEstimate for gasLimit.
     relayTransaction.gasLimit = gasEstimate.mul(120).div(100);
 
-    // 9. Send transaction.
+    // 8. Send transaction.
     const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
@@ -767,32 +783,32 @@ describe('Relay Adapt', function test() {
       [], // shieldNFTsTokenData
     );
 
-    // 5. Generate relay adapt params from dummy transactions.
+    // 5. Get gas estimate from dummy txs. (Expect revert).
+    const gasEstimateRandom = randomHex(31);
+    const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
+      dummyTransactions,
+      crossContractCalls,
+      relayShieldInputs,
+      gasEstimateRandom,
+      true, // isGasEstimate
+      true, // isRelayerTransaction
+    );
+    populatedTransactionGasEstimate.from = DEAD_ADDRESS;
+    await expect(
+      RelayAdaptContract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
+    ).to.be.rejectedWith(
+      'RelayAdapt multicall failed at index 0 with ABI-encoded revert message: "data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"',
+    );
+
+    // 6. Create real transactions with relay adapt params.
     const random = randomHex(31);
     const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
       relayShieldInputs,
       random,
+      true, // isRelayerTransaction
     );
-
-    // 6. Get gas estimate from dummy txs.
-    const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
-      dummyTransactions,
-      crossContractCalls,
-      relayShieldInputs,
-      random,
-    );
-    populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
-    );
-    expect(gasEstimate.toNumber()).to.be.lessThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
-    );
-
-    // 7. Create real transactions with relay adapt params.
     transactionBatch.setAdaptID({
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
@@ -808,18 +824,20 @@ describe('Relay Adapt', function test() {
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
-    // 8. Generate real relay transaction for cross contract call.
+    // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
       relayShieldInputs,
       random,
+      false, // isGasEstimate
+      true, // isRelayerTransaction
     );
 
-    // Add 20% to gasEstimate for gasLimit.
-    relayTransaction.gasLimit = gasEstimate.mul(120).div(100);
+    // Set high gas limit.
+    relayTransaction.gasLimit = BigNumber.from('25000000');
 
-    // 9. Send transaction.
+    // 8. Send transaction.
     const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
@@ -936,24 +954,21 @@ describe('Relay Adapt', function test() {
       [], // shieldNFTsTokenData
     );
 
-    // 5. Generate relay adapt params from dummy transactions.
-    const random = randomHex(31);
-    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
-      dummyTransactions,
-      crossContractCalls,
-      relayShieldInputs,
-      random,
-    );
-
-    // 6. Get gas estimate from dummy txs.
+    // 5. Get gas estimate from dummy txs.
+    const randomGasEstimate = randomHex(31);
     const populatedTransactionGasEstimate = await relayAdaptContract.populateCrossContractCalls(
       dummyTransactions,
       crossContractCalls,
       relayShieldInputs,
-      random,
+      randomGasEstimate,
+      true, // isGasEstimate
+      true, // isRelayerTransaction
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await provider.estimateGas(populatedTransactionGasEstimate);
+    const gasEstimate = await RelayAdaptContract.estimateGasWithErrorHandler(
+      provider,
+      populatedTransactionGasEstimate,
+    );
     expect(gasEstimate.toNumber()).to.be.greaterThan(
       MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
     );
@@ -961,7 +976,15 @@ describe('Relay Adapt', function test() {
       MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
     );
 
-    // 7. Create real transactions with relay adapt params.
+    // 6. Create real transactions with relay adapt params.
+    const random = randomHex(31);
+    const relayAdaptParams = await relayAdaptContract.getRelayAdaptParamsCrossContractCalls(
+      dummyTransactions,
+      crossContractCalls,
+      relayShieldInputs,
+      random,
+      true, // isRelayerTransaction
+    );
     transactionBatch.setAdaptID({
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
@@ -977,12 +1000,14 @@ describe('Relay Adapt', function test() {
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
-    // 8. Generate real relay transaction for cross contract call.
+    // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
       transactions,
       crossContractCalls,
       relayShieldInputs,
       random,
+      false, // isGasEstimate
+      true, // isRelayerTransaction
     );
 
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
@@ -991,7 +1016,7 @@ describe('Relay Adapt', function test() {
     // Set gas limit to this value, which should revert inside the smart contract.
     relayTransaction.gasLimit = gasEstimateFinal.mul(101).div(100);
 
-    // 9. Send transaction.
+    // 8. Send transaction.
     const txResponse = await ethersWallet.sendTransaction(relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
@@ -1158,11 +1183,34 @@ describe('Relay Adapt', function test() {
     expect(relayAdaptParams).to.equal(expectedParamsHex);
   });
 
+  it('Should decode and parse relay adapt error logs (from failed Sushi V2 LP removal)', () => {
+    const relayAdaptError = RelayAdaptContract.getRelayAdaptCallError(FormattedRelayAdaptErrorLogs);
+    expect(relayAdaptError).to.equal('ds-math-sub-underflow');
+  });
+
+  it('Should extract call failed index and error message from ethers error', () => {
+    const errorText = `"data":{"message":"Error: VM Exception while processing transaction: reverted with custom error 'CallFailed(0, "0x")'","data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"}}} and some other stuff....."`;
+    const { callFailedIndexString, errorMessage } =
+      RelayAdaptContract.extractCallFailedIndexAndErrorText(errorText);
+    expect(callFailedIndexString).to.equal('0');
+    expect(errorMessage).to.equal(
+      'ABI-encoded revert message: "data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"',
+    );
+  });
+
+  it('Should extract call failed index and error message from non-parseable ethers error', () => {
+    const errorText = `not a parseable error`;
+    const { callFailedIndexString, errorMessage } =
+      RelayAdaptContract.extractCallFailedIndexAndErrorText(errorText);
+    expect(callFailedIndexString).to.equal('UNKNOWN');
+    expect(errorMessage).to.equal('error: not a parseable error');
+  });
+
   afterEach(async () => {
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-    engine.unload();
+    await engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });
 });
