@@ -894,7 +894,7 @@ describe('Relay Adapt', function test() {
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
-  it.only('[HH] Should revert send for failing re-shield', async function run() {
+  it('[HH] Should revert send for failing re-shield', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
