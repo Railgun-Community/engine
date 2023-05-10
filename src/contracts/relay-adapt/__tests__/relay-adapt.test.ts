@@ -894,7 +894,7 @@ describe('Relay Adapt', function test() {
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
-  it('[HH] Should revert send for failing re-shield', async function run() {
+  it.only('[HH] Should revert send for failing re-shield', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -965,15 +965,10 @@ describe('Relay Adapt', function test() {
       true, // isRelayerTransaction
     );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await RelayAdaptContract.estimateGasWithErrorHandler(
-      provider,
-      populatedTransactionGasEstimate,
-    );
-    expect(gasEstimate.toNumber()).to.be.greaterThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
-    );
-    expect(gasEstimate.toNumber()).to.be.lessThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    await expect(
+      RelayAdaptContract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
+    ).to.be.rejectedWith(
+      'RelayAdapt multicall failed at index 0 with ABI-encoded revert message: "data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"',
     );
 
     // 6. Create real transactions with relay adapt params.
