@@ -339,6 +339,7 @@ class MerkleTree {
     return Promise.all(
       keySplits.map(async (keySplit) => {
         const unshieldEvent = (await this.db.get(keySplit, 'json')) as UnshieldStoredEvent;
+        unshieldEvent.timestamp = unshieldEvent.timestamp || undefined;
         return unshieldEvent;
       }),
     );

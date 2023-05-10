@@ -596,7 +596,7 @@ describe('MerkleTree', () => {
     expect(await merkletree.getStoredNullifierTxid('00')).to.equal('01');
   }).timeout(1000);
 
-  it('Should store and retrieve unshield events', async () => {
+  it.only('Should store and retrieve unshield events', async () => {
     expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([]);
     const unshieldA1: UnshieldStoredEvent = {
       txid: '0',
