@@ -1,4 +1,4 @@
-import { Provider } from '@ethersproject/abstract-provider';
+import { Provider, TransactionRequest } from '@ethersproject/abstract-provider';
 import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { Result } from 'ethers/lib/utils';
 import { ABIRelayAdapt } from '../../abi/abi';
@@ -210,10 +210,10 @@ export class RelayAdaptContract {
 
   static async estimateGasWithErrorHandler(
     provider: BaseProvider,
-    populatedTransaction: PopulatedTransaction,
+    transaction: PopulatedTransaction | TransactionRequest,
   ): Promise<BigNumber> {
     try {
-      const gasEstimate = await provider.estimateGas(populatedTransaction);
+      const gasEstimate = await provider.estimateGas(transaction);
       return gasEstimate;
     } catch (err) {
       if (!(err instanceof Error)) {
