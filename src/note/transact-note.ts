@@ -604,6 +604,9 @@ export class TransactNote {
     );
   }
 
+  static calculateTotalNoteValues = (notes: TransactNote[]): bigint =>
+    notes.reduce((left, right) => left + right.value, BigInt(0));
+
   /**
    * TransactNote with tokenData and value, for a mimic Unshield Note during solution processing.
    * All other fields are placeholders.

@@ -56,6 +56,7 @@ import {
   TransactionHistoryTokenAmount,
   TransactionHistoryTransferTokenAmount,
   TransactionHistoryUnshieldTokenAmount,
+  TreeBalance,
   ViewOnlyWalletData,
   WalletData,
   WalletDetails,
@@ -1241,6 +1242,20 @@ abstract class AbstractWallet extends EventEmitter {
     });
 
     return balancesByTree;
+  }
+
+  async balancesByTreeForToken(chain: Chain, tokenHash: string): Promise<TreeBalance[]> {
+    const balances = await this.balancesByTree(chain);
+    const treeSortedBalances = balances[tokenHash] || [];
+    return treeSortedBalances;
+  }
+
+  static tokenBalanceAcrossAllTrees(treeSortedBalances: TreeBalance[]): bigint {
+    const tokenBalance: bigint = treeSortedBalances.reduce(
+      (left, right) => left + right.balance,
+      BigInt(0),
+    );
+    return tokenBalance;
   }
 
   /**

@@ -646,7 +646,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'Can not find RAILGUN wallet balance for ERC20 token: 0x000925cdf66ddf5b88016df1fe915e68eff8f192',
+      'RAILGUN private token balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192.',
     );
 
     transactionBatch.resetOutputs();
@@ -678,7 +678,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transaction2.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'Can not find RAILGUN wallet balance for ERC20 token: 0x00000000000000000000000000000000000000ff',
+      'RAILGUN private token balance too low for 0x00000000000000000000000000000000000000ff.',
     );
   });
 

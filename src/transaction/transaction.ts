@@ -28,6 +28,7 @@ import { getChainFullNetworkID } from '../chain/chain';
 import { UnshieldNoteERC20 } from '../note/erc20/unshield-note-erc20';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { getTokenDataHash } from '../note';
+import { calculateTotalSpend } from '../solutions/utxos';
 
 class Transaction {
   private readonly adaptID: AdaptID;
@@ -173,11 +174,9 @@ class Transaction {
 
     const allOutputs: (TransactNote | UnshieldNote)[] = [...this.tokenOutputs];
 
-    // Calculate change amount
-    const totalIn = utxos.reduce((left, right) => left + right.note.value, BigInt(0));
-
-    const totalOut =
-      this.tokenOutputs.reduce((left, right) => left + right.value, BigInt(0)) + this.unshieldValue;
+    const totalIn = calculateTotalSpend(utxos);
+    const totalOutputNoteValues = TransactNote.calculateTotalNoteValues(this.tokenOutputs);
+    const totalOut = totalOutputNoteValues + this.unshieldValue;
 
     const change = totalIn - totalOut;
     if (change < 0n) {

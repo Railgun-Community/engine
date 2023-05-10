@@ -19,6 +19,7 @@ import { TransactNote } from '../note/transact-note';
 import { TreeBalance } from '../models';
 import { TransactionStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { getTokenDataHash } from '../note/note-util';
+import { AbstractWallet } from '../wallet';
 
 export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 7500;
 
@@ -78,7 +79,7 @@ export class TransactionBatch {
     this.adaptID = adaptID;
   }
 
-  private getOutputTokenDatas = (): TokenData[] => {
+  private getOutputTokenDatas(): TokenData[] {
     const tokenHashes: string[] = [];
     const tokenDatas: TokenData[] = [];
     const outputTokenDatas: TokenData[] = this.outputs.map((output) => output.tokenData);
@@ -93,7 +94,7 @@ export class TransactionBatch {
       }
     });
     return tokenDatas;
-  };
+  }
 
   async generateValidSpendingSolutionGroupsAllOutputs(
     wallet: RailgunWallet,
@@ -115,34 +116,13 @@ export class TransactionBatch {
   ): Promise<SpendingSolutionGroup[]> {
     const tokenHash = getTokenDataHash(tokenData);
     const tokenOutputs = this.outputs.filter((output) => output.tokenHash === tokenHash);
-
-    const outputTotal = tokenOutputs.reduce((left, right) => left + right.value, BigInt(0));
+    const outputTotal = TransactNote.calculateTotalNoteValues(tokenOutputs);
 
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
 
-    // Get UTXOs sorted by tree
-    const balances = await wallet.balancesByTree(this.chain);
-    const treeSortedBalances = balances[tokenHash];
-    if (treeSortedBalances == null) {
-      switch (tokenData.tokenType) {
-        case TokenType.ERC20:
-          throw new Error(
-            `Can not find RAILGUN wallet balance for ERC20 token: ${tokenData.tokenAddress}`,
-          );
-        case TokenType.ERC721:
-        case TokenType.ERC1155:
-          throw new Error(
-            `Can not find RAILGUN wallet balance for NFT with token ID: ${tokenHash}`,
-          );
-      }
-    }
-
-    // Sum balances
-    const tokenBalance: bigint = treeSortedBalances.reduce(
-      (left, right) => left + right.balance,
-      BigInt(0),
-    );
+    const treeSortedBalances = await wallet.balancesByTreeForToken(this.chain, tokenHash);
+    const tokenBalance = AbstractWallet.tokenBalanceAcrossAllTrees(treeSortedBalances);
 
     // Check if wallet balance is enough to cover this transaction
     if (totalRequired > tokenBalance) {
