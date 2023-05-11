@@ -300,7 +300,7 @@ export class RelayAdaptContract {
       // eslint-disable-next-line no-restricted-syntax
       for (const log of receiptLogs) {
         if (log.topics[0] === topic) {
-          const parsedError = this.customRelayAdaptErrorParse(log);
+          const parsedError = this.customRelayAdaptErrorParse(log.data);
           if (parsedError) {
             return parsedError;
           }
@@ -316,11 +316,11 @@ export class RelayAdaptContract {
     return undefined;
   }
 
-  private static customRelayAdaptErrorParse(log: TransactionReceiptLog): Optional<string> {
+  static customRelayAdaptErrorParse(data: string): Optional<string> {
     // Force parse as bytes
     const decoded: Result = ethers.utils.defaultAbiCoder.decode(
       ['uint256 callIndex', 'bytes revertReason'],
-      log.data,
+      data,
     );
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
