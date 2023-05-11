@@ -1,6 +1,7 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider';
 import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
 import { Result } from 'ethers/lib/utils';
+import { BaseProvider } from '@ethersproject/providers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import { TransactionReceiptLog } from '../../models/formatted-types';
 import { getTokenDataERC20 } from '../../note/note-util';
@@ -12,11 +13,13 @@ import {
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 import EngineDebug from '../../debugger/debugger';
-import { BaseProvider } from '@ethersproject/providers';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
 }
+
+export const RETURN_DATA_RELAY_ADAPT_STRING_PREFIX = '0x5c0dee5d';
+export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
@@ -317,12 +320,14 @@ export class RelayAdaptContract {
   }
 
   static parseRelayAdaptReturnValue(returnValue: string): Optional<string> {
-    const RETURN_DATA_RELAY_ADAPT_STRING_PREFIX = '0x5c0dee5d';
-    if (!returnValue.match(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX)) {
-      return `Not a RelayAdapt return value: must be prefixed with ${RETURN_DATA_RELAY_ADAPT_STRING_PREFIX}`;
+    if (returnValue.match(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX)) {
+      const strippedReturnValue = returnValue.replace(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX, '0x');
+      return this.customRelayAdaptErrorParse(strippedReturnValue);
     }
-    const strippedReturnValue = returnValue.replace(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX, '0x');
-    return this.customRelayAdaptErrorParse(strippedReturnValue);
+    if (returnValue.match(RETURN_DATA_STRING_PREFIX)) {
+      return this.parseRelayAdaptStringError(returnValue);
+    }
+    return `Not a RelayAdapt return value: must be prefixed with ${RETURN_DATA_RELAY_ADAPT_STRING_PREFIX} or ${RETURN_DATA_STRING_PREFIX}`;
   }
 
   private static customRelayAdaptErrorParse(data: string): Optional<string> {
@@ -336,12 +341,11 @@ export class RelayAdaptContract {
     const revertReasonBytes: string = decoded[1];
 
     // Map function to try parsing bytes as string
-    const parsedError = this.parseCallResultError(revertReasonBytes);
+    const parsedError = this.parseRelayAdaptStringError(revertReasonBytes);
     return parsedError;
   }
 
-  private static parseCallResultError(revertReason: string): string {
-    const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
+  private static parseRelayAdaptStringError(revertReason: string): string {
     if (revertReason.match(RETURN_DATA_STRING_PREFIX)) {
       const strippedReturnValue = revertReason.replace(RETURN_DATA_STRING_PREFIX, '0x');
       const result = ethers.utils.defaultAbiCoder.decode(['string'], strippedReturnValue);
