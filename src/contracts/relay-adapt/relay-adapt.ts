@@ -316,7 +316,16 @@ export class RelayAdaptContract {
     return undefined;
   }
 
-  static customRelayAdaptErrorParse(data: string): Optional<string> {
+  static parseRelayAdaptReturnValue(returnValue: string): Optional<string> {
+    const RETURN_DATA_RELAY_ADAPT_STRING_PREFIX = '0x5c0dee5d';
+    if (!returnValue.match(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX)) {
+      return `Not a RelayAdapt return value: must be prefixed with ${RETURN_DATA_RELAY_ADAPT_STRING_PREFIX}`;
+    }
+    const strippedReturnValue = returnValue.replace(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX, '0x');
+    return this.customRelayAdaptErrorParse(strippedReturnValue);
+  }
+
+  private static customRelayAdaptErrorParse(data: string): Optional<string> {
     // Force parse as bytes
     const decoded: Result = ethers.utils.defaultAbiCoder.decode(
       ['uint256 callIndex', 'bytes revertReason'],
