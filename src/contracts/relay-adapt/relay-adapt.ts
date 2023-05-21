@@ -59,11 +59,11 @@ export class RelayAdaptContract {
 
   async populateMulticallWithoutUnshields(
     calls: PopulatedTransaction[],
-    shieldRequest: ShieldRequestStruct,
+    shieldRequests: ShieldRequestStruct[],
     isGasEstimate: boolean,
     isRelayerTransaction: boolean,
   ): Promise<PopulatedTransaction> {
-    const orderedCalls = await this.getOrderedCallsForCrossContractCalls(calls, [shieldRequest]);
+    const orderedCalls = await this.getOrderedCallsForCrossContractCalls(calls, shieldRequests);
     const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
       isGasEstimate,
       isRelayerTransaction,
