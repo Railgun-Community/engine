@@ -49,26 +49,17 @@ export class RelayAdaptContract {
       this.contract.populateTransaction.wrapBase(shieldRequest.preimage.value),
       this.populateRelayShields([shieldRequest]),
     ]);
-
-    const requireSuccess = true;
-
-    return this.populateRelayMulticall(requireSuccess, orderedCalls, {
+    return this.populateRelayMulticall(orderedCalls, {
       value: shieldRequest.preimage.value,
     });
   }
 
-  async populateMulticallWithoutUnshields(
+  async populateMulticall(
     calls: PopulatedTransaction[],
     shieldRequests: ShieldRequestStruct[],
-    isGasEstimate: boolean,
-    isRelayerTransaction: boolean,
   ): Promise<PopulatedTransaction> {
     const orderedCalls = await this.getOrderedCallsForCrossContractCalls(calls, shieldRequests);
-    const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
-      isGasEstimate,
-      isRelayerTransaction,
-    );
-    return this.populateRelayMulticall(requireSuccess, orderedCalls, {});
+    return this.populateRelayMulticall(orderedCalls, {});
   }
 
   /**
@@ -271,10 +262,11 @@ export class RelayAdaptContract {
    * @returns populated transaction
    */
   private async populateRelayMulticall(
-    requireSuccess: boolean,
     calls: PopulatedTransaction[],
     overrides: CallOverrides,
   ): Promise<PopulatedTransaction> {
+    // Always requireSuccess when there is no Relayer payment.
+    const requireSuccess = true;
     const populatedTransaction = await this.contract.populateTransaction.multicall(
       requireSuccess,
       RelayAdaptHelper.formatCalls(calls),
