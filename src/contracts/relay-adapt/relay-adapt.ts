@@ -57,6 +57,20 @@ export class RelayAdaptContract {
     });
   }
 
+  async populateMulticallWithoutUnshields(
+    calls: PopulatedTransaction[],
+    shieldRequest: ShieldRequestStruct,
+    isGasEstimate: boolean,
+    isRelayerTransaction: boolean,
+  ): Promise<PopulatedTransaction> {
+    const orderedCalls = await this.getOrderedCallsForCrossContractCalls(calls, [shieldRequest]);
+    const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
+      isGasEstimate,
+      isRelayerTransaction,
+    );
+    return this.populateRelayMulticall(requireSuccess, orderedCalls, {});
+  }
+
   /**
    * @returns Populated transaction
    */
