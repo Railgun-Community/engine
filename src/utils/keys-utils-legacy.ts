@@ -1,4 +1,4 @@
-import { utils as utilsEd25519, Point, CURVE } from '@noble/ed25519';
+import { etc as etcEd25519, ExtendedPoint, CURVE } from '@noble/ed25519';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { ByteLength, hexToBigInt, hexToBytes, nToHex } from './bytes';
 import { sha256 } from './hash';
@@ -45,10 +45,10 @@ function unblindNoteKeyLegacy(
     const commitmentBlindingKey = getCommitmentBlindingKeyLegacy(random, senderRandom);
 
     // Create curve point instance from ephemeral key bytes
-    const point = Point.fromHex(bytesToHex(ephemeralKey));
+    const point = ExtendedPoint.fromHex(bytesToHex(ephemeralKey));
 
     // Invert the scalar to undo blinding multiplication operation
-    const inverse = utilsEd25519.invert(commitmentBlindingKey, CURVE.n);
+    const inverse = etcEd25519.invert(commitmentBlindingKey, CURVE.n);
 
     // Unblind by multiplying by the inverted scalar
     const unblinded = point.multiply(inverse);
@@ -70,10 +70,10 @@ function getNoteBlindingKeysLegacy(
   // Multiply both sender and receiver viewing public keys with the public blinding key
   // The pub blinding key is only known to the sender and receiver preventing external
   // observers from being able to invert and retrieve the original value
-  const ephemeralKeyReceiver = Point.fromHex(bytesToHex(senderViewingPublicKey))
+  const ephemeralKeyReceiver = ExtendedPoint.fromHex(bytesToHex(senderViewingPublicKey))
     .multiply(commitmentBlindingKey)
     .toRawBytes();
-  const ephemeralKeySender = Point.fromHex(bytesToHex(receiverViewingPublicKey))
+  const ephemeralKeySender = ExtendedPoint.fromHex(bytesToHex(receiverViewingPublicKey))
     .multiply(commitmentBlindingKey)
     .toRawBytes();
 
@@ -87,7 +87,7 @@ async function getSharedSymmetricKeyLegacy(
 ): Promise<Optional<Uint8Array>> {
   try {
     // Create curve point instance from ephemeral key class
-    const publicKeyPoint = Point.fromHex(bytesToHex(blindedPublicKeyPairB));
+    const publicKeyPoint = ExtendedPoint.fromHex(bytesToHex(blindedPublicKeyPairB));
 
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKeyPairA);

@@ -106,15 +106,14 @@ describe('Test keys-utils', () => {
     const message = utf8ToBytes(JSON.stringify({ data: 'value', more: { data: 'another_value' } }));
 
     const signature = await signED25519(message, privateViewingKey);
-    assert.isTrue(await verifyED25519(message, signature, publicViewingKey));
-    assert.isTrue(
-      await verifyED25519(bytesToHex(message), bytesToHex(signature), publicViewingKey),
-    );
+    assert.isTrue(verifyED25519(message, signature, publicViewingKey));
+    assert.isTrue(verifyED25519(bytesToHex(message), bytesToHex(signature), publicViewingKey));
 
     const fakeMessage = utf8ToBytes('123');
-    assert.isFalse(await verifyED25519(fakeMessage, signature, publicViewingKey));
+    assert.isFalse(verifyED25519(fakeMessage, signature, publicViewingKey));
+
     // eslint-disable-next-line no-unused-expressions
-    expect(verifyED25519(message, signature, randomBytes(32))).to.eventually.be.rejected;
+    expect(verifyED25519(message, signature, randomBytes(32))).to.throw('error');
   });
   it('Should get shared key from two note keys', async () => {
     const sender = randomBytes(32);

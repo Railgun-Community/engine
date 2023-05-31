@@ -1,4 +1,3 @@
-/* eslint-disable prefer-template */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { BigNumber, ethers, PopulatedTransaction } from 'ethers';
@@ -32,7 +31,7 @@ import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { getTokenDataERC20 } from '../../../note/note-util';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
 import { UnshieldNoteNFT } from '../../../note';
-import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json';
+import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json' assert { type: 'json' };
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -1134,7 +1133,7 @@ describe('Relay Adapt', function test() {
         5, 228, 162, 212, 44, 195, 165, 245, 46, 252, 85, 67, 78, 165, 80, 86, 216, 220, 217, 118,
         198, 92, 41, 84, 51, 159, 175, 75, 194, 103, 163, 115,
       ]),
-    ].map((n) => '0x' + bytesToHex(n));
+    ].map((n) => `0x${bytesToHex(n)}`);
 
     const random = bytesToHex(
       new Uint8Array([
@@ -1144,36 +1143,32 @@ describe('Relay Adapt', function test() {
     );
 
     const relayAdaptParams = RelayAdaptHelper.getRelayAdaptParams(
-      [{ nullifiers } as unknown as TransactionStruct],
+      [{ nullifiers } as TransactionStruct],
       random,
       false,
       [
         {
           to: '0x8f86403A4DE0BB5791fa46B8e795C547942fE4Cf',
-          data:
-            '0x' +
-            bytesToHex(
-              new Uint8Array([
-                210, 140, 37, 212, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 104, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-              ]),
-            ),
+          data: `0x${bytesToHex(
+            new Uint8Array([
+              210, 140, 37, 212, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 104, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ]),
+          )}`,
           value: BigNumber.from(0n),
         },
       ],
       BigNumber.from(10000000n),
     );
 
-    const expectedParamsHex =
-      '0x' +
-      bytesToHex(
-        new Uint8Array([
-          53, 54, 66, 65, 188, 134, 60, 165, 0, 101, 8, 125, 85, 49, 151, 206, 203, 156, 192, 199,
-          6, 178, 94, 150, 14, 31, 101, 68, 83, 251, 241, 35,
-        ]),
-      );
+    const expectedParamsHex = `0x${bytesToHex(
+      new Uint8Array([
+        53, 54, 66, 65, 188, 134, 60, 165, 0, 101, 8, 125, 85, 49, 151, 206, 203, 156, 192, 199, 6,
+        178, 94, 150, 14, 31, 101, 68, 83, 251, 241, 35,
+      ]),
+    )}`;
 
     expect(relayAdaptParams).to.equal(expectedParamsHex);
   });

@@ -100,14 +100,14 @@ describe('Wallet', () => {
     const data = utf8ToBytes('20388293809abc');
     const signed = await wallet.signWithViewingKey(data);
     const { pubkey } = wallet.getViewingKeyPair();
-    expect(await verifyED25519(data, signed, pubkey)).to.equal(true);
+    expect(verifyED25519(data, signed, pubkey)).to.equal(true);
   });
 
   it('Should sign and verify with viewing keypair (view-only wallet)', async () => {
     const data = utf8ToBytes('20388293809abc');
     const signed = await viewOnlyWallet.signWithViewingKey(data);
     const { pubkey } = viewOnlyWallet.getViewingKeyPair();
-    expect(await verifyED25519(data, signed, pubkey)).to.equal(true);
+    expect(verifyED25519(data, signed, pubkey)).to.equal(true);
   });
 
   it('Should get spending keypair', async () => {

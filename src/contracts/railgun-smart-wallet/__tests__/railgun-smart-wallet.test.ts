@@ -403,7 +403,7 @@ describe('Railgun Smart Wallet', function runTests() {
       return;
     }
 
-    let resultEvent!: Optional<CommitmentEvent>;
+    let resultEvent: Optional<CommitmentEvent>;
     const eventsListener = async (commitmentEvent: CommitmentEvent) => {
       resultEvent = commitmentEvent;
     };

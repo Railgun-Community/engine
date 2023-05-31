@@ -50,7 +50,7 @@ import {
 } from '../../utils';
 import { Chain, ChainType } from '../../models/engine-types';
 import { ShieldEventFilter_LegacyShield_PreMar23 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
-import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json';
+import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json' assert { type: 'json' };
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;

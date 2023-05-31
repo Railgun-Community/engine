@@ -1,4 +1,4 @@
-import { Point } from '@noble/ed25519';
+import { ExtendedPoint } from '@noble/ed25519';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, nToBytes } from './bytes';
@@ -48,6 +48,6 @@ export const scalarMultiplyWasmFallbackToJavascript = (
 };
 
 export const scalarMultiplyJavascript = (point: Uint8Array, scalar: bigint) => {
-  const pk = Point.fromHex(bytesToHex(point));
+  const pk = ExtendedPoint.fromHex(bytesToHex(point));
   return pk.multiply(scalar).toRawBytes();
 };
