@@ -1,20 +1,24 @@
 /* eslint-disable prefer-template */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, ethers, PopulatedTransaction } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
+import { Contract, ContractTransaction, JsonRpcProvider, TransactionReceipt, Wallet } from 'ethers';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
 import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
 import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
 import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
-import { awaitMultipleScans, awaitScan, testArtifactsGetter } from '../../../test/helper.test';
+import {
+  awaitMultipleScans,
+  awaitScan,
+  getEthersWallet,
+  sendTransactionWithLatestNonce,
+  testArtifactsGetter,
+} from '../../../test/helper.test';
 import { NFTTokenData, OutputType } from '../../../models/formatted-types';
 import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
-import { ERC20, TestERC721 } from '../../../typechain-types';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
@@ -33,6 +37,10 @@ import { getTokenDataERC20 } from '../../../note/note-util';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
 import { UnshieldNoteNFT } from '../../../note';
 import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json';
+import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
+import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
+import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
+import { promiseTimeout } from '../../../utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -40,7 +48,7 @@ const { expect } = chai;
 let provider: JsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
-let ethersWallet: ethers.Wallet;
+let ethersWallet: Wallet;
 let snapshot: number;
 let relayAdaptContract: RelayAdaptContract;
 let railgunSmartWalletContract: RailgunSmartWalletContract;
@@ -54,12 +62,14 @@ const testEncryptionKey = config.encryptionKey;
 const WETH_TOKEN_ADDRESS = config.contracts.weth9;
 const SHIELD_RANDOM = randomHex(16);
 
+const NFT_ADDRESS = config.contracts.testERC721;
+
 const wethTokenData = getTokenDataERC20(WETH_TOKEN_ADDRESS);
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
 const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
 
-let testShieldBaseToken: (value?: bigint) => Promise<[TransactionReceipt, unknown]>;
+let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
 describe('Relay Adapt', function test() {
   this.timeout(60000);
@@ -83,10 +93,10 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    provider = new JsonRpcProvider(config.rpc);
+    provider = new PollingJsonRpcProvider(config.rpc);
     chain = {
       type: ChainType.EVM,
-      id: (await provider.getNetwork()).chainId,
+      id: Number((await provider.getNetwork()).chainId),
     };
     await engine.loadNetwork(
       chain,
@@ -99,17 +109,12 @@ describe('Relay Adapt', function test() {
     railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
     relayAdaptContract = engine.relayAdaptContracts[chain.type][chain.id];
 
-    const { privateKey } = ethers.utils.HDNode.fromMnemonic(testMnemonic).derivePath(
-      ethers.utils.defaultPath,
-    );
-    ethersWallet = new ethers.Wallet(privateKey, provider);
+    ethersWallet = await getEthersWallet(config.mnemonic, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
-    nft = new ethers.Contract(config.contracts.testERC721, erc721Abi, ethersWallet) as TestERC721;
+    nft = new Contract(NFT_ADDRESS, erc721Abi, ethersWallet) as unknown as TestERC721;
 
-    testShieldBaseToken = async (
-      value: bigint = 10000n,
-    ): Promise<[TransactionReceipt, unknown]> => {
+    testShieldBaseToken = async (value: bigint = 10000n): Promise<TransactionReceipt | null> => {
       // Create shield
       const shield = new ShieldNoteERC20(
         wallet.masterPublicKey,
@@ -126,9 +131,9 @@ describe('Relay Adapt', function test() {
       const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
 
       // Send shield on chain
-      const awaiterShield = awaitScan(wallet, chain);
-      const tx = await ethersWallet.sendTransaction(shieldTx);
-      return Promise.all([tx.wait(), awaiterShield]);
+      const awaiterShield = promiseTimeout(awaitScan(wallet, chain), 5000);
+      const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
+      return (await Promise.all([tx.wait(), awaiterShield]))[0];
     };
   });
 
@@ -150,10 +155,10 @@ describe('Relay Adapt', function test() {
 
     const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
 
-    const awaiterShield = awaitScan(wallet, chain);
+    const awaiterShield = promiseTimeout(awaitScan(wallet, chain), 5000);
 
     // Send shield on chain
-    const txResponse = await ethersWallet.sendTransaction(shieldTx);
+    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
     const receiveShieldEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -218,7 +223,7 @@ describe('Relay Adapt', function test() {
     relayTransactionGasEstimate.from = DEAD_ADDRESS;
 
     const gasEstimate = await provider.estimateGas(relayTransactionGasEstimate);
-    expect(gasEstimate.toNumber()).to.be.greaterThan(0);
+    expect(Number(gasEstimate)).to.be.greaterThan(0);
   });
 
   it('[HH] Should execute relay adapt transaction for unshield base token', async function run() {
@@ -298,7 +303,7 @@ describe('Relay Adapt', function test() {
     );
 
     // 6: Send relay transaction.
-    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
+    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -320,6 +325,10 @@ describe('Relay Adapt', function test() {
       receiveTransactEvent,
       receiveUnshieldEvent,
     ]);
+    if (txReceipt == null) {
+      throw new Error('No transaction receipt for relay transaction');
+    }
+
     await expect(awaiterScan).to.be.fulfilled; // Unshield
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(
@@ -331,8 +340,8 @@ describe('Relay Adapt', function test() {
 
     // TODO: Fix this test assertion. How much gas is used?
     // const postEthBalance = await ethersWallet.getBalance();
-    // expect(preEthBalance.toBigInt() - txReceipt.gasUsed.toBigInt() + 300n).to.equal(
-    //   postEthBalance.toBigInt(),
+    // expect(preEthBalance - txReceipt.gasUsed + 300n).to.equal(
+    //   postEthBalance,
     // );
   });
 
@@ -349,9 +358,10 @@ describe('Relay Adapt', function test() {
     // Mint NFTs with tokenIDs 0 and 1 into public balance.
     await mintNFTsID01ForTest(nft, ethersWallet);
 
-    // Approve shield
-    const approval = await nft.approve(railgunSmartWalletContract.address, 1);
-    await approval.wait();
+    // Approve NFT for shield.
+    const approval = await nft.approve.populateTransaction(railgunSmartWalletContract.address, 1);
+    const approvalTxResponse = await sendTransactionWithLatestNonce(ethersWallet, approval);
+    await approvalTxResponse.wait();
 
     // Create shield
     const shield = await shieldNFTForTest(
@@ -360,12 +370,12 @@ describe('Relay Adapt', function test() {
       railgunSmartWalletContract,
       chain,
       randomHex(16),
-      nft.address,
+      NFT_ADDRESS,
       '1',
     );
 
     const nftBalanceAfterShield = await nft.balanceOf(railgunSmartWalletContract.address);
-    expect(nftBalanceAfterShield.toHexString()).to.equal('0x01');
+    expect(nftBalanceAfterShield).to.equal(1n);
 
     const nftTokenData = shield.tokenData as NFTTokenData;
 
@@ -400,7 +410,7 @@ describe('Relay Adapt', function test() {
     // 3. Create the cross contract calls.
     // Do nothing for now.
     // TODO: Add a test NFT interaction via cross contract call.
-    const crossContractCalls: PopulatedTransaction[] = [];
+    const crossContractCalls: ContractTransaction[] = [];
 
     // 4. Create shield inputs.
     const shieldRandom = '0x10203040506070809000102030405060';
@@ -426,11 +436,11 @@ describe('Relay Adapt', function test() {
       provider,
       populatedTransactionGasEstimate,
     );
-    expect(gasEstimate.toNumber()).to.be.greaterThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
+    expect(Number(gasEstimate)).to.be.greaterThan(
+      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT),
     );
-    expect(gasEstimate.toNumber()).to.be.lessThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    expect(Number(gasEstimate)).to.be.lessThan(
+      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT),
     );
 
     // 7. Create real transactions with relay adapt params.
@@ -468,13 +478,13 @@ describe('Relay Adapt', function test() {
       true, // isRelayerTransaction
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
-    expect(gasEstimate.sub(gasEstimateFinal).abs().toNumber()).to.be.below(
+    expect(Math.abs(Number(gasEstimate - gasEstimateFinal))).to.be.below(
       12000,
       'Gas difference from estimate (dummy) to final transaction should be less than 12000',
     );
 
     // 9: Send relay transaction.
-    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
+    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -489,21 +499,25 @@ describe('Relay Adapt', function test() {
       ),
     );
 
-    const awaiterScan = awaitScan(wallet, chain);
+    const awaiterScan = promiseTimeout(awaitScan(wallet, chain), 5000);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
       receiveTransactEvent,
       receiveUnshieldEvent,
     ]);
+    if (txReceipt == null) {
+      throw new Error('No transaction receipt for relay transaction');
+    }
+
     await expect(awaiterScan).to.be.fulfilled; // Unshield
 
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
     const nftBalanceAfterReshield = await nft.balanceOf(railgunSmartWalletContract.address);
-    expect(nftBalanceAfterReshield.toHexString()).to.equal('0x01');
-  });
+    expect(nftBalanceAfterReshield).to.equal(1n);
+  }).timeout(120000);
 
   it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
@@ -532,25 +546,25 @@ describe('Relay Adapt', function test() {
     const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
     // Unshield to relay adapt.
-    const txTransact = await ethersWallet.sendTransaction(transact);
+    const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
     await Promise.all([txTransact.wait(), awaitScan(wallet, chain)]);
 
-    const wethTokenContract = new ethers.Contract(
+    const wethTokenContract = new Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
       ethersWallet,
-    ) as ERC20;
+    ) as unknown as TestERC20;
 
-    let relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+    let relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
       relayAdaptContract.address,
     );
-    expect(relayAdaptAddressBalance.toBigInt()).to.equal(998n);
+    expect(relayAdaptAddressBalance).to.equal(998n);
 
     // Value 0n doesn't matter - all WETH should be shielded anyway.
     await testShieldBaseToken(0n);
 
     relayAdaptAddressBalance = await wethTokenContract.balanceOf(relayAdaptContract.address);
-    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
+    expect(relayAdaptAddressBalance).to.equal(0n);
   });
 
   it('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
@@ -592,15 +606,15 @@ describe('Relay Adapt', function test() {
 
     // 3. Create the cross contract call.
     // Cross contract call: send 990n WETH tokens to Dead address.
-    const wethTokenContract = new ethers.Contract(
+    const wethTokenContract = new Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
       ethersWallet,
-    ) as ERC20;
+    ) as unknown as TestERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 990n;
-    const crossContractCalls: PopulatedTransaction[] = [
-      await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
+    const crossContractCalls: ContractTransaction[] = [
+      await wethTokenContract.transfer.populateTransaction(sendToAddress, sendAmount),
     ];
 
     // 4. Create shield inputs.
@@ -628,11 +642,11 @@ describe('Relay Adapt', function test() {
       provider,
       populatedTransactionGasEstimate,
     );
-    expect(gasEstimate.toNumber()).to.be.greaterThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT.toNumber(),
+    expect(Number(gasEstimate)).to.be.greaterThan(
+      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT),
     );
-    expect(gasEstimate.toNumber()).to.be.lessThan(
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT.toNumber(),
+    expect(Number(gasEstimate)).to.be.lessThan(
+      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT),
     );
 
     // 6. Create real transactions with relay adapt params.
@@ -670,16 +684,16 @@ describe('Relay Adapt', function test() {
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
 
-    expect(gasEstimate.sub(gasEstimateFinal).abs().toNumber()).to.be.below(
+    expect(Math.abs(Number(gasEstimate - gasEstimateFinal))).to.be.below(
       10000,
       'Gas difference from estimate (dummy) to final transaction should be less than 10000',
     );
 
     // Add 20% to gasEstimate for gasLimit.
-    relayTransaction.gasLimit = gasEstimate.mul(120).div(100);
+    relayTransaction.gasLimit = (gasEstimate * 120n) / 100n;
 
     // 8. Send transaction.
-    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
+    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -692,16 +706,20 @@ describe('Relay Adapt', function test() {
     const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
+    if (txReceipt == null) {
+      throw new Error('No transaction receipt for relay transaction');
+    }
+
     await expect(scansAwaiter).to.be.fulfilled;
 
     // Dead address should have 990n WETH.
-    const sendAddressBalance: BigNumber = await wethTokenContract.balanceOf(sendToAddress);
-    expect(sendAddressBalance.toBigInt()).to.equal(sendAmount);
+    const sendAddressBalance: bigint = await wethTokenContract.balanceOf(sendToAddress);
+    expect(sendAddressBalance).to.equal(sendAmount);
 
-    const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+    const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
       relayAdaptContract.address,
     );
-    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
+    expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
@@ -714,9 +732,7 @@ describe('Relay Adapt', function test() {
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
-    const proxyWethBalance = (
-      await wethTokenContract.balanceOf(railgunSmartWalletContract.address)
-    ).toBigInt();
+    const proxyWethBalance = await wethTokenContract.balanceOf(railgunSmartWalletContract.address);
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
 
     const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
@@ -762,15 +778,15 @@ describe('Relay Adapt', function test() {
 
     // 3. Create the cross contract call.
     // Cross contract call: send 1 WETH token to Dead address.
-    const wethTokenContract = new ethers.Contract(
+    const wethTokenContract = new Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
       ethersWallet,
-    ) as ERC20;
+    ) as unknown as TestERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 20000n; // More than is available (after 0.25% unshield fee).
-    const crossContractCalls: PopulatedTransaction[] = [
-      await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
+    const crossContractCalls: ContractTransaction[] = [
+      await wethTokenContract.transfer.populateTransaction(sendToAddress, sendAmount),
     ];
 
     // 4. Create shield inputs.
@@ -797,7 +813,7 @@ describe('Relay Adapt', function test() {
     await expect(
       RelayAdaptContract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
     ).to.be.rejectedWith(
-      'RelayAdapt multicall failed at index 0 with ABI-encoded revert message: "data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"',
+      `RelayAdapt multicall failed at index 0 with 'execution reverted (unknown custom error)': Unknown Relay Adapt error.`,
     );
 
     // 6. Create real transactions with relay adapt params.
@@ -835,10 +851,10 @@ describe('Relay Adapt', function test() {
     );
 
     // Set high gas limit.
-    relayTransaction.gasLimit = BigNumber.from('25000000');
+    relayTransaction.gasLimit = BigInt('25000000');
 
     // 8. Send transaction.
-    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
+    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -861,16 +877,20 @@ describe('Relay Adapt', function test() {
       receiveTransactEvent,
       receiveUnshieldEvent,
     ]);
+    if (txReceipt == null) {
+      throw new Error('No transaction receipt for relay transaction');
+    }
+
     await expect(scansAwaiter).to.be.fulfilled;
 
     // Dead address should have 0 WETH.
-    const sendAddressBalance: BigNumber = await wethTokenContract.balanceOf(sendToAddress);
-    expect(sendAddressBalance.toBigInt()).to.equal(0n);
+    const sendAddressBalance: bigint = await wethTokenContract.balanceOf(sendToAddress);
+    expect(sendAddressBalance).to.equal(0n);
 
-    const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+    const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
       relayAdaptContract.address,
     );
-    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
+    expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
@@ -885,9 +905,7 @@ describe('Relay Adapt', function test() {
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
 
-    const proxyWethBalance = (
-      await wethTokenContract.balanceOf(railgunSmartWalletContract.address)
-    ).toBigInt();
+    const proxyWethBalance = await wethTokenContract.balanceOf(railgunSmartWalletContract.address);
     const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
@@ -933,15 +951,15 @@ describe('Relay Adapt', function test() {
 
     // 3. Create the cross contract call.
     // Cross contract call: send 1 WETH token to Dead address.
-    const wethTokenContract = new ethers.Contract(
+    const wethTokenContract = new Contract(
       WETH_TOKEN_ADDRESS,
       erc20Abi,
       ethersWallet,
-    ) as ERC20;
+    ) as unknown as TestERC20;
     const sendToAddress = DEAD_ADDRESS;
     const sendAmount = 20000n; // More than is available (after 0.25% unshield fee).
-    const crossContractCalls: PopulatedTransaction[] = [
-      await wethTokenContract.populateTransaction.transfer(sendToAddress, sendAmount),
+    const crossContractCalls: ContractTransaction[] = [
+      await wethTokenContract.transfer.populateTransaction(sendToAddress, sendAmount),
     ];
 
     // 4. Create shield inputs.
@@ -968,7 +986,7 @@ describe('Relay Adapt', function test() {
     await expect(
       RelayAdaptContract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
     ).to.be.rejectedWith(
-      'RelayAdapt multicall failed at index 0 with ABI-encoded revert message: "data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"',
+      `RelayAdapt multicall failed at index 0 with 'execution reverted (unknown custom error)': Unknown Relay Adapt error.`,
     );
 
     // 6. Create real transactions with relay adapt params.
@@ -1009,10 +1027,10 @@ describe('Relay Adapt', function test() {
 
     // Gas estimate is currently an underestimate (which is a bug).
     // Set gas limit to this value, which should revert inside the smart contract.
-    relayTransaction.gasLimit = gasEstimateFinal.mul(101).div(100);
+    relayTransaction.gasLimit = (gasEstimateFinal * 101n) / 100n;
 
     // 8. Send transaction.
-    const txResponse = await ethersWallet.sendTransaction(relayTransaction);
+    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     const receiveTransactEvent = new Promise((resolve) =>
       railgunSmartWalletContract.contract.once(
@@ -1025,16 +1043,20 @@ describe('Relay Adapt', function test() {
     const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
     const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
+    if (txReceipt == null) {
+      throw new Error('No transaction receipt for relay transaction');
+    }
+
     await expect(scansAwaiter).to.be.fulfilled;
 
     // Dead address should have 0 WETH.
-    const sendAddressBalance: BigNumber = await wethTokenContract.balanceOf(sendToAddress);
-    expect(sendAddressBalance.toBigInt()).to.equal(0n);
+    const sendAddressBalance: bigint = await wethTokenContract.balanceOf(sendToAddress);
+    expect(sendAddressBalance).to.equal(0n);
 
-    const relayAdaptAddressBalance: BigNumber = await wethTokenContract.balanceOf(
+    const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
       relayAdaptContract.address,
     );
-    expect(relayAdaptAddressBalance.toBigInt()).to.equal(0n);
+    expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
@@ -1048,14 +1070,12 @@ describe('Relay Adapt', function test() {
     );
     const expectedWalletBalance = BigInt(expectedProxyBalance - 300n /* relayer fee */);
 
-    const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(
+    const treasuryBalance: bigint = await wethTokenContract.balanceOf(
       config.contracts.treasuryProxy,
     );
-    expect(treasuryBalance.toBigInt()).to.equal(299n);
+    expect(treasuryBalance).to.equal(299n);
 
-    const proxyWethBalance = (
-      await wethTokenContract.balanceOf(railgunSmartWalletContract.address)
-    ).toBigInt();
+    const proxyWethBalance = await wethTokenContract.balanceOf(railgunSmartWalletContract.address);
     const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     expect(proxyWethBalance).to.equal(expectedProxyBalance);
@@ -1067,10 +1087,10 @@ describe('Relay Adapt', function test() {
 
     // const expectedPrivateWethBalance = BigInt(99750 /* original */);
 
-    // const treasuryBalance: BigNumber = await wethTokenContract.balanceOf(config.contracts.treasuryProxy);
-    // expect(treasuryBalance.toBigInt()).to.equal(250n);
+    // const treasuryBalance: bigint = await wethTokenContract.balanceOf(config.contracts.treasuryProxy);
+    // expect(treasuryBalance).to.equal(250n);
 
-    // const proxyWethBalance = (await wethTokenContract.balanceOf(railgunSmartWalletContract.address)).toBigInt();
+    // const proxyWethBalance = (await wethTokenContract.balanceOf(railgunSmartWalletContract.address));
     // const privateWalletBalance = await wallet.getBalance(chain, WETH_TOKEN_ADDRESS);
 
     // expect(proxyWethBalance).to.equal(expectedPrivateWethBalance);
@@ -1105,23 +1125,6 @@ describe('Relay Adapt', function test() {
       );
       expect(relayShieldInput.preimage.token.tokenType).to.equal(0);
     });
-  });
-
-  it.skip('Should parse relay adapt error messages - legacy', async () => {
-    const polygonProvider = new JsonRpcProvider('https://polygon-rpc.com');
-    const txReceipt: TransactionReceipt = await polygonProvider.getTransactionReceipt(
-      '0x56c3b9bfb573e6f49f21b8e09282edd01a93bbb965b1f4debbf7316ea3d878dd',
-    );
-    expect(RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs)).to.equal(
-      'Unknown Relay Adapt error.',
-    );
-
-    const txReceipt2: TransactionReceipt = await polygonProvider.getTransactionReceipt(
-      '0xeeaf0c55b4c34516402ce1c0d1eb4e3d2664b11204f2fc9988ec57ae7a1220ff',
-    );
-    expect(RelayAdaptContract.getRelayAdaptCallError(txReceipt2.logs)).to.equal(
-      'ERC20: transfer amount exceeds allowance',
-    );
   });
 
   it('Should calculate relay adapt params', () => {
@@ -1160,10 +1163,10 @@ describe('Relay Adapt', function test() {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
               ]),
             ),
-          value: BigNumber.from(0n),
+          value: 0n,
         },
       ],
-      BigNumber.from(10000000n),
+      10000000n,
     );
 
     const expectedParamsHex =
@@ -1184,33 +1187,35 @@ describe('Relay Adapt', function test() {
   });
 
   it('Should extract call failed index and error message from ethers error', () => {
-    const errorText = `"data":{"message":"Error: VM Exception while processing transaction: reverted with custom error 'CallFailed(0, "0x")'","data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"}}} and some other stuff....."`;
+    const errorText = `execution reverted (unknown custom error) (action="estimateGas", data="0x5c0dee5d00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006408c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001564732d6d6174682d7375622d756e646572666c6f77000000000000000000000000000000000000000000000000000000000000000000000000000000", reason=null, transaction={ "data": "0x28223a77000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000007a00000000000000000000000000000000000000000000000000…00000000004640cd6086ade3e984b011b4e8c7cab9369b90499ab88222e673ec1ae4d2c3bf78ae96e95f9171653e5b1410273269edd64a0ab792a5d355093caa9cb92406125c7803a48028503783f2ab5e84f0ea270ce770860e436b77c942ed904a5d577d021cf0fd936183e0298175679d63d73902e116484e10c7b558d4dc84e113380500000000000000000000000000000000000000000000000000000000", "from": "0x000000000000000000000000000000000000dEaD", "to": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726" }, invocation=null, revert=null, code=CALL_EXCEPTION, version=6.4.0)`;
     const { callFailedIndexString, errorMessage } =
-      RelayAdaptContract.extractCallFailedIndexAndErrorText(errorText);
-    expect(callFailedIndexString).to.equal('0');
+      RelayAdaptContract.extractGasEstimateCallFailedIndexAndErrorText(errorText);
+    expect(callFailedIndexString).to.equal('5');
     expect(errorMessage).to.equal(
-      'ABI-encoded revert message: "data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"',
+      `'execution reverted (unknown custom error)': ds-math-sub-underflow`,
     );
   });
 
   it('Should parse relay adapt log revert data - relay adapt abi value', () => {
-    const transactionError = RelayAdaptContract.parseRelayAdaptReturnValue(
+    const parsed = RelayAdaptContract.parseRelayAdaptReturnValue(
       `0x5c0dee5d00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006408c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001564732d6d6174682d7375622d756e646572666c6f77000000000000000000000000000000000000000000000000000000000000000000000000000000`,
     );
-    expect(transactionError).to.equal('ds-math-sub-underflow');
+    expect(parsed?.callIndex).to.equal(5);
+    expect(parsed?.error).to.equal('ds-math-sub-underflow');
   });
 
   it('Should parse relay adapt log revert data - string value', () => {
-    const transactionError = RelayAdaptContract.parseRelayAdaptReturnValue(
+    const parsed = RelayAdaptContract.parseRelayAdaptReturnValue(
       `0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000205261696c67756e4c6f6769633a204e6f746520616c7265616479207370656e74`,
     );
-    expect(transactionError).to.equal('RailgunLogic: Note already spent');
+    expect(parsed?.callIndex).to.equal(undefined);
+    expect(parsed?.error).to.equal('RailgunLogic: Note already spent');
   });
 
   it('Should extract call failed index and error message from non-parseable ethers error', () => {
     const errorText = `not a parseable error`;
     const { callFailedIndexString, errorMessage } =
-      RelayAdaptContract.extractCallFailedIndexAndErrorText(errorText);
+      RelayAdaptContract.extractGasEstimateCallFailedIndexAndErrorText(errorText);
     expect(callFailedIndexString).to.equal('UNKNOWN');
     expect(errorMessage).to.equal('error: not a parseable error');
   });

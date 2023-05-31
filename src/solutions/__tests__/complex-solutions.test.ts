@@ -1,5 +1,5 @@
 import { assert, expect } from 'chai';
-import { randomBytes } from 'ethers/lib/utils';
+import { randomBytes } from 'ethers';
 import {
   createSpendingSolutionsForValue,
   findNextSolutionBatch,

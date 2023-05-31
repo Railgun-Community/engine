@@ -1,6 +1,6 @@
+import { CommitmentPreimageStruct } from '../abi/typechain/RailgunSmartWallet';
 import { UnshieldData } from '../models';
 import { TokenData } from '../models/formatted-types';
-import { CommitmentPreimageStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ByteLength, nToHex } from '../utils/bytes';
 import { assertValidNoteToken, getNoteHash, serializePreImage } from './note-util';
 

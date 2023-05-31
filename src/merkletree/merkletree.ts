@@ -3,7 +3,6 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import { poseidon } from 'circomlibjs';
 import msgpack from 'msgpack-lite';
-import { BigNumber } from '@ethersproject/bignumber';
 import type { Database } from '../database/database';
 import {
   fromUTF8String,
@@ -248,7 +247,7 @@ class MerkleTree {
       hexlify(txid),
     ];
     if (eventLogIndex != null) {
-      path.push(hexlify(BigNumber.from(eventLogIndex).toHexString()));
+      path.push(eventLogIndex.toString(16));
     }
     return path.map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }

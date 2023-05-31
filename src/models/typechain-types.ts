@@ -1,6 +1,3 @@
-import {
-  TransactionStruct,
-  ShieldRequestStruct,
-} from '../typechain-types/contracts/logic/RailgunSmartWallet';
+import { TransactionStruct, ShieldRequestStruct } from '../abi/typechain/RailgunSmartWallet';
 
 export { TransactionStruct, ShieldRequestStruct };

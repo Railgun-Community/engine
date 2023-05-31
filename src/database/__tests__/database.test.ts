@@ -27,7 +27,9 @@ describe('Database', () => {
 
   it('Should perform CRUD operations on database', async () => {
     // Value should not exist yet
-    await expect(db.get(['a'])).to.eventually.be.rejected;
+    await expect(db.get(['a'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000a]',
+    );
 
     // Put value in database
     await db.put(['a'], '01');
@@ -39,7 +41,9 @@ describe('Database', () => {
     await db.del(['a']);
 
     // Check if value is deleted
-    await expect(db.get(['a'])).to.eventually.be.rejected;
+    await expect(db.get(['a'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000a]',
+    );
   });
 
   it('Should write and read encrypted values', async () => {
@@ -71,9 +75,15 @@ describe('Database', () => {
     ]);
 
     // Check if values are deleted
-    await expect(db.get(['a'])).to.eventually.be.rejected;
-    await expect(db.get(['b'])).to.eventually.be.rejected;
-    await expect(db.get(['c'])).to.eventually.be.rejected;
+    await expect(db.get(['a'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000a]',
+    );
+    await expect(db.get(['b'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000b]',
+    );
+    await expect(db.get(['c'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000c]',
+    );
   });
 
   it('Should count values in a namespace', async () => {
@@ -106,9 +116,15 @@ describe('Database', () => {
     await db.clearNamespace(['a']);
 
     // Check if values are deleted
-    await expect(db.get(['a', 'a'])).to.eventually.be.rejected;
-    await expect(db.get(['a', 'b'])).to.eventually.be.rejected;
-    await expect(db.get(['a', 'c'])).to.eventually.be.rejected;
+    await expect(db.get(['a', 'a'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000a:000000000000000000000000000000000000000000000000000000000000000a]',
+    );
+    await expect(db.get(['a', 'b'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000a:000000000000000000000000000000000000000000000000000000000000000b]',
+    );
+    await expect(db.get(['a', 'c'])).to.eventually.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000000000000000a:000000000000000000000000000000000000000000000000000000000000000c]',
+    );
   });
 
   it('Should convert byte array data to hex', async () => {

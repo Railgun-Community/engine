@@ -1,11 +1,11 @@
-import { HDNode, mnemonicToSeed } from '@ethersproject/hdnode';
+import { HDNodeWallet, Mnemonic } from 'ethers';
 import { Database } from '../database/database';
 import { deriveNodes, SpendingKeyPair, WalletNode } from '../key-derivation/wallet-node';
-import { BytesData } from '../models/formatted-types';
 import { WalletData } from '../models/wallet-types';
 import { combine } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
 import { AbstractWallet } from './abstract-wallet';
+import { mnemonicToSeed } from '../key-derivation/bip39';
 
 class RailgunWallet extends AbstractWallet {
   /**
@@ -13,7 +13,7 @@ class RailgunWallet extends AbstractWallet {
    * Spending key should be kept private and only accessed on demand
    * @returns {Promise<SpendingKeyPair>}
    */
-  async getSpendingKeyPair(encryptionKey: BytesData): Promise<SpendingKeyPair> {
+  async getSpendingKeyPair(encryptionKey: string): Promise<SpendingKeyPair> {
     const node = await this.loadSpendingKey(encryptionKey);
     return node.getSpendingKeyPair();
   }
@@ -23,7 +23,7 @@ class RailgunWallet extends AbstractWallet {
    * @param {BytesData} encryptionKey
    * @returns {Node} BabyJubJub node
    */
-  private async loadSpendingKey(encryptionKey: BytesData): Promise<WalletNode> {
+  private async loadSpendingKey(encryptionKey: string): Promise<WalletNode> {
     const { mnemonic, index } = (await RailgunWallet.read(
       this.db,
       this.id,
@@ -35,14 +35,14 @@ class RailgunWallet extends AbstractWallet {
   /**
    * Helper to get the ethereum/whatever address is associated with this wallet
    */
-  async getChainAddress(encryptionKey: BytesData): Promise<string> {
+  async getChainAddress(encryptionKey: string): Promise<string> {
     const { mnemonic, index } = (await AbstractWallet.read(
       this.db,
       this.id,
       encryptionKey,
     )) as WalletData;
     const path = `m/44'/60'/0'/0/${index}`;
-    const hdnode = HDNode.fromMnemonic(mnemonic).derivePath(path);
+    const hdnode = HDNodeWallet.fromMnemonic(Mnemonic.fromPhrase(mnemonic)).derivePath(path);
     return hdnode.address;
   }
 
@@ -78,7 +78,7 @@ class RailgunWallet extends AbstractWallet {
    */
   static async fromMnemonic(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: string,
     mnemonic: string,
     index: number,
     creationBlockNumbers: Optional<number[][]>,
@@ -100,7 +100,7 @@ class RailgunWallet extends AbstractWallet {
    */
   static async loadExisting(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: string,
     id: string,
   ): Promise<RailgunWallet> {
     // Get encrypted mnemonic and index from DB

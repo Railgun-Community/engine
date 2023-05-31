@@ -1,11 +1,9 @@
 import { poseidon, Signature } from 'circomlibjs';
-import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { BigNumber } from 'ethers';
-import { Provider } from '@ethersproject/abstract-provider';
+import { Provider, Wallet } from 'ethers';
 import {
   Ciphertext,
   CommitmentType,
@@ -22,7 +20,7 @@ import {
   signEDDSA,
   verifyEDDSA,
 } from '../../utils/keys-utils';
-import { DECIMALS_18, testArtifactsGetter } from '../../test/helper.test';
+import { DECIMALS_18, getEthersWallet, testArtifactsGetter } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
@@ -31,7 +29,6 @@ import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
 import { hashBoundParams } from '../bound-params';
-import { BoundParamsStruct } from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { MEMO_SENDER_RANDOM_NULL } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { aes } from '../../utils';
@@ -40,6 +37,8 @@ import { getTokenDataERC20 } from '../../note/note-util';
 import { TokenDataGetter } from '../../token/token-data-getter';
 import { ContractStore } from '../../contracts/contract-store';
 import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
+import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
+import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -49,7 +48,7 @@ let merkletree: MerkleTree;
 let wallet: RailgunWallet;
 let tokenDataGetter: TokenDataGetter;
 let chain: Chain;
-let ethersWallet: EthersWallet;
+let ethersWallet: Wallet;
 let transactionBatch: TransactionBatch;
 let prover: Prover;
 let address: AddressData;
@@ -97,7 +96,7 @@ describe('Transaction/ERC20', function test() {
       undefined, // creationBlockNumbers
     );
     WalletInfo.setWalletSource('erc20 Wallet');
-    ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
+    ethersWallet = await getEthersWallet(testMnemonic);
     prover = new Prover(testArtifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
@@ -106,7 +105,11 @@ describe('Transaction/ERC20', function test() {
     // Load fake contract
     ContractStore.railgunSmartWalletContracts[chain.type] = [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
-      new RailgunSmartWalletContract(config.contracts.proxy, null as unknown as Provider, chain);
+      new RailgunSmartWalletContract(
+        config.contracts.proxy,
+        new PollingJsonRpcProvider('abc'),
+        chain,
+      );
 
     tokenDataGetter = new TokenDataGetter(db, chain);
 
@@ -162,7 +165,7 @@ describe('Transaction/ERC20', function test() {
           annotationData: hexlify('00', true),
         },
       ],
-      minGasPrice: BigNumber.from(3000),
+      minGasPrice: BigInt(3000),
     };
     const hashed = hashBoundParams(params);
     assert.typeOf(hashed, 'bigint');

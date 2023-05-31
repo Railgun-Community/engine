@@ -1,19 +1,17 @@
-// TODO: Remove reliance on ethers utils
-import { utils as ethersUtils } from 'ethers';
-import { BytesData } from '../models/formatted-types';
+import { BytesLike, ethers } from 'ethers';
 import { arrayify } from './bytes';
+
+const bytesLikeify = (data: BytesLike): Uint8Array => {
+  return new Uint8Array(arrayify(data));
+};
 
 /**
  * Calculates sha256 hash of bytes
- * @param preImage - bytesdata
  * @returns hash
  */
-function sha256(preImage: BytesData): string {
-  // Convert to bytes array
-  const preImageFormatted = arrayify(preImage);
-
+function sha256(preImage: BytesLike): string {
   // Hash and return
-  return ethersUtils.sha256(preImageFormatted).slice(2);
+  return ethers.sha256(bytesLikeify(preImage)).slice(2);
 }
 
 /**
@@ -21,42 +19,24 @@ function sha256(preImage: BytesData): string {
  * @param preImage - bytesdata
  * @returns hash
  */
-function sha512(preImage: BytesData): string {
-  // Convert to bytes array
-  const preImageFormatted = arrayify(preImage);
-
-  // Hash and return
-  return ethersUtils.sha512(preImageFormatted).slice(2);
+function sha512(preImage: BytesLike): string {
+  return ethers.sha512(bytesLikeify(preImage)).slice(2);
 }
 
 /**
  * Calculates sha512 hmac
- * @param key - bytesdata
- * @param data - bytesdata
  * @returns hmac
  */
-function sha512HMAC(key: BytesData, data: BytesData): string {
-  // Convert to bytes array
-  const keyFormatted = arrayify(key);
-  const dataFormatted = arrayify(data);
-
-  // Hash HMAC and return
-  return ethersUtils
-    .computeHmac(ethersUtils.SupportedAlgorithm.sha512, keyFormatted, dataFormatted)
-    .slice(2);
+function sha512HMAC(key: BytesLike, data: BytesLike): string {
+  return ethers.computeHmac('sha512', bytesLikeify(key), bytesLikeify(data)).slice(2);
 }
 
 /**
  * Calculates keccak256 hash of bytes
- * @param preImage - bytesdata
  * @returns hash
  */
-function keccak256(preImage: BytesData): string {
-  // Convert to bytes array
-  const preImageFormatted = arrayify(preImage);
-
-  // Hash and return
-  return ethersUtils.keccak256(preImageFormatted).slice(2);
+function keccak256(preImage: BytesLike): string {
+  return ethers.keccak256(bytesLikeify(preImage)).slice(2);
 }
 
 export { sha256, sha512, sha512HMAC, keccak256 };

@@ -17,9 +17,9 @@ import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import { TreeBalance } from '../models';
-import { TransactionStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
+import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
 
 export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 7500;
 

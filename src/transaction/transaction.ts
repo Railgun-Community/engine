@@ -22,7 +22,7 @@ import {
   CommitmentCiphertextStruct,
   CommitmentPreimageStruct,
   TransactionStruct,
-} from '../typechain-types/contracts/logic/RailgunSmartWallet';
+} from '../abi/typechain/RailgunSmartWallet';
 import { hashBoundParams } from './bound-params';
 import { getChainFullNetworkID } from '../chain/chain';
 import { UnshieldNoteERC20 } from '../note/erc20/unshield-note-erc20';

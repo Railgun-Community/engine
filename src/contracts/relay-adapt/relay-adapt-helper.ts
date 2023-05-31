@@ -1,15 +1,11 @@
-import { ethers, PopulatedTransaction, BigNumber } from 'ethers';
+import { ContractTransaction, AbiCoder, keccak256 } from 'ethers';
 import { randomHex, hexToBytes } from '../../utils/bytes';
-import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
-import {
-  ShieldRequestStruct,
-  TransactionStruct,
-} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 import { AddressData } from '../../key-derivation';
 import { NFTTokenData, TokenType } from '../../models/formatted-types';
 import { ShieldNoteNFT } from '../../note/nft/shield-note-nft';
 import { ERC721_NOTE_VALUE } from '../../note/note-util';
+import { RelayAdapt, ShieldRequestStruct, TransactionStruct } from '../../abi/typechain/RelayAdapt';
 
 class RelayAdaptHelper {
   static async generateRelayShieldRequests(
@@ -103,8 +99,8 @@ class RelayAdaptHelper {
   static getActionData(
     random: string,
     requireSuccess: boolean,
-    calls: PopulatedTransaction[],
-    minGasLimit: BigNumber,
+    calls: ContractTransaction[],
+    minGasLimit: bigint,
   ): RelayAdapt.ActionDataStruct {
     const formattedRandom = RelayAdaptHelper.formatRandom(random);
     return {
@@ -129,14 +125,13 @@ class RelayAdaptHelper {
     transactions: TransactionStruct[],
     random: string,
     requireSuccess: boolean,
-    calls: PopulatedTransaction[],
-    minGasLimit = BigNumber.from(0),
+    calls: ContractTransaction[],
+    minGasLimit = BigInt(0),
   ): string {
     const nullifiers = transactions.map((transaction) => transaction.nullifiers);
     const actionData = RelayAdaptHelper.getActionData(random, requireSuccess, calls, minGasLimit);
 
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const preimage = abiCoder.encode(
+    const preimage = AbiCoder.defaultAbiCoder().encode(
       [
         'bytes32[][] nullifiers',
         'uint256 transactionsLength',
@@ -145,7 +140,7 @@ class RelayAdaptHelper {
       [nullifiers, transactions.length, actionData],
     );
 
-    return ethers.utils.keccak256(hexToBytes(preimage));
+    return keccak256(hexToBytes(preimage));
   }
 
   /**
@@ -154,7 +149,7 @@ class RelayAdaptHelper {
    * @param {object[]} calls - calls list
    * @returns {object[]} formatted calls
    */
-  static formatCalls(calls: PopulatedTransaction[]): RelayAdapt.CallStruct[] {
+  static formatCalls(calls: ContractTransaction[]): RelayAdapt.CallStruct[] {
     return calls.map((call) => ({
       to: call.to || '',
       data: call.data || '',

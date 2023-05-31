@@ -1,6 +1,6 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import EventEmitter from 'events';
-import { FallbackProvider, JsonRpcProvider } from '@ethersproject/providers';
+import { FallbackProvider } from 'ethers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
 import { Database, DatabaseNamespace } from './database/database';
@@ -27,9 +27,11 @@ import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
 import { CURRENT_MERKLETREE_HISTORY_VERSION } from './utils/constants';
+import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
+import { assertPollingProvider } from './provider/polling-util';
 
 class RailgunEngine extends EventEmitter {
-  readonly db;
+  readonly db: Database;
 
   readonly merkletrees: MerkleTree[][] = [];
 
@@ -91,6 +93,9 @@ class RailgunEngine extends EventEmitter {
     leaves: Commitment[],
     shouldUpdateTrees: boolean,
   ): Promise<void> {
+    if (this.db.isClosed()) {
+      return;
+    }
     if (!leaves.length) {
       return;
     }
@@ -115,6 +120,9 @@ class RailgunEngine extends EventEmitter {
    * @param nullifiers - transaction info to nullify commitment
    */
   async nullifierListener(chain: Chain, nullifiers: Nullifier[]): Promise<void> {
+    if (this.db.isClosed()) {
+      return;
+    }
     if (!nullifiers.length) {
       return;
     }
@@ -135,6 +143,9 @@ class RailgunEngine extends EventEmitter {
    * @param unshields - unshield events
    */
   async unshieldListener(chain: Chain, unshields: UnshieldStoredEvent[]): Promise<void> {
+    if (this.db.isClosed()) {
+      return;
+    }
     if (!unshields.length) {
       return;
     }
@@ -151,7 +162,10 @@ class RailgunEngine extends EventEmitter {
     const merkletree = this.getMerkletreeForChain(chain);
     const railgunSmartWalletContract =
       ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
-    const { provider } = railgunSmartWalletContract.contract;
+    const provider = railgunSmartWalletContract.contract.runner?.provider;
+    if (!provider) {
+      throw new Error('Requires provider for commitment block lookup');
+    }
 
     // Get latest tree
     const firstInvalidMerklerootTree = merkletree.getFirstInvalidMerklerootTree();
@@ -340,7 +354,10 @@ class RailgunEngine extends EventEmitter {
       `startScanningBlockSlowScan: ${startScanningBlockSlowScan} (note: continously updated during scan)`,
     );
 
-    const latestBlock = await railgunSmartWalletContract.contract.provider.getBlockNumber();
+    if (!railgunSmartWalletContract.contract.runner?.provider) {
+      throw new Error('Requires provider for RailgunSmartWallet contract');
+    }
+    const latestBlock = await railgunSmartWalletContract.contract.runner.provider.getBlockNumber();
     const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
     EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
@@ -459,10 +476,11 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     railgunSmartWalletContractAddress: string,
     relayAdaptContractAddress: string,
-    provider: JsonRpcProvider | FallbackProvider,
+    provider: PollingJsonRpcProvider | FallbackProvider,
     deploymentBlock: number,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
+    assertPollingProvider(provider);
 
     try {
       // Test that provider responds.
@@ -481,7 +499,7 @@ class RailgunEngine extends EventEmitter {
       ContractStore.relayAdaptContracts[chain.type][chain.id];
     if (hasMerkletree || hasSmartWalletContract || hasRelayAdaptContract) {
       // If a network with this chainID exists, unload it and load the provider as a new network
-      this.unloadNetwork(chain);
+      await this.unloadNetwork(chain);
     }
 
     // Create proxy contract instance
@@ -541,7 +559,7 @@ class RailgunEngine extends EventEmitter {
     const unshieldListener = async (unshields: UnshieldStoredEvent[]) => {
       await this.unshieldListener(chain, unshields);
     };
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id].setTreeUpdateListeners(
+    await ContractStore.railgunSmartWalletContracts[chain.type][chain.id].setTreeUpdateListeners(
       eventsListener,
       nullifierListener,
       unshieldListener,
@@ -552,7 +570,7 @@ class RailgunEngine extends EventEmitter {
    * Unload network
    * @param chain - chainID of network to unload
    */
-  unloadNetwork(chain: Chain) {
+  async unloadNetwork(chain: Chain): Promise<void> {
     if (
       ContractStore.railgunSmartWalletContracts[chain.type] &&
       ContractStore.railgunSmartWalletContracts[chain.id]
@@ -568,7 +586,7 @@ class RailgunEngine extends EventEmitter {
       });
 
       // Unload listeners
-      ContractStore.railgunSmartWalletContracts[chain.type][chain.id].unload();
+      await ContractStore.railgunSmartWalletContracts[chain.type][chain.id].unload();
 
       // Delete contracts
       delete ContractStore.railgunSmartWalletContracts[chain.id][chain.type];
@@ -693,10 +711,9 @@ class RailgunEngine extends EventEmitter {
   async unload() {
     // Unload chains
     ContractStore.railgunSmartWalletContracts.forEach((contractsForChainType, chainType) => {
-      contractsForChainType.forEach((railgunSmartWalletContract, chainID) => {
-        EngineDebug.log(`unload contract for ${chainType}:${chainID}`);
-        this.unloadNetwork({ type: chainType, id: chainID });
-        railgunSmartWalletContract.contract.removeAllListeners();
+      contractsForChainType.forEach(async (_railgunSmartWalletContract, chainID) => {
+        EngineDebug.log(`unload network ${chainType}:${chainID}`);
+        await this.unloadNetwork({ type: chainType, id: chainID });
       });
     });
 

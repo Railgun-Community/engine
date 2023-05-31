@@ -1,11 +1,11 @@
 import { poseidon } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { ShieldCiphertext, TokenData } from '../models/formatted-types';
-import { ShieldRequestStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { getPublicViewingKey, getSharedSymmetricKey } from '../utils';
 import { ByteLength, combine, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { aes } from '../utils/encryption';
 import { assertValidNoteRandom, assertValidNoteToken, getTokenDataHash } from './note-util';
+import { ShieldRequestStruct } from '../abi/typechain/RailgunSmartWallet';
 
 export abstract class ShieldNote {
   readonly masterPublicKey: bigint;

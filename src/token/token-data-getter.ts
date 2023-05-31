@@ -1,10 +1,10 @@
+import { TokenDataStructOutput } from '../abi/typechain/RailgunSmartWallet';
 import { ContractStore } from '../contracts/contract-store';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { Database } from '../database/database';
 import { Chain } from '../models/engine-types';
 import { TokenData } from '../models/formatted-types';
 import { getTokenDataERC20, serializeTokenData } from '../note/note-util';
-import { TokenDataStructOutput } from '../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ByteLength, formatToByteLength, fromUTF8String } from '../utils';
 
 // 12 empty bytes.
@@ -46,11 +46,7 @@ export class TokenDataGetter {
   }
 
   private static structToTokenData(struct: TokenDataStructOutput): TokenData {
-    return serializeTokenData(
-      struct.tokenAddress,
-      struct.tokenType,
-      struct.tokenSubID.toHexString(),
-    );
+    return serializeTokenData(struct.tokenAddress, struct.tokenType, struct.tokenSubID);
   }
 
   private static getNFTTokenDataPrefix(): string[] {

@@ -4,7 +4,6 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
-import { BigNumber } from '@ethersproject/bignumber';
 import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
@@ -1089,9 +1088,9 @@ abstract class AbstractWallet extends EventEmitter {
       );
       if (existingUnshieldEvent) {
         // Add amount to existing unshield event.
-        existingUnshieldEvent.amount = BigNumber.from(existingUnshieldEvent.amount)
-          .add(unshieldEvent.amount)
-          .toHexString();
+        existingUnshieldEvent.amount = (
+          BigInt(existingUnshieldEvent.amount) + unshieldEvent.amount
+        ).toString();
         return;
       }
       txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
@@ -1442,7 +1441,7 @@ abstract class AbstractWallet extends EventEmitter {
   static async read(
     db: Database,
     id: string,
-    encryptionKey: BytesData,
+    encryptionKey: string,
   ): Promise<WalletData | ViewOnlyWalletData> {
     return msgpack.decode(
       arrayify(await db.getEncrypted(AbstractWallet.dbPath(id), encryptionKey)),
@@ -1452,7 +1451,7 @@ abstract class AbstractWallet extends EventEmitter {
   static async write(
     db: Database,
     id: string,
-    encryptionKey: BytesData,
+    encryptionKey: string,
     data: WalletData | ViewOnlyWalletData,
   ): Promise<void> {
     await db.putEncrypted(AbstractWallet.dbPath(id), encryptionKey, msgpack.encode(data));
@@ -1466,7 +1465,7 @@ abstract class AbstractWallet extends EventEmitter {
    */
   static async getEncryptedData(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: string,
     id: string,
   ): Promise<WalletData | ViewOnlyWalletData> {
     return msgpack.decode(

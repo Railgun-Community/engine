@@ -1,7 +1,13 @@
-import type { Provider } from '@ethersproject/abstract-provider';
-import { BigNumber, Contract, Event, PopulatedTransaction } from 'ethers';
+import {
+  Contract,
+  ContractEventPayload,
+  ContractTransaction,
+  FallbackProvider,
+  Interface,
+  Provider,
+  Result,
+} from 'ethers';
 import EventEmitter from 'events';
-import { Interface } from '@ethersproject/abi';
 import EngineDebug from '../../debugger/debugger';
 import {
   EventsListener,
@@ -28,29 +34,34 @@ import {
   processLegacyGeneratedCommitmentEvents,
   processLegacyNullifierEvents,
 } from './legacy-events/legacy-events';
-import { RailgunSmartWallet } from '../../typechain-types';
-import { TypedEvent, TypedEventFilter } from '../../typechain-types/common';
-import { LegacyRailgunLogic } from './legacy-events/RailgunLogic_LegacyEvents';
+import { RailgunLogic_LegacyEvents } from '../../abi/typechain/RailgunLogic_LegacyEvents';
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStruct,
   CommitmentPreimageStructOutput,
-  NullifiedEventObject,
+  NullifiedEvent,
   ShieldCiphertextStructOutput,
-  ShieldEventObject,
+  ShieldEvent,
   ShieldRequestStruct,
   TokenDataStructOutput,
-  TransactEventObject,
+  TransactEvent,
   TransactionStruct,
-  UnshieldEventObject,
-} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
+  UnshieldEvent,
+  RailgunSmartWallet,
+} from '../../abi/typechain/RailgunSmartWallet';
 import {
   ENGINE_V3_START_BLOCK_NUMBERS_EVM,
   ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM,
 } from '../../utils';
 import { Chain, ChainType } from '../../models/engine-types';
-import { ShieldEventFilter_LegacyShield_PreMar23 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
-import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json';
+import {
+  TypedContractEvent,
+  TypedDeferredTopicFilter,
+  TypedEventLog,
+} from '../../abi/typechain/common';
+import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-legacy';
+import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
+import { assertPollingProvider } from '../../provider/polling-util';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;
@@ -70,14 +81,19 @@ class RailgunSmartWalletContract extends EventEmitter {
    * @param railgunSmartWalletContractAddress - address of Railgun instance (Proxy contract)
    * @param provider - Network provider
    */
-  constructor(railgunSmartWalletContractAddress: string, provider: Provider, chain: Chain) {
+  constructor(
+    railgunSmartWalletContractAddress: string,
+    provider: PollingJsonRpcProvider | FallbackProvider,
+    chain: Chain,
+  ) {
     super();
+    assertPollingProvider(provider);
     this.address = railgunSmartWalletContractAddress;
     this.contract = new Contract(
       railgunSmartWalletContractAddress,
       ABIRailgunSmartWallet,
       provider,
-    ) as RailgunSmartWallet;
+    ) as unknown as RailgunSmartWallet;
     this.provider = provider;
     this.chain = chain;
   }
@@ -95,20 +111,19 @@ class RailgunSmartWalletContract extends EventEmitter {
    * Shield and unshield fees are in basis points, NFT is in wei.
    */
   async fees(): Promise<{
-    shield: string;
-    unshield: string;
-    nft: string;
+    shield: bigint;
+    unshield: bigint;
+    nft: bigint;
   }> {
     const [shieldFee, unshieldFee, nftFee] = await Promise.all([
       this.contract.shieldFee(),
       this.contract.unshieldFee(),
       this.contract.nftFee(),
     ]);
-
     return {
-      shield: shieldFee.toHexString(),
-      unshield: unshieldFee.toHexString(),
-      nft: nftFee.toHexString(),
+      shield: shieldFee,
+      unshield: unshieldFee,
+      nft: nftFee,
     };
   }
 
@@ -142,116 +157,218 @@ class RailgunSmartWalletContract extends EventEmitter {
     }
   }
 
+  private static recursivelyDecodeResult = (result: Result): any => {
+    if (typeof result !== 'object') {
+      // End (primitive) value
+      return result;
+    }
+    try {
+      const obj = result.toObject();
+      if (obj._) {
+        throw new Error('Decode as array, not object');
+      }
+      Object.keys(obj).forEach((key) => {
+        obj[key] = RailgunSmartWalletContract.recursivelyDecodeResult(obj[key]);
+      });
+      return obj;
+    } catch (err) {
+      // Result is array.
+      return result
+        .toArray()
+        .map((item) => RailgunSmartWalletContract.recursivelyDecodeResult(item as Result));
+    }
+  };
+
   /**
    * Listens for tree update events
    * @param commitmentListener - listener callback
    * @param eventsNullifierListener - nullifier listener callback
    * @param eventsUnshieldListener - unshield listener callback
    */
-  setTreeUpdateListeners(
+  async setTreeUpdateListeners(
     commitmentListener: EventsListener,
     eventsNullifierListener: EventsNullifierListener,
     eventsUnshieldListener: EventsUnshieldListener,
-  ) {
-    // listen for nullifiers first so balances aren't "double" before they process
-    this.contract.on(
+  ): Promise<void> {
+    // @ts-expect-error
+    await this.contract.on(
       this.contract.filters.Nullified(),
-      async (treeNumber: number, nullifier: string[], event: Event) => {
-        const args: NullifiedEventObject = {
+      async (event: ContractEventPayload) => {
+        try {
+          if (
+            event.log.topics.length !== 1 ||
+            event.log.topics[0] !== this.contract.getEvent('Nullified').getFragment().topicHash
+          ) {
+            throw new Error('Requires Nullified topic');
+          }
+
+          const { treeNumber, nullifier } = event.args.toObject() as NullifiedEvent.OutputObject;
+
+          const nullifierDecoded: string[] = RailgunSmartWalletContract.recursivelyDecodeResult(
+            nullifier as Result,
+          );
+
+          const args: NullifiedEvent.OutputObject = {
+            treeNumber,
+            nullifier: nullifierDecoded,
+          };
+          const nullifiers = formatNullifiedEvents(
+            args,
+            event.log.transactionHash,
+            event.log.blockNumber,
+          );
+          await eventsNullifierListener(nullifiers);
+          this.emit(EngineEvent.ContractNullifierReceived, nullifiers);
+        } catch (err) {
+          if (err instanceof Error) {
+            EngineDebug.error(err);
+          }
+          throw err;
+        }
+      },
+    );
+
+    // @ts-expect-error
+    await this.contract.on(this.contract.filters.Shield(), async (event: ContractEventPayload) => {
+      try {
+        if (
+          event.log.topics.length !== 1 ||
+          event.log.topics[0] !== this.contract.getEvent('Shield').getFragment().topicHash
+        ) {
+          throw new Error('Requires Shield topic');
+        }
+
+        const { treeNumber, startPosition, commitments, shieldCiphertext, fees } =
+          event.args.toObject() as ShieldEvent.OutputObject;
+
+        const commitmentsDecoded: CommitmentPreimageStructOutput[] =
+          RailgunSmartWalletContract.recursivelyDecodeResult(commitments as Result);
+        const shieldCiphertextDecoded: ShieldCiphertextStructOutput[] =
+          RailgunSmartWalletContract.recursivelyDecodeResult(shieldCiphertext as Result);
+        const feesDecoded: bigint[] = RailgunSmartWalletContract.recursivelyDecodeResult(
+          fees as Result,
+        );
+
+        const args: ShieldEvent.OutputObject = {
           treeNumber,
-          nullifier,
+          startPosition,
+          commitments: commitmentsDecoded,
+          shieldCiphertext: shieldCiphertextDecoded,
+          fees: feesDecoded,
         };
-        const formattedEventArgs = formatNullifiedEvents(
+        const shieldEvent = formatShieldEvent(
           args,
-          event.transactionHash,
-          event.blockNumber,
+          event.log.transactionHash,
+          event.log.blockNumber,
+          args.fees,
         );
-        await eventsNullifierListener(formattedEventArgs);
-        // @todo why is it emitted twice for a transaction of 1 input?
-        this.emit(EngineEvent.ContractNullifierReceived, formattedEventArgs);
-      },
-    );
+        await commitmentListener(shieldEvent);
+      } catch (err) {
+        if (err instanceof Error) {
+          EngineDebug.error(err);
+        }
+        throw err;
+      }
+    });
 
-    this.contract.on(
-      this.contract.filters.Shield(),
-      async (
-        treeNumber: BigNumber,
-        startPosition: BigNumber,
-        commitments: CommitmentPreimageStructOutput[],
-        shieldCiphertext: ShieldCiphertextStructOutput[],
-        fees: BigNumber[],
-        event: Event,
-      ) => {
-        const args: ShieldEventObject = {
-          treeNumber,
-          startPosition,
-          commitments,
-          shieldCiphertext,
-          fees,
-        };
-        await commitmentListener(
-          formatShieldEvent(args, event.transactionHash, event.blockNumber, fees),
-        );
-      },
-    );
-
-    this.contract.on(
+    // @ts-expect-error
+    await this.contract.on(
       this.contract.filters.Transact(),
-      async (
-        treeNumber: BigNumber,
-        startPosition: BigNumber,
-        hash: string[],
-        ciphertext: CommitmentCiphertextStructOutput[],
-        event: Event,
-      ) => {
-        const args: TransactEventObject = {
-          treeNumber,
-          startPosition,
-          hash,
-          ciphertext,
-        };
-        await commitmentListener(
-          formatTransactEvent(args, event.transactionHash, event.blockNumber),
-        );
+      async (event: ContractEventPayload) => {
+        try {
+          if (
+            event.log.topics.length !== 1 ||
+            event.log.topics[0] !== this.contract.getEvent('Transact').getFragment().topicHash
+          ) {
+            throw new Error('Requires Transact topic');
+          }
+
+          const { treeNumber, startPosition, hash, ciphertext } =
+            event.args.toObject() as TransactEvent.OutputObject;
+
+          const hashDecoded: string[] = RailgunSmartWalletContract.recursivelyDecodeResult(
+            hash as Result,
+          );
+          const ciphertextDecoded: CommitmentCiphertextStructOutput[] =
+            RailgunSmartWalletContract.recursivelyDecodeResult(ciphertext as Result);
+
+          const args: TransactEvent.OutputObject = {
+            treeNumber,
+            startPosition,
+            hash: hashDecoded,
+            ciphertext: ciphertextDecoded,
+          };
+          const transactEvent = formatTransactEvent(
+            args,
+            event.log.transactionHash,
+            event.log.blockNumber,
+          );
+          await commitmentListener(transactEvent);
+        } catch (err) {
+          if (err instanceof Error) {
+            EngineDebug.error(err);
+          }
+          throw err;
+        }
       },
     );
 
-    this.contract.on(
+    // @ts-expect-error
+    await this.contract.on(
       this.contract.filters.Unshield(),
-      async (
-        to: string,
-        token: TokenDataStructOutput,
-        amount: BigNumber,
-        fee: BigNumber,
-        event: Event,
-      ) => {
-        const args: UnshieldEventObject = {
-          to,
-          token,
-          amount,
-          fee,
-        };
-        await eventsUnshieldListener([
-          formatUnshieldEvent(args, event.transactionHash, event.blockNumber, event.logIndex),
-        ]);
+      async (event: ContractEventPayload) => {
+        try {
+          if (
+            event.log.topics.length !== 1 ||
+            event.log.topics[0] !== this.contract.getEvent('Unshield').getFragment().topicHash
+          ) {
+            throw new Error('Requires Unshield topic');
+          }
+
+          const { to, token, amount, fee } = event.args.toObject() as UnshieldEvent.OutputObject;
+
+          const tokenDecoded: TokenDataStructOutput =
+            RailgunSmartWalletContract.recursivelyDecodeResult(token as unknown as Result);
+
+          const args: UnshieldEvent.OutputObject = {
+            to,
+            token: tokenDecoded,
+            amount,
+            fee,
+          };
+          const unshieldEvent = formatUnshieldEvent(
+            args,
+            event.log.transactionHash,
+            event.log.blockNumber,
+            event.log.index,
+          );
+          await eventsUnshieldListener([unshieldEvent]);
+        } catch (err) {
+          if (err instanceof Error) {
+            EngineDebug.error(err);
+          }
+          throw err;
+        }
       },
     );
   }
 
-  private async scanEvents<EventType extends TypedEvent>(
-    eventFilter: TypedEventFilter<EventType>,
+  private async scanEvents<Event extends TypedContractEvent>(
+    eventFilter: TypedDeferredTopicFilter<Event>,
     startBlock: number,
     endBlock: number,
     retryCount = 0,
-  ): Promise<EventType[]> {
+  ): Promise<TypedEventLog<Event>[]> {
     try {
       const events = await promiseTimeout(
         this.contract.queryFilter(eventFilter, startBlock, endBlock),
         EVENTS_SCAN_TIMEOUT,
-      ).catch(() => {
-        throw new Error(`Timed out after ${EVENTS_SCAN_TIMEOUT}`);
-      });
-      return events;
+      );
+      const eventsWithDecodedArgs = events.map((event) => ({
+        ...event,
+        args: RailgunSmartWalletContract.recursivelyDecodeResult(event.args),
+      }));
+      return eventsWithDecodedArgs;
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
@@ -286,6 +403,22 @@ class RailgunSmartWalletContract extends EventEmitter {
       return ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM[chain.id] || 0;
     }
     return 0;
+  }
+
+  private static getShieldPreMar23EventFilter(): TypedDeferredTopicFilter<TypedContractEvent> {
+    // Cannot use `this.contract`, because the "Shield" named event has changed. (It has a different topic).
+    const ifaceLegacyShieldPreMar23 = new Interface(
+      ABIRailgunSmartWallet_Legacy_PreMar23.filter((fragment) => fragment.type === 'event'),
+    );
+    const shieldPreMar23EventFragment = ifaceLegacyShieldPreMar23.getEvent('Shield');
+    if (!shieldPreMar23EventFragment) {
+      throw new Error('Requires shield event fragment - Legacy, pre mar 23');
+    }
+    const legacyPreMar23EventFilterShield: TypedDeferredTopicFilter<TypedContractEvent> = {
+      getTopicFilter: async () => ifaceLegacyShieldPreMar23.encodeFilterTopics('Shield', []),
+      fragment: shieldPreMar23EventFragment,
+    };
+    return legacyPreMar23EventFilterShield;
   }
 
   /**
@@ -325,7 +458,7 @@ class RailgunSmartWalletContract extends EventEmitter {
 
     // This type includes legacy event types and filters, from before the v3 update.
     // We need to scan prior commitments from these past events, before engineV3StartBlockNumber.
-    const legacyEventsContract = this.contract as unknown as LegacyRailgunLogic;
+    const legacyEventsContract = this.contract as unknown as RailgunLogic_LegacyEvents;
     const legacyEventFilterNullifiers = legacyEventsContract.filters.Nullifiers();
     const legacyEventFilterGeneratedCommitmentBatch =
       legacyEventsContract.filters.GeneratedCommitmentBatch();
@@ -333,14 +466,8 @@ class RailgunSmartWalletContract extends EventEmitter {
       legacyEventsContract.filters.CommitmentBatch();
 
     // This type includes legacy Shield event types and filters, from before the Mar 2023 update.
-    // Cannot use `this.contract`, because the "Shield" named event has changed. (It has a different topic).
-    const ifaceLegacyShieldPreMar23 = new Interface(
-      ABIRailgunSmartWallet_Legacy_PreMar23.filter((fragment) => fragment.type === 'event'),
-    );
-    const eventFilter_LegacyShield_PreMar23: ShieldEventFilter_LegacyShield_PreMar23 = {
-      address: this.address,
-      topics: [ifaceLegacyShieldPreMar23.getEventTopic('Shield')],
-    };
+    const legacyPreMar23EventFilterShield =
+      RailgunSmartWalletContract.getShieldPreMar23EventFilter();
 
     EngineDebug.log(
       `[Chain ${this.chain.type}:${this.chain.id}]: Scanning historical events from block ${currentStartBlock} to ${latestBlock}`,
@@ -377,7 +504,7 @@ class RailgunSmartWalletContract extends EventEmitter {
           // Legacy V3 Shield Event - Pre March 2023.
           // eslint-disable-next-line no-await-in-loop
           const eventsShield = await this.scanEvents(
-            eventFilter_LegacyShield_PreMar23,
+            legacyPreMar23EventFilterShield,
             currentStartBlock,
             endBlock,
           );
@@ -469,11 +596,10 @@ class RailgunSmartWalletContract extends EventEmitter {
 
   /**
    * GenerateShield populated transaction
-   * @param {ShieldInput[]} shieldInputs - array of preImage and encryptedRandom for each shield note
    * @returns Populated transaction
    */
-  generateShield(shieldRequests: ShieldRequestStruct[]): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.shield(shieldRequests);
+  generateShield(shieldRequests: ShieldRequestStruct[]): Promise<ContractTransaction> {
+    return this.contract.shield.populateTransaction(shieldRequests);
   }
 
   /**
@@ -481,8 +607,8 @@ class RailgunSmartWalletContract extends EventEmitter {
    * @param transactions - serialized railgun transaction
    * @returns - populated ETH transaction
    */
-  transact(transactions: TransactionStruct[]): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.transact(transactions);
+  transact(transactions: TransactionStruct[]): Promise<ContractTransaction> {
+    return this.contract.transact.populateTransaction(transactions);
   }
 
   async hashCommitment(commitment: CommitmentPreimageStruct): Promise<string> {
@@ -495,8 +621,8 @@ class RailgunSmartWalletContract extends EventEmitter {
   /**
    * Remove all listeners and shutdown contract instance
    */
-  unload() {
-    this.contract.removeAllListeners();
+  async unload() {
+    await this.contract.removeAllListeners();
   }
 }
 

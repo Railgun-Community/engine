@@ -1,6 +1,5 @@
 import { Database } from '../database/database';
 import { ViewingKeyPair } from '../key-derivation/wallet-node';
-import { BytesData } from '../models/formatted-types';
 import { ViewOnlyWalletData } from '../models/wallet-types';
 import { hexStringToBytes } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
@@ -47,7 +46,7 @@ class ViewOnlyWallet extends AbstractWallet {
    */
   static async fromShareableViewingKey(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: string,
     shareableViewingKey: string,
     creationBlockNumbers: Optional<number[][]>,
   ): Promise<AbstractWallet> {
@@ -71,7 +70,7 @@ class ViewOnlyWallet extends AbstractWallet {
    */
   static async loadExisting(
     db: Database,
-    encryptionKey: BytesData,
+    encryptionKey: string,
     id: string,
   ): Promise<AbstractWallet> {
     // Get encrypted shareableViewingKey from DB

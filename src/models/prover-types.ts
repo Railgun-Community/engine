@@ -1,5 +1,3 @@
-import { BigNumberish } from 'ethers';
-
 export const enum Circuits {
   OneTwo,
   OneThree,
@@ -9,12 +7,12 @@ export const enum Circuits {
 }
 
 export type G1Point = {
-  x: BigNumberish;
-  y: BigNumberish;
+  x: bigint;
+  y: bigint;
 };
 export type G2Point = {
-  x: [BigNumberish, BigNumberish];
-  y: [BigNumberish, BigNumberish];
+  x: [bigint, bigint];
+  y: [bigint, bigint];
 };
 
 export type SnarkProof = {

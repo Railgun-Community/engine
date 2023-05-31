@@ -1,7 +1,6 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { utf8ToBytes } from 'ethereum-cryptography/utils';
-import { mnemonicToSeed } from 'ethers/lib/utils';
 import memdown from 'memdown';
 import { verifyED25519 } from '../../utils/keys-utils';
 import { RailgunWallet } from '../railgun-wallet';
@@ -13,6 +12,7 @@ import { MerkleTree } from '../../merkletree/merkletree';
 import { sha256 } from '../../utils/hash';
 import { combine } from '../../utils/bytes';
 import { RailgunEngine } from '../../railgun-engine';
+import { mnemonicToSeed } from '../../key-derivation/bip39';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

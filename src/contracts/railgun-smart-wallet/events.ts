@@ -1,5 +1,4 @@
-import { BigNumber } from '@ethersproject/bignumber';
-import { Interface } from '@ethersproject/abi';
+import { Interface } from 'ethers';
 import {
   CommitmentCiphertext,
   CommitmentType,
@@ -20,21 +19,14 @@ import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
   NullifiedEvent,
-  NullifiedEventObject,
   ShieldCiphertextStructOutput,
   ShieldEvent,
-  ShieldEventObject,
   TransactEvent,
-  TransactEventObject,
   UnshieldEvent,
-  UnshieldEventObject,
-} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
+} from '../../abi/typechain/RailgunSmartWallet';
 import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
-import {
-  ShieldEventObject_LegacyShield_PreMar23,
-  ShieldEvent_LegacyShield_PreMar23,
-} from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
-import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json';
+import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
+import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-legacy';
 
 /**
  * Parse event data for database
@@ -44,16 +36,16 @@ export function formatShieldCommitments(
   preImages: CommitmentPreimageStructOutput[],
   shieldCiphertext: ShieldCiphertextStructOutput[],
   blockNumber: number,
-  fees: Optional<BigNumber[]>,
+  fees: Optional<bigint[]>,
 ): ShieldCommitment[] {
   const shieldCommitments = preImages.map((commitmentPreImage, index) => {
     const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
     const tokenData = serializeTokenData(
       commitmentPreImage.token.tokenAddress,
       commitmentPreImage.token.tokenType,
-      commitmentPreImage.token.tokenSubID.toHexString(),
+      commitmentPreImage.token.tokenSubID.toString(),
     );
-    const value = commitmentPreImage.value.toBigInt();
+    const { value } = commitmentPreImage;
     const preImage = serializePreImage(npk, tokenData, value);
     const noteHash = getNoteHash(npk, tokenData, value);
 
@@ -66,7 +58,7 @@ export function formatShieldCommitments(
       preImage,
       encryptedBundle: shieldCiphertext[index].encryptedBundle,
       shieldKey: shieldCiphertext[index].shieldKey,
-      fee: fees ? fees[index].toHexString() : undefined,
+      fee: fees && fees[index] ? fees[index].toString() : undefined,
     };
     return commitment;
   });
@@ -74,10 +66,10 @@ export function formatShieldCommitments(
 }
 
 export function formatShieldEvent(
-  shieldEventArgs: ShieldEventObject | ShieldEventObject_LegacyShield_PreMar23,
+  shieldEventArgs: ShieldEvent.OutputObject | ShieldEvent_LegacyShield_PreMar23.OutputObject,
   transactionHash: string,
   blockNumber: number,
-  fees: Optional<BigNumber[]>,
+  fees: Optional<bigint[]>,
 ): CommitmentEvent {
   const { treeNumber, startPosition, commitments, shieldCiphertext } = shieldEventArgs;
   if (
@@ -100,8 +92,8 @@ export function formatShieldEvent(
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: treeNumber.toNumber(),
-    startPosition: startPosition.toNumber(),
+    treeNumber: Number(treeNumber),
+    startPosition: Number(startPosition),
     commitments: formattedCommitments,
     blockNumber,
   };
@@ -149,7 +141,7 @@ export function formatTransactCommitments(
 }
 
 export function formatTransactEvent(
-  transactEventArgs: TransactEventObject,
+  transactEventArgs: TransactEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
 ): CommitmentEvent {
@@ -168,15 +160,15 @@ export function formatTransactEvent(
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: treeNumber.toNumber(),
-    startPosition: startPosition.toNumber(),
+    treeNumber: Number(treeNumber),
+    startPosition: Number(startPosition),
     commitments: formattedCommitments,
     blockNumber,
   };
 }
 
 export function formatUnshieldEvent(
-  unshieldEventArgs: UnshieldEventObject,
+  unshieldEventArgs: UnshieldEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
   eventLogIndex: number,
@@ -186,11 +178,11 @@ export function formatUnshieldEvent(
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
     timestamp: undefined,
     toAddress: to,
-    tokenType: token.tokenType,
+    tokenType: Number(token.tokenType),
     tokenAddress: token.tokenAddress,
-    tokenSubID: token.tokenSubID.toHexString(),
-    amount: amount.toHexString(),
-    fee: fee.toHexString(),
+    tokenSubID: token.tokenSubID.toString(),
+    amount: amount.toString(),
+    fee: fee.toString(),
     blockNumber,
     eventLogIndex,
   };
@@ -198,15 +190,15 @@ export function formatUnshieldEvent(
 
 export async function processShieldEvents(
   eventsListener: EventsListener,
-  events: ShieldEvent[],
+  logs: ShieldEvent.Log[],
 ): Promise<void> {
-  const filtered = events.filter((event) => event.args);
-  if (events.length !== filtered.length) {
+  const filtered = logs.filter((log) => log.args);
+  if (logs.length !== filtered.length) {
     throw new Error('Args required for Shield events');
   }
   await Promise.all(
-    filtered.map(async (event) => {
-      const { args, transactionHash, blockNumber } = event;
+    filtered.map(async (log) => {
+      const { args, transactionHash, blockNumber } = log;
       const { fees } = args;
       return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
     }),
@@ -215,7 +207,7 @@ export async function processShieldEvents(
 
 export async function processShieldEvents_LegacyShield_PreMar23(
   eventsListener: EventsListener,
-  events: ShieldEvent_LegacyShield_PreMar23[],
+  logs: ShieldEvent_LegacyShield_PreMar23.Log[],
 ): Promise<void> {
   // NOTE: Legacy "Shield" event of the same name conflicts with the current ABI's Shield event.
   // It seems that the first ABI to load, with "Shield" event, for a given contract address,
@@ -226,20 +218,21 @@ export async function processShieldEvents_LegacyShield_PreMar23(
     ABIRailgunSmartWallet_Legacy_PreMar23.filter((fragment) => fragment.type === 'event'),
   );
   // eslint-disable-next-line no-restricted-syntax
-  for (const event of events) {
-    const args = iface.decodeEventLog('Shield', event.data);
-    event.args = args as any;
+  for (const log of logs) {
+    const args = iface.decodeEventLog('Shield', log.data);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    log.args = args as any;
   }
 
-  const filtered = events.filter((event) => event.args);
-  if (events.length !== filtered.length) {
+  const filtered = logs.filter((log) => log.args);
+  if (logs.length !== filtered.length) {
     throw new Error('Args required for Legacy Shield events');
   }
 
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
-      const fees: Optional<BigNumber[]> = undefined;
+      const fees: Optional<bigint[]> = undefined;
       return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
     }),
   );
@@ -247,10 +240,10 @@ export async function processShieldEvents_LegacyShield_PreMar23(
 
 export async function processTransactEvents(
   eventsListener: EventsListener,
-  events: TransactEvent[],
+  logs: TransactEvent.Log[],
 ): Promise<void> {
-  const filtered = events.filter((event) => event.args);
-  if (events.length !== filtered.length) {
+  const filtered = logs.filter((log) => log.args);
+  if (logs.length !== filtered.length) {
     throw new Error('Args required for Transact events');
   }
   await Promise.all(
@@ -263,24 +256,24 @@ export async function processTransactEvents(
 
 export async function processUnshieldEvents(
   eventsUnshieldListener: EventsUnshieldListener,
-  events: UnshieldEvent[],
+  logs: UnshieldEvent.Log[],
 ): Promise<void> {
   const unshields: UnshieldStoredEvent[] = [];
 
-  const filtered = events.filter((event) => event.args);
-  if (events.length !== filtered.length) {
+  const filtered = logs.filter((log) => log.args);
+  if (logs.length !== filtered.length) {
     throw new Error('Args required for Unshield events');
   }
-  filtered.forEach((event) => {
-    const { args, transactionHash, blockNumber } = event;
-    unshields.push(formatUnshieldEvent(args, transactionHash, blockNumber, event.logIndex));
+  filtered.forEach((log) => {
+    const { args, transactionHash, blockNumber } = log;
+    unshields.push(formatUnshieldEvent(args, transactionHash, blockNumber, log.index));
   });
 
   await eventsUnshieldListener(unshields);
 }
 
 export function formatNullifiedEvents(
-  nullifierEventArgs: NullifiedEventObject,
+  nullifierEventArgs: NullifiedEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
 ): Nullifier[] {
@@ -290,7 +283,7 @@ export function formatNullifiedEvents(
     nullifiers.push({
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       nullifier: formatToByteLength(nullifier, ByteLength.UINT_256),
-      treeNumber: nullifierEventArgs.treeNumber,
+      treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
     });
   });
@@ -300,17 +293,17 @@ export function formatNullifiedEvents(
 
 export async function processNullifiedEvents(
   eventsNullifierListener: EventsNullifierListener,
-  events: NullifiedEvent[],
+  logs: NullifiedEvent.Log[],
 ): Promise<void> {
   const nullifiers: Nullifier[] = [];
 
-  const filtered = events.filter((event) => event.args);
-  if (events.length !== filtered.length) {
+  const filtered = logs.filter((log) => log.args);
+  if (logs.length !== filtered.length) {
     throw new Error('Args required for Nullified events');
   }
 
-  filtered.forEach((event) => {
-    const { args, transactionHash, blockNumber } = event;
+  filtered.forEach((log) => {
+    const { args, transactionHash, blockNumber } = log;
     nullifiers.push(...formatNullifiedEvents(args, transactionHash, blockNumber));
   });
 

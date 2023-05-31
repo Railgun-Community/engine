@@ -7,6 +7,7 @@ export * from './key-derivation';
 export * from './merkletree/merkletree';
 export * from './models';
 export * from './note';
+export * from './provider';
 export * from './prover/prover';
 export * from './solutions';
 export * from './transaction';

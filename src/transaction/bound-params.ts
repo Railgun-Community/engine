@@ -1,8 +1,8 @@
-import { defaultAbiCoder } from '@ethersproject/abi';
-import { BoundParamsStruct } from '../typechain-types/contracts/logic/RailgunSmartWallet';
+import { AbiCoder } from 'ethers';
+import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 import { keccak256, hexToBigInt, SNARK_PRIME_BIGINT } from '../utils';
 
-const abiCoder = defaultAbiCoder;
+const abiCoder = AbiCoder.defaultAbiCoder();
 
 export function hashBoundParams(boundParams: BoundParamsStruct) {
   const hashed = keccak256(

@@ -6,23 +6,26 @@ import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/ra
 import { Chain } from '../models/engine-types';
 import { NFTTokenData, TokenType } from '../models/formatted-types';
 import { ShieldNoteNFT } from '../note/nft/shield-note-nft';
-import { TestERC721 } from '../typechain-types';
 import { hexToBytes, randomHex } from '../utils/bytes';
 import { RailgunWallet } from '../wallet/railgun-wallet';
-import { awaitScan } from './helper.test';
+import { awaitScan, sendTransactionWithLatestNonce } from './helper.test';
+import { TestERC721 } from './abi/typechain/TestERC721';
+import { promiseTimeout } from '../utils/promises';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 export const mintNFTsID01ForTest = async (nft: TestERC721, ethersWallet: Wallet) => {
   const nftBalanceBeforeMint = await nft.balanceOf(ethersWallet.address);
-  expect(nftBalanceBeforeMint.toHexString()).to.equal('0x00');
-  const mintTx0 = await nft.mint(ethersWallet.address, 0);
-  await mintTx0.wait();
-  const mintTx1 = await nft.mint(ethersWallet.address, 1);
-  await mintTx1.wait();
+  expect(nftBalanceBeforeMint).to.equal(0n);
+  const mintTx0 = await nft.mint.populateTransaction(ethersWallet.address, 0);
+  const mintTx0Send = await sendTransactionWithLatestNonce(ethersWallet, mintTx0);
+  await mintTx0Send.wait();
+  const mintTx1 = await nft.mint.populateTransaction(ethersWallet.address, 1);
+  const mintTx1Send = await sendTransactionWithLatestNonce(ethersWallet, mintTx1);
+  await mintTx1Send.wait();
   const nftBalanceAfterMint = await nft.balanceOf(ethersWallet.address);
-  expect(nftBalanceAfterMint.toHexString()).to.equal('0x02');
+  expect(nftBalanceAfterMint).to.equal(2n);
   const tokenOwner = await nft.ownerOf(1);
   expect(tokenOwner).to.equal(ethersWallet.address);
   const tokenURI = await nft.tokenURI(1);
@@ -50,20 +53,19 @@ export const shieldNFTForTest = async (
 
   const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
-  const awaiterShield = awaitScan(wallet, chain);
-
   // Send shield on chain
-  await (await ethersWallet.sendTransaction(shieldTx)).wait();
+  const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
-  // Wait for events to fire
-  await new Promise((resolve) =>
-    railgunSmartWalletContract.contract.once(
-      railgunSmartWalletContract.contract.filters.Shield(),
-      resolve,
+  await Promise.all([
+    txResponse.wait(),
+    new Promise((resolve) =>
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Shield(),
+        resolve,
+      ),
     ),
-  );
-
-  await expect(awaiterShield).to.be.fulfilled;
+    promiseTimeout(awaitScan(wallet, chain), 5000),
+  ]);
 
   return shield;
 };

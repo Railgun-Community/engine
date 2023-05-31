@@ -1,18 +1,22 @@
-import { Provider, TransactionRequest } from '@ethersproject/abstract-provider';
-import { BigNumber, CallOverrides, Contract, ethers, PopulatedTransaction } from 'ethers';
-import { Result } from 'ethers/lib/utils';
-import { BaseProvider } from '@ethersproject/providers';
+import {
+  AbiCoder,
+  Contract,
+  ContractTransaction,
+  Provider,
+  Interface,
+  TransactionRequest,
+  Result,
+  Log,
+} from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import { TransactionReceiptLog } from '../../models/formatted-types';
 import { getTokenDataERC20 } from '../../note/note-util';
-import { RelayAdapt } from '../../typechain-types/contracts/adapt/Relay.sol/RelayAdapt';
-import {
-  ShieldRequestStruct,
-  TransactionStruct,
-} from '../../typechain-types/contracts/logic/RailgunSmartWallet';
 import { ZERO_ADDRESS } from '../../utils/constants';
 import { RelayAdaptHelper } from './relay-adapt-helper';
 import EngineDebug from '../../debugger/debugger';
+import { ShieldRequestStruct } from '../../abi/typechain/RailgunSmartWallet';
+import { RelayAdapt, TransactionStruct } from '../../abi/typechain/RelayAdapt';
+import { PayableOverrides } from '../../abi/typechain/common';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -23,11 +27,10 @@ export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigNumber.from(2_800_000);
+export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigInt(2_800_000);
 // Contract call needs ~50,000 less gas than the gasLimit setting.
 // This can be more if there are complex UTXO sets for the unshield.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT =
-  BigNumber.from(2_600_000);
+export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigInt(2_600_000);
 
 export class RelayAdaptContract {
   private readonly contract: RelayAdapt;
@@ -41,12 +44,16 @@ export class RelayAdaptContract {
    */
   constructor(relayAdaptContractAddress: string, provider: Provider) {
     this.address = relayAdaptContractAddress;
-    this.contract = new Contract(relayAdaptContractAddress, ABIRelayAdapt, provider) as RelayAdapt;
+    this.contract = new Contract(
+      relayAdaptContractAddress,
+      ABIRelayAdapt,
+      provider,
+    ) as unknown as RelayAdapt;
   }
 
-  async populateShieldBaseToken(shieldRequest: ShieldRequestStruct): Promise<PopulatedTransaction> {
-    const orderedCalls: PopulatedTransaction[] = await Promise.all([
-      this.contract.populateTransaction.wrapBase(shieldRequest.preimage.value),
+  async populateShieldBaseToken(shieldRequest: ShieldRequestStruct): Promise<ContractTransaction> {
+    const orderedCalls: ContractTransaction[] = await Promise.all([
+      this.contract.wrapBase.populateTransaction(shieldRequest.preimage.value),
       this.populateRelayShields([shieldRequest]),
     ]);
     return this.populateRelayMulticall(orderedCalls, {
@@ -55,9 +62,9 @@ export class RelayAdaptContract {
   }
 
   async populateMulticall(
-    calls: PopulatedTransaction[],
+    calls: ContractTransaction[],
     shieldRequests: ShieldRequestStruct[],
-  ): Promise<PopulatedTransaction> {
+  ): Promise<ContractTransaction> {
     const orderedCalls = await this.getOrderedCallsForCrossContractCalls(calls, shieldRequests);
     return this.populateRelayMulticall(orderedCalls, {});
   }
@@ -67,14 +74,14 @@ export class RelayAdaptContract {
    */
   private populateRelayShields(
     shieldRequests: ShieldRequestStruct[],
-  ): Promise<PopulatedTransaction> {
+  ): Promise<ContractTransaction> {
     RelayAdaptHelper.validateShieldRequests(shieldRequests);
-    return this.contract.populateTransaction.shield(shieldRequests);
+    return this.contract.shield.populateTransaction(shieldRequests);
   }
 
   private async getOrderedCallsForUnshieldBaseToken(
     unshieldAddress: string,
-  ): Promise<PopulatedTransaction[]> {
+  ): Promise<ContractTransaction[]> {
     // Use 0x00 address ERC20 to represent base token.
     const baseTokenData = getTokenDataERC20(ZERO_ADDRESS);
 
@@ -88,7 +95,7 @@ export class RelayAdaptContract {
     };
 
     return Promise.all([
-      this.contract.populateTransaction.unwrapBase(value),
+      this.contract.unwrapBase.populateTransaction(value),
       this.populateRelayTransfers([baseTokenTransfer]),
     ]);
   }
@@ -98,7 +105,7 @@ export class RelayAdaptContract {
     unshieldAddress: string,
     random: string,
   ): Promise<string> {
-    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
+    const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
     );
 
@@ -115,8 +122,8 @@ export class RelayAdaptContract {
     transactions: TransactionStruct[],
     unshieldAddress: string,
     random31Bytes: string,
-  ): Promise<PopulatedTransaction> {
-    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
+  ): Promise<ContractTransaction> {
+    const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
     );
 
@@ -129,15 +136,15 @@ export class RelayAdaptContract {
    */
   private populateRelayTransfers(
     transfersData: RelayAdapt.TokenTransferStruct[],
-  ): Promise<PopulatedTransaction> {
-    return this.contract.populateTransaction.transfer(transfersData);
+  ): Promise<ContractTransaction> {
+    return this.contract.transfer.populateTransaction(transfersData);
   }
 
   private async getOrderedCallsForCrossContractCalls(
-    crossContractCalls: PopulatedTransaction[],
+    crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
-  ): Promise<PopulatedTransaction[]> {
-    const orderedCallPromises: PopulatedTransaction[] = [...crossContractCalls];
+  ): Promise<ContractTransaction[]> {
+    const orderedCallPromises: ContractTransaction[] = [...crossContractCalls];
     if (relayShieldRequests.length) {
       orderedCallPromises.push(await this.populateRelayShields(relayShieldRequests));
     }
@@ -156,12 +163,12 @@ export class RelayAdaptContract {
 
   async getRelayAdaptParamsCrossContractCalls(
     dummyUnshieldTransactions: TransactionStruct[],
-    crossContractCalls: PopulatedTransaction[],
+    crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random: string,
     isRelayerTransaction: boolean,
   ): Promise<string> {
-    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
+    const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
       relayShieldRequests,
     );
@@ -185,13 +192,13 @@ export class RelayAdaptContract {
 
   async populateCrossContractCalls(
     unshieldTransactions: TransactionStruct[],
-    crossContractCalls: PopulatedTransaction[],
+    crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random31Bytes: string,
     isGasEstimate: boolean,
     isRelayerTransaction: boolean,
-  ): Promise<PopulatedTransaction> {
-    const orderedCalls: PopulatedTransaction[] = await this.getOrderedCallsForCrossContractCalls(
+  ): Promise<ContractTransaction> {
+    const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
       relayShieldRequests,
     );
@@ -217,9 +224,9 @@ export class RelayAdaptContract {
   }
 
   static async estimateGasWithErrorHandler(
-    provider: BaseProvider,
-    transaction: PopulatedTransaction | TransactionRequest,
-  ): Promise<BigNumber> {
+    provider: Provider,
+    transaction: ContractTransaction | TransactionRequest,
+  ): Promise<bigint> {
     try {
       const gasEstimate = await provider.estimateGas(transaction);
       return gasEstimate;
@@ -228,26 +235,25 @@ export class RelayAdaptContract {
         throw err;
       }
       const { callFailedIndexString, errorMessage } =
-        RelayAdaptContract.extractCallFailedIndexAndErrorText(err.message);
+        RelayAdaptContract.extractGasEstimateCallFailedIndexAndErrorText(err.message);
       throw new Error(
         `RelayAdapt multicall failed at index ${callFailedIndexString} with ${errorMessage}`,
       );
     }
   }
 
-  static extractCallFailedIndexAndErrorText(errMessage: string) {
+  static extractGasEstimateCallFailedIndexAndErrorText(errMessage: string) {
     try {
-      // Sample error text from ethers: `"data":{"message":"Error: VM Exception while processing transaction: reverted with custom error 'CallFailed(0, \"0x")\'\","data":"0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000"\}}}"`
-      const removedBackslashes = errMessage.replace(/\//g, '');
-      const prefixSplit = `"data":{"message":"Error: VM Exception while processing transaction: reverted with custom error '`;
-      const prefixSplitResult = removedBackslashes.split(prefixSplit)[1];
-      const splitResult = prefixSplitResult.split(`'",`);
-      const callFailedMessage = splitResult[0];
-      const dataMessage = splitResult[1].split(`}}`)[0];
-      const callFailedIndexString = callFailedMessage.split('(')[1].split(',')[0];
+      // Sample error text from ethers v6.4.0: 'execution reverted (unknown custom error) (action="estimateGas", data="0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000", reason=null, transaction={ "data": "0x28223a77000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000007a00000000000000000000000000000000000000000000000000…00000000004640cd6086ade3e984b011b4e8c7cab9369b90499ab88222e673ec1ae4d2c3bf78ae96e95f9171653e5b1410273269edd64a0ab792a5d355093caa9cb92406125c7803a48028503783f2ab5e84f0ea270ce770860e436b77c942ed904a5d577d021cf0fd936183e0298175679d63d73902e116484e10c7b558d4dc84e113380500000000000000000000000000000000000000000000000000000000", "from": "0x000000000000000000000000000000000000dEaD", "to": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726" }, invocation=null, revert=null, code=CALL_EXCEPTION, version=6.4.0)'
+      const prefixSplit = ` (action="estimateGas", data="`;
+      const splitResult = errMessage.split(prefixSplit);
+      const callFailedMessage = splitResult[0]; // execution reverted (unknown custom error)
+      const dataMessage = splitResult[1].split(`"`)[0]; // 0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000
+      const parsedDataMessage = this.parseRelayAdaptReturnValue(dataMessage);
+      const callFailedIndexString: string = `${parsedDataMessage?.callIndex}` ?? 'UNKNOWN';
       return {
         callFailedIndexString,
-        errorMessage: `ABI-encoded revert message: ${dataMessage}`,
+        errorMessage: `'${callFailedMessage}': ${parsedDataMessage?.error ?? dataMessage}`,
       };
     } catch (err) {
       return {
@@ -262,12 +268,12 @@ export class RelayAdaptContract {
    * @returns populated transaction
    */
   private async populateRelayMulticall(
-    calls: PopulatedTransaction[],
-    overrides: CallOverrides,
-  ): Promise<PopulatedTransaction> {
+    calls: ContractTransaction[],
+    overrides: PayableOverrides,
+  ): Promise<ContractTransaction> {
     // Always requireSuccess when there is no Relayer payment.
     const requireSuccess = true;
-    const populatedTransaction = await this.contract.populateTransaction.multicall(
+    const populatedTransaction = await this.contract.multicall.populateTransaction(
       requireSuccess,
       RelayAdaptHelper.formatCalls(calls),
       overrides,
@@ -283,17 +289,17 @@ export class RelayAdaptContract {
     transactions: TransactionStruct[],
     random31Bytes: string,
     requireSuccess: boolean,
-    calls: PopulatedTransaction[],
-    overrides: CallOverrides,
-    minimumGasLimit = BigNumber.from(0),
-  ): Promise<PopulatedTransaction> {
+    calls: ContractTransaction[],
+    overrides: PayableOverrides,
+    minimumGasLimit = BigInt(0),
+  ): Promise<ContractTransaction> {
     const actionData: RelayAdapt.ActionDataStruct = RelayAdaptHelper.getActionData(
       random31Bytes,
       requireSuccess,
       calls,
       minimumGasLimit,
     );
-    const populatedTransaction = await this.contract.populateTransaction.relay(
+    const populatedTransaction = await this.contract.relay.populateTransaction(
       transactions,
       actionData,
       overrides,
@@ -301,17 +307,22 @@ export class RelayAdaptContract {
     return populatedTransaction;
   }
 
-  static getRelayAdaptCallError(receiptLogs: TransactionReceiptLog[]): Optional<string> {
-    const iface = new ethers.utils.Interface(ABIRelayAdapt);
-    const topic = iface.getEventTopic(RelayAdaptEvent.CallError);
+  private static getCallErrorTopic() {
+    const iface = new Interface(ABIRelayAdapt);
+    return iface.encodeFilterTopics(RelayAdaptEvent.CallError, [])[0];
+  }
 
+  static getRelayAdaptCallError(
+    receiptLogs: TransactionReceiptLog[] | readonly Log[],
+  ): Optional<string> {
+    const topic = this.getCallErrorTopic();
     try {
       // eslint-disable-next-line no-restricted-syntax
       for (const log of receiptLogs) {
         if (log.topics[0] === topic) {
-          const parsedError = this.customRelayAdaptErrorParse(log.data);
-          if (parsedError) {
-            return parsedError;
+          const parsed = this.customRelayAdaptErrorParse(log.data);
+          if (parsed) {
+            return parsed.error;
           }
         }
       }
@@ -325,36 +336,44 @@ export class RelayAdaptContract {
     return undefined;
   }
 
-  static parseRelayAdaptReturnValue(returnValue: string): Optional<string> {
+  static parseRelayAdaptReturnValue(
+    returnValue: string,
+  ): Optional<{ callIndex?: number; error: string }> {
     if (returnValue.match(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX)) {
       const strippedReturnValue = returnValue.replace(RETURN_DATA_RELAY_ADAPT_STRING_PREFIX, '0x');
       return this.customRelayAdaptErrorParse(strippedReturnValue);
     }
     if (returnValue.match(RETURN_DATA_STRING_PREFIX)) {
-      return this.parseRelayAdaptStringError(returnValue);
+      return { error: this.parseRelayAdaptStringError(returnValue) };
     }
-    return `Not a RelayAdapt return value: must be prefixed with ${RETURN_DATA_RELAY_ADAPT_STRING_PREFIX} or ${RETURN_DATA_STRING_PREFIX}`;
+    return {
+      error: `Not a RelayAdapt return value: must be prefixed with ${RETURN_DATA_RELAY_ADAPT_STRING_PREFIX} or ${RETURN_DATA_STRING_PREFIX}`,
+    };
   }
 
-  private static customRelayAdaptErrorParse(data: string): Optional<string> {
+  private static customRelayAdaptErrorParse(
+    data: string,
+  ): Optional<{ callIndex: number; error: string }> {
     // Force parse as bytes
-    const decoded: Result = ethers.utils.defaultAbiCoder.decode(
+    const decoded: Result = AbiCoder.defaultAbiCoder().decode(
       ['uint256 callIndex', 'bytes revertReason'],
       data,
     );
+
+    const callIndex = Number(decoded[0]);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const revertReasonBytes: string = decoded[1];
 
     // Map function to try parsing bytes as string
-    const parsedError = this.parseRelayAdaptStringError(revertReasonBytes);
-    return parsedError;
+    const error = this.parseRelayAdaptStringError(revertReasonBytes);
+    return { callIndex, error };
   }
 
   private static parseRelayAdaptStringError(revertReason: string): string {
     if (revertReason.match(RETURN_DATA_STRING_PREFIX)) {
       const strippedReturnValue = revertReason.replace(RETURN_DATA_STRING_PREFIX, '0x');
-      const result = ethers.utils.defaultAbiCoder.decode(['string'], strippedReturnValue);
+      const result = AbiCoder.defaultAbiCoder().decode(['string'], strippedReturnValue);
       return result[0];
     }
     return 'Unknown Relay Adapt error.';

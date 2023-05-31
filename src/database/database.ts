@@ -21,6 +21,8 @@ export enum DatabaseNamespace {
   ChainSyncInfo = 'chain_sync_info',
 }
 
+type Path = BytesData[];
+
 /** Database class */
 class Database {
   readonly level: LevelUp;
@@ -34,14 +36,18 @@ class Database {
     this.level = levelup(encode(leveldown));
   }
 
+  isClosed() {
+    return this.level.isClosed();
+  }
+
   /**
    * Parses path and returns key
    * @param path - path to convert
    * @returns key
    */
-  static pathToKey(path: BytesData[]): string {
+  static pathToKey(path: Path): string {
     // Convert to hex string, pad to 32 bytes, and join with :
-    return path.map((element) => hexlify(element).toLowerCase().padStart(64, '0')).join(':');
+    return path.map((el) => hexlify(el).toLowerCase().padStart(64, '0')).join(':');
   }
 
   /**
@@ -52,7 +58,7 @@ class Database {
    * @returns complete
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  put(path: BytesData[], value: any, encoding: Encoding = 'hex'): Promise<void> {
+  put(path: Path, value: any, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.put(key, value, { valueEncoding: encoding });
   }
@@ -64,7 +70,7 @@ class Database {
    * @returns value
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  get(path: BytesData[], encoding: Encoding = 'hex'): Promise<any> {
+  get(path: Path, encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
     return this.level.get(key, { valueEncoding: encoding });
   }
@@ -75,7 +81,7 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  del(path: BytesData[], encoding: Encoding = 'hex'): Promise<void> {
+  del(path: Path, encoding: Encoding = 'hex'): Promise<void> {
     const key = Database.pathToKey(path);
     return this.level.del(key, { valueEncoding: encoding });
   }
@@ -96,7 +102,7 @@ class Database {
    * @param encryptionKey - AES-256-GCM encryption key
    * @param value - value to encrypt and set
    */
-  async putEncrypted(path: BytesData[], encryptionKey: BytesData, value: BytesData) {
+  async putEncrypted(path: Path, encryptionKey: string, value: string | Buffer) {
     // Encrypt data
     const encrypted = aes.gcm.encrypt(chunk(value), encryptionKey);
 
@@ -110,7 +116,7 @@ class Database {
    * @param encryptionKey - AES-256-GCM  encryption key
    * @return decrypted value
    */
-  async getEncrypted(path: BytesData[], encryptionKey: BytesData): Promise<BytesData> {
+  async getEncrypted(path: Path, encryptionKey: string): Promise<string> {
     // Read from database
     const encrypted: Ciphertext = (await this.get(path, 'json')) as Ciphertext;
 
@@ -123,7 +129,7 @@ class Database {
    * @param namespace - namespace to stream from
    * @returns namespace stream
    */
-  streamNamespace(namespace: BytesData[], keys: boolean = true, values: boolean = false) {
+  streamNamespace(namespace: string[], keys: boolean = true, values: boolean = false) {
     const pathkey = Database.pathToKey(namespace);
     return this.level.createReadStream({
       gte: `${pathkey}`,
@@ -158,7 +164,7 @@ class Database {
    * @param namespace - namespace to delete
    * @returns complete
    */
-  async clearNamespace(namespace: BytesData[]): Promise<void> {
+  async clearNamespace(namespace: string[]): Promise<void> {
     const pathkey = Database.pathToKey(namespace);
     await this.level.clear({
       gte: `${pathkey}`,
@@ -171,7 +177,7 @@ class Database {
    * @param namespace - namespace to count keys in
    * @returns number of keys in namespace
    */
-  countNamespace(namespace: BytesData[]): Promise<number> {
+  countNamespace(namespace: string[]): Promise<number> {
     return new Promise((resolve) => {
       let keyNumber = 0;
 

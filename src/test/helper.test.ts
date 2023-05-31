@@ -1,11 +1,9 @@
 /// <reference types="../types/global" />
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
-// eslint-disable-next-line import/no-unresolved
 import artifacts from 'railgun-community-circuit-artifacts';
-import { ethers } from 'ethers';
+import { ContractTransaction, JsonRpcProvider, TransactionResponse, Wallet, ethers } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { Nullifier } from '../models/formatted-types';
 import {
   AccumulatedEvents,
@@ -88,8 +86,40 @@ export const awaitMultipleScans = async (
   return Promise.resolve();
 };
 
-export const getEthersWallet = (mnemonic: string, provider: JsonRpcProvider): ethers.Wallet => {
+export const getEthersWallet = async (
+  mnemonic: string,
+  provider?: JsonRpcProvider,
+): Promise<Wallet> => {
   const node = HDKey.fromMasterSeed(mnemonicToSeedSync(mnemonic)).derive(WALLET_PATH);
-  const wallet = new ethers.Wallet(bytesToHex(node.privateKey as Uint8Array), provider);
+  const wallet = new Wallet(bytesToHex(node.privateKey as Uint8Array), provider);
   return wallet;
+};
+
+// TODO: This logic is messy - it's because of Ethers v6.4.0.
+// It seems like the nonce isn't updated appropriately via hardhat.
+// Ethers will probably improve the nonce calculation in the future. (Or hardhat?).
+// We should be able to remove `additionalNonce` when it's updated.
+export const sendTransactionWithLatestNonce = async (
+  wallet: Wallet,
+  transaction: ContractTransaction,
+  additionalNonce = 0,
+): Promise<TransactionResponse> => {
+  if (additionalNonce > 2) {
+    throw new Error('Nonce already used - many pending transactions');
+  }
+  const updatedNonceTx = {
+    ...transaction,
+    nonce: (await wallet.getNonce('latest')) + additionalNonce,
+  };
+  try {
+    return await wallet.sendTransaction(updatedNonceTx);
+  } catch (err) {
+    if (!(err instanceof Error)) {
+      throw err;
+    }
+    if (err.message.includes('nonce has already been used')) {
+      return sendTransactionWithLatestNonce(wallet, transaction, additionalNonce + 1);
+    }
+    throw err;
+  }
 };

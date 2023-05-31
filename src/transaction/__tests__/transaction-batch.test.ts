@@ -1,14 +1,18 @@
-import { Wallet as EthersWallet } from '@ethersproject/wallet';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { Wallet } from 'ethers';
 import { Commitment, CommitmentType, OutputType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { randomHex } from '../../utils/bytes';
 import { config } from '../../test/config.test';
-import { DECIMALS_18, mockQuickSync, testArtifactsGetter } from '../../test/helper.test';
+import {
+  DECIMALS_18,
+  getEthersWallet,
+  mockQuickSync,
+  testArtifactsGetter,
+} from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { MerkleTree } from '../../merkletree/merkletree';
@@ -18,6 +22,7 @@ import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { RailgunEngine } from '../../railgun-engine';
+import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -26,7 +31,7 @@ let db: Database;
 let merkletree: MerkleTree;
 let wallet: RailgunWallet;
 let chain: Chain;
-let ethersWallet: EthersWallet;
+let ethersWallet: Wallet;
 let transactionBatch: TransactionBatch;
 let prover: Prover;
 let address: AddressData;
@@ -75,13 +80,11 @@ describe('Transaction/Transaction Batch', function run() {
       0,
       undefined, // creationBlockNumbers
     );
-    ethersWallet = EthersWallet.fromMnemonic(testMnemonic);
+    ethersWallet = await getEthersWallet(testMnemonic);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;
     }
-
-    const provider = new JsonRpcProvider(config.rpc);
 
     const engine = new RailgunEngine(
       'Tx Batch Tests',
@@ -91,6 +94,8 @@ describe('Transaction/Transaction Batch', function run() {
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );
+
+    const provider = new PollingJsonRpcProvider(config.rpc);
 
     await engine.loadNetwork(
       chain,

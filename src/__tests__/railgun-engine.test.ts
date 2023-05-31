@@ -1,9 +1,8 @@
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BigNumber, ethers } from 'ethers';
+import { Contract, JsonRpcProvider, Wallet } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { RailgunEngine } from '../railgun-engine';
 import { abi as erc20Abi } from '../test/test-erc20-abi.test';
 import { config } from '../test/config.test';
@@ -15,6 +14,7 @@ import {
   DECIMALS_18,
   getEthersWallet,
   mockQuickSync,
+  sendTransactionWithLatestNonce,
   testArtifactsGetter,
 } from '../test/helper.test';
 import { ShieldNoteERC20 } from '../note/erc20/shield-note-erc20';
@@ -29,7 +29,8 @@ import {
   TokenType,
 } from '../models/formatted-types';
 import { Groth16 } from '../prover/prover';
-import { ERC20, TestERC721 } from '../typechain-types';
+import { TestERC20 } from '../test/abi/typechain/TestERC20';
+import { TestERC721 } from '../test/abi/typechain/TestERC721';
 import { promiseTimeout } from '../utils/promises';
 import { Chain, ChainType } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
@@ -39,21 +40,25 @@ import { TransactionBatch } from '../transaction/transaction-batch';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { ContractStore } from '../contracts/contract-store';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../test/shared-test.test';
+import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
 
 chai.use(chaiAsPromised);
 
 let provider: JsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
-let ethersWallet: ethers.Wallet;
+let ethersWallet: Wallet;
 let snapshot: number;
-let token: ERC20;
+let token: TestERC20;
 let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 let merkleTree: MerkleTree;
 let tokenAddress: string;
 let railgunSmartWalletContract: RailgunSmartWalletContract;
+
+const erc20Address = config.contracts.rail;
+const nftAddress = config.contracts.testERC721;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -62,7 +67,7 @@ const shieldTestTokens = async (railgunAddress: string, value: bigint) => {
   const mpk = RailgunEngine.decodeAddress(railgunAddress).masterPublicKey;
   const receiverViewingPublicKey = wallet.getViewingKeyPair().pubkey;
   const random = randomHex(16);
-  const shield = new ShieldNoteERC20(mpk, random, value, token.address);
+  const shield = new ShieldNoteERC20(mpk, random, value, await token.getAddress());
 
   const shieldPrivateKey = hexToBytes(randomHex(32));
   const shieldInput = await shield.serialize(shieldPrivateKey, receiverViewingPublicKey);
@@ -71,12 +76,15 @@ const shieldTestTokens = async (railgunAddress: string, value: bigint) => {
   const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
 
   // Send shield on chain
-  await ethersWallet.sendTransaction(shieldTx);
-  await expect(awaitScan(wallet, chain)).to.be.fulfilled;
+  const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
+  await Promise.all([
+    tx.wait(),
+    promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out scanning after test token shield'),
+  ]);
 };
 
 describe('RailgunEngine', function test() {
-  this.timeout(240000);
+  this.timeout(20000);
 
   beforeEach(async () => {
     engine = new RailgunEngine(
@@ -94,19 +102,19 @@ describe('RailgunEngine', function test() {
     }
 
     // EngineDebug.init(console); // uncomment for logs
-    provider = new JsonRpcProvider(config.rpc);
+    provider = new PollingJsonRpcProvider(config.rpc);
     chain = {
       type: ChainType.EVM,
-      id: (await provider.getNetwork()).chainId,
+      id: Number((await provider.getNetwork()).chainId),
     };
 
-    ethersWallet = getEthersWallet(config.mnemonic, provider);
+    ethersWallet = await getEthersWallet(config.mnemonic, provider);
 
     snapshot = (await provider.send('evm_snapshot', [])) as number;
-    token = new ethers.Contract(config.contracts.rail, erc20Abi, ethersWallet) as ERC20;
-    tokenAddress = formatToByteLength(token.address, 32, false);
+    token = new Contract(erc20Address, erc20Abi, ethersWallet) as unknown as TestERC20;
+    tokenAddress = formatToByteLength(erc20Address, ByteLength.UINT_256, false);
 
-    nft = new ethers.Contract(config.contracts.testERC721, erc721Abi, ethersWallet) as TestERC721;
+    nft = new Contract(nftAddress, erc721Abi, ethersWallet) as unknown as TestERC721;
 
     const balance = await token.balanceOf(ethersWallet.address);
     await token.approve(config.contracts.proxy, balance);
@@ -187,7 +195,7 @@ describe('RailgunEngine', function test() {
       return;
     }
 
-    // { [chain.type]: { [chain.id]: 0 } }
+    // [[chain.type]: [[chain.id]: 0]]
     const creationBlockNumbers: number[][] = [];
     creationBlockNumbers[chain.type] = [];
     creationBlockNumbers[chain.type][chain.id] = 0;
@@ -289,7 +297,7 @@ describe('RailgunEngine', function test() {
     );
     const transact = await railgunSmartWalletContract.transact(transactions);
 
-    const transactTx = await ethersWallet.sendTransaction(transact);
+    const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
     await transactTx.wait();
     await Promise.all([
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
@@ -322,7 +330,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
-        shieldFee: BigNumber.from('275000000000000000000').toHexString(),
+        shieldFee: '275000000000000000000',
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -370,7 +378,7 @@ describe('RailgunEngine', function test() {
         recipientAddress: ethersWallet.address,
         memoText: undefined,
         senderAddress: undefined,
-        unshieldFee: BigNumber.from('750000000000000000').toHexString(),
+        unshieldFee: '750000000000000000',
       },
     ]);
 
@@ -415,7 +423,7 @@ describe('RailgunEngine', function test() {
     expect(transactions[0].commitments.length).to.equal(1);
     const transact = await railgunSmartWalletContract.transact(transactions);
 
-    const transactTx = await ethersWallet.sendTransaction(transact);
+    const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
     await Promise.all([
       transactTx.wait(),
       promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
@@ -443,7 +451,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
-        shieldFee: BigNumber.from('275000000000000000000').toHexString(),
+        shieldFee: '275000000000000000000',
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -468,7 +476,7 @@ describe('RailgunEngine', function test() {
         recipientAddress: ethersWallet.address,
         memoText: undefined,
         senderAddress: undefined,
-        unshieldFee: BigNumber.from('274312500000000000000').toHexString(),
+        unshieldFee: '274312500000000000000',
       },
     ]);
   }).timeout(90000);
@@ -536,7 +544,7 @@ describe('RailgunEngine', function test() {
     );
     const transact = await railgunSmartWalletContract.transact(transactions);
 
-    const transactTx = await ethersWallet.sendTransaction(transact);
+    const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
     await transactTx.wait();
     await Promise.all([
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
@@ -564,7 +572,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt('109725000000000000000000'),
         memoText: undefined,
         senderAddress: undefined,
-        shieldFee: BigNumber.from('275000000000000000000').toHexString(),
+        shieldFee: '275000000000000000000',
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -666,17 +674,17 @@ describe('RailgunEngine', function test() {
       railgunSmartWalletContract,
       chain,
       randomHex(16),
-      nft.address,
+      nftAddress,
       '1',
     );
 
     const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(1);
 
-    const tokenDataNFT0 = getTokenDataNFT(nft.address, TokenType.ERC721, BigInt(0).toString());
+    const tokenDataNFT0 = getTokenDataNFT(nftAddress, TokenType.ERC721, BigInt(0).toString());
     const tokenHashNFT0 = getTokenDataHash(tokenDataNFT0);
 
-    const tokenDataNFT1 = getTokenDataNFT(nft.address, TokenType.ERC721, BigInt(1).toString());
+    const tokenDataNFT1 = getTokenDataNFT(nftAddress, TokenType.ERC721, BigInt(1).toString());
     const tokenHashNFT1 = getTokenDataHash(tokenDataNFT1);
 
     // Check first output: Shield (receive only).
@@ -687,7 +695,7 @@ describe('RailgunEngine', function test() {
         amount: BigInt(1),
         memoText: undefined,
         senderAddress: undefined,
-        shieldFee: '0x00',
+        shieldFee: undefined,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -702,7 +710,7 @@ describe('RailgunEngine', function test() {
       railgunSmartWalletContract,
       chain,
       randomHex(16),
-      nft.address,
+      nftAddress,
       '0',
     );
 
@@ -739,7 +747,7 @@ describe('RailgunEngine', function test() {
 
     const relayerMemoText = 'A short memo with only 32 chars.';
 
-    const tokenDataRelayerFee = getTokenDataERC20(token.address);
+    const tokenDataRelayerFee = getTokenDataERC20(erc20Address);
 
     // Add output for mock Relayer
     transactionBatch.addOutput(
@@ -764,7 +772,7 @@ describe('RailgunEngine', function test() {
     );
     const transact = await railgunSmartWalletContract.transact(transactions);
 
-    const transactTx = await ethersWallet.sendTransaction(transact);
+    const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
     await transactTx.wait();
     await Promise.all([
       promiseTimeout(awaitMultipleScans(wallet, chain, 4), 15000, 'Timed out wallet1 scan'),
@@ -834,7 +842,7 @@ describe('RailgunEngine', function test() {
         recipientAddress: ethersWallet.address,
         memoText: undefined,
         senderAddress: undefined,
-        unshieldFee: '0x00',
+        unshieldFee: '0',
       },
     ]);
   }).timeout(90000);

@@ -47,8 +47,6 @@
     "no-continue": 0,
     "no-use-before-define": 0,
     "arrow-body-style": 0,
-    "es/no-nullish-coalescing-operators": 2,
-    "es/no-optional-chaining": 2,
     "@typescript-eslint/switch-exhaustiveness-check": 2,
     "@typescript-eslint/no-inferrable-types": 0,
     "@typescript-eslint/ban-ts-comment": 1,

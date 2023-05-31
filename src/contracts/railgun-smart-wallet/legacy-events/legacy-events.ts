@@ -1,14 +1,10 @@
-import { BigNumber } from 'ethers';
 import {
-  LegacyNullifiersEvent,
-  LegacyCommitmentBatchEvent,
-  LegacyCommitmentPreimageStructOutput,
-  LegacyGeneratedCommitmentBatchEvent,
-  LegacyGeneratedCommitmentBatchEventObject,
-  LegacyCommitmentBatchEventObject,
-  LegacyCommitmentCiphertextStructOutput,
-  LegacyNullifiersEventObject,
-} from './RailgunLogic_LegacyEvents';
+  NullifiersEvent as LegacyNullifiersEvent,
+  CommitmentBatchEvent as LegacyCommitmentBatchEvent,
+  CommitmentPreimageStructOutput as LegacyCommitmentPreimageStructOutput,
+  GeneratedCommitmentBatchEvent as LegacyGeneratedCommitmentBatchEvent,
+  CommitmentCiphertextStructOutput as LegacyCommitmentCiphertextStructOutput,
+} from '../../../abi/typechain/RailgunLogic_LegacyEvents';
 import {
   CommitmentEvent,
   EventsListener,
@@ -28,24 +24,21 @@ import EngineDebug from '../../../debugger/debugger';
 export function formatLegacyGeneratedCommitmentBatchCommitments(
   transactionHash: string,
   preImages: LegacyCommitmentPreimageStructOutput[],
-  encryptedRandoms: [BigNumber, BigNumber][],
+  encryptedRandoms: [bigint, bigint][],
   blockNumber: number,
 ): LegacyGeneratedCommitment[] {
-  const randomFormatted = encryptedRandoms.map(
-    (encryptedRandom) =>
-      [
-        formatToByteLength(encryptedRandom[0].toHexString(), ByteLength.UINT_256),
-        formatToByteLength(encryptedRandom[1].toHexString(), ByteLength.UINT_128),
-      ] as [string, string],
-  );
+  const randomFormatted: [string, string][] = encryptedRandoms.map((encryptedRandom) => [
+    nToHex(encryptedRandom[0], ByteLength.UINT_256),
+    nToHex(encryptedRandom[1], ByteLength.UINT_128),
+  ]);
   return preImages.map((commitmentPreImage, index) => {
-    const npk = formatToByteLength(commitmentPreImage.npk.toHexString(), ByteLength.UINT_256);
+    const npk = formatToByteLength(commitmentPreImage.npk.toString(), ByteLength.UINT_256);
     const tokenData = serializeTokenData(
       commitmentPreImage.token.tokenAddress,
       commitmentPreImage.token.tokenType,
-      commitmentPreImage.token.tokenSubID.toHexString(),
+      commitmentPreImage.token.tokenSubID.toString(),
     );
-    const value = commitmentPreImage.value.toBigInt();
+    const { value } = commitmentPreImage;
     const preImage = serializePreImage(npk, tokenData, value);
     const noteHash = getNoteHash(npk, tokenData, value);
 
@@ -62,7 +55,7 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
 }
 
 export function formatLegacyGeneratedCommitmentBatchEvent(
-  commitmentBatchArgs: LegacyGeneratedCommitmentBatchEventObject,
+  commitmentBatchArgs: LegacyGeneratedCommitmentBatchEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
 ): CommitmentEvent {
@@ -87,8 +80,8 @@ export function formatLegacyGeneratedCommitmentBatchEvent(
     );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: treeNumber.toNumber(),
-    startPosition: startPosition.toNumber(),
+    treeNumber: Number(treeNumber),
+    startPosition: Number(startPosition),
     commitments: formattedCommitments,
     blockNumber,
   };
@@ -99,7 +92,7 @@ function formatLegacyCommitmentCiphertext(
 ): LegacyCommitmentCiphertext {
   const { ephemeralKeys, memo } = commitment;
   const ciphertext = commitment.ciphertext.map(
-    (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256), // 32 bytes each.
+    (el) => nToHex(el, ByteLength.UINT_256), // 32 bytes each.
   );
   const ivTag = ciphertext[0];
 
@@ -110,24 +103,24 @@ function formatLegacyCommitmentCiphertext(
       data: ciphertext.slice(1),
     },
     ephemeralKeys: ephemeralKeys.map(
-      (key) => formatToByteLength(key.toHexString(), ByteLength.UINT_256), // 32 bytes each.
+      (key) => nToHex(key, ByteLength.UINT_256), // 32 bytes each.
     ),
     memo: memo.map(
-      (el) => formatToByteLength(el.toHexString(), ByteLength.UINT_256), // 32 bytes each.
+      (el) => nToHex(el, ByteLength.UINT_256), // 32 bytes each.
     ),
   };
 }
 
 export function formatLegacyCommitmentBatchCommitments(
   transactionHash: string,
-  hash: BigNumber[],
+  hash: bigint[],
   commitments: LegacyCommitmentCiphertextStructOutput[],
   blockNumber: number,
 ): LegacyEncryptedCommitment[] {
   return commitments.map((commitment, index) => {
     return {
       commitmentType: CommitmentType.LegacyEncryptedCommitment,
-      hash: formatToByteLength(hash[index].toHexString(), ByteLength.UINT_256),
+      hash: nToHex(hash[index], ByteLength.UINT_256),
       txid: transactionHash,
       timestamp: undefined,
       blockNumber,
@@ -137,7 +130,7 @@ export function formatLegacyCommitmentBatchCommitments(
 }
 
 export function formatLegacyCommitmentBatchEvent(
-  commitmentBatchArgs: LegacyCommitmentBatchEventObject,
+  commitmentBatchArgs: LegacyCommitmentBatchEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
 ): CommitmentEvent {
@@ -156,8 +149,8 @@ export function formatLegacyCommitmentBatchEvent(
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: treeNumber.toNumber(),
-    startPosition: startPosition.toNumber(),
+    treeNumber: Number(treeNumber),
+    startPosition: Number(startPosition),
     commitments: formattedCommitments,
     blockNumber,
   };
@@ -165,12 +158,12 @@ export function formatLegacyCommitmentBatchEvent(
 
 export async function processGeneratedCommitmentEvents(
   eventsListener: EventsListener,
-  events: LegacyGeneratedCommitmentBatchEvent[],
+  logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = events.filter((event) => event.args);
+  const filtered = logs.filter((log) => log.args);
   await Promise.all(
-    filtered.map(async (event) => {
-      const { args, transactionHash, blockNumber } = event;
+    filtered.map(async (log) => {
+      const { args, transactionHash, blockNumber } = log;
       return eventsListener(
         formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
       );
@@ -180,29 +173,29 @@ export async function processGeneratedCommitmentEvents(
 
 export async function processCommitmentBatchEvents(
   eventsListener: EventsListener,
-  events: LegacyCommitmentBatchEvent[],
+  logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = events.filter((event) => event.args);
+  const filtered = logs.filter((log) => log.args);
   await Promise.all(
-    filtered.map(async (event) => {
-      const { args, transactionHash, blockNumber } = event;
+    filtered.map(async (log) => {
+      const { args, transactionHash, blockNumber } = log;
       return eventsListener(formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber));
     }),
   );
 }
 
 export function formatLegacyNullifierEvents(
-  nullifierEventArgs: LegacyNullifiersEventObject,
+  nullifierEventArgs: LegacyNullifiersEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
 ): Nullifier[] {
   const nullifiers: Nullifier[] = [];
 
-  nullifierEventArgs.nullifier.forEach((nullifier: BigNumber) => {
+  nullifierEventArgs.nullifier.forEach((nullifier: bigint) => {
     nullifiers.push({
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-      nullifier: formatToByteLength(nullifier.toHexString(), ByteLength.UINT_256),
-      treeNumber: nullifierEventArgs.treeNumber.toNumber(),
+      nullifier: nToHex(nullifier, ByteLength.UINT_256),
+      treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
     });
   });
@@ -212,12 +205,12 @@ export function formatLegacyNullifierEvents(
 
 export async function processLegacyGeneratedCommitmentEvents(
   eventsListener: EventsListener,
-  events: LegacyGeneratedCommitmentBatchEvent[],
+  logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = events.filter((event) => event.args);
+  const filtered = logs.filter((log) => log.args);
   await Promise.all(
-    filtered.map(async (event) => {
-      const { args, transactionHash, blockNumber } = event;
+    filtered.map(async (log) => {
+      const { args, transactionHash, blockNumber } = log;
       return eventsListener(
         formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
       );
@@ -227,12 +220,12 @@ export async function processLegacyGeneratedCommitmentEvents(
 
 export async function processLegacyCommitmentBatchEvents(
   eventsListener: EventsListener,
-  events: LegacyCommitmentBatchEvent[],
+  logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = events.filter((event) => event.args);
+  const filtered = logs.filter((log) => log.args);
   await Promise.all(
-    filtered.map(async (event) => {
-      const { args, transactionHash, blockNumber } = event;
+    filtered.map(async (log) => {
+      const { args, transactionHash, blockNumber } = log;
       return eventsListener(formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber));
     }),
   );
@@ -240,11 +233,11 @@ export async function processLegacyCommitmentBatchEvents(
 
 export async function processLegacyNullifierEvents(
   eventsNullifierListener: EventsNullifierListener,
-  events: LegacyNullifiersEvent[],
+  logs: LegacyNullifiersEvent.Log[],
 ): Promise<void> {
   const nullifiers: Nullifier[] = [];
 
-  const filtered = events.filter((event) => event.args);
+  const filtered = logs.filter((log) => log.args);
   filtered.forEach((event) => {
     const { args, transactionHash, blockNumber } = event;
     nullifiers.push(...formatLegacyNullifierEvents(args, transactionHash, blockNumber));

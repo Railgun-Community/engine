@@ -89,12 +89,12 @@ export const serializePreImage = (
 
 export const serializeTokenData = (
   tokenAddress: string,
-  tokenType: TokenType,
+  tokenType: bigint | TokenType,
   tokenSubID: bigint | string,
 ): TokenData => {
   return {
     tokenAddress: formatToByteLength(tokenAddress, ByteLength.Address, true),
-    tokenType,
+    tokenType: Number(tokenType),
     tokenSubID: nToHex(BigInt(tokenSubID), ByteLength.UINT_256, true),
   };
 };

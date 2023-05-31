@@ -1,8 +1,7 @@
-import { Provider } from '@ethersproject/abstract-provider';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { randomBytes } from 'ethers/lib/utils';
 import memdown from 'memdown';
+import { Provider, randomBytes } from 'ethers';
 import { ContractStore } from '../../contracts/contract-store';
 import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { Database } from '../../database/database';
@@ -22,6 +21,7 @@ import {
 import { getPublicViewingKey } from '../../utils/keys-utils';
 import { getTokenDataERC20 } from '../note-util';
 import { TransactNote } from '../transact-note';
+import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -324,7 +324,11 @@ describe('Note/TransactNote', () => {
     // Load fake contract
     ContractStore.railgunSmartWalletContracts[chain.type] = [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
-      new RailgunSmartWalletContract(config.contracts.proxy, null as unknown as Provider, chain);
+      new RailgunSmartWalletContract(
+        config.contracts.proxy,
+        new PollingJsonRpcProvider('abc'),
+        chain,
+      );
 
     tokenDataGetter = new TokenDataGetter(db, chain);
   });
