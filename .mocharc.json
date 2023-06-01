@@ -1,5 +1,5 @@
 {
-  "node-option": ["experimental-specifier-resolution=node", "loader=ts-node/esm"],
   "file": ["./src/test/setup.test.ts"],
+  "require": "ts-node/register",
   "exit": true
 }

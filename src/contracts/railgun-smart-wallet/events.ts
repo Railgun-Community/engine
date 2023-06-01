@@ -34,7 +34,7 @@ import {
   ShieldEventObject_LegacyShield_PreMar23,
   ShieldEvent_LegacyShield_PreMar23,
 } from './legacy-events/RailgunSmartWallet_LegacyShield_PreMar23';
-import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json' assert { type: 'json' };
+import ABIRailgunSmartWallet_Legacy_PreMar23 from './legacy-events/RailgunSmartWallet_Legacy_PreMar23.json';
 
 /**
  * Parse event data for database

@@ -1,4 +1,4 @@
-import * as curve25519 from '@noble/ed25519';
+import { ed25519 } from '@noble/curves/ed25519';
 import { randomBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
@@ -12,9 +12,9 @@ const { expect } = chai;
 describe('ecies', () => {
   it('Should encrypt and decrypt data using shared keys', async () => {
     const privateKey1 = randomBytes(32);
-    const publicKey1 = await curve25519.getPublicKey(privateKey1);
+    const publicKey1 = ed25519.getPublicKey(privateKey1);
     const privateKey2 = randomBytes(32);
-    const publicKey2 = await curve25519.getPublicKey(privateKey2);
+    const publicKey2 = ed25519.getPublicKey(privateKey2);
 
     const data: object = {
       text: '468abc',

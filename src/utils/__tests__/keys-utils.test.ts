@@ -113,7 +113,7 @@ describe('Test keys-utils', () => {
     assert.isFalse(verifyED25519(fakeMessage, signature, publicViewingKey));
 
     // eslint-disable-next-line no-unused-expressions
-    expect(verifyED25519(message, signature, randomBytes(32))).to.throw('error');
+    expect(verifyED25519(message, signature, randomBytes(32))).to.be.false;
   });
   it('Should get shared key from two note keys', async () => {
     const sender = randomBytes(32);

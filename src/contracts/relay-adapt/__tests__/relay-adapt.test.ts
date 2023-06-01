@@ -31,7 +31,7 @@ import { TransactionBatch } from '../../../transaction/transaction-batch';
 import { getTokenDataERC20 } from '../../../note/note-util';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
 import { UnshieldNoteNFT } from '../../../note';
-import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json' assert { type: 'json' };
+import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

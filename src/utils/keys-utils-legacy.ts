@@ -1,4 +1,5 @@
-import { etc as etcEd25519, ExtendedPoint, CURVE } from '@noble/ed25519';
+import { ed25519 } from '@noble/curves/ed25519';
+import { invert } from '@noble/curves/abstract/modular';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { ByteLength, hexToBigInt, hexToBytes, nToHex } from './bytes';
 import { sha256 } from './hash';
@@ -14,7 +15,7 @@ function normalizeRandomLegacy(random: string): bigint {
   const adjustedBytes = adjustBytes25519(randomArray, 'le');
 
   // Return mod n to fit to curve point
-  return BigInt(`0x${bytesToHex(adjustedBytes)}`) % CURVE.n;
+  return BigInt(`0x${bytesToHex(adjustedBytes)}`) % ed25519.CURVE.n;
 }
 
 function getCommitmentBlindingKeyLegacy(random: string, senderRandom: string): bigint {
@@ -45,10 +46,10 @@ function unblindNoteKeyLegacy(
     const commitmentBlindingKey = getCommitmentBlindingKeyLegacy(random, senderRandom);
 
     // Create curve point instance from ephemeral key bytes
-    const point = ExtendedPoint.fromHex(bytesToHex(ephemeralKey));
+    const point = ed25519.ExtendedPoint.fromHex(bytesToHex(ephemeralKey));
 
     // Invert the scalar to undo blinding multiplication operation
-    const inverse = etcEd25519.invert(commitmentBlindingKey, CURVE.n);
+    const inverse = invert(commitmentBlindingKey, ed25519.CURVE.n);
 
     // Unblind by multiplying by the inverted scalar
     const unblinded = point.multiply(inverse);
@@ -70,10 +71,10 @@ function getNoteBlindingKeysLegacy(
   // Multiply both sender and receiver viewing public keys with the public blinding key
   // The pub blinding key is only known to the sender and receiver preventing external
   // observers from being able to invert and retrieve the original value
-  const ephemeralKeyReceiver = ExtendedPoint.fromHex(bytesToHex(senderViewingPublicKey))
+  const ephemeralKeyReceiver = ed25519.ExtendedPoint.fromHex(bytesToHex(senderViewingPublicKey))
     .multiply(commitmentBlindingKey)
     .toRawBytes();
-  const ephemeralKeySender = ExtendedPoint.fromHex(bytesToHex(receiverViewingPublicKey))
+  const ephemeralKeySender = ed25519.ExtendedPoint.fromHex(bytesToHex(receiverViewingPublicKey))
     .multiply(commitmentBlindingKey)
     .toRawBytes();
 
@@ -87,7 +88,7 @@ async function getSharedSymmetricKeyLegacy(
 ): Promise<Optional<Uint8Array>> {
   try {
     // Create curve point instance from ephemeral key class
-    const publicKeyPoint = ExtendedPoint.fromHex(bytesToHex(blindedPublicKeyPairB));
+    const publicKeyPoint = ed25519.ExtendedPoint.fromHex(blindedPublicKeyPairB);
 
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKeyPairA);

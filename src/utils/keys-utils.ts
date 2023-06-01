@@ -1,25 +1,18 @@
-import {
-  etc as etcEd25519,
-  ExtendedPoint,
-  getPublicKey,
-  sign,
-  verify,
-  CURVE,
-} from '@noble/ed25519';
+import { ed25519 } from '@noble/curves/ed25519';
+import { invert } from '@noble/curves/abstract/modular';
+import { hexToBytes, bytesToHex, randomBytes } from '@noble/hashes/utils';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
 import { bytesToN, hexlify, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
 import { sha256, sha512 } from './hash';
 import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
-
-const { bytesToHex, randomBytes } = etcEd25519;
 
 function getPublicSpendingKey(privateKey: Uint8Array): [bigint, bigint] {
   if (privateKey.length !== 32) throw Error('Invalid private key length');
   return eddsa.prv2pub(Buffer.from(privateKey));
 }
 
-async function getPublicViewingKey(privateViewingKey: Uint8Array): Promise<Uint8Array> {
-  return getPublicKey(privateViewingKey);
+function getPublicViewingKey(privateViewingKey: Uint8Array): Uint8Array {
+  return ed25519.getPublicKey(privateViewingKey);
 }
 
 function getRandomScalar(): bigint {
@@ -35,7 +28,7 @@ function verifyEDDSA(message: bigint, signature: Signature, pubkey: [bigint, big
 }
 
 async function signED25519(message: Uint8Array, privateKey: Uint8Array): Promise<Uint8Array> {
-  return sign(message, privateKey);
+  return ed25519.sign(message, privateKey);
 }
 
 function verifyED25519(
@@ -43,7 +36,7 @@ function verifyED25519(
   signature: string | Uint8Array,
   pubkey: Uint8Array,
 ): boolean {
-  return verify(signature, message, pubkey);
+  return ed25519.verify(signature, message, pubkey);
 }
 
 /**
@@ -92,16 +85,16 @@ async function getPrivateScalarFromPrivateKey(privateKey: Uint8Array): Promise<b
   }
 
   // SHA512 hash private key
-  const hash = await etcEd25519.sha512Async(privateKey);
+  const hash = hexToBytes(sha512(privateKey));
 
   // Get key head, this is the first 32 bytes of the hash
   // We aren't interested in the rest of the hash as we only want the scalar
   const head = adjustBytes25519(hash.slice(0, 32), 'le');
 
   // Convert head to scalar
-  const scalar = BigInt(`0x${etcEd25519.bytesToHex(head.reverse())}`) % CURVE.n;
+  const scalar = BigInt(`0x${bytesToHex(head.reverse())}`) % ed25519.CURVE.n;
 
-  return scalar > 0n ? scalar : CURVE.n;
+  return scalar > 0n ? scalar : ed25519.CURVE.n;
 }
 
 /**
@@ -115,7 +108,7 @@ function seedToScalar(seed: Uint8Array): Uint8Array {
   const seedHash = sha512(seed);
 
   // Return (seedHash mod (n - 1)) + 1 to fit to range 0 < scalar < n
-  return nToBytes((hexToBigInt(seedHash) % CURVE.n) - 1n + 1n, 32);
+  return nToBytes((hexToBigInt(seedHash) % ed25519.CURVE.n) - 1n + 1n, 32);
 }
 
 /**
@@ -154,8 +147,8 @@ function getNoteBlindingKeys(
   const blindingScalar = getBlindingScalar(sharedRandom, senderRandom);
 
   // Get public key points
-  const senderPublicKeyPoint = ExtendedPoint.fromHex(senderViewingPublicKey);
-  const receiverPublicKeyPoint = ExtendedPoint.fromHex(receiverViewingPublicKey);
+  const senderPublicKeyPoint = ed25519.ExtendedPoint.fromHex(senderViewingPublicKey);
+  const receiverPublicKeyPoint = ed25519.ExtendedPoint.fromHex(receiverViewingPublicKey);
 
   // Multiply both public keys by blinding scalar
   const blindedSenderViewingKey = senderPublicKeyPoint.multiply(blindingScalar).toRawBytes();
@@ -174,10 +167,10 @@ function unblindNoteKey(
     const blindingScalar = getBlindingScalar(sharedRandom, senderRandom);
 
     // Create curve point instance from ephemeral key bytes
-    const point = ExtendedPoint.fromHex(bytesToHex(blindedNoteKey));
+    const point = ed25519.ExtendedPoint.fromHex(bytesToHex(blindedNoteKey));
 
     // Invert the scalar to undo blinding multiplication operation
-    const inverse = etcEd25519.invert(blindingScalar, CURVE.n);
+    const inverse = invert(blindingScalar, ed25519.CURVE.n);
 
     // Unblind by multiplying by the inverted scalar
     const unblinded = point.multiply(inverse);
