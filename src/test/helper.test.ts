@@ -2,7 +2,7 @@
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
 import artifacts from 'railgun-community-circuit-artifacts';
-import { ContractTransaction, JsonRpcProvider, TransactionResponse, Wallet, ethers } from 'ethers';
+import { ContractTransaction, JsonRpcProvider, TransactionResponse, Wallet } from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { Nullifier } from '../models/formatted-types';
 import {
@@ -16,9 +16,9 @@ import {
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
 import { ArtifactGetter, PublicInputs } from '../models/prover-types';
+import { mnemonicToPrivateKey } from '../key-derivation';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
-const WALLET_PATH = "m/44'/60'/0'/0/0";
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const testNodeArtifactGetter = async (inputs: PublicInputs): Promise<Artifact> => {
@@ -86,13 +86,9 @@ export const awaitMultipleScans = async (
   return Promise.resolve();
 };
 
-export const getEthersWallet = async (
-  mnemonic: string,
-  provider?: JsonRpcProvider,
-): Promise<Wallet> => {
-  const node = HDKey.fromMasterSeed(mnemonicToSeedSync(mnemonic)).derive(WALLET_PATH);
-  const wallet = new Wallet(bytesToHex(node.privateKey as Uint8Array), provider);
-  return wallet;
+export const getEthersWallet = (mnemonic: string, provider?: JsonRpcProvider): Wallet => {
+  const privateKey = mnemonicToPrivateKey(mnemonic);
+  return new Wallet(privateKey, provider);
 };
 
 // TODO: This logic is messy - it's because of Ethers v6.4.0.

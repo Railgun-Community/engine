@@ -80,7 +80,7 @@ describe('Transaction/Transaction Batch', function run() {
       0,
       undefined, // creationBlockNumbers
     );
-    ethersWallet = await getEthersWallet(testMnemonic);
+    ethersWallet = getEthersWallet(testMnemonic);
 
     if (!process.env.RUN_HARDHAT_TESTS) {
       return;

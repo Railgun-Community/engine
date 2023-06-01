@@ -121,7 +121,7 @@ describe('Railgun Smart Wallet', function runTests() {
     await engine.scanHistory(chain);
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
 
-    ethersWallet = await getEthersWallet(config.mnemonic, provider);
+    ethersWallet = getEthersWallet(config.mnemonic, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
     token = new Contract(TOKEN_ADDRESS, erc20Abi, ethersWallet) as unknown as TestERC20;

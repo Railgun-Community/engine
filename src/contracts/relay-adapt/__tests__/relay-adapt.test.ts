@@ -109,7 +109,7 @@ describe('Relay Adapt', function test() {
     railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
     relayAdaptContract = engine.relayAdaptContracts[chain.type][chain.id];
 
-    ethersWallet = await getEthersWallet(config.mnemonic, provider);
+    ethersWallet = getEthersWallet(config.mnemonic, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
     nft = new Contract(NFT_ADDRESS, erc721Abi, ethersWallet) as unknown as TestERC721;

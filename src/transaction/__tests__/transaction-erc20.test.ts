@@ -96,7 +96,7 @@ describe('Transaction/ERC20', function test() {
       undefined, // creationBlockNumbers
     );
     WalletInfo.setWalletSource('erc20 Wallet');
-    ethersWallet = await getEthersWallet(testMnemonic);
+    ethersWallet = getEthersWallet(testMnemonic);
     prover = new Prover(testArtifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;

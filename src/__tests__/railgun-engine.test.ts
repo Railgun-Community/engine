@@ -108,7 +108,7 @@ describe('RailgunEngine', function test() {
       id: Number((await provider.getNetwork()).chainId),
     };
 
-    ethersWallet = await getEthersWallet(config.mnemonic, provider);
+    ethersWallet = getEthersWallet(config.mnemonic, provider);
 
     snapshot = (await provider.send('evm_snapshot', [])) as number;
     token = new Contract(erc20Address, erc20Abi, ethersWallet) as unknown as TestERC20;
