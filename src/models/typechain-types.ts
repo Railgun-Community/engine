@@ -1,3 +1,7 @@
-import { TransactionStruct, ShieldRequestStruct } from '../abi/typechain/RailgunSmartWallet';
+import {
+  TransactionStruct,
+  ShieldRequestStruct,
+  CommitmentCiphertextStructOutput,
+} from '../abi/typechain/RailgunSmartWallet';
 
-export { TransactionStruct, ShieldRequestStruct };
+export { TransactionStruct, ShieldRequestStruct, CommitmentCiphertextStructOutput };
