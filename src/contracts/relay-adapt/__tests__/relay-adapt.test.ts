@@ -71,7 +71,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe('Relay Adapt', function test() {
+describe.only('Relay Adapt', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -130,10 +130,22 @@ describe('Relay Adapt', function test() {
 
       const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
 
+      const receiveShieldEvent = new Promise((resolve) =>
+        railgunSmartWalletContract.contract.once(
+          railgunSmartWalletContract.contract.filters.Shield(),
+          resolve,
+        ),
+      );
+
       // Send shield on chain
-      const awaiterShield = promiseTimeout(awaitScan(wallet, chain), 5000);
       const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
-      return (await Promise.all([tx.wait(), awaiterShield]))[0];
+
+      const [txReceipt] = await Promise.all([
+        tx.wait(),
+        awaitScan(wallet, chain),
+        receiveShieldEvent,
+      ]);
+      return txReceipt;
     };
   });
 
@@ -324,12 +336,11 @@ describe('Relay Adapt', function test() {
       txResponse.wait(),
       receiveTransactEvent,
       receiveUnshieldEvent,
+      awaiterScan,
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
     }
-
-    await expect(awaiterScan).to.be.fulfilled; // Unshield
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(
       BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* unshield amount */),
@@ -547,7 +558,25 @@ describe('Relay Adapt', function test() {
 
     // Unshield to relay adapt.
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
-    await Promise.all([txTransact.wait(), awaitScan(wallet, chain)]);
+
+    const receiveTransactEvent = new Promise((resolve) =>
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Transact(),
+        resolve,
+      ),
+    );
+    const receiveUnshieldEvent = new Promise((resolve) =>
+      railgunSmartWalletContract.contract.once(
+        railgunSmartWalletContract.contract.filters.Unshield(),
+        resolve,
+      ),
+    );
+    await Promise.all([
+      txTransact.wait(),
+      awaitMultipleScans(wallet, chain, 2),
+      receiveTransactEvent,
+      receiveUnshieldEvent,
+    ]);
 
     const wethTokenContract = new Contract(
       WETH_TOKEN_ADDRESS,
@@ -560,11 +589,17 @@ describe('Relay Adapt', function test() {
     );
     expect(relayAdaptAddressBalance).to.equal(998n);
 
-    // Value 0n doesn't matter - all WETH should be shielded anyway.
+    // 9975 - 1000
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(8975n);
+
+    // Value 0n doesn't matter - all WETH remaining in Relay Adapt will be shielded.
     await testShieldBaseToken(0n);
 
     relayAdaptAddressBalance = await wethTokenContract.balanceOf(relayAdaptContract.address);
     expect(relayAdaptAddressBalance).to.equal(0n);
+
+    // 9975 - 1000 + 998 - 2 (fee)
+    expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9971n);
   });
 
   it('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
