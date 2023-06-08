@@ -536,7 +536,7 @@ abstract class AbstractWallet extends EventEmitter {
           ? encodeAddress(noteReceive.senderAddressData)
           : undefined,
       };
-      EngineDebug.log(`Adding RECEIVE commitment at ${position}.`);
+      EngineDebug.log(`Adding RECEIVE commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
         type: 'put',
         key: this.getWalletReceiveCommitmentDBPrefix(chain, tree, position).join(':'),
@@ -557,7 +557,7 @@ abstract class AbstractWallet extends EventEmitter {
         noteExtraData: Memo.decryptNoteAnnotationData(noteSend.annotationData, viewingPrivateKey),
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
       };
-      EngineDebug.log(`Adding SPEND commitment at ${position}.`);
+      EngineDebug.log(`Adding SPEND commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
         type: 'put',
         key: this.getWalletSentCommitmentDBPrefix(chain, tree, position).join(':'),

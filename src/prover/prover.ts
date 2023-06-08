@@ -8,6 +8,7 @@ import {
   PublicInputs,
   SnarkProof,
 } from '../models/prover-types';
+import { stringifySafe } from '../utils/stringify';
 
 type NativeProverFormattedJsonInputs = {
   merkleRoot: string;
@@ -81,16 +82,6 @@ export class Prover {
         throw new Error(`No circuit found for ${circuitString.toLowerCase()}`);
       }
       return circuitId;
-    };
-
-    /**
-     * JSON.stringify does not handle bigint values out-of-the-box.
-     * This handler will safely stringify bigints into decimal strings.
-     */
-    const stringifySafe = (obj: object) => {
-      return JSON.stringify(obj, (_key, value) =>
-        typeof value === 'bigint' ? value.toString(10) : value,
-      );
     };
 
     const fullProve = async (

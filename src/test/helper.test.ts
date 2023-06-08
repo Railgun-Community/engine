@@ -2,7 +2,13 @@
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDKey } from 'ethereum-cryptography/hdkey';
 import artifacts from 'railgun-community-circuit-artifacts';
-import { ContractTransaction, JsonRpcProvider, TransactionResponse, Wallet } from 'ethers';
+import {
+  ContractTransaction,
+  JsonRpcProvider,
+  Provider,
+  TransactionResponse,
+  Wallet,
+} from 'ethers';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { Nullifier } from '../models/formatted-types';
 import {
@@ -86,7 +92,7 @@ export const awaitMultipleScans = async (
   return Promise.resolve();
 };
 
-export const getEthersWallet = (mnemonic: string, provider?: JsonRpcProvider): Wallet => {
+export const getEthersWallet = (mnemonic: string, provider?: Provider): Wallet => {
   const privateKey = mnemonicToPrivateKey(mnemonic);
   return new Wallet(privateKey, provider);
 };

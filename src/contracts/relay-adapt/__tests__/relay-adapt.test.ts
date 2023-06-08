@@ -4,7 +4,14 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { Contract, ContractTransaction, JsonRpcProvider, TransactionReceipt, Wallet } from 'ethers';
+import {
+  Contract,
+  ContractTransaction,
+  FallbackProvider,
+  JsonRpcProvider,
+  TransactionReceipt,
+  Wallet,
+} from 'ethers';
 import { RelayAdaptHelper } from '../relay-adapt-helper';
 import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
 import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
@@ -41,6 +48,7 @@ import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
 import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { promiseTimeout } from '../../../utils';
+import EngineDebug from '../../../debugger/debugger';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -71,7 +79,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe.only('Relay Adapt', function test() {
+describe('Relay Adapt', function test() {
   this.timeout(60000);
 
   beforeEach(async () => {
@@ -94,6 +102,8 @@ describe.only('Relay Adapt', function test() {
     }
 
     provider = new PollingJsonRpcProvider(config.rpc);
+    const fallbackProvider = new FallbackProvider([{ provider, weight: 2 }]);
+
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),
@@ -102,14 +112,14 @@ describe.only('Relay Adapt', function test() {
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
-      provider,
+      fallbackProvider,
       DEPLOYMENT_BLOCK,
     );
     await engine.scanHistory(chain);
     railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];
     relayAdaptContract = engine.relayAdaptContracts[chain.type][chain.id];
 
-    ethersWallet = getEthersWallet(config.mnemonic, provider);
+    ethersWallet = getEthersWallet(config.mnemonic, fallbackProvider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
 
     nft = new Contract(NFT_ADDRESS, erc721Abi, ethersWallet) as unknown as TestERC721;
