@@ -240,12 +240,14 @@ class MerkleTree {
    * @param txid - unshield txid to get path for
    * @returns database path
    */
-  getUnshieldEventsDBPath(txid: string, eventLogIndex?: number): string[] {
+  getUnshieldEventsDBPath(txid?: string, eventLogIndex?: number): string[] {
     const path = [
       ...this.getChainDBPrefix(),
       hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
-      hexlify(txid),
     ];
+    if (txid != null) {
+      path.push(hexlify(txid));
+    }
     if (eventLogIndex != null) {
       path.push(eventLogIndex.toString(16));
     }

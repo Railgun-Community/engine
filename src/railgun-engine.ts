@@ -438,6 +438,11 @@ class RailgunEngine extends EventEmitter {
     await Promise.all(this.allWallets().map((wallet) => wallet.clearScannedBalances(chain)));
   }
 
+  async clearSyncedUnshieldEvents(chain: Chain) {
+    const merkletree = this.getMerkletreeForChain(chain);
+    await this.db.clearNamespace(merkletree.getUnshieldEventsDBPath());
+  }
+
   /**
    * Clears stored merkletree leaves and wallet balances, and re-scans fully.
    * @param chain - chain type/id to rescan
@@ -461,6 +466,7 @@ class RailgunEngine extends EventEmitter {
     this.emitScanUpdateEvent(chain, 0.01); // 1%
     merkletree.isScanning = true; // Don't allow scans while removing leaves.
     await this.clearMerkletreeAndWallets(chain);
+    await this.clearSyncedUnshieldEvents(chain);
     merkletree.isScanning = false; // Clear before calling scanHistory.
     await this.scanHistory(chain);
   }
