@@ -1089,7 +1089,7 @@ abstract class AbstractWallet extends EventEmitter {
       if (existingUnshieldEvent) {
         // Add amount to existing unshield event.
         existingUnshieldEvent.amount = (
-          BigInt(existingUnshieldEvent.amount) + unshieldEvent.amount
+          BigInt(existingUnshieldEvent.amount) + BigInt(unshieldEvent.amount)
         ).toString();
         return;
       }
