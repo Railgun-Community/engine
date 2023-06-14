@@ -223,7 +223,9 @@ class RailgunSmartWalletContract extends EventEmitter {
           if (err instanceof Error) {
             EngineDebug.error(err);
           }
-          throw err;
+          if (EngineDebug.isTestRun()) {
+            throw err;
+          }
         }
       },
     );
@@ -267,7 +269,9 @@ class RailgunSmartWalletContract extends EventEmitter {
         if (err instanceof Error) {
           EngineDebug.error(err);
         }
-        throw err;
+        if (EngineDebug.isTestRun()) {
+          throw err;
+        }
       }
     });
 
@@ -308,7 +312,9 @@ class RailgunSmartWalletContract extends EventEmitter {
           if (err instanceof Error) {
             EngineDebug.error(err);
           }
-          throw err;
+          if (EngineDebug.isTestRun()) {
+            throw err;
+          }
         }
       },
     );
@@ -347,7 +353,9 @@ class RailgunSmartWalletContract extends EventEmitter {
           if (err instanceof Error) {
             EngineDebug.error(err);
           }
-          throw err;
+          if (EngineDebug.isTestRun()) {
+            throw err;
+          }
         }
       },
     );

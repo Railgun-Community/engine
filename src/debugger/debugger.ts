@@ -17,9 +17,13 @@ export default class EngineDebug {
     if (this.engineDebugger) {
       this.engineDebugger.error(err);
     }
-    if (process.env.NODE_ENV === 'test' && !ignoreInTests) {
+    if (this.isTestRun() && !ignoreInTests) {
       // eslint-disable-next-line no-console
       console.error(err);
     }
+  }
+
+  static isTestRun() {
+    return process.env.NODE_ENV === 'test';
   }
 }
