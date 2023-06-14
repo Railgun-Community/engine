@@ -66,6 +66,7 @@ import { assertPollingProvider } from '../../provider/polling-util';
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;
 const EVENTS_SCAN_TIMEOUT = 5000;
+const SCAN_TIMEOUT_ERROR_MESSAGE = 'getLogs request timed out after 5 seconds.';
 
 class RailgunSmartWalletContract extends EventEmitter {
   readonly contract: RailgunSmartWallet;
@@ -371,6 +372,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       const events = await promiseTimeout(
         this.contract.queryFilter(eventFilter, startBlock, endBlock),
         EVENTS_SCAN_TIMEOUT,
+        SCAN_TIMEOUT_ERROR_MESSAGE,
       );
       const eventsWithDecodedArgs = events.map((event) => ({
         ...event,
@@ -381,7 +383,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       if (!(err instanceof Error)) {
         throw err;
       }
-      if (retryCount < MAX_SCAN_RETRIES) {
+      if (retryCount < MAX_SCAN_RETRIES && err.message === SCAN_TIMEOUT_ERROR_MESSAGE) {
         const retry = retryCount + 1;
         EngineDebug.log(
           `[Chain ${this.chain.type}:${
