@@ -10,7 +10,7 @@ import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
 import EngineDebug from '../../debugger/debugger';
 import {
   CommitmentEvent,
-  EventsListener,
+  EventsCommitmentListener,
   EventsNullifierListener,
   EventsUnshieldListener,
   UnshieldStoredEvent,
@@ -189,7 +189,7 @@ export function formatUnshieldEvent(
 }
 
 export async function processShieldEvents(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: ShieldEvent.Log[],
 ): Promise<void> {
   const filtered = logs.filter((log) => log.args);
@@ -206,7 +206,7 @@ export async function processShieldEvents(
 }
 
 export async function processShieldEvents_LegacyShield_PreMar23(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: ShieldEvent_LegacyShield_PreMar23.Log[],
 ): Promise<void> {
   // NOTE: Legacy "Shield" event of the same name conflicts with the current ABI's Shield event.
@@ -239,7 +239,7 @@ export async function processShieldEvents_LegacyShield_PreMar23(
 }
 
 export async function processTransactEvents(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: TransactEvent.Log[],
 ): Promise<void> {
   const filtered = logs.filter((log) => log.args);

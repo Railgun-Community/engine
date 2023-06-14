@@ -7,7 +7,7 @@ import {
 } from '../../../abi/typechain/RailgunLogic_LegacyEvents';
 import {
   CommitmentEvent,
-  EventsListener,
+  EventsCommitmentListener,
   EventsNullifierListener,
 } from '../../../models/event-types';
 import {
@@ -157,7 +157,7 @@ export function formatLegacyCommitmentBatchEvent(
 }
 
 export async function processGeneratedCommitmentEvents(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
   const filtered = logs.filter((log) => log.args);
@@ -172,7 +172,7 @@ export async function processGeneratedCommitmentEvents(
 }
 
 export async function processCommitmentBatchEvents(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
   const filtered = logs.filter((log) => log.args);
@@ -204,7 +204,7 @@ export function formatLegacyNullifierEvents(
 }
 
 export async function processLegacyGeneratedCommitmentEvents(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
   const filtered = logs.filter((log) => log.args);
@@ -219,7 +219,7 @@ export async function processLegacyGeneratedCommitmentEvents(
 }
 
 export async function processLegacyCommitmentBatchEvents(
-  eventsListener: EventsListener,
+  eventsListener: EventsCommitmentListener,
   logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
   const filtered = logs.filter((log) => log.args);

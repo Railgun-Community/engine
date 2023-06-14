@@ -11,7 +11,7 @@ export enum EngineEvent {
 }
 
 export type QuickSync = (chain: Chain, startingBlock: number) => Promise<AccumulatedEvents>;
-export type EventsListener = (event: CommitmentEvent) => Promise<void>;
+export type EventsCommitmentListener = (event: CommitmentEvent) => Promise<void>;
 export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 export type EventsUnshieldListener = (unshields: UnshieldStoredEvent[]) => Promise<void>;
 
