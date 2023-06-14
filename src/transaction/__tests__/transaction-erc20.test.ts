@@ -3,7 +3,7 @@ import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { Provider, Wallet } from 'ethers';
+import { Wallet } from 'ethers';
 import {
   Ciphertext,
   CommitmentType,
@@ -107,7 +107,7 @@ describe('Transaction/ERC20', function test() {
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
-        new PollingJsonRpcProvider('abc'),
+        new PollingJsonRpcProvider('abc', 1, true),
         chain,
       );
 

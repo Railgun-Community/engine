@@ -88,7 +88,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
 
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
-    provider = new PollingJsonRpcProvider('https://rpc.ankr.com/eth');
+    provider = new PollingJsonRpcProvider('https://rpc.ankr.com/eth', 1, true);
 
     chain = {
       type: ChainType.EVM,

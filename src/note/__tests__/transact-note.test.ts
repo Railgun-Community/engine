@@ -1,7 +1,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
-import { Provider, randomBytes } from 'ethers';
+import { randomBytes } from 'ethers';
 import { ContractStore } from '../../contracts/contract-store';
 import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { Database } from '../../database/database';
@@ -326,7 +326,7 @@ describe('Note/TransactNote', () => {
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
-        new PollingJsonRpcProvider('abc'),
+        new PollingJsonRpcProvider('abc', 1, true),
         chain,
       );
 

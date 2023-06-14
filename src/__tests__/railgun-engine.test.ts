@@ -102,7 +102,7 @@ describe('RailgunEngine', function test() {
     }
 
     // EngineDebug.init(console); // uncomment for logs
-    provider = new PollingJsonRpcProvider(config.rpc);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, true);
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),

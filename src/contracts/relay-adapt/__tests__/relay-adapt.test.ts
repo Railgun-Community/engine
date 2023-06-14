@@ -48,7 +48,6 @@ import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
 import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { promiseTimeout } from '../../../utils';
-import EngineDebug from '../../../debugger/debugger';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -101,7 +100,7 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    provider = new PollingJsonRpcProvider(config.rpc);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, true);
     const fallbackProvider = new FallbackProvider([{ provider, weight: 2 }]);
 
     chain = {
