@@ -1,15 +1,6 @@
 /// <reference types="../types/global" />
-import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
-import { HDKey } from 'ethereum-cryptography/hdkey';
 import artifacts from 'railgun-community-circuit-artifacts';
-import {
-  ContractTransaction,
-  JsonRpcProvider,
-  Provider,
-  TransactionResponse,
-  Wallet,
-} from 'ethers';
-import { bytesToHex } from 'ethereum-cryptography/utils';
+import { ContractTransaction, Provider, TransactionResponse, Wallet } from 'ethers';
 import { Nullifier } from '../models/formatted-types';
 import {
   AccumulatedEvents,
@@ -23,6 +14,8 @@ import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
 import { ArtifactGetter, PublicInputs } from '../models/prover-types';
 import { mnemonicToPrivateKey } from '../key-derivation';
+import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
+import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -90,6 +83,16 @@ export const awaitMultipleScans = async (
     i += 1;
   }
   return Promise.resolve();
+};
+
+export const awaitRailgunSmartWalletEvent = async (
+  railgunSmartWallet: RailgunSmartWalletContract,
+  event: TypedDeferredTopicFilter<TypedContractEvent>,
+) => {
+  await new Promise<void>((resolve) => {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    railgunSmartWallet.contract.once(event, () => resolve());
+  });
 };
 
 export const getEthersWallet = (mnemonic: string, provider?: Provider): Wallet => {

@@ -923,9 +923,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get balances for
    * @returns history
    */
-  static async getTransactionReceiveHistory(
-    filteredTXOs: TXO[],
-  ): Promise<TransactionHistoryEntryReceived[]> {
+  static getTransactionReceiveHistory(filteredTXOs: TXO[]): TransactionHistoryEntryReceived[] {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
     filteredTXOs.forEach(({ txid, timestamp, note }) => {
@@ -1021,47 +1019,44 @@ abstract class AbstractWallet extends EventEmitter {
 
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    await Promise.all(
-      sentCommitments.map(
-        async ({ txid, timestamp, note, isLegacyTransactNote, noteAnnotationData }) => {
-          if (note.value === 0n) {
-            return;
-          }
-          if (!txidTransactionMap[txid]) {
-            txidTransactionMap[txid] = {
-              txid,
-              timestamp,
-              blockNumber: note.blockNumber,
-              tokenAmounts: [],
-              unshieldEvents: [],
-              version: AbstractWallet.getTransactionHistoryItemVersion(
-                noteAnnotationData,
-                isLegacyTransactNote,
-              ),
-            };
-          }
-
-          const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
-          const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount =
-            {
-              tokenHash,
-              tokenData: note.tokenData,
-              amount: note.value,
+    sentCommitments.forEach(
+      ({ txid, timestamp, note, isLegacyTransactNote, noteAnnotationData }) => {
+        if (note.value === 0n) {
+          return;
+        }
+        if (!txidTransactionMap[txid]) {
+          txidTransactionMap[txid] = {
+            txid,
+            timestamp,
+            blockNumber: note.blockNumber,
+            tokenAmounts: [],
+            unshieldEvents: [],
+            version: AbstractWallet.getTransactionHistoryItemVersion(
               noteAnnotationData,
-              memoText: note.memoText,
-            };
-          const isNonLegacyTransfer =
-            !isLegacyTransactNote &&
-            noteAnnotationData &&
-            noteAnnotationData.outputType === OutputType.Transfer;
-          if (isNonLegacyTransfer) {
-            (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
-              note.receiverAddressData,
-            );
-          }
-          txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
-        },
-      ),
+              isLegacyTransactNote,
+            ),
+          };
+        }
+
+        const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
+        const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
+          tokenHash,
+          tokenData: note.tokenData,
+          amount: note.value,
+          noteAnnotationData,
+          memoText: note.memoText,
+        };
+        const isNonLegacyTransfer =
+          !isLegacyTransactNote &&
+          noteAnnotationData &&
+          noteAnnotationData.outputType === OutputType.Transfer;
+        if (isNonLegacyTransfer) {
+          (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
+            note.receiverAddressData,
+          );
+        }
+        txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
+      },
     );
 
     // Add unshield events to txidTransactionMap
@@ -1488,7 +1483,7 @@ abstract class AbstractWallet extends EventEmitter {
     }
   }
 
-  async generateShareableViewingKey(): Promise<string> {
+  generateShareableViewingKey(): string {
     const spendingPublicKeyString = packPoint(this.spendingPublicKey).toString('hex');
     const data: ShareableViewingKeyData = {
       vpriv: formatToByteLength(this.viewingKeyPair.privateKey, ByteLength.UINT_256),

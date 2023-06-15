@@ -27,8 +27,11 @@ const PREFIX = '0zk';
  * @param chainID - hex value of chainID
  * @returns - chainID XOR'd with 'railgun' to make address prettier
  */
-const xorNetworkID = (chainID: string) =>
-  xor(Buffer.from(chainID as string, 'hex'), Buffer.from('railgun', 'utf8')).toString('hex');
+const xorNetworkID = (chainID: string) => {
+  const chainIDBuffer = Buffer.from(chainID, 'hex');
+  const railgunBuffer = Buffer.from('railgun', 'utf8');
+  return xor(chainIDBuffer, railgunBuffer).toString('hex');
+};
 
 const chainToNetworkID = (chain: Optional<Chain>): string => {
   if (chain == null) {

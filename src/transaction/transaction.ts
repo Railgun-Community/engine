@@ -369,7 +369,7 @@ class Transaction {
       overallBatchMinGasPrice,
     );
 
-    const dummyProof: Proof = await prover.dummyProve(publicInputs);
+    const dummyProof: Proof = prover.dummyProve(publicInputs);
 
     return Transaction.generateTransaction(
       dummyProof,
@@ -394,7 +394,7 @@ class Transaction {
       commitments: publicInputs.commitmentsOut.map((n) => nToHex(n, ByteLength.UINT_256, true)),
       unshieldPreimage: {
         ...unshieldPreimage,
-        npk: formatToByteLength(await unshieldPreimage.npk, ByteLength.UINT_256, true),
+        npk: formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
       },
     };
     return formattedTransaction;

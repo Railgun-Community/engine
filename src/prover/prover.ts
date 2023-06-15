@@ -84,7 +84,7 @@ export class Prover {
       return circuitId;
     };
 
-    const fullProve = async (
+    const fullProve = (
       formattedInputs: FormattedCircuitInputs,
       _wasm: ArrayLike<number> | undefined,
       zkey: ArrayLike<number>,
@@ -122,7 +122,7 @@ export class Prover {
 
         logger.debug(`Proof lapsed ${Date.now() - start} ms`);
 
-        return { proof };
+        return Promise.resolve({ proof });
       } catch (err) {
         if (!(err instanceof Error)) {
           throw err;
@@ -174,14 +174,13 @@ export class Prover {
     };
   }
 
-  async dummyProve(publicInputs: PublicInputs): Promise<Proof> {
+  dummyProve(publicInputs: PublicInputs): Proof {
     // Make sure we have valid artifacts for this number of inputs.
     // Note that the artifacts are not used in the dummy proof.
     this.artifactGetter.assertArtifactExists(
       publicInputs.nullifiers.length,
       publicInputs.commitmentsOut.length,
     );
-
     return Prover.zeroProof;
   }
 
@@ -213,7 +212,7 @@ export class Prover {
       formattedInputs,
       artifacts.wasm,
       artifacts.zkey,
-      { debug: EngineDebug.log },
+      { debug: (msg: string) => EngineDebug.log(msg) },
       artifacts.dat,
       (progress: number) => {
         progressCallback(

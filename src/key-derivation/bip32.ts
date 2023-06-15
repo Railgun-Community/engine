@@ -48,7 +48,7 @@ export function childKeyDerivationHardened(
   const indexFormatted = padToLength(new BN(index + offset), 4);
 
   // Calculate HMAC preImage
-  const preImage = `00${node.chainKey}${indexFormatted}`;
+  const preImage = `00${node.chainKey}${indexFormatted as string}`;
 
   // Calculate I
   const I = sha512HMAC(node.chainCode, preImage);

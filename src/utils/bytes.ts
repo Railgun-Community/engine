@@ -126,8 +126,9 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
     // Remove leading 0x if exists
     const dataFormatted = strip0x(data);
     const invalid = [' ', '-', ''];
-    if (invalid.includes(dataFormatted)) throw new Error(`Invalid BytesData: ${invalid}`);
-
+    if (invalid.includes(dataFormatted)) {
+      throw new Error(`Invalid BytesData: ${dataFormatted}`);
+    }
     return new BN(dataFormatted, 'hex', endian);
   }
 
@@ -145,7 +146,11 @@ function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
  * @param side - whether to pad left or right
  * @returns padded bytes data
  */
-function padToLength(data: BytesData, length: number, side: 'left' | 'right' = 'left'): BytesData {
+function padToLength(
+  data: BytesData,
+  length: number,
+  side: 'left' | 'right' = 'left',
+): string | number[] {
   // Can't pad a number, if we get a number convert to hex string
   const dataFormatted = data instanceof BN ? hexlify(data) : data;
 
@@ -189,8 +194,7 @@ function padToLength(data: BytesData, length: number, side: 'left' | 'right' = '
  * @param data - bytes to reverse
  * @returns reversed bytes
  */
-function reverseBytes(data: ArrayLike<number> | string): typeof data {
-  // TODO: Allow reversing number bytes.
+function reverseBytes(data: ArrayLike<number> | string): ArrayLike<number> | string {
   // Use Conditional type return or overload so passed param and return are same type.
   if (typeof data === 'string') {
     // Split to bytes array, reverse, join, and return

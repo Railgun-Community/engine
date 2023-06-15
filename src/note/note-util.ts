@@ -158,7 +158,7 @@ export const getTokenDataHash = (tokenData: TokenData): string => {
 export const getReadableTokenAddress = (tokenData: TokenData): string => {
   switch (tokenData.tokenType) {
     case TokenType.ERC20:
-      return `0x${trim(tokenData.tokenAddress, ByteLength.Address)}`;
+      return `0x${trim(tokenData.tokenAddress, ByteLength.Address) as string}`;
     case TokenType.ERC721:
     case TokenType.ERC1155:
       return `${tokenData.tokenAddress} (${tokenData.tokenSubID})`;

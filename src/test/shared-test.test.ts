@@ -8,7 +8,11 @@ import { NFTTokenData, TokenType } from '../models/formatted-types';
 import { ShieldNoteNFT } from '../note/nft/shield-note-nft';
 import { hexToBytes, randomHex } from '../utils/bytes';
 import { RailgunWallet } from '../wallet/railgun-wallet';
-import { awaitScan, sendTransactionWithLatestNonce } from './helper.test';
+import {
+  awaitRailgunSmartWalletEvent,
+  awaitScan,
+  sendTransactionWithLatestNonce,
+} from './helper.test';
 import { TestERC721 } from './abi/typechain/TestERC721';
 import { promiseTimeout } from '../utils/promises';
 
@@ -58,11 +62,9 @@ export const shieldNFTForTest = async (
 
   await Promise.all([
     txResponse.wait(),
-    new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Shield(),
-        resolve,
-      ),
+    awaitRailgunSmartWalletEvent(
+      railgunSmartWalletContract,
+      railgunSmartWalletContract.contract.filters.Shield(),
     ),
     promiseTimeout(awaitScan(wallet, chain), 5000),
   ]);

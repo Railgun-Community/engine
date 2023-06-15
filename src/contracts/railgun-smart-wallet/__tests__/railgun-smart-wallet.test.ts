@@ -17,6 +17,7 @@ import {
 } from '../../../utils/bytes';
 import {
   awaitMultipleScans,
+  awaitRailgunSmartWalletEvent,
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
@@ -134,7 +135,7 @@ describe('Railgun Smart Wallet', function runTests() {
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
     viewOnlyWallet = await engine.createViewOnlyWalletFromShareableViewingKey(
       testEncryptionKey,
-      await wallet.generateShareableViewingKey(),
+      wallet.generateShareableViewingKey(),
       undefined, // creationBlockNumbers
     );
 
@@ -739,11 +740,9 @@ describe('Railgun Smart Wallet', function runTests() {
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
     await Promise.all([
       txResponse.wait(),
-      new Promise((resolve) =>
-        railgunSmartWalletContract.contract.once(
-          railgunSmartWalletContract.contract.filters.Shield(),
-          resolve,
-        ),
+      awaitRailgunSmartWalletEvent(
+        railgunSmartWalletContract,
+        railgunSmartWalletContract.contract.filters.Shield(),
       ),
       promiseTimeout(awaitScan(wallet, chain), 5000),
     ]);
@@ -875,11 +874,9 @@ describe('Railgun Smart Wallet', function runTests() {
 
     await Promise.all([
       txResponse.wait(),
-      new Promise((resolve) =>
-        railgunSmartWalletContract.contract.once(
-          railgunSmartWalletContract.contract.filters.Transact(),
-          resolve,
-        ),
+      awaitRailgunSmartWalletEvent(
+        railgunSmartWalletContract,
+        railgunSmartWalletContract.contract.filters.Transact(),
       ),
     ]);
 
