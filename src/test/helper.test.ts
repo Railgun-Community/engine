@@ -95,13 +95,49 @@ export const awaitRailgunSmartWalletEvent = async (
   });
 };
 
+export const awaitRailgunSmartWalletShield = async (
+  railgunSmartWallet: RailgunSmartWalletContract,
+) => {
+  return awaitRailgunSmartWalletEvent(
+    railgunSmartWallet,
+    railgunSmartWallet.contract.filters.Shield(),
+  );
+};
+
+export const awaitRailgunSmartWalletTransact = async (
+  railgunSmartWallet: RailgunSmartWalletContract,
+) => {
+  return awaitRailgunSmartWalletEvent(
+    railgunSmartWallet,
+    railgunSmartWallet.contract.filters.Transact(),
+  );
+};
+
+export const awaitRailgunSmartWalletUnshield = async (
+  railgunSmartWallet: RailgunSmartWalletContract,
+) => {
+  return awaitRailgunSmartWalletEvent(
+    railgunSmartWallet,
+    railgunSmartWallet.contract.filters.Unshield(),
+  );
+};
+
+export const awaitRailgunSmartWalletNullified = async (
+  railgunSmartWallet: RailgunSmartWalletContract,
+) => {
+  return awaitRailgunSmartWalletEvent(
+    railgunSmartWallet,
+    railgunSmartWallet.contract.filters.Nullified(),
+  );
+};
+
 export const getEthersWallet = (mnemonic: string, provider?: Provider): Wallet => {
   const privateKey = mnemonicToPrivateKey(mnemonic);
   return new Wallet(privateKey, provider);
 };
 
 // TODO: This logic is messy - it's because of Ethers v6.4.0.
-// It seems like the nonce isn't updated appropriately via hardhat.
+// It seems like the nonce isn't updated quickly enough via hardhat.
 // Ethers will probably improve the nonce calculation in the future. (Or hardhat?).
 // We should be able to remove `additionalNonce` when it's updated.
 export const sendTransactionWithLatestNonce = async (
@@ -112,7 +148,7 @@ export const sendTransactionWithLatestNonce = async (
   if (additionalNonce > 2) {
     throw new Error('Nonce already used - many pending transactions');
   }
-  const updatedNonceTx = {
+  const updatedNonceTx: ContractTransaction = {
     ...transaction,
     nonce: (await wallet.getNonce('latest')) + additionalNonce,
   };

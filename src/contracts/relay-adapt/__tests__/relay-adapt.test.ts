@@ -19,6 +19,9 @@ import { config } from '../../../test/config.test';
 import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import {
   awaitMultipleScans,
+  awaitRailgunSmartWalletEvent,
+  awaitRailgunSmartWalletTransact,
+  awaitRailgunSmartWalletUnshield,
   awaitScan,
   getEthersWallet,
   sendTransactionWithLatestNonce,
@@ -139,20 +142,16 @@ describe('Relay Adapt', function test() {
 
       const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
 
-      const receiveShieldEvent = new Promise((resolve) =>
-        railgunSmartWalletContract.contract.once(
-          railgunSmartWalletContract.contract.filters.Shield(),
-          resolve,
-        ),
-      );
-
       // Send shield on chain
       const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
       const [txReceipt] = await Promise.all([
         tx.wait(),
         awaitScan(wallet, chain),
-        receiveShieldEvent,
+        awaitRailgunSmartWalletEvent(
+          railgunSmartWalletContract,
+          railgunSmartWalletContract.contract.filters.Shield(),
+        ),
       ]);
       return txReceipt;
     };
@@ -181,14 +180,13 @@ describe('Relay Adapt', function test() {
     // Send shield on chain
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
-    const receiveShieldEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
+    await Promise.all([
+      txResponse.wait(),
+      awaitRailgunSmartWalletEvent(
+        railgunSmartWalletContract,
         railgunSmartWalletContract.contract.filters.Shield(),
-        resolve,
       ),
-    );
-
-    await Promise.all([txResponse.wait(), receiveShieldEvent]);
+    ]);
     await expect(awaiterShield).to.be.fulfilled;
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
@@ -326,25 +324,12 @@ describe('Relay Adapt', function test() {
     // 6: Send relay transaction.
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    const receiveTransactEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Transact(),
-        resolve,
-      ),
-    );
-    const receiveUnshieldEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Unshield(),
-        resolve,
-      ),
-    );
-
     const awaiterScan = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
-      receiveTransactEvent,
-      receiveUnshieldEvent,
+      awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
+      awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
       awaiterScan,
     ]);
     if (txReceipt == null) {
@@ -506,25 +491,12 @@ describe('Relay Adapt', function test() {
     // 9: Send relay transaction.
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    const receiveTransactEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Transact(),
-        resolve,
-      ),
-    );
-    const receiveUnshieldEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Unshield(),
-        resolve,
-      ),
-    );
-
     const awaiterScan = promiseTimeout(awaitScan(wallet, chain), 5000);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
-      receiveTransactEvent,
-      receiveUnshieldEvent,
+      awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
+      awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
@@ -568,23 +540,11 @@ describe('Relay Adapt', function test() {
     // Unshield to relay adapt.
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
 
-    const receiveTransactEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Transact(),
-        resolve,
-      ),
-    );
-    const receiveUnshieldEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Unshield(),
-        resolve,
-      ),
-    );
     await Promise.all([
       txTransact.wait(),
       awaitMultipleScans(wallet, chain, 2),
-      receiveTransactEvent,
-      receiveUnshieldEvent,
+      awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
+      awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
     ]);
 
     const wethTokenContract = new Contract(
@@ -739,17 +699,13 @@ describe('Relay Adapt', function test() {
     // 8. Send transaction.
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    const receiveTransactEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Transact(),
-        resolve,
-      ),
-    );
-
     // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
-    const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
+    const [txReceipt] = await Promise.all([
+      txResponse.wait(),
+      awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
+    ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
     }
@@ -900,26 +856,13 @@ describe('Relay Adapt', function test() {
     // 8. Send transaction.
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    const receiveTransactEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Transact(),
-        resolve,
-      ),
-    );
-    const receiveUnshieldEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Unshield(),
-        resolve,
-      ),
-    );
-
     // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
-      receiveTransactEvent,
-      receiveUnshieldEvent,
+      awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
+      awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
@@ -1076,17 +1019,13 @@ describe('Relay Adapt', function test() {
     // 8. Send transaction.
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    const receiveTransactEvent = new Promise((resolve) =>
-      railgunSmartWalletContract.contract.once(
-        railgunSmartWalletContract.contract.filters.Transact(),
-        resolve,
-      ),
-    );
-
     // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
-    const [txReceipt] = await Promise.all([txResponse.wait(), receiveTransactEvent]);
+    const [txReceipt] = await Promise.all([
+      txResponse.wait(),
+      awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
+    ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
     }
