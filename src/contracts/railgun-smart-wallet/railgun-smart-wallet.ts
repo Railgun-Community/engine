@@ -61,7 +61,7 @@ import {
 } from '../../abi/typechain/common';
 import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-legacy';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
-import { assertPollingProvider } from '../../provider/polling-util';
+import { assertIsPollingProvider } from '../../provider/polling-util';
 import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
 
 const SCAN_CHUNKS = 499;
@@ -89,7 +89,7 @@ class RailgunSmartWalletContract extends EventEmitter {
     chain: Chain,
   ) {
     super();
-    assertPollingProvider(provider);
+    assertIsPollingProvider(provider);
     this.address = railgunSmartWalletContractAddress;
     this.contract = new Contract(
       railgunSmartWalletContractAddress,
@@ -306,7 +306,7 @@ class RailgunSmartWalletContract extends EventEmitter {
     await this.contract.on(
       // @ts-expect-error - Use * to request all events
       '*', // All Events
-      async (event: ContractEventPayload) => {
+      (event: ContractEventPayload) => {
         try {
           if (event.log.topics.length !== 1) {
             throw new Error('Requires one topic for railgun events');
@@ -314,16 +314,21 @@ class RailgunSmartWalletContract extends EventEmitter {
 
           switch (event.log.topics[0]) {
             case nullifiedTopic:
-              return this.handleNullifiedEvent(event, eventsNullifierListener);
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              this.handleNullifiedEvent(event, eventsNullifierListener);
+              return;
             case shieldTopic:
-              return RailgunSmartWalletContract.handleShieldEvent(event, eventsCommitmentListener);
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              RailgunSmartWalletContract.handleShieldEvent(event, eventsCommitmentListener);
+              return;
             case transactTopic:
-              return RailgunSmartWalletContract.handleTransactEvent(
-                event,
-                eventsCommitmentListener,
-              );
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              RailgunSmartWalletContract.handleTransactEvent(event, eventsCommitmentListener);
+              return;
             case unshieldTopic:
-              return RailgunSmartWalletContract.handleUnshieldEvent(event, eventsUnshieldListener);
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              RailgunSmartWalletContract.handleUnshieldEvent(event, eventsUnshieldListener);
+              return;
           }
 
           throw new Error('Event topic not recognized');
@@ -334,7 +339,6 @@ class RailgunSmartWalletContract extends EventEmitter {
           if (EngineDebug.isTestRun()) {
             throw err;
           }
-          return undefined;
         }
       },
     );

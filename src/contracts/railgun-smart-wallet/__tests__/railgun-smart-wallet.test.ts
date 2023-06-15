@@ -167,12 +167,6 @@ describe('Railgun Smart Wallet', function runTests() {
     }).to.throw(
       'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
     );
-    const nonPollingFallbackProvider = new FallbackProvider([nonPollingProvider, provider]);
-    expect(() => {
-      return new RailgunSmartWalletContract('abc', nonPollingFallbackProvider, chain);
-    }).to.throw(
-      'All JsonRpcProviders in FallbackProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
-    );
   });
 
   it('[HH] Should retrieve merkle root from contract', async function run() {

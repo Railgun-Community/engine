@@ -28,7 +28,7 @@ import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
 import { CURRENT_MERKLETREE_HISTORY_VERSION } from './utils/constants';
 import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
-import { assertPollingProvider } from './provider/polling-util';
+import { assertIsPollingProvider } from './provider/polling-util';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -206,7 +206,7 @@ class RailgunEngine extends EventEmitter {
 
   async getStartScanningBlock(chain: Chain): Promise<number> {
     let startScanningBlock = await this.getMostRecentValidCommitmentBlock(chain);
-    EngineDebug.log(`most recent valid commitment block: ${startScanningBlock}`);
+    EngineDebug.log(`most recent valid commitment block: ${startScanningBlock ?? 'unknown'}`);
     if (startScanningBlock == null) {
       // If we haven't scanned anything yet, start scanning at deployment block
       startScanningBlock = this.deploymentBlocks[chain.type][chain.id];
@@ -290,7 +290,7 @@ class RailgunEngine extends EventEmitter {
     // Get updated start-scanning block from new valid merkletree.
     let startScanningBlockSlowScan = await this.getStartScanningBlock(chain);
     const lastSyncedBlock = await this.getLastSyncedBlock(chain);
-    EngineDebug.log(`lastSyncedBlock: ${lastSyncedBlock}`);
+    EngineDebug.log(`lastSyncedBlock: ${lastSyncedBlock ?? 'unknown'}`);
     if (lastSyncedBlock && lastSyncedBlock > startScanningBlockSlowScan) {
       startScanningBlockSlowScan = lastSyncedBlock;
     }
@@ -486,7 +486,7 @@ class RailgunEngine extends EventEmitter {
     deploymentBlock: number,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
-    assertPollingProvider(provider);
+    assertIsPollingProvider(provider);
 
     try {
       // Test that provider responds.
@@ -716,12 +716,16 @@ class RailgunEngine extends EventEmitter {
    */
   async unload() {
     // Unload chains
-    ContractStore.railgunSmartWalletContracts.forEach((contractsForChainType, chainType) => {
-      contractsForChainType.forEach(async (_railgunSmartWalletContract, chainID) => {
-        EngineDebug.log(`unload network ${chainType}:${chainID}`);
-        await this.unloadNetwork({ type: chainType, id: chainID });
-      });
-    });
+    await Promise.all(
+      ContractStore.railgunSmartWalletContracts.map(async (contractsForChainType, chainType) => {
+        await Promise.all(
+          contractsForChainType.map(async (_railgunSmartWalletContract, chainID) => {
+            EngineDebug.log(`unload network ${chainType}:${chainID}`);
+            await this.unloadNetwork({ type: chainType, id: chainID });
+          }),
+        );
+      }),
+    );
 
     // Unload wallets
     Object.keys(this.wallets).forEach((walletID) => {
