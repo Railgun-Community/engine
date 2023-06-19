@@ -23,6 +23,7 @@ export const assertIsPollingProvider = (provider: AbstractProvider) => {
  */
 export const createPollingJsonRpcProviderForListeners = async (
   provider: JsonRpcProvider | FallbackProvider,
+  pollingInterval?: number,
 ): Promise<PollingJsonRpcProvider> => {
   if (provider instanceof PollingJsonRpcProvider) {
     return provider;
@@ -47,7 +48,7 @@ export const createPollingJsonRpcProviderForListeners = async (
     const { chainId } = await provider.getNetwork();
     // eslint-disable-next-line no-underscore-dangle
     const maxLogsPerBatch = provider.providerConfigs[0].provider._getOption('batchMaxSize');
-    return new PollingJsonRpcProvider(url, Number(chainId), maxLogsPerBatch);
+    return new PollingJsonRpcProvider(url, Number(chainId), pollingInterval, maxLogsPerBatch);
   }
 
   throw new Error('Invalid provider type - make sure you are using the same version of ethers');
