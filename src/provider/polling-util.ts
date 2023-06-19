@@ -50,5 +50,5 @@ export const createPollingJsonRpcProviderForListeners = async (
     return new PollingJsonRpcProvider(url, Number(chainId), maxLogsPerBatch);
   }
 
-  throw new Error('Invalid provider type');
+  throw new Error('Invalid provider type - make sure you are using the same version of ethers');
 };
