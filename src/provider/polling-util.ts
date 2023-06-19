@@ -40,9 +40,12 @@ export const createPollingJsonRpcProviderForListeners = async (
     if (!provider.providerConfigs.length) {
       throw new Error('Requires 1+ providers in FallbackProvider');
     }
+
+    // TODO: Support WSS providers for polling.
     if (!(provider.providerConfigs[0].provider instanceof JsonRpcProvider)) {
       throw new Error('First provider in FallbackProvider must be JsonRpcProvider');
     }
+
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider.providerConfigs[0].provider._getConnection();
     const { chainId } = await provider.getNetwork();
