@@ -9,7 +9,7 @@ import { ShieldNoteNFT } from '../note/nft/shield-note-nft';
 import { hexToBytes, randomHex } from '../utils/bytes';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import {
-  awaitRailgunSmartWalletEvent,
+  awaitRailgunSmartWalletShield,
   awaitScan,
   sendTransactionWithLatestNonce,
 } from './helper.test';
@@ -61,12 +61,9 @@ export const shieldNFTForTest = async (
   const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
   await Promise.all([
-    txResponse.wait(),
-    awaitRailgunSmartWalletEvent(
-      railgunSmartWalletContract,
-      railgunSmartWalletContract.contract.filters.Shield(),
-    ),
+    awaitRailgunSmartWalletShield(railgunSmartWalletContract),
     promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out waiting for NFT shield'),
+    txResponse.wait(),
   ]);
 
   return shield;

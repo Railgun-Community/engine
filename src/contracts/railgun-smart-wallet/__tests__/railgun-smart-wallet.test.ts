@@ -1,7 +1,7 @@
 /// <reference types="../../../types/global" />
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Contract, FallbackProvider, JsonRpcProvider, TransactionReceipt, Wallet } from 'ethers';
+import { Contract, JsonRpcProvider, TransactionReceipt, Wallet } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
@@ -18,6 +18,7 @@ import {
 import {
   awaitMultipleScans,
   awaitRailgunSmartWalletEvent,
+  awaitRailgunSmartWalletShield,
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
@@ -736,12 +737,9 @@ describe('Railgun Smart Wallet', function runTests() {
 
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
     await Promise.all([
-      txResponse.wait(),
-      awaitRailgunSmartWalletEvent(
-        railgunSmartWalletContract,
-        railgunSmartWalletContract.contract.filters.Shield(),
-      ),
+      awaitRailgunSmartWalletShield(railgunSmartWalletContract),
       promiseTimeout(awaitScan(wallet, chain), 5000),
+      txResponse.wait(),
     ]);
 
     // Check result

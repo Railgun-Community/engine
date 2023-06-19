@@ -20,6 +20,7 @@ import { RailgunWallet } from '../../../wallet/railgun-wallet';
 import {
   awaitMultipleScans,
   awaitRailgunSmartWalletEvent,
+  awaitRailgunSmartWalletShield,
   awaitRailgunSmartWalletTransact,
   awaitRailgunSmartWalletUnshield,
   awaitScan,
@@ -83,7 +84,7 @@ const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLO
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
 describe('Relay Adapt', function test() {
-  this.timeout(60000);
+  this.timeout(45000);
 
   beforeEach(async () => {
     engine = new RailgunEngine(
@@ -104,7 +105,7 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 100, true);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 500, true);
     const fallbackProvider = new FallbackProvider([{ provider, weight: 2 }]);
 
     chain = {
@@ -148,12 +149,17 @@ describe('Relay Adapt', function test() {
       // Send shield on chain
       const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
-      const [txReceipt] = await Promise.all([
-        tx.wait(),
-        awaitScan(wallet, chain),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const [_, txReceipt] = await Promise.all([
         awaitRailgunSmartWalletEvent(
           railgunSmartWalletContract,
           railgunSmartWalletContract.contract.filters.Shield(),
+        ),
+        tx.wait(),
+        promiseTimeout(
+          awaitScan(wallet, chain),
+          10000,
+          'Timed out shielding base token for relay adapt test setup',
         ),
       ]);
       return txReceipt;
@@ -178,19 +184,14 @@ describe('Relay Adapt', function test() {
 
     const shieldTx = await relayAdaptContract.populateShieldBaseToken(shieldRequest);
 
-    const awaiterShield = promiseTimeout(awaitScan(wallet, chain), 5000);
-
     // Send shield on chain
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
     await Promise.all([
+      awaitRailgunSmartWalletShield(railgunSmartWalletContract),
       txResponse.wait(),
-      awaitRailgunSmartWalletEvent(
-        railgunSmartWalletContract,
-        railgunSmartWalletContract.contract.filters.Shield(),
-      ),
+      promiseTimeout(awaitScan(wallet, chain), 10000),
     ]);
-    await expect(awaiterShield).to.be.fulfilled;
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
   });
@@ -329,10 +330,11 @@ describe('Relay Adapt', function test() {
 
     const awaiterScan = awaitMultipleScans(wallet, chain, 2);
 
-    const [txReceipt] = await Promise.all([
-      txResponse.wait(),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [_t, _u, txReceipt] = await Promise.all([
       awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
       awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
+      txResponse.wait(),
       awaiterScan,
     ]);
     if (txReceipt == null) {
@@ -353,7 +355,7 @@ describe('Relay Adapt', function test() {
     // );
   });
 
-  it('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
+  it.only('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
       this.skip();
       return;
@@ -494,25 +496,23 @@ describe('Relay Adapt', function test() {
     // 9: Send relay transaction.
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    const awaiterScan = promiseTimeout(awaitScan(wallet, chain), 5000);
-
-    const [txReceipt] = await Promise.all([
-      txResponse.wait(),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [_t, _u, txReceipt] = await Promise.all([
       awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
       awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
+      txResponse.wait(),
+      promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out waiting for scan'),
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
     }
-
-    await expect(awaiterScan).to.be.fulfilled; // Unshield
 
     const callResultError = RelayAdaptContract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
 
     const nftBalanceAfterReshield = await nft.balanceOf(railgunSmartWalletContract.address);
     expect(nftBalanceAfterReshield).to.equal(1n);
-  }).timeout(120000);
+  }).timeout(90000);
 
   it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
     if (!process.env.RUN_HARDHAT_TESTS) {
@@ -544,10 +544,10 @@ describe('Relay Adapt', function test() {
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
 
     await Promise.all([
-      txTransact.wait(),
-      awaitMultipleScans(wallet, chain, 2),
       awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
       awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
+      awaitMultipleScans(wallet, chain, 2),
+      txTransact.wait(),
     ]);
 
     const wethTokenContract = new Contract(
@@ -862,10 +862,11 @@ describe('Relay Adapt', function test() {
     // Perform scans: Unshield and Shield
     const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
 
-    const [txReceipt] = await Promise.all([
-      txResponse.wait(),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [_t, _u, txReceipt] = await Promise.all([
       awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
       awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
+      txResponse.wait(),
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');

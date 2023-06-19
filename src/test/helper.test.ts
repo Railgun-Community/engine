@@ -16,6 +16,7 @@ import { ArtifactGetter, PublicInputs } from '../models/prover-types';
 import { mnemonicToPrivateKey } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
+import { promiseTimeout } from '../utils';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -89,10 +90,14 @@ export const awaitRailgunSmartWalletEvent = async (
   railgunSmartWallet: RailgunSmartWalletContract,
   event: TypedDeferredTopicFilter<TypedContractEvent>,
 ) => {
-  await new Promise<void>((resolve) => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    railgunSmartWallet.contract.once(event, () => resolve());
-  });
+  await promiseTimeout(
+    new Promise<void>((resolve) => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      railgunSmartWallet.contractForListeners.once(event, () => resolve());
+    }),
+    15000,
+    `Timed out waiting for RailgunSmartWallet event: ${event.fragment.name}`,
+  );
 };
 
 export const awaitRailgunSmartWalletShield = async (
