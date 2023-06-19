@@ -96,7 +96,7 @@ describe('Transaction/Transaction Batch', function run() {
       undefined, // skipMerkletreeScans
     );
 
-    const provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 500, true);
+    const provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 500, 1);
 
     const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
     await engine.loadNetwork(

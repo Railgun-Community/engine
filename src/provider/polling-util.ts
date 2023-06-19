@@ -45,7 +45,9 @@ export const createPollingJsonRpcProviderForListeners = async (
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider.providerConfigs[0].provider._getConnection();
     const { chainId } = await provider.getNetwork();
-    return new PollingJsonRpcProvider(url, Number(chainId));
+    // eslint-disable-next-line no-underscore-dangle
+    const maxLogsPerBatch = provider.providerConfigs[0].provider._getOption('batchMaxSize');
+    return new PollingJsonRpcProvider(url, Number(chainId), maxLogsPerBatch);
   }
 
   throw new Error('Invalid provider type');

@@ -105,7 +105,7 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 500, true);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 500, 1);
     const fallbackProvider = new FallbackProvider([{ provider, weight: 2 }]);
 
     chain = {

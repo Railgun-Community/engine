@@ -326,8 +326,8 @@ describe('Note/TransactNote', () => {
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
-        new PollingJsonRpcProvider('abc', 1, 500, true),
-        new PollingJsonRpcProvider('abc', 1, 500, true),
+        new PollingJsonRpcProvider('abc', 1, 500, 1),
+        new PollingJsonRpcProvider('abc', 1, 500, 1),
         chain,
       );
 
