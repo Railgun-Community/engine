@@ -1,6 +1,6 @@
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Contract, JsonRpcProvider, Wallet } from 'ethers';
+import { Contract, FallbackProvider, JsonRpcProvider, Wallet } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { RailgunEngine } from '../railgun-engine';
@@ -40,7 +40,7 @@ import { TransactionBatch } from '../transaction/transaction-batch';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { ContractStore } from '../contracts/contract-store';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../test/shared-test.test';
-import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
+import { createPollingJsonRpcProviderForListeners } from '../provider/polling-util';
 
 chai.use(chaiAsPromised);
 
@@ -102,7 +102,7 @@ describe('RailgunEngine', function test() {
     }
 
     // EngineDebug.init(console); // uncomment for logs
-    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, true);
+    provider = new JsonRpcProvider(config.rpc);
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),
@@ -121,11 +121,13 @@ describe('RailgunEngine', function test() {
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
+      pollingProvider,
       24,
     );
     await engine.scanHistory(chain);

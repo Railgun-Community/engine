@@ -62,6 +62,7 @@ import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
 import { TransactionHistoryReceiveTokenAmount } from '../../../models/wallet-types';
 import { ShieldRequestStruct } from '../../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
+import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -107,16 +108,18 @@ describe('Railgun Smart Wallet', function runTests() {
       return;
     }
 
-    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, true);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 100);
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),
     };
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
+      pollingProvider,
       0,
     );
     await engine.scanHistory(chain);
@@ -163,7 +166,7 @@ describe('Railgun Smart Wallet', function runTests() {
   it('Should fail to instantiate without a polling provider', () => {
     const nonPollingProvider = new JsonRpcProvider(config.rpc);
     expect(() => {
-      return new RailgunSmartWalletContract('abc', nonPollingProvider, chain);
+      return new RailgunSmartWalletContract('abc', nonPollingProvider, nonPollingProvider, chain);
     }).to.throw(
       'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
     );

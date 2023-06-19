@@ -5,7 +5,7 @@ import { JsonRpcProvider, JsonRpcApiProviderOptions, Network } from 'ethers';
  * rather than using sparsely-implemented eth_filter events.
  */
 export class PollingJsonRpcProvider extends JsonRpcProvider {
-  constructor(url: string, chainId: number, disableBatching = false) {
+  constructor(url: string, chainId: number, pollingInterval = 10000, disableBatching = false) {
     const network = Network.from(chainId);
     const options: JsonRpcApiProviderOptions = {
       polling: true,
@@ -15,5 +15,6 @@ export class PollingJsonRpcProvider extends JsonRpcProvider {
       options.batchMaxCount = 1;
     }
     super(url, network, options);
+    this.pollingInterval = pollingInterval;
   }
 }

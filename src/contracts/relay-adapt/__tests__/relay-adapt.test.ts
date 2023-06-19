@@ -51,6 +51,7 @@ import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
 import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { promiseTimeout } from '../../../utils';
+import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -103,18 +104,20 @@ describe('Relay Adapt', function test() {
       return;
     }
 
-    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, true);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 100, true);
     const fallbackProvider = new FallbackProvider([{ provider, weight: 2 }]);
 
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),
     };
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(fallbackProvider);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       fallbackProvider,
+      pollingProvider,
       DEPLOYMENT_BLOCK,
     );
     await engine.scanHistory(chain);

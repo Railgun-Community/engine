@@ -107,7 +107,8 @@ describe('Transaction/ERC20', function test() {
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
-        new PollingJsonRpcProvider('abc', 1, true),
+        new PollingJsonRpcProvider('abc', 1, 100, true),
+        new PollingJsonRpcProvider('abc', 1, 100, true),
         chain,
       );
 

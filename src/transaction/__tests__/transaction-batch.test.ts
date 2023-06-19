@@ -23,6 +23,7 @@ import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { RailgunEngine } from '../../railgun-engine';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
+import { createPollingJsonRpcProviderForListeners } from '../../provider/polling-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -95,13 +96,15 @@ describe('Transaction/Transaction Batch', function run() {
       undefined, // skipMerkletreeScans
     );
 
-    const provider = new PollingJsonRpcProvider(config.rpc, config.chainId, true);
+    const provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 100, true);
 
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
       provider,
+      pollingProvider,
       0,
     );
 

@@ -326,100 +326,103 @@ describe('Note/TransactNote', () => {
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
-        new PollingJsonRpcProvider('abc', 1, true),
+        new PollingJsonRpcProvider('abc', 1, 100, true),
+        new PollingJsonRpcProvider('abc', 1, 100, true),
         chain,
       );
 
     tokenDataGetter = new TokenDataGetter(db, chain);
   });
 
-  it('Should encrypt and decrypt notes', () => {
-    ciphertextVectors.forEach(async (vector) => {
-      const viewingPublicKey = hexStringToBytes(vector.note.pubkey);
+  it('Should encrypt and decrypt notes', async () => {
+    await Promise.all(
+      ciphertextVectors.map(async (vector) => {
+        const viewingPublicKey = hexStringToBytes(vector.note.pubkey);
 
-      // Create Note object
-      const address = {
-        masterPublicKey: hexToBigInt(vector.note.pubkey),
-        viewingPublicKey,
-      };
-      const privateViewingKey = randomBytes(32);
-      const publicViewingKey = await getPublicViewingKey(privateViewingKey);
-      const viewingKeyPair: ViewingKeyPair = {
-        privateKey: privateViewingKey,
-        pubkey: publicViewingKey,
-      };
+        // Create Note object
+        const address = {
+          masterPublicKey: hexToBigInt(vector.note.pubkey),
+          viewingPublicKey,
+        };
+        const privateViewingKey = randomBytes(32);
+        const publicViewingKey = await getPublicViewingKey(privateViewingKey);
+        const viewingKeyPair: ViewingKeyPair = {
+          privateKey: privateViewingKey,
+          pubkey: publicViewingKey,
+        };
 
-      const tokenData = getTokenDataERC20(vector.note.token);
+        const tokenData = getTokenDataERC20(vector.note.token);
 
-      const note = TransactNote.createTransfer(
-        address,
-        address,
-        vector.note.random,
-        hexToBigInt(vector.note.amount),
-        tokenData,
-        viewingKeyPair,
-        false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
-        'something', // memoText
-      );
+        const note = TransactNote.createTransfer(
+          address,
+          address,
+          vector.note.random,
+          hexToBigInt(vector.note.amount),
+          tokenData,
+          viewingKeyPair,
+          false, // showSenderAddressToRecipient
+          OutputType.RelayerFee,
+          'something', // memoText
+        );
 
-      const sharedKeyBytes = hexStringToBytes(vector.sharedKey);
+        const sharedKeyBytes = hexStringToBytes(vector.sharedKey);
 
-      // Get encrypted values
-      const { noteCiphertext, noteMemo } = note.encrypt(
-        sharedKeyBytes,
-        address.masterPublicKey,
-        undefined,
-      );
+        // Get encrypted values
+        const { noteCiphertext, noteMemo } = note.encrypt(
+          sharedKeyBytes,
+          address.masterPublicKey,
+          undefined,
+        );
 
-      // Check if encrypted values are successfully decrypted
-      const decrypted = await TransactNote.decrypt(
-        address,
-        noteCiphertext,
-        sharedKeyBytes,
-        noteMemo,
-        note.annotationData,
-        undefined, // blindedReceiverViewingKey
-        undefined, // blindedSenderViewingKey
-        undefined, // senderRandom
-        true, // isSentNote
-        true, // isLegacyDecryption
-        tokenDataGetter,
-        BLOCK_NUMBER,
-      );
-      expect(decrypted.tokenHash).to.equal(note.tokenHash);
-      expect(decrypted.value).to.equal(note.value);
-      expect(decrypted.random).to.equal(note.random);
-      expect(decrypted.hash).to.equal(note.hash);
-      expect(decrypted.memoText).to.equal(note.memoText);
+        // Check if encrypted values are successfully decrypted
+        const decrypted = await TransactNote.decrypt(
+          address,
+          noteCiphertext,
+          sharedKeyBytes,
+          noteMemo,
+          note.annotationData,
+          undefined, // blindedReceiverViewingKey
+          undefined, // blindedSenderViewingKey
+          undefined, // senderRandom
+          true, // isSentNote
+          true, // isLegacyDecryption
+          tokenDataGetter,
+          BLOCK_NUMBER,
+        );
+        expect(decrypted.tokenHash).to.equal(note.tokenHash);
+        expect(decrypted.value).to.equal(note.value);
+        expect(decrypted.random).to.equal(note.random);
+        expect(decrypted.hash).to.equal(note.hash);
+        expect(decrypted.memoText).to.equal(note.memoText);
 
-      // Check if vector encrypted values are successfully decrypted
-      const decryptedFromCiphertext = await TransactNote.decrypt(
-        address,
-        noteCiphertext,
-        sharedKeyBytes,
-        noteMemo,
-        note.annotationData,
-        undefined, // blindedReceiverViewingKey
-        undefined, // blindedSenderViewingKey
-        undefined, // senderRandom
-        true, // isSentNote
-        true, // isLegacyDecryption
-        tokenDataGetter,
-        BLOCK_NUMBER,
-      );
-      expect(decryptedFromCiphertext.tokenHash).to.equal(note.tokenHash);
-      expect(decryptedFromCiphertext.value).to.equal(note.value);
-      expect(decryptedFromCiphertext.random).to.equal(note.random);
-      expect(decryptedFromCiphertext.hash).to.equal(note.hash);
-      expect(decryptedFromCiphertext.memoText).to.equal(note.memoText);
-      expect(decryptedFromCiphertext.receiverAddressData.masterPublicKey).to.equal(
-        address.masterPublicKey,
-      );
-      expect(decryptedFromCiphertext.receiverAddressData.viewingPublicKey).to.deep.equal(
-        new Uint8Array(),
-      );
-    });
+        // Check if vector encrypted values are successfully decrypted
+        const decryptedFromCiphertext = await TransactNote.decrypt(
+          address,
+          noteCiphertext,
+          sharedKeyBytes,
+          noteMemo,
+          note.annotationData,
+          undefined, // blindedReceiverViewingKey
+          undefined, // blindedSenderViewingKey
+          undefined, // senderRandom
+          true, // isSentNote
+          true, // isLegacyDecryption
+          tokenDataGetter,
+          BLOCK_NUMBER,
+        );
+        expect(decryptedFromCiphertext.tokenHash).to.equal(note.tokenHash);
+        expect(decryptedFromCiphertext.value).to.equal(note.value);
+        expect(decryptedFromCiphertext.random).to.equal(note.random);
+        expect(decryptedFromCiphertext.hash).to.equal(note.hash);
+        expect(decryptedFromCiphertext.memoText).to.equal(note.memoText);
+        expect(decryptedFromCiphertext.receiverAddressData.masterPublicKey).to.equal(
+          address.masterPublicKey,
+        );
+        expect(decryptedFromCiphertext.receiverAddressData.viewingPublicKey).to.deep.equal(
+          new Uint8Array(),
+        );
+      }),
+    );
   });
 
   it('Should serialize and deserialize notes', async () => {

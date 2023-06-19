@@ -13,6 +13,7 @@ import { ContractStore } from '../../contract-store';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { CommitmentEvent } from '../../../models/event-types';
 import { CommitmentType, Nullifier } from '../../../models/formatted-types';
+import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -88,18 +89,20 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
 
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
-    provider = new PollingJsonRpcProvider('https://rpc.ankr.com/eth', 1, true);
+    provider = new PollingJsonRpcProvider('https://rpc.ankr.com/eth', 1, 100);
 
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),
     };
     const fakeRelayAdaptContract = '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9';
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
     await engine.loadNetwork(
       chain,
       '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9', // Live ETH proxy
       fakeRelayAdaptContract,
       provider,
+      pollingProvider,
       0,
     );
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];

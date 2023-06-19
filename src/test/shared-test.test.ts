@@ -66,7 +66,7 @@ export const shieldNFTForTest = async (
       railgunSmartWalletContract,
       railgunSmartWalletContract.contract.filters.Shield(),
     ),
-    promiseTimeout(awaitScan(wallet, chain), 5000),
+    promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out waiting for NFT shield'),
   ]);
 
   return shield;

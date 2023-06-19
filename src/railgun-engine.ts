@@ -482,18 +482,25 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     railgunSmartWalletContractAddress: string,
     relayAdaptContractAddress: string,
-    provider: PollingJsonRpcProvider | FallbackProvider,
+    defaultProvider: PollingJsonRpcProvider | FallbackProvider,
+    pollingProvider: PollingJsonRpcProvider,
     deploymentBlock: number,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
-    assertIsPollingProvider(provider);
 
     try {
-      // Test that provider responds.
-      await provider.getBlockNumber();
+      await defaultProvider.getBlockNumber();
     } catch (err) {
       EngineDebug.error(err as Error);
-      throw new Error(`Cannot connect to RPC provider.`);
+      throw new Error(`Cannot connect to default fallback RPC provider.`);
+    }
+
+    assertIsPollingProvider(pollingProvider);
+    try {
+      await pollingProvider.getBlockNumber();
+    } catch (err) {
+      EngineDebug.error(err as Error);
+      throw new Error(`Cannot connect to polling RPC provider.`);
     }
 
     const hasMerkletree = this.merkletrees[chain.type] && this.merkletrees[chain.type][chain.id];
@@ -513,7 +520,12 @@ class RailgunEngine extends EventEmitter {
       ContractStore.railgunSmartWalletContracts[chain.type] = [];
     }
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
-      new RailgunSmartWalletContract(railgunSmartWalletContractAddress, provider, chain);
+      new RailgunSmartWalletContract(
+        railgunSmartWalletContractAddress,
+        defaultProvider,
+        pollingProvider,
+        chain,
+      );
 
     // Create relay adapt contract instance
     if (!ContractStore.relayAdaptContracts[chain.type]) {
@@ -521,7 +533,7 @@ class RailgunEngine extends EventEmitter {
     }
     ContractStore.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
       relayAdaptContractAddress,
-      provider,
+      defaultProvider,
     );
 
     // Create tree controllers

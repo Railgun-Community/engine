@@ -4,7 +4,6 @@ import {
   ContractTransaction,
   FallbackProvider,
   Interface,
-  Provider,
   Result,
 } from 'ethers';
 import EventEmitter from 'events';
@@ -72,9 +71,9 @@ const SCAN_TIMEOUT_ERROR_MESSAGE = 'getLogs request timed out after 5 seconds.';
 class RailgunSmartWalletContract extends EventEmitter {
   readonly contract: RailgunSmartWallet;
 
-  readonly address: string;
+  readonly contractForListeners: RailgunSmartWallet;
 
-  readonly provider: Provider;
+  readonly address: string;
 
   readonly chain: Chain;
 
@@ -85,18 +84,27 @@ class RailgunSmartWalletContract extends EventEmitter {
    */
   constructor(
     railgunSmartWalletContractAddress: string,
-    provider: PollingJsonRpcProvider | FallbackProvider,
+    defaultProvider: PollingJsonRpcProvider | FallbackProvider,
+    pollingProvider: PollingJsonRpcProvider,
     chain: Chain,
   ) {
     super();
-    assertIsPollingProvider(provider);
     this.address = railgunSmartWalletContractAddress;
     this.contract = new Contract(
       railgunSmartWalletContractAddress,
       ABIRailgunSmartWallet,
-      provider,
+      defaultProvider,
     ) as unknown as RailgunSmartWallet;
-    this.provider = provider;
+
+    // Because of a 'stallTimeout' bug in Ethers v6, all providers in a FallbackProvider will get called simultaneously.
+    // So, we'll use a single json rpc (the first in the FallbackProvider) to poll for the event listeners.
+    assertIsPollingProvider(pollingProvider);
+    this.contractForListeners = new Contract(
+      railgunSmartWalletContractAddress,
+      ABIRailgunSmartWallet,
+      pollingProvider,
+    ) as unknown as RailgunSmartWallet;
+
     this.chain = chain;
   }
 
@@ -303,7 +311,7 @@ class RailgunSmartWalletContract extends EventEmitter {
     const transactTopic = this.contract.getEvent('Transact').getFragment().topicHash;
     const unshieldTopic = this.contract.getEvent('Unshield').getFragment().topicHash;
 
-    await this.contract.on(
+    await this.contractForListeners.on(
       // @ts-expect-error - Use * to request all events
       '*', // All Events
       (event: ContractEventPayload) => {
@@ -627,6 +635,7 @@ class RailgunSmartWalletContract extends EventEmitter {
    */
   async unload() {
     await this.contract.removeAllListeners();
+    await this.contractForListeners?.removeAllListeners();
   }
 }
 
