@@ -144,18 +144,21 @@ export const getEthersWallet = (mnemonic: string, provider?: Provider): Wallet =
 // TODO: This logic is messy - it's because of Ethers v6.4.0.
 // It seems like the nonce isn't updated quickly enough via hardhat.
 // Ethers will probably improve the nonce calculation in the future. (Or hardhat?).
-// We should be able to remove `additionalNonce` when it's updated.
+// We should be able to remove `additionalNonce` and `retries` when it's updated.
 export const sendTransactionWithLatestNonce = async (
   wallet: Wallet,
   transaction: ContractTransaction,
-  additionalNonce = 0,
+  expectedNextNonce?: number,
+  retries = 0,
 ): Promise<TransactionResponse> => {
-  if (additionalNonce > 2) {
+  if (retries > 3) {
     throw new Error('Nonce already used - many pending transactions');
   }
+  const latestNonce = await wallet.getNonce('latest');
+  const nonce = expectedNextNonce ?? latestNonce;
   const updatedNonceTx: ContractTransaction = {
     ...transaction,
-    nonce: (await wallet.getNonce('latest')) + additionalNonce,
+    nonce,
   };
   try {
     return await wallet.sendTransaction(updatedNonceTx);
@@ -164,7 +167,7 @@ export const sendTransactionWithLatestNonce = async (
       throw err;
     }
     if (err.message.includes('nonce has already been used')) {
-      return sendTransactionWithLatestNonce(wallet, transaction, additionalNonce + 1);
+      return sendTransactionWithLatestNonce(wallet, transaction, nonce + 1, retries + 1);
     }
     throw err;
   }
