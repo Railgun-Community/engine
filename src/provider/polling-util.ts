@@ -50,7 +50,7 @@ export const createPollingJsonRpcProviderForListeners = async (
     const { url } = provider.providerConfigs[0].provider._getConnection();
     const { chainId } = await provider.getNetwork();
     // eslint-disable-next-line no-underscore-dangle
-    const maxLogsPerBatch = provider.providerConfigs[0].provider._getOption('batchMaxSize');
+    const maxLogsPerBatch = provider.providerConfigs[0].provider._getOption('batchMaxCount');
     return new PollingJsonRpcProvider(url, Number(chainId), pollingInterval, maxLogsPerBatch);
   }
 
