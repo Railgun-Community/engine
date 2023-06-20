@@ -3,6 +3,7 @@ import { bytesToHex } from 'ethereum-cryptography/utils';
 import { ByteLength, hexToBigInt, hexToBytes, nToHex } from './bytes';
 import { sha256 } from './hash';
 import { adjustBytes25519, getPrivateScalarFromPrivateKey } from './keys-utils';
+import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 function normalizeRandomLegacy(random: string): bigint {
   // Hash with sha256 to get a uniform random 32 bytes of data
@@ -86,15 +87,13 @@ async function getSharedSymmetricKeyLegacy(
   blindedPublicKeyPairB: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
   try {
-    // Create curve point instance from ephemeral key class
-    const publicKeyPoint = Point.fromHex(bytesToHex(blindedPublicKeyPairB));
+    await initCurve25519Promise;
 
     // Retrieve private scalar from private key
     const scalar = await getPrivateScalarFromPrivateKey(privateKeyPairA);
 
     // Multiply ephemeral key by private scalar to get shared key
-    const symmetricKey = publicKeyPoint.multiply(scalar);
-    return symmetricKey.toRawBytes();
+    return scalarMultiplyWasmFallbackToJavascript(blindedPublicKeyPairB, scalar);
   } catch (err) {
     return undefined;
   }
