@@ -1,12 +1,13 @@
 import { AbstractProvider, FallbackProvider, JsonRpcProvider } from 'ethers';
 import { PollingJsonRpcProvider } from './polling-json-rpc-provider';
+import { isDefined } from '../utils/is-defined';
 
 export const isNonPollingJsonRpcProvider = (provider: AbstractProvider) => {
   if (!(provider instanceof JsonRpcProvider)) {
     return false;
   }
   // eslint-disable-next-line no-underscore-dangle
-  return !provider._getOption('polling');
+  return !isDefined(provider._getOption('polling')) || provider._getOption('polling') === false;
 };
 
 export const assertIsPollingProvider = (provider: AbstractProvider) => {

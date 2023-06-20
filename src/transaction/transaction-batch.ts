@@ -20,6 +20,7 @@ import { TreeBalance } from '../models';
 import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
 import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
+import { isDefined } from '../utils/is-defined';
 
 export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 7500;
 
@@ -56,7 +57,7 @@ export class TransactionBatch {
 
   addUnshieldData(unshieldData: UnshieldData) {
     const tokenHash = getTokenDataHash(unshieldData.tokenData);
-    if (this.unshieldDataMap[tokenHash]) {
+    if (isDefined(this.unshieldDataMap[tokenHash])) {
       throw new Error(
         'You may only call .addUnshieldData once per token for a given TransactionBatch.',
       );
@@ -72,7 +73,9 @@ export class TransactionBatch {
   }
 
   private unshieldTotal(tokenHash: string) {
-    return this.unshieldDataMap[tokenHash] ? this.unshieldDataMap[tokenHash].value : BigInt(0);
+    return isDefined(this.unshieldDataMap[tokenHash])
+      ? this.unshieldDataMap[tokenHash].value
+      : BigInt(0);
   }
 
   setAdaptID(adaptID: AdaptID) {
@@ -252,7 +255,7 @@ export class TransactionBatch {
     }
 
     const tokenHash = getTokenDataHash(tokenData);
-    if (this.unshieldDataMap[tokenHash]) {
+    if (isDefined(this.unshieldDataMap[tokenHash])) {
       const value = this.unshieldTotal(tokenHash);
       const nullUnshieldNote = TransactNote.createNullUnshieldNote(tokenData, value);
       const unshieldTokenOutputs: TransactNote[] = [nullUnshieldNote];
@@ -384,7 +387,7 @@ export class TransactionBatch {
       this.adaptID,
     );
     const tokenHash = getTokenDataHash(tokenData);
-    if (this.unshieldDataMap[tokenHash] && unshieldValue > 0) {
+    if (isDefined(this.unshieldDataMap[tokenHash]) && unshieldValue > 0) {
       transaction.addUnshieldData(this.unshieldDataMap[tokenHash], unshieldValue);
     }
     return transaction;

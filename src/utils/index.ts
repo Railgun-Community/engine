@@ -10,3 +10,4 @@ export * from './hash';
 export * from './keys-utils';
 export * from './promises';
 export * from './stringify';
+export * from './is-defined';

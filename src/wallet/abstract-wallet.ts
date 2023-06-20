@@ -69,6 +69,7 @@ import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import { getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
+import { isDefined } from '../utils/is-defined';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -135,7 +136,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param merkletree - merkletree to load
    */
   loadMerkletree(merkletree: MerkleTree) {
-    if (!this.merkletrees[merkletree.chain.type]) {
+    if (!isDefined(this.merkletrees[merkletree.chain.type])) {
       this.merkletrees[merkletree.chain.type] = [];
     }
     this.merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
@@ -326,7 +327,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private static getCommitmentType(commitment: Commitment) {
-    if (commitment.commitmentType) {
+    if (isDefined(commitment.commitmentType)) {
       // New or legacy commitment.
       return commitment.commitmentType;
     }
@@ -635,8 +636,8 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
   ): Promise<CachedStoredReceiveCommitment[]> {
     if (
-      this.cachedReceiveCommitments[chain.type] &&
-      this.cachedReceiveCommitments[chain.type][chain.id]
+      isDefined(this.cachedReceiveCommitments[chain.type]) &&
+      isDefined(this.cachedReceiveCommitments[chain.type][chain.id])
     ) {
       return this.cachedReceiveCommitments[chain.type][chain.id];
     }
@@ -656,7 +657,7 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    if (!this.cachedReceiveCommitments[chain.type]) {
+    if (!isDefined(this.cachedReceiveCommitments[chain.type])) {
       this.cachedReceiveCommitments[chain.type] = [];
     }
     this.cachedReceiveCommitments[chain.type][chain.id] = dbStoredReceiveCommitments;
@@ -665,8 +666,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   private async queryAllStoredSendCommitments(chain: Chain): Promise<CachedStoredSendCommitment[]> {
     if (
-      this.cachedSendCommitments[chain.type] &&
-      this.cachedSendCommitments[chain.type][chain.id]
+      isDefined(this.cachedSendCommitments[chain.type]) &&
+      isDefined(this.cachedSendCommitments[chain.type][chain.id])
     ) {
       return this.cachedSendCommitments[chain.type][chain.id];
     }
@@ -686,7 +687,7 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    if (!this.cachedSendCommitments[chain.type]) {
+    if (!isDefined(this.cachedSendCommitments[chain.type])) {
       this.cachedSendCommitments[chain.type] = [];
     }
     this.cachedSendCommitments[chain.type][chain.id] = dbStoredSendCommitments;
@@ -698,7 +699,10 @@ abstract class AbstractWallet extends EventEmitter {
     commitmentCache: Cache,
     cachedCommitment: CachedStoredReceiveCommitment | CachedStoredSendCommitment,
   ) {
-    if (!commitmentCache[chain.type] || !commitmentCache[chain.type][chain.id]) {
+    if (
+      !isDefined(commitmentCache[chain.type]) ||
+      !isDefined(commitmentCache[chain.type][chain.id])
+    ) {
       return;
     }
     const cacheForChain = commitmentCache[chain.type][chain.id];
@@ -729,9 +733,9 @@ abstract class AbstractWallet extends EventEmitter {
         const txo = storedReceiveCommitment;
 
         // Check if TXO has been spent.
-        if (!txo.spendtxid) {
+        if (txo.spendtxid === false) {
           const storedNullifier = await merkletree.getStoredNullifierTxid(txo.nullifier);
-          if (storedNullifier) {
+          if (isDefined(storedNullifier)) {
             txo.spendtxid = storedNullifier;
             // Write nullifier spend txid to db.
             await this.db.put(
@@ -785,7 +789,7 @@ abstract class AbstractWallet extends EventEmitter {
 
         const note = await TransactNote.deserialize(sentCommitment.decrypted, vpk, tokenDataGetter);
 
-        if (!note.blockNumber) {
+        if (!isDefined(note.blockNumber)) {
           return;
         }
         if (startingBlock != null && note.blockNumber < startingBlock) {
@@ -905,7 +909,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     let hasShownNoBlockNumbersError = false;
     return txos.filter((txo) => {
-      if (!txo.note.blockNumber) {
+      if (!isDefined(txo.note.blockNumber)) {
         if (!hasShownNoBlockNumbersError) {
           // This will occur for legacy scanned notes.
           // New notes will have block number, and will optimize the history response.
@@ -930,7 +934,7 @@ abstract class AbstractWallet extends EventEmitter {
       if (note.value === 0n) {
         return;
       }
-      if (!txidTransactionMap[txid]) {
+      if (!isDefined(txidTransactionMap[txid])) {
         txidTransactionMap[txid] = {
           txid,
           timestamp,
@@ -980,7 +984,7 @@ abstract class AbstractWallet extends EventEmitter {
         if (note.value === 0n) {
           return;
         }
-        if (!spendtxid) {
+        if (spendtxid === false) {
           return;
         }
         if (seenSpentTxids.includes(spendtxid)) {
@@ -1024,7 +1028,7 @@ abstract class AbstractWallet extends EventEmitter {
         if (note.value === 0n) {
           return;
         }
-        if (!txidTransactionMap[txid]) {
+        if (!isDefined(txidTransactionMap[txid])) {
           txidTransactionMap[txid] = {
             txid,
             timestamp,
@@ -1048,7 +1052,7 @@ abstract class AbstractWallet extends EventEmitter {
         };
         const isNonLegacyTransfer =
           !isLegacyTransactNote &&
-          noteAnnotationData &&
+          isDefined(noteAnnotationData) &&
           noteAnnotationData.outputType === OutputType.Transfer;
         if (isNonLegacyTransfer) {
           (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
@@ -1062,7 +1066,7 @@ abstract class AbstractWallet extends EventEmitter {
     // Add unshield events to txidTransactionMap
     allUnshieldEvents.forEach((unshieldEvent) => {
       const foundUnshieldTransactionInTransactCommitments = txidTransactionMap[unshieldEvent.txid];
-      if (!foundUnshieldTransactionInTransactCommitments) {
+      if (!isDefined(foundUnshieldTransactionInTransactCommitments)) {
         // This will occur on a self-signed unshield.
         // There is no commitment (or tokenAmounts) for this kind of unshield transaction.
         txidTransactionMap[unshieldEvent.txid] = {
@@ -1158,7 +1162,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   private getMerkletreeForChain(chain: Chain): MerkleTree {
     const merkletree = this.merkletrees[chain.type][chain.id];
-    if (!merkletree) {
+    if (!isDefined(merkletree)) {
       throw new Error(`No merkletree for chain ${chain.type}:${chain.id}`);
     }
     return merkletree;
@@ -1177,7 +1181,7 @@ abstract class AbstractWallet extends EventEmitter {
     TXOs.forEach((txo) => {
       const tokenHash = formatToByteLength(txo.note.tokenHash, ByteLength.UINT_256, false);
       // If we don't have an entry for this token yet, create one
-      if (!balances[tokenHash]) {
+      if (!isDefined(balances[tokenHash])) {
         balances[tokenHash] = {
           balance: BigInt(0),
           utxos: [],
@@ -1186,7 +1190,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // If utxo is unspent process it
-      if (!txo.spendtxid) {
+      if (txo.spendtxid === false) {
         // Store utxo
         balances[tokenHash].utxos.push(txo);
         // Increment balance
@@ -1200,7 +1204,7 @@ abstract class AbstractWallet extends EventEmitter {
   async getBalance(chain: Chain, tokenAddress: string): Promise<Optional<bigint>> {
     const balances = await this.balances(chain);
     const balanceForToken = balances[formatToByteLength(tokenAddress, 32, false)];
-    return balanceForToken ? balanceForToken.balance : undefined;
+    return isDefined(balanceForToken) ? balanceForToken.balance : undefined;
   }
 
   /**
@@ -1222,7 +1226,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Loop through each TXO and sort by tree
       balances[token].utxos.forEach((utxo) => {
-        if (!balancesByTree[token][utxo.tree]) {
+        if (!isDefined(balancesByTree[token][utxo.tree])) {
           balancesByTree[token][utxo.tree] = {
             balance: utxo.note.value,
             utxos: [utxo],
@@ -1240,7 +1244,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   async balancesByTreeForToken(chain: Chain, tokenHash: string): Promise<TreeBalance[]> {
     const balances = await this.balancesByTree(chain);
-    const treeSortedBalances = balances[tokenHash] || [];
+    const treeSortedBalances = balances[tokenHash] ?? [];
     return treeSortedBalances;
   }
 
@@ -1291,7 +1295,7 @@ abstract class AbstractWallet extends EventEmitter {
         }
       }
 
-      const startScanTree = walletDetails.creationTree || 0;
+      const startScanTree = walletDetails.creationTree ?? 0;
 
       const treesToScan = latestTree - startScanTree + 1;
 
@@ -1301,7 +1305,10 @@ abstract class AbstractWallet extends EventEmitter {
         let startScanHeight = walletDetails.treeScannedHeights[treeIndex];
 
         // If creationTreeHeight exists, check if it is higher than default startScanHeight and start there if needed
-        if (treeIndex === walletDetails.creationTree && walletDetails.creationTreeHeight) {
+        if (
+          treeIndex === walletDetails.creationTree &&
+          isDefined(walletDetails.creationTreeHeight)
+        ) {
           startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
         }
 

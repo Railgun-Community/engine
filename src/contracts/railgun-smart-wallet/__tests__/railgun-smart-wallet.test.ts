@@ -64,6 +64,7 @@ import { TransactionHistoryReceiveTokenAmount } from '../../../models/wallet-typ
 import { ShieldRequestStruct } from '../../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
+import { isDefined } from '../../../utils/is-defined';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -105,7 +106,7 @@ describe('Railgun Smart Wallet', function runTests() {
 
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
 
@@ -174,7 +175,7 @@ describe('Railgun Smart Wallet', function runTests() {
   });
 
   it('[HH] Should retrieve merkle root from contract', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -185,7 +186,7 @@ describe('Railgun Smart Wallet', function runTests() {
   });
 
   it('[HH] Should check gas estimates for dummy transactions and full transactions', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -381,7 +382,7 @@ describe('Railgun Smart Wallet', function runTests() {
   }).timeout(120000);
 
   it('[HH] Should return valid merkle roots', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -400,7 +401,7 @@ describe('Railgun Smart Wallet', function runTests() {
   });
 
   it('[HH] Should return fees', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -412,7 +413,7 @@ describe('Railgun Smart Wallet', function runTests() {
   });
 
   it('[HH] Should find shield, transact and unshield as historical events', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -562,7 +563,7 @@ describe('Railgun Smart Wallet', function runTests() {
   }).timeout(120000);
 
   it('[HH] Should create 11 shields which generates 2 unshield events', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -672,7 +673,7 @@ describe('Railgun Smart Wallet', function runTests() {
   }).timeout(120000);
 
   it('[HH] Should scan and rescan history for events', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -702,7 +703,7 @@ describe('Railgun Smart Wallet', function runTests() {
   });
 
   it('[HH] Should get note hashes', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -713,7 +714,7 @@ describe('Railgun Smart Wallet', function runTests() {
   });
 
   it('[HH] Should shield erc20', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -754,7 +755,7 @@ describe('Railgun Smart Wallet', function runTests() {
   }).timeout(20000);
 
   it('[HH] Should shield erc721', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -814,7 +815,7 @@ describe('Railgun Smart Wallet', function runTests() {
   }).timeout(20000);
 
   it('[HH] Should create transactions and parse tree updates', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -908,7 +909,7 @@ describe('Railgun Smart Wallet', function runTests() {
   }).timeout(120000);
 
   afterEach(async () => {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
     await engine.unload();

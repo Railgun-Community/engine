@@ -29,6 +29,7 @@ import { UnshieldNoteERC20 } from '../note/erc20/unshield-note-erc20';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { getTokenDataHash } from '../note';
 import { calculateTotalSpend } from '../solutions/utxos';
+import { isDefined } from '../utils/is-defined';
 
 class Transaction {
   private readonly adaptID: AdaptID;
@@ -117,11 +118,12 @@ class Transaction {
       }
     }
 
-    this.unshieldFlag = allowOverride ? UnshieldFlag.OVERRIDE : UnshieldFlag.UNSHIELD;
+    this.unshieldFlag =
+      isDefined(allowOverride) && allowOverride ? UnshieldFlag.OVERRIDE : UnshieldFlag.UNSHIELD;
   }
 
   get unshieldValue() {
-    return this.unshieldNote ? this.unshieldNote.value : BigInt(0);
+    return isDefined(this.unshieldNote) ? this.unshieldNote.value : BigInt(0);
   }
 
   /**
@@ -202,7 +204,8 @@ class Transaction {
     }
 
     // Push unshield output if unshield is requested
-    const hasUnshield = this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && this.unshieldNote;
+    const hasUnshield =
+      this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && isDefined(this.unshieldNote);
     if (hasUnshield) {
       allOutputs.push(this.unshieldNote);
     }

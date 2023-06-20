@@ -24,6 +24,7 @@ import { getTokenDataERC20 } from '../../note/note-util';
 import { RailgunEngine } from '../../railgun-engine';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { createPollingJsonRpcProviderForListeners } from '../../provider/polling-util';
+import { isDefined } from '../../utils/is-defined';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -83,7 +84,7 @@ describe('Transaction/Transaction Batch', function run() {
     );
     ethersWallet = getEthersWallet(testMnemonic);
 
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
 
@@ -145,7 +146,7 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   it('[HH] Should validate transaction batch outputs', async function test() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -221,7 +222,7 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   it('[HH] Should validate transaction batch outputs w/ unshields', async function test() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -356,7 +357,7 @@ describe('Transaction/Transaction Batch', function run() {
   });
 
   this.afterAll(async () => {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
 
