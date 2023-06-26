@@ -2,6 +2,13 @@ import BN from 'bn.js';
 import crypto from 'crypto';
 import { hexToBytes } from 'ethereum-cryptography/utils';
 import { BytesData } from '../models/formatted-types';
+import { isReactNative } from './runtime';
+
+// TextEncoder/TextDecoder (used in this file) needs to shimmed in React Native
+if (isReactNative) {
+  // eslint-disable-next-line global-require
+  require('fast-text-encoding');
+}
 
 export enum ByteLength {
   UINT_8 = 1,
