@@ -8,7 +8,14 @@ import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 import { arrayify, ByteLength, hexlify, nToHex } from '../utils/bytes';
 import { aes } from '../utils/encryption';
 import { isDefined } from '../utils/is-defined';
+import { isReactNative } from '../utils/runtime';
 import WalletInfo from '../wallet/wallet-info';
+
+// TextEncoder/TextDecoder (used in this file) needs to shimmed in React Native
+if (isReactNative) {
+  // eslint-disable-next-line global-require
+  require('fast-text-encoding');
+}
 
 // Annotation Data used to be stored as the leading bytes in Memo field.
 export const LEGACY_MEMO_METADATA_BYTE_CHUNKS = 2;

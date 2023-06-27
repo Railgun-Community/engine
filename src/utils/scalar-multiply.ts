@@ -2,8 +2,7 @@ import { Point } from '@noble/ed25519';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, nToBytes } from './bytes';
-
-const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+import { isReactNative } from './runtime';
 
 interface ScalarMultMod {
   default?: () => Promise<void>;
