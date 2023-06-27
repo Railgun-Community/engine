@@ -53,6 +53,7 @@ import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { promiseTimeout } from '../../../utils';
 import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
+import { isDefined } from '../../../utils/is-defined';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -79,7 +80,9 @@ const NFT_ADDRESS = config.contracts.testERC721;
 const wethTokenData = getTokenDataERC20(WETH_TOKEN_ADDRESS);
 
 const DEAD_ADDRESS = '0x000000000000000000000000000000000000dEaD';
-const DEPLOYMENT_BLOCK = process.env.DEPLOYMENT_BLOCK ? Number(process.env.DEPLOYMENT_BLOCK) : 0;
+const DEPLOYMENT_BLOCK = isDefined(process.env.DEPLOYMENT_BLOCK)
+  ? Number(process.env.DEPLOYMENT_BLOCK)
+  : 0;
 
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
@@ -101,7 +104,7 @@ describe('Relay Adapt', function test() {
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
 
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
 
@@ -167,7 +170,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should wrap and shield base token', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -197,7 +200,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should return gas estimate for unshield base token', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -250,7 +253,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should execute relay adapt transaction for unshield base token', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -356,7 +359,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -515,7 +518,7 @@ describe('Relay Adapt', function test() {
   }).timeout(60000);
 
   it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -575,7 +578,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -743,7 +746,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should revert send, but keep fees for failing cross contract call', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -904,7 +907,7 @@ describe('Relay Adapt', function test() {
   });
 
   it('[HH] Should revert send for failing re-shield', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -1208,7 +1211,7 @@ describe('Relay Adapt', function test() {
   });
 
   afterEach(async () => {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
     await engine.unload();

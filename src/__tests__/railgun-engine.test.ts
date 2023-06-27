@@ -41,6 +41,7 @@ import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { ContractStore } from '../contracts/contract-store';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../test/shared-test.test';
 import { createPollingJsonRpcProviderForListeners } from '../provider/polling-util';
+import { isDefined } from '../utils/is-defined';
 
 chai.use(chaiAsPromised);
 
@@ -97,7 +98,7 @@ describe('RailgunEngine', function test() {
     );
     engine.prover.setSnarkJSGroth16(groth16 as Groth16);
 
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
 
@@ -136,7 +137,7 @@ describe('RailgunEngine', function test() {
   });
 
   it('[HH] Should load existing wallets', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -147,7 +148,7 @@ describe('RailgunEngine', function test() {
   });
 
   it('[HH] Should show balance after shield and rescan', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -192,7 +193,7 @@ describe('RailgunEngine', function test() {
   });
 
   it('[HH] With a creation block number provided, should show balance after shield and rescan', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -252,7 +253,7 @@ describe('RailgunEngine', function test() {
   });
 
   it('[HH] Should shield, unshield and update balance, and pull formatted spend/receive transaction history', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -390,7 +391,7 @@ describe('RailgunEngine', function test() {
   }).timeout(90000);
 
   it('[HH] Should shield, max-unshield without relayer, and pull formatted spend/receive transaction history', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -484,7 +485,7 @@ describe('RailgunEngine', function test() {
   }).timeout(90000);
 
   it('[HH] Should shield, transfer and update balance, and pull formatted spend/receive transaction history', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -657,7 +658,7 @@ describe('RailgunEngine', function test() {
   }).timeout(90000);
 
   it('[HH] Should shield NFTs, transfer & unshield NFTs, and pull formatted spend/receive NFT history', async function run() {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -880,7 +881,7 @@ describe('RailgunEngine', function test() {
   });
 
   afterEach(async () => {
-    if (!process.env.RUN_HARDHAT_TESTS) {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
     await engine.unload();

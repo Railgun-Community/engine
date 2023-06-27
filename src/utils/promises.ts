@@ -12,7 +12,7 @@ export function promiseTimeout<T>(
   const timeout = new Promise((_resolve, reject) => {
     const id = setTimeout(() => {
       clearTimeout(id);
-      reject(new Error(customError || `Timed out in ${ms} ms.`));
+      reject(new Error(customError ?? `Timed out in ${ms} ms.`));
     }, ms);
   });
 

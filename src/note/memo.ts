@@ -7,6 +7,7 @@ import {
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 import { arrayify, ByteLength, hexlify, nToHex } from '../utils/bytes';
 import { aes } from '../utils/encryption';
+import { isDefined } from '../utils/is-defined';
 import WalletInfo from '../wallet/wallet-info';
 
 // Annotation Data used to be stored as the leading bytes in Memo field.
@@ -96,7 +97,7 @@ export class Memo {
   }
 
   static encodeMemoText(memoText: Optional<string>): string {
-    if (!memoText) {
+    if (!isDefined(memoText)) {
       return '';
     }
     const encoded = hexlify(new TextEncoder().encode(memoText));

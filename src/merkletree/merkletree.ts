@@ -21,6 +21,7 @@ import { getChainFullNetworkID } from '../chain/chain';
 import { SNARK_PRIME } from '../utils/constants';
 import { keccak256 } from '../utils/hash';
 import { UnshieldStoredEvent } from '../models';
+import { isDefined } from '../utils/is-defined';
 
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
@@ -340,7 +341,7 @@ class MerkleTree {
     return Promise.all(
       keySplits.map(async (keySplit) => {
         const unshieldEvent = (await this.db.get(keySplit, 'json')) as UnshieldStoredEvent;
-        unshieldEvent.timestamp = unshieldEvent.timestamp || undefined;
+        unshieldEvent.timestamp = unshieldEvent.timestamp ?? undefined;
         return unshieldEvent;
       }),
     );
@@ -355,8 +356,8 @@ class MerkleTree {
    */
   async getNodeHash(tree: number, level: number, index: number): Promise<string> {
     if (
-      this.cachedNodeHashes[tree] &&
-      this.cachedNodeHashes[tree][level] &&
+      isDefined(this.cachedNodeHashes[tree]) &&
+      isDefined(this.cachedNodeHashes[tree][level]) &&
       this.cachedNodeHashes[tree][level][index]
     ) {
       return this.cachedNodeHashes[tree][level][index];
@@ -371,10 +372,10 @@ class MerkleTree {
   }
 
   private cacheNodeHash(tree: number, level: number, index: number, hash: string) {
-    if (!this.cachedNodeHashes[tree]) {
+    if (!isDefined(this.cachedNodeHashes[tree])) {
       this.cachedNodeHashes[tree] = {};
     }
-    if (!this.cachedNodeHashes[tree][level]) {
+    if (!isDefined(this.cachedNodeHashes[tree][level])) {
       this.cachedNodeHashes[tree][level] = {};
     }
     this.cachedNodeHashes[tree][level][index] = hash;
@@ -391,7 +392,7 @@ class MerkleTree {
       this.treeLengths[tree] = treeMetadata.scannedHeight;
       if (treeMetadata.invalidMerklerootDetails) {
         this.invalidMerklerootDetailsByTree[tree] =
-          treeMetadata.invalidMerklerootDetails || undefined;
+          treeMetadata.invalidMerklerootDetails ?? undefined;
       }
     });
   }
@@ -429,7 +430,7 @@ class MerkleTree {
     }
 
     const storedMetadata = await this.getMerkletreesMetadata();
-    if (storedMetadata && storedMetadata.trees[treeIndex]) {
+    if (isDefined(storedMetadata) && isDefined(storedMetadata.trees[treeIndex])) {
       this.treeLengths[treeIndex] = storedMetadata.trees[treeIndex].scannedHeight;
       return this.treeLengths[treeIndex];
     }
@@ -575,8 +576,8 @@ class MerkleTree {
       index = nextLevelStartIndex;
 
       // Ensure writecache array exists for next level
-      hashWriteGroup[level] = hashWriteGroup[level] || [];
-      hashWriteGroup[level + 1] = hashWriteGroup[level + 1] || [];
+      hashWriteGroup[level] = hashWriteGroup[level] ?? [];
+      hashWriteGroup[level + 1] = hashWriteGroup[level + 1] ?? [];
 
       // Loop through every pair
       for (index; index <= endIndex + 1; index += 2) {
@@ -629,7 +630,7 @@ class MerkleTree {
   ) {
     const invalidMerklerootDetails: Optional<InvalidMerklerootDetails> =
       this.invalidMerklerootDetailsByTree[tree];
-    if (invalidMerklerootDetails) {
+    if (isDefined(invalidMerklerootDetails)) {
       if (invalidMerklerootDetails.position < lastKnownInvalidLeafIndex) {
         return;
       }
@@ -646,7 +647,7 @@ class MerkleTree {
   async removeInvalidMerklerootDetailsIfNecessary(tree: number, lastValidLeafIndex: number) {
     const invalidMerklerootDetails: Optional<InvalidMerklerootDetails> =
       this.invalidMerklerootDetailsByTree[tree];
-    if (!invalidMerklerootDetails) {
+    if (!isDefined(invalidMerklerootDetails)) {
       return;
     }
     if (invalidMerklerootDetails.position > lastValidLeafIndex) {
@@ -683,7 +684,7 @@ class MerkleTree {
       return;
     }
 
-    while (this.writeQueue[treeIndex]) {
+    while (isDefined(this.writeQueue[treeIndex])) {
       // Process leaves as a group until we hit an invalid merkleroot.
       // Then, process each single item.
       // This optimizes for fewer `rootValidator` calls, while still protecting
@@ -778,7 +779,7 @@ class MerkleTree {
   ): Promise<boolean> {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
-    if (!nextCommitmentGroup) {
+    if (!isDefined(nextCommitmentGroup)) {
       EngineDebug.log(
         `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
       );
@@ -791,7 +792,7 @@ class MerkleTree {
     const commitmentGroups: Commitment[][] = [nextCommitmentGroup];
     while (
       maxCommitmentGroupsToProcess > commitmentGroups.length &&
-      this.writeQueue[treeIndex][nextIndex]
+      isDefined(this.writeQueue[treeIndex][nextIndex])
     ) {
       commitmentGroupIndices.push(nextIndex);
       const next = this.writeQueue[treeIndex][nextIndex];
@@ -832,7 +833,7 @@ class MerkleTree {
     const treeLength = await this.getTreeLength(tree);
 
     // Ensure write queue for tree exists
-    if (!this.writeQueue[tree]) {
+    if (!isDefined(this.writeQueue[tree])) {
       this.writeQueue[tree] = [];
     }
 

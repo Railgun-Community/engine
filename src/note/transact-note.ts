@@ -36,6 +36,7 @@ import {
   ERC721_NOTE_VALUE,
   serializeTokenData,
 } from './note-util';
+import { isDefined } from '../utils/is-defined';
 
 /**
  *
@@ -291,7 +292,7 @@ export class TransactNote {
     senderRandom: Optional<string>,
     isLegacyDecryption: boolean,
   ): Uint8Array {
-    if (blindedViewingPublicKey && senderRandom) {
+    if (blindedViewingPublicKey && isDefined(senderRandom)) {
       const unblinded = isLegacyDecryption
         ? unblindNoteKeyLegacy(blindedViewingPublicKey, random, senderRandom)
         : unblindNoteKey(blindedViewingPublicKey, random, senderRandom);
@@ -350,7 +351,10 @@ export class TransactNote {
     senderRandom: Optional<string>,
     isLegacyDecryption: boolean,
   ): bigint {
-    if (isLegacyDecryption || (senderRandom && senderRandom !== MEMO_SENDER_RANDOM_NULL)) {
+    if (
+      isLegacyDecryption ||
+      (isDefined(senderRandom) && senderRandom !== MEMO_SENDER_RANDOM_NULL)
+    ) {
       return encodedMasterPublicKey; // Unencoded
     }
     return encodedMasterPublicKey ^ currentWalletMasterPublicKey;
@@ -361,7 +365,7 @@ export class TransactNote {
     receiverMasterPublicKey: bigint,
     senderMasterPublicKey: bigint,
   ): bigint {
-    return senderRandom && senderRandom !== MEMO_SENDER_RANDOM_NULL
+    return isDefined(senderRandom) && senderRandom !== MEMO_SENDER_RANDOM_NULL
       ? receiverMasterPublicKey // Unencoded
       : receiverMasterPublicKey ^ senderMasterPublicKey;
   }
@@ -464,7 +468,7 @@ export class TransactNote {
       value: nToHex(BigInt(this.value), ByteLength.UINT_128, prefix),
       random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
       annotationData: this.annotationData,
-      shieldFee: this.shieldFee || undefined,
+      shieldFee: this.shieldFee ?? undefined,
     };
   }
 
@@ -534,14 +538,14 @@ export class TransactNote {
     // NoteSerialized type.
     return new TransactNote(
       decodeAddress(noteData.recipientAddress),
-      noteData.senderAddress ? decodeAddress(noteData.senderAddress) : undefined,
+      isDefined(noteData.senderAddress) ? decodeAddress(noteData.senderAddress) : undefined,
       noteData.random,
       hexToBigInt(noteData.value),
       tokenData,
       noteData.annotationData,
-      noteData.memoText || undefined,
-      noteData.shieldFee || undefined,
-      noteData.blockNumber || undefined,
+      noteData.memoText ?? undefined,
+      noteData.shieldFee ?? undefined,
+      noteData.blockNumber ?? undefined,
     );
   }
 
@@ -558,7 +562,7 @@ export class TransactNote {
     const randomCiphertext = encryptedDataToCiphertext(noteData.encryptedRandom);
     const decryptedRandom = aes.gcm.decrypt(randomCiphertext, viewingPrivateKey);
 
-    const annotationDataChunked = noteData.memoField
+    const annotationDataChunked = isDefined(noteData.memoField)
       ? noteData.memoField.slice(0, LEGACY_MEMO_METADATA_BYTE_CHUNKS)
       : [];
     const annotationData: string = combine(annotationDataChunked);
@@ -574,9 +578,9 @@ export class TransactNote {
       hexToBigInt(noteData.value),
       tokenData,
       annotationData,
-      noteData.memoText || undefined,
+      noteData.memoText ?? undefined,
       undefined, // shieldFee
-      noteData.blockNumber || undefined,
+      noteData.blockNumber ?? undefined,
     );
   }
 

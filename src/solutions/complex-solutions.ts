@@ -6,6 +6,7 @@ import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from 
 import { TransactNote } from '../note/transact-note';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, formatToByteLength } from '../utils';
+import { isDefined } from '../utils/is-defined';
 
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
@@ -212,7 +213,7 @@ export const shouldAddMoreUTXOsForSolutionBatch = (
   }
 
   const nullifierTarget = nextNullifierTarget(currentNullifierCount);
-  if (!nullifierTarget) {
+  if (!isDefined(nullifierTarget)) {
     // No next nullifier target.
     return false;
   }
