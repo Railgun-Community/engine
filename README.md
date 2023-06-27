@@ -6,7 +6,7 @@ Wallet framework for RAILGUN smart contracts and private balances on Ethereum an
 
 Read about RAILGUN: www.railgun.org
 
-For simple implementations, use RAILGUN Quickstart.
+For simple implementations, use [RAILGUN Wallet SDK](https://github.com/Railgun-Community/wallet).
 
 ## Installing
 

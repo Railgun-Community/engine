@@ -136,9 +136,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param merkletree - merkletree to load
    */
   loadMerkletree(merkletree: MerkleTree) {
-    if (!isDefined(this.merkletrees[merkletree.chain.type])) {
-      this.merkletrees[merkletree.chain.type] = [];
-    }
+    this.merkletrees[merkletree.chain.type] ??= [];
     this.merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
   }
 
@@ -147,7 +145,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id of tree to unload
    */
   unloadMerkletree(chain: Chain) {
-    delete this.merkletrees[chain.type][chain.id];
+    delete this.merkletrees[chain.type]?.[chain.id];
   }
 
   private createTokenDataGetter(chain: Chain): TokenDataGetter {
@@ -167,8 +165,12 @@ abstract class AbstractWallet extends EventEmitter {
     const path = [fromUTF8String('wallet'), hexlify(this.id), getChainFullNetworkID(chain)].map(
       (el) => formatToByteLength(el, ByteLength.UINT_256),
     );
-    if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
-    if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
+    if (tree != null) {
+      path.push(hexlify(padToLength(new BN(tree), 32)));
+    }
+    if (position != null) {
+      path.push(hexlify(padToLength(new BN(position), 32)));
+    }
     return path;
   }
 
@@ -195,8 +197,12 @@ abstract class AbstractWallet extends EventEmitter {
       `${hexlify(this.id)}-spent`,
       getChainFullNetworkID(chain),
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
-    if (tree != null) path.push(hexlify(padToLength(new BN(tree), 32)));
-    if (position != null) path.push(hexlify(padToLength(new BN(position), 32)));
+    if (tree != null) {
+      path.push(hexlify(padToLength(new BN(tree), 32)));
+    }
+    if (position != null) {
+      path.push(hexlify(padToLength(new BN(position), 32)));
+    }
     return path;
   }
 
@@ -321,7 +327,7 @@ abstract class AbstractWallet extends EventEmitter {
       );
       return decrypted;
     } catch (err) {
-      // Expect error if leaf not addressed to us.
+      // Expect error if leaf not addressed to this wallet.
       return undefined;
     }
   }
@@ -440,7 +446,7 @@ abstract class AbstractWallet extends EventEmitter {
           );
           serializedNoteReceive = serialized;
         } catch (err) {
-          // Expect error if leaf not addressed to us.
+          // Expect error if leaf not addressed to this wallet.
         }
         break;
       }

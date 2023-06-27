@@ -174,7 +174,7 @@ class RailgunSmartWalletContract extends EventEmitter {
     }
     try {
       const obj = result.toObject();
-      if (obj._) {
+      if ('_' in obj) {
         throw new Error('Decode as array, not object');
       }
       Object.keys(obj).forEach((key) => {
