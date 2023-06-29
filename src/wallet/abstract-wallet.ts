@@ -1465,6 +1465,10 @@ abstract class AbstractWallet extends EventEmitter {
     await db.putEncrypted(AbstractWallet.dbPath(id), encryptionKey, msgpack.encode(data));
   }
 
+  static async delete(db: Database, id: string): Promise<void> {
+    return db.del(AbstractWallet.dbPath(id));
+  }
+
   /**
    * Loads encrypted wallet data from database.
    * @param db - database

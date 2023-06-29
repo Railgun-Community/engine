@@ -42,6 +42,7 @@ import { ContractStore } from '../contracts/contract-store';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../test/shared-test.test';
 import { createPollingJsonRpcProviderForListeners } from '../provider/polling-util';
 import { isDefined } from '../utils/is-defined';
+import { AbstractWallet } from '../wallet';
 
 chai.use(chaiAsPromised);
 
@@ -145,6 +146,21 @@ describe('RailgunEngine', function test() {
     engine.unloadWallet(wallet.id);
     await engine.loadExistingWallet(testEncryptionKey, wallet.id);
     expect(engine.wallets[wallet.id].id).to.equal(wallet.id);
+  });
+
+  it('Should delete wallet', async () => {
+    const walletForDeletion = await engine.createWalletFromMnemonic(
+      testEncryptionKey,
+      testMnemonic,
+      5, // index
+    );
+
+    await engine.deleteWallet(walletForDeletion.id);
+    await expect(
+      engine.loadExistingWallet(testEncryptionKey, walletForDeletion.id),
+    ).to.be.rejectedWith(
+      'Key not found in database [000000000000000000000000000000000000000000000000000077616c6c6574:4e562d7b2e7cd11d98309031e1697540b51647fa67c9621f74bbd8ef45312443]',
+    );
   });
 
   it('[HH] Should show balance after shield and rescan', async function run() {

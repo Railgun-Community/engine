@@ -788,6 +788,11 @@ class RailgunEngine extends EventEmitter {
     return wallet;
   }
 
+  async deleteWallet(id: string) {
+    this.unloadWallet(id);
+    return AbstractWallet.delete(this.db, id);
+  }
+
   /**
    * Creates wallet from mnemonic
    * @param {string} encryptionKey - encryption key of wallet
