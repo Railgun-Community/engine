@@ -26,10 +26,16 @@ const testNodeArtifactGetter = async (inputs: PublicInputs): Promise<Artifact> =
   const commitments = inputs.commitmentsOut.length;
   assertTestNodeArtifactExists(nullifiers, commitments);
 
-  return {
-    ...artifacts.getArtifact(nullifiers, commitments),
-    dat: undefined,
-  };
+  try {
+    return {
+      ...artifacts.getArtifact(nullifiers, commitments),
+      dat: undefined,
+    };
+  } catch (err) {
+    throw new Error(
+      `Could not find lite artifact for tests: ${inputs.commitmentsOut.length}:${inputs.nullifiers.length}`,
+    );
+  }
 };
 
 const assertTestNodeArtifactExists = (nullifiers: number, commitments: number): void => {
