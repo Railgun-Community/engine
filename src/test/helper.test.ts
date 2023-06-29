@@ -1,6 +1,6 @@
 /// <reference types="../types/global" />
-import artifacts from 'railgun-community-circuit-artifacts';
 import { ContractTransaction, Provider, TransactionResponse, Wallet } from 'ethers';
+import artifacts from './test-artifacts-lite';
 import { Nullifier } from '../models/formatted-types';
 import {
   AccumulatedEvents,
@@ -40,7 +40,9 @@ const assertTestNodeArtifactExists = (nullifiers: number, commitments: number): 
     );
   });
   if (!found) {
-    throw new Error(`No artifacts for inputs: ${nullifiers}-${commitments}`);
+    throw new Error(
+      `No artifacts for inputs: ${nullifiers}-${commitments}. NOTE: railgun-community-circuit-artifacts-lite only includes a small subset of artifacts for testing.`,
+    );
   }
 };
 
