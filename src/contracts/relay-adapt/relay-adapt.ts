@@ -27,10 +27,10 @@ export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigInt(2_800_000);
+export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigInt(3_200_000);
 // Contract call needs ~50,000 less gas than the gasLimit setting.
 // This can be more if there are complex UTXO sets for the unshield.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigInt(2_600_000);
+export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigInt(3_000_000);
 
 export class RelayAdaptContract {
   private readonly contract: RelayAdapt;
