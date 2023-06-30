@@ -250,7 +250,7 @@ export class RelayAdaptContract {
       const callFailedMessage = splitResult[0]; // execution reverted (unknown custom error)
       const dataMessage = splitResult[1].split(`"`)[0]; // 0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000
       const parsedDataMessage = this.parseRelayAdaptReturnValue(dataMessage);
-      const callFailedIndexString: string = `${parsedDataMessage?.callIndex}` ?? 'UNKNOWN';
+      const callFailedIndexString: string = parsedDataMessage?.callIndex?.toString() ?? 'UNKNOWN';
       return {
         callFailedIndexString,
         errorMessage: `'${callFailedMessage}': ${parsedDataMessage?.error ?? dataMessage}`,

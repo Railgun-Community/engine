@@ -33,7 +33,7 @@ const testNodeArtifactGetter = async (inputs: PublicInputs): Promise<Artifact> =
     };
   } catch (err) {
     throw new Error(
-      `Could not find lite artifact for tests: ${inputs.commitmentsOut.length}:${inputs.nullifiers.length}`,
+      `Could not find lite artifact for tests: ${inputs.nullifiers.length}:${inputs.commitmentsOut.length}`,
     );
   }
 };
