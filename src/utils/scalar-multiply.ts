@@ -46,6 +46,10 @@ export const scalarMultiplyWasmFallbackToJavascript = (
     if (!(err instanceof Error)) {
       throw err;
     }
+    if (err.message.includes('invalid y coordinate')) {
+      // Noble/ed25519 would also throw this error, so no need to call Noble
+      throw err;
+    }
     // Fallback to Javascript.
     EngineDebug.log('curve25519-scalarmult-wasm scalarMultiply failed: Fallback to JavaScript');
     EngineDebug.error(err);
