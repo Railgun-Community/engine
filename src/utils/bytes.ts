@@ -1,6 +1,6 @@
 import BN from 'bn.js';
-import crypto from 'crypto';
-import { hexToBytes } from 'ethereum-cryptography/utils';
+import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
+import { getRandomBytesSync } from 'ethereum-cryptography/random';
 import { BytesData } from '../models/formatted-types';
 import { isReactNative } from './runtime';
 
@@ -375,7 +375,7 @@ export function hexStringToBytes(hex: string): Uint8Array {
  * @returns random bytes hex string
  */
 function randomHex(length: number = 32): string {
-  return crypto.randomBytes(length).toString('hex');
+  return bytesToHex(getRandomBytesSync(length));
 }
 
 export const HashZero = formatToByteLength('00', 32, true);

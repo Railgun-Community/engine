@@ -1,6 +1,14 @@
-import crypto from 'crypto';
 import { arrayify, ByteLength, formatToByteLength, padToLength, randomHex, trim } from './bytes';
 import { BytesData, Ciphertext, CTRCiphertext } from '../models/formatted-types';
+import { isNodejs } from './runtime';
+
+type Ciphers = Pick<typeof import('crypto'), 'createCipheriv' | 'createDecipheriv'>;
+
+const { createCipheriv, createDecipheriv } = isNodejs
+  ? // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+    (require('crypto') as Ciphers)
+  : // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+    (require('@staltz/browserify-aes/browser') as Ciphers);
 
 const aes = {
   gcm: {
@@ -24,7 +32,7 @@ const aes = {
       const ivFormatted = new Uint8Array(arrayify(iv));
 
       // Initialize cipher
-      const cipher = crypto.createCipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
+      const cipher = createCipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
         authTagLength: 16,
       });
 
@@ -61,7 +69,7 @@ const aes = {
         const tagFormatted = new Uint8Array(arrayify(trim(ciphertext.tag, 16)));
 
         // Initialize decipher
-        const decipher = crypto.createDecipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
+        const decipher = createDecipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
           authTagLength: 16,
         });
 
@@ -103,7 +111,7 @@ const aes = {
       const ivFormatted = new Uint8Array(arrayify(iv));
 
       // Initialize cipher
-      const cipher = crypto.createCipheriv('aes-256-ctr', keyFormatted, ivFormatted);
+      const cipher = createCipheriv('aes-256-ctr', keyFormatted, ivFormatted);
 
       // Loop through data blocks and encrypt
       const data = plaintextFormatted
@@ -132,7 +140,7 @@ const aes = {
       const ivFormatted = new Uint8Array(arrayify(trim(ciphertext.iv, 16)));
 
       // Initialize decipher
-      const decipher = crypto.createDecipheriv('aes-256-ctr', keyFormatted, ivFormatted);
+      const decipher = createDecipheriv('aes-256-ctr', keyFormatted, ivFormatted);
 
       // Loop through ciphertext and decrypt then return
       const data = ciphertextFormatted
