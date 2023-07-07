@@ -34,7 +34,7 @@ export const createPollingJsonRpcProviderForListeners = async (
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider._getConnection();
     const { chainId } = await provider.getNetwork();
-    return new PollingJsonRpcProvider(url, Number(chainId));
+    return new PollingJsonRpcProvider(url, Number(chainId), pollingInterval);
   }
 
   if ('quorum' in provider) {
