@@ -335,7 +335,7 @@ class Transaction {
 
     const { proof } = await prover.prove(unprovedTransactionInputs, progressCallback);
 
-    return Transaction.generateTransaction(
+    return Transaction.createTransactionStruct(
       proof,
       publicInputs,
       boundParams,
@@ -357,7 +357,7 @@ class Transaction {
 
     const dummyProof: Proof = prover.dummyProve(publicInputs);
 
-    return Transaction.generateTransaction(
+    return Transaction.createTransactionStruct(
       dummyProof,
       publicInputs,
       boundParams,
@@ -365,7 +365,7 @@ class Transaction {
     );
   }
 
-  static async generateTransaction(
+  static async createTransactionStruct(
     proof: Proof,
     publicInputs: PublicInputs,
     boundParams: BoundParamsStruct,
