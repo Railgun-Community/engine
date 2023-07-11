@@ -84,5 +84,9 @@
     "ts-node": "^10.9.1",
     "typechain": "^8.2.0",
     "typescript": "^5.0.4"
+  },
+  "react-native": {
+    "@railgun-community/curve25519-scalarmult-wasm": false,
+    "crypto": false
   }
 }
