@@ -331,6 +331,9 @@ export class TransactionBatch {
           signature: [...signature.R8, signature.S],
         };
 
+        // NOTE: For multisig, at this point the UnprovedTransactionInputs are
+        // forwarded to the next participant, along with an array of signatures.
+
         return transaction.generateProvedTransaction(
           prover,
           unprovedTransactionInputs,
