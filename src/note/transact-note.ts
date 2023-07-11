@@ -229,18 +229,6 @@ export class TransactNote {
   }
 
   /**
-   * Sign a transaction
-   *
-   * @param {PublicInputs} publicInputs - transaction merkle root
-   * @returns {Signature} signature
-   */
-  static sign(publicInputs: PublicInputs, spendingKeyPrivate: Uint8Array): Signature {
-    const entries = Object.values(publicInputs).flatMap((x) => x);
-    const msg = poseidon(entries);
-    return signEDDSA(spendingKeyPrivate, msg);
-  }
-
-  /**
    * AES-256-GCM encrypts note data
    * @param sharedKey - key to encrypt with
    */

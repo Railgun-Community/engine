@@ -1,5 +1,7 @@
+import { Signature } from 'circomlibjs';
 import { Database } from '../database/database';
 import { ViewingKeyPair } from '../key-derivation/wallet-node';
+import { PublicInputs } from '../models';
 import { ViewOnlyWalletData } from '../models/wallet-types';
 import { hexStringToBytes } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
@@ -7,6 +9,11 @@ import { getPublicViewingKey } from '../utils/keys-utils';
 import { AbstractWallet } from './abstract-wallet';
 
 class ViewOnlyWallet extends AbstractWallet {
+  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-unused-vars
+  sign(_publicInputs: PublicInputs, _encryptionKey: string): Promise<Signature> {
+    throw new Error('View-Only wallet cannot generate signatures.');
+  }
+
   /**
    * Calculate Wallet ID from mnemonic and derivation path index
    * @returns {string} hash of mnemonic and index

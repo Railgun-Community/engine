@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { poseidon } from 'circomlibjs';
+import { Signature, poseidon } from 'circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
@@ -70,6 +70,7 @@ import { ShieldNote } from '../note';
 import { getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined } from '../utils/is-defined';
+import { PublicInputs } from '../models/prover-types';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -1441,6 +1442,8 @@ abstract class AbstractWallet extends EventEmitter {
     await this.clearScannedBalances(chain);
     return this.scanBalances(chain, progressCallback);
   }
+
+  abstract sign(publicInputs: PublicInputs, encryptionKey: string): Promise<Signature>;
 
   static dbPath(id: string): BytesData[] {
     return [fromUTF8String('wallet'), id];

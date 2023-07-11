@@ -16,7 +16,13 @@ import { TXO, UnshieldData } from '../models/txo-types';
 import { Memo } from '../note/memo';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
-import { PrivateInputs, Proof, PublicInputs } from '../models/prover-types';
+import {
+  UnprovedTransactionInputs,
+  Proof,
+  PublicInputs,
+  RailgunTransactionRequest,
+  PrivateInputs,
+} from '../models/prover-types';
 import {
   BoundParamsStruct,
   CommitmentCiphertextStruct,
@@ -130,15 +136,11 @@ class Transaction {
    * @param wallet - wallet to spend from
    * @param encryptionKey - encryption key of wallet
    */
-  async generateProverInputs(
+  async generateTransactionRequest(
     wallet: RailgunWallet,
     encryptionKey: string,
     overallBatchMinGasPrice = 0n,
-  ): Promise<{
-    inputs: PrivateInputs;
-    publicInputs: PublicInputs;
-    boundParams: BoundParamsStruct;
-  }> {
+  ): Promise<RailgunTransactionRequest> {
     const merkletree = wallet.merkletrees[this.chain.type][this.chain.id];
     const merkleRoot = await merkletree.getRoot(this.spendingTree);
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
@@ -280,19 +282,14 @@ class Transaction {
       commitmentCiphertext,
     };
 
-    const commitmentsOut = allOutputs.map((note) => note.hash);
-
     const publicInputs: PublicInputs = {
       merkleRoot: hexToBigInt(merkleRoot),
       boundParamsHash: hashBoundParams(boundParams),
       nullifiers,
-      commitmentsOut,
+      commitmentsOut: allOutputs.map((note) => note.hash),
     };
 
-    const signature = TransactNote.sign(publicInputs, spendingKey.privateKey);
-
-    // Format inputs
-    const inputs: PrivateInputs = {
+    const privateInputs: PrivateInputs = {
       tokenAddress: hexToBigInt(this.tokenHash),
       randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
@@ -302,14 +299,15 @@ class Transaction {
       publicKey: spendingKey.pubkey,
       npkOut: allOutputs.map((x) => x.notePublicKey),
       nullifyingKey,
-      signature: [...signature.R8, signature.S],
     };
 
-    return {
-      inputs,
+    const railgunTransactionRequest: RailgunTransactionRequest = {
+      privateInputs,
       publicInputs,
       boundParams,
     };
+
+    return railgunTransactionRequest;
   }
 
   /**
@@ -319,31 +317,23 @@ class Transaction {
    * @param encryptionKey - encryption key for wallet
    * @returns serialized transaction
    */
-  async prove(
+  async generateProvedTransaction(
     prover: Prover,
-    wallet: RailgunWallet,
-    encryptionKey: string,
-    overallBatchMinGasPrice: bigint,
+    unprovedTransactionInputs: UnprovedTransactionInputs,
     progressCallback: ProverProgressCallback,
   ): Promise<TransactionStruct> {
-    // Get inputs
-    const { inputs, publicInputs, boundParams } = await this.generateProverInputs(
-      wallet,
-      encryptionKey,
-      overallBatchMinGasPrice,
-    );
+    const { publicInputs, privateInputs, boundParams } = unprovedTransactionInputs;
 
-    // Calculate proof
     if (
-      inputs.valueIn.length === 1 &&
-      inputs.valueOut.length === 1 &&
-      inputs.valueIn[0] === 0n &&
-      inputs.valueOut[0] === 0n
+      privateInputs.valueIn.length === 1 &&
+      privateInputs.valueOut.length === 1 &&
+      privateInputs.valueIn[0] === 0n &&
+      privateInputs.valueOut[0] === 0n
     ) {
       throw new Error('Cannot prove transaction with null (zero value) inputs and outputs.');
     }
 
-    const { proof } = await prover.prove(publicInputs, inputs, progressCallback);
+    const { proof } = await prover.prove(unprovedTransactionInputs, progressCallback);
 
     return Transaction.generateTransaction(
       proof,
@@ -359,18 +349,11 @@ class Transaction {
    * @param encryptionKey - encryption key for wallet
    * @returns serialized transaction
    */
-  async dummyProve(
+  async generateDummyProvedTransaction(
     prover: Prover,
-    wallet: RailgunWallet,
-    encryptionKey: string,
-    overallBatchMinGasPrice: bigint,
+    transactionRequest: RailgunTransactionRequest,
   ): Promise<TransactionStruct> {
-    // Get inputs
-    const { publicInputs, boundParams } = await this.generateProverInputs(
-      wallet,
-      encryptionKey,
-      overallBatchMinGasPrice,
-    );
+    const { publicInputs, boundParams } = transactionRequest;
 
     const dummyProof: Proof = prover.dummyProve(publicInputs);
 

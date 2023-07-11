@@ -1,3 +1,5 @@
+import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
+
 export const enum Circuits {
   OneTwo,
   OneThree,
@@ -37,7 +39,6 @@ export type PublicInputs = {
 export type PrivateInputs = {
   tokenAddress: bigint;
   publicKey: [bigint, bigint];
-  signature: [bigint, bigint, bigint];
   randomIn: bigint[];
   valueIn: bigint[];
   pathElements: bigint[][];
@@ -45,6 +46,16 @@ export type PrivateInputs = {
   nullifyingKey: bigint;
   npkOut: bigint[];
   valueOut: bigint[];
+};
+
+export type RailgunTransactionRequest = {
+  privateInputs: PrivateInputs;
+  publicInputs: PublicInputs;
+  boundParams: BoundParamsStruct;
+};
+
+export type UnprovedTransactionInputs = RailgunTransactionRequest & {
+  signature: [bigint, bigint, bigint];
 };
 
 export type FormattedCircuitInputs = {

@@ -16,7 +16,7 @@ import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
-import { TreeBalance } from '../models';
+import { TreeBalance, UnprovedTransactionInputs } from '../models';
 import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
 import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
@@ -308,23 +308,37 @@ export class TransactionBatch {
       progressCallback(averageProgress);
     };
 
-    const proofPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
-      (spendingSolutionGroup, index) => {
+    const provedTransactionPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
+      async (spendingSolutionGroup, index) => {
         const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
         const individualProgressCallback = (progress: number) => {
           individualProgressAmounts[index] = progress;
           updateProgressCallback();
         };
-        return transaction.prove(
+        const { publicInputs, privateInputs, boundParams } =
+          await transaction.generateTransactionRequest(
+            wallet,
+            encryptionKey,
+            this.overallBatchMinGasPrice,
+          );
+
+        const signature = await wallet.sign(publicInputs, encryptionKey);
+
+        const unprovedTransactionInputs: UnprovedTransactionInputs = {
+          privateInputs,
+          publicInputs,
+          boundParams,
+          signature: [...signature.R8, signature.S],
+        };
+
+        return transaction.generateProvedTransaction(
           prover,
-          wallet,
-          encryptionKey,
-          this.overallBatchMinGasPrice,
+          unprovedTransactionInputs,
           individualProgressCallback,
         );
       },
     );
-    return Promise.all(proofPromises);
+    return Promise.all(provedTransactionPromises);
   }
 
   private static logDummySpendingSolutionGroupsSummary(
@@ -365,13 +379,18 @@ export class TransactionBatch {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(wallet);
     TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 
-    const proofPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
-      (spendingSolutionGroup) => {
+    const dummyProvedTransactionPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
+      async (spendingSolutionGroup) => {
         const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-        return transaction.dummyProve(prover, wallet, encryptionKey, this.overallBatchMinGasPrice);
+        const transactionRequest = await transaction.generateTransactionRequest(
+          wallet,
+          encryptionKey,
+          this.overallBatchMinGasPrice,
+        );
+        return transaction.generateDummyProvedTransaction(prover, transactionRequest);
       },
     );
-    return Promise.all(proofPromises);
+    return Promise.all(dummyProvedTransactionPromises);
   }
 
   generateTransactionForSpendingSolutionGroup(

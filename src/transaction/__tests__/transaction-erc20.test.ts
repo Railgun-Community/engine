@@ -1,4 +1,4 @@
-import { poseidon, Signature } from 'circomlibjs';
+import { poseidon } from 'circomlibjs';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
@@ -586,7 +586,7 @@ describe('Transaction/ERC20', function test() {
     expect(receiverDecrypted.memoText).to.equal(memoText);
   });
 
-  it('Should generate a valid signature for transaction', async () => {
+  it('Should generate a valid signature for hot wallet transaction', async () => {
     transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups =
       await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet);
@@ -595,18 +595,17 @@ describe('Transaction/ERC20', function test() {
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
     );
-    const { inputs, publicInputs } = await transaction.generateProverInputs(
+    const { publicInputs } = await transaction.generateTransactionRequest(
       wallet,
       testEncryptionKey,
     );
-    const { signature } = inputs;
+    const signature = await wallet.sign(publicInputs, testEncryptionKey);
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
     const msg: bigint = poseidon(Object.values(publicInputs).flatMap((x) => x));
-    const sig: Signature = { R8: [signature[0], signature[1]], S: signature[2] };
 
-    assert.isTrue(verifyEDDSA(msg, sig, pubkey));
+    assert.isTrue(verifyEDDSA(msg, signature, pubkey));
 
-    expect(sig).to.deep.equal(signEDDSA(privateKey, msg));
+    expect(signature).to.deep.equal(signEDDSA(privateKey, msg));
   });
 
   it('Should generate validated inputs for transaction batch', async () => {
@@ -618,7 +617,10 @@ describe('Transaction/ERC20', function test() {
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
     );
-    const { publicInputs } = await transaction.generateProverInputs(wallet, testEncryptionKey);
+    const { publicInputs } = await transaction.generateTransactionRequest(
+      wallet,
+      testEncryptionKey,
+    );
     const { nullifiers, commitmentsOut } = publicInputs;
     expect(nullifiers.length).to.equal(1);
     expect(commitmentsOut.length).to.equal(2);
@@ -700,7 +702,7 @@ describe('Transaction/ERC20', function test() {
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
     );
-    const { publicInputs } = await transaction.generateProverInputs(
+    const { publicInputs } = await transaction.generateTransactionRequest(
       wallet,
       testEncryptionKey,
       0n, // overallBatchMinGasPrice

@@ -3,7 +3,7 @@ import { ByteLength, nToHex } from '../utils/bytes';
 import {
   ArtifactGetter,
   FormattedCircuitInputs,
-  PrivateInputs,
+  UnprovedTransactionInputs,
   Proof,
   PublicInputs,
   SnarkProof,
@@ -185,13 +185,14 @@ export class Prover {
   }
 
   async prove(
-    publicInputs: PublicInputs,
-    privateInputs: PrivateInputs,
+    unprovedTransactionInputs: UnprovedTransactionInputs,
     progressCallback: ProverProgressCallback,
   ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
     if (!this.groth16) {
       throw new Error('Requires groth16 full prover implementation');
     }
+
+    const { publicInputs } = unprovedTransactionInputs;
 
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
@@ -202,7 +203,7 @@ export class Prover {
     }
 
     // Get formatted inputs
-    const formattedInputs = Prover.formatInputs(publicInputs, privateInputs);
+    const formattedInputs = Prover.formatInputs(unprovedTransactionInputs);
 
     // Generate proof: Progress from 20 - 99%
     const initialProgressProof = 20;
@@ -252,10 +253,9 @@ export class Prover {
     };
   }
 
-  static formatInputs(
-    publicInputs: PublicInputs,
-    privateInputs: PrivateInputs,
-  ): FormattedCircuitInputs {
+  static formatInputs(transactionInputs: UnprovedTransactionInputs): FormattedCircuitInputs {
+    const { publicInputs, privateInputs } = transactionInputs;
+
     return {
       merkleRoot: publicInputs.merkleRoot,
       boundParamsHash: publicInputs.boundParamsHash,
@@ -263,7 +263,7 @@ export class Prover {
       commitmentsOut: publicInputs.commitmentsOut,
       token: privateInputs.tokenAddress,
       publicKey: privateInputs.publicKey,
-      signature: privateInputs.signature,
+      signature: transactionInputs.signature,
       randomIn: privateInputs.randomIn,
       valueIn: privateInputs.valueIn,
       pathElements: privateInputs.pathElements.flat(2),
