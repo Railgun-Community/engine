@@ -365,25 +365,24 @@ class Transaction {
     );
   }
 
-  static async createTransactionStruct(
+  private static createTransactionStruct(
     proof: Proof,
     publicInputs: PublicInputs,
     boundParams: BoundParamsStruct,
     unshieldPreimage: CommitmentPreimageStruct,
-  ): Promise<TransactionStruct> {
-    const formatted = Prover.formatProof(proof);
-    const formattedTransaction = {
-      proof: formatted,
+  ): TransactionStruct {
+    return {
+      proof: Prover.formatProof(proof),
       merkleRoot: nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
       nullifiers: publicInputs.nullifiers.map((n) => nToHex(n, ByteLength.UINT_256, true)),
       boundParams,
       commitments: publicInputs.commitmentsOut.map((n) => nToHex(n, ByteLength.UINT_256, true)),
       unshieldPreimage: {
-        ...unshieldPreimage,
         npk: formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
+        token: unshieldPreimage.token,
+        value: unshieldPreimage.value,
       },
     };
-    return formattedTransaction;
   }
 }
 
