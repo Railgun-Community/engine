@@ -8,7 +8,7 @@ const { createCipheriv, createDecipheriv } = isNodejs
   ? // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
     (require('crypto') as Ciphers)
   : // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
-    (require('@staltz/browserify-aes/browser') as Ciphers);
+    (require('browserify-aes/browser') as Ciphers);
 
 const aes = {
   gcm: {
