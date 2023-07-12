@@ -1,5 +1,5 @@
 import { HDKey } from 'ethereum-cryptography/hdkey';
-import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
+import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39/index';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 
 const getPath = (index = 0) => {

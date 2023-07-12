@@ -1,4 +1,4 @@
-import * as bip39 from 'ethereum-cryptography/bip39';
+import * as bip39 from 'ethereum-cryptography/bip39/index';
 import { wordlist } from 'ethereum-cryptography/bip39/wordlists/english';
 import { toHex } from 'ethereum-cryptography/utils';
 import { hexStringToBytes } from '../utils/bytes';
