@@ -40,6 +40,7 @@
     "@scure/base": "^1.1.1",
     "abstract-leveldown": "^7.2.0",
     "bn.js": "^5.2.1",
+    "browserify-aes": "^1.2.0",
     "buffer-xor": "^2.0.2",
     "chai-as-promised": "^7.1.1",
     "circomlibjs": "hsg88/circomlibjs#ffjavascrip.0.1.0",
@@ -83,5 +84,9 @@
     "ts-node": "^10.9.1",
     "typechain": "^8.2.0",
     "typescript": "^5.0.4"
+  },
+  "react-native": {
+    "@railgun-community/curve25519-scalarmult-wasm": false,
+    "crypto": false
   }
 }
