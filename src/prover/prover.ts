@@ -65,7 +65,23 @@ export class Prover {
    */
   setSnarkJSGroth16(snarkJSGroth16: Groth16) {
     this.groth16 = {
-      fullProve: snarkJSGroth16.fullProve,
+      fullProve: (
+        formattedInputs: FormattedCircuitInputs,
+        wasm: Optional<ArrayLike<number>>,
+        zkey: ArrayLike<number>,
+      ) => {
+        const suppressDebugLogger = { debug: () => {} };
+
+        // snarkjs: groth16FullProve(_input, wasmFile, zkeyFileName, logger)
+        return snarkJSGroth16.fullProve(
+          formattedInputs,
+          wasm,
+          zkey,
+          suppressDebugLogger,
+          undefined, // unused by snarkjs
+          () => {}, // unused by snarkjs
+        );
+      },
       verify: snarkJSGroth16.verify,
     };
   }
