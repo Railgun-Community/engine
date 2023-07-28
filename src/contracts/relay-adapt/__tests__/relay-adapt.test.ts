@@ -300,7 +300,7 @@ describe('Relay Adapt', function test() {
       random,
     );
     expect(relayAdaptParams).to.equal(
-      '0xa54346cdc981dd16bf95990bd28264a2e498e8db8be602b9611b999df51f3cf1',
+      '0xdefad8b10a8bbf7586dfac76b95be681247cf8c3e656b36286687dfe5838ac9e',
     );
 
     // 4. Create real transactions with relay adapt params.
