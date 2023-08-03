@@ -652,7 +652,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192.',
+      'RAILGUN private token balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192',
     );
 
     transactionBatch.resetOutputs();
@@ -660,7 +660,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3.',
+      'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
 
     transactionBatch.resetOutputs();
@@ -668,7 +668,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3.',
+      'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
 
     const transaction2 = new TransactionBatch(chain);
@@ -684,7 +684,7 @@ describe('Transaction/ERC20', function test() {
     await expect(
       transaction2.generateValidSpendingSolutionGroupsAllOutputs(wallet),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x00000000000000000000000000000000000000ff.',
+      'RAILGUN private token balance too low for 0x00000000000000000000000000000000000000ff',
     );
   });
 
