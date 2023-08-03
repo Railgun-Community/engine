@@ -434,6 +434,7 @@ abstract class AbstractWallet extends EventEmitter {
             value: commitment.preImage.value,
             annotationData: '', // Empty for non-private txs.
             recipientAddress: walletAddress,
+            outputType: OutputType.Transfer,
             senderAddress: undefined,
             memoText: undefined,
             shieldFee: commitment.fee,

@@ -75,6 +75,8 @@ export class TransactNote {
 
   readonly hash: bigint;
 
+  readonly outputType: Optional<OutputType>;
+
   // This is just the metadata at the start of the memo field.
   readonly annotationData: string;
 
@@ -99,6 +101,7 @@ export class TransactNote {
     value: bigint,
     tokenData: TokenData,
     annotationData: string,
+    outputType: Optional<OutputType>,
     memoText: Optional<string>,
     shieldFee: Optional<string>,
     blockNumber: Optional<number>,
@@ -152,6 +155,7 @@ export class TransactNote {
       value,
       tokenData,
       annotationData,
+      outputType,
       memoText,
       undefined, // shieldFee
       undefined, // blockNumber
@@ -408,6 +412,7 @@ export class TransactNote {
         value,
         tokenData,
         annotationData,
+        undefined, // outputType
         memoText,
         undefined, // shieldFee
         blockNumber,
@@ -443,6 +448,7 @@ export class TransactNote {
       value,
       tokenData,
       annotationData,
+      undefined, // outputType
       memoText,
       undefined, // shieldFee
       blockNumber,
@@ -456,6 +462,7 @@ export class TransactNote {
       value: nToHex(BigInt(this.value), ByteLength.UINT_128, prefix),
       random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
       annotationData: this.annotationData,
+      outputType: this.outputType ?? undefined,
       shieldFee: this.shieldFee ?? undefined,
     };
   }
@@ -465,13 +472,15 @@ export class TransactNote {
    * @returns serialized note
    */
   serialize(prefix?: boolean): NoteSerialized {
-    const { npk, token, value, random, annotationData, shieldFee } = this.formatFields(prefix);
+    const { npk, token, value, random, annotationData, outputType, shieldFee } =
+      this.formatFields(prefix);
     return {
       npk,
       token,
       value,
       random,
       annotationData,
+      outputType,
       recipientAddress: encodeAddress(this.receiverAddressData),
       senderAddress: this.senderAddressData ? encodeAddress(this.senderAddressData) : undefined,
       memoText: this.memoText,
@@ -531,6 +540,7 @@ export class TransactNote {
       hexToBigInt(noteData.value),
       tokenData,
       noteData.annotationData,
+      noteData.outputType ?? undefined,
       noteData.memoText ?? undefined,
       noteData.shieldFee ?? undefined,
       noteData.blockNumber ?? undefined,
@@ -566,6 +576,7 @@ export class TransactNote {
       hexToBigInt(noteData.value),
       tokenData,
       annotationData,
+      undefined, // outputType
       noteData.memoText ?? undefined,
       undefined, // shieldFee
       noteData.blockNumber ?? undefined,
@@ -590,6 +601,7 @@ export class TransactNote {
       value,
       this.tokenData,
       this.annotationData,
+      this.outputType,
       this.memoText,
       this.shieldFee,
       undefined, // blockNumber
@@ -615,6 +627,7 @@ export class TransactNote {
       value,
       tokenData,
       '', // annotationData
+      undefined, // outputType
       undefined, // memoText
       undefined, // shieldFee
       undefined, // blockNumber

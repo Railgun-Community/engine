@@ -70,6 +70,7 @@ export type NoteSerialized = {
   random: string;
   annotationData: string;
   recipientAddress: string;
+  outputType: Optional<OutputType>;
   senderAddress: Optional<string>;
   memoText: Optional<string>;
   shieldFee: Optional<string>;

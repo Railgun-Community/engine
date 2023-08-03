@@ -4,7 +4,7 @@ import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
-import { AdaptID, TokenData, TokenType } from '../models/formatted-types';
+import { AdaptID, OutputType, TokenData, TokenType } from '../models/formatted-types';
 import { createSpendingSolutionsForValue } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import EngineDebug from '../debugger/debugger';
@@ -133,12 +133,19 @@ export class TransactionBatch {
       EngineDebug.log(`totalRequired: ${totalRequired}`);
       EngineDebug.log(`tokenBalance: ${tokenBalance}`);
       switch (tokenData.tokenType) {
-        case TokenType.ERC20:
+        case TokenType.ERC20: {
+          const relayerFeeOutput = tokenOutputs.find(
+            (output) => output.outputType === OutputType.RelayerFee,
+          );
+          const amountRequiredMessage = relayerFeeOutput
+            ? `${totalRequired.toString()} (includes ${relayerFeeOutput.value.toString()} Relayer Fee)`
+            : totalRequired.toString();
           throw new Error(
             `RAILGUN private token balance too low for ${
               tokenData.tokenAddress
-            }. Amount required: ${totalRequired.toString()}. Balance: ${tokenBalance.toString()}.`,
+            }. Amount required: ${amountRequiredMessage}. Balance: ${tokenBalance.toString()}.`,
           );
+        }
         case TokenType.ERC721:
         case TokenType.ERC1155:
           throw new Error(`RAILGUN private NFT balance too low.`);
