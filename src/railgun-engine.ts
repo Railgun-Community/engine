@@ -383,13 +383,10 @@ class RailgunEngine extends EventEmitter {
         },
         async (syncedBlock: number) => {
           const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
-          const scanUpdateData: MerkletreeHistoryScanUpdateData = {
-            chain,
-            progress:
-              postQuickSyncProgress +
-              ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan, // From 50% -> 95%
-          };
-          this.emit(EngineEvent.MerkletreeHistoryScanUpdate, scanUpdateData);
+          const progress =
+            postQuickSyncProgress +
+            ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan;
+          this.emitScanUpdateEvent(chain, progress);
 
           if (merkletree.getFirstInvalidMerklerootTree() != null) {
             // Do not save lastSyncedBlock in case of merkleroot error.
