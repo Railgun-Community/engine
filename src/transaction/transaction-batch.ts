@@ -319,40 +319,41 @@ export class TransactionBatch {
       progressCallback(averageProgress);
     };
 
-    const provedTransactionPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
-      async (spendingSolutionGroup, index) => {
-        const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-        const individualProgressCallback = (progress: number) => {
-          individualProgressAmounts[index] = progress;
-          updateProgressCallback();
-        };
-        const { publicInputs, privateInputs, boundParams } =
-          await transaction.generateTransactionRequest(
-            wallet,
-            encryptionKey,
-            this.overallBatchMinGasPrice,
-          );
-
-        const signature = await wallet.sign(publicInputs, encryptionKey);
-
-        const unprovedTransactionInputs: UnprovedTransactionInputs = {
-          privateInputs,
-          publicInputs,
-          boundParams,
-          signature: [...signature.R8, signature.S],
-        };
-
-        // NOTE: For multisig, at this point the UnprovedTransactionInputs are
-        // forwarded to the next participant, along with an array of signatures.
-
-        return transaction.generateProvedTransaction(
-          prover,
-          unprovedTransactionInputs,
-          individualProgressCallback,
+    const provedTransactionPromises: TransactionStruct[] = [];
+    for (let index = 0; index < spendingSolutionGroups.length; index += 1) {
+      const spendingSolutionGroup = spendingSolutionGroups[index];
+      const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
+      const individualProgressCallback = (progress: number) => {
+        individualProgressAmounts[index] = progress;
+        updateProgressCallback();
+      };
+      const { publicInputs, privateInputs, boundParams } =
+        // eslint-disable-next-line no-await-in-loop
+        await transaction.generateTransactionRequest(
+          wallet,
+          encryptionKey,
+          this.overallBatchMinGasPrice,
         );
-      },
-    );
-    return Promise.all(provedTransactionPromises);
+      // eslint-disable-next-line no-await-in-loop
+      const signature = await wallet.sign(publicInputs, encryptionKey);
+      const unprovedTransactionInputs: UnprovedTransactionInputs = {
+        privateInputs,
+        publicInputs,
+        boundParams,
+        signature: [...signature.R8, signature.S],
+      };
+      // NOTE: For multisig, at this point the UnprovedTransactionInputs are
+      // forwarded to the next participant, along with an array of signatures.
+      // eslint-disable-next-line no-await-in-loop
+      const provedTransaction = await transaction.generateProvedTransaction(
+        prover,
+        unprovedTransactionInputs,
+        individualProgressCallback,
+      );
+      provedTransactionPromises.push(provedTransaction);
+    }
+    // return Promise.all(provedTransactionPromises);
+    return provedTransactionPromises;
   }
 
   private static logDummySpendingSolutionGroupsSummary(
