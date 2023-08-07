@@ -36,7 +36,6 @@ import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunSmartWalletContract } from '../../railgun-smart-wallet/railgun-smart-wallet';
 import {
   MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
-  MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT,
   RelayAdaptContract,
 } from '../relay-adapt';
 import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
@@ -450,7 +449,11 @@ describe('Relay Adapt', function test() {
       populatedTransactionGasEstimate,
     );
     expect(Number(gasEstimate)).to.be.greaterThan(
-      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT),
+      Number(
+        RelayAdaptContract.getMinimumGasLimitForContract(
+          MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
+        ),
+      ),
     );
     expect(Number(gasEstimate)).to.be.lessThan(
       Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT),
@@ -653,7 +656,11 @@ describe('Relay Adapt', function test() {
       populatedTransactionGasEstimate,
     );
     expect(Number(gasEstimate)).to.be.greaterThan(
-      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT),
+      Number(
+        RelayAdaptContract.getMinimumGasLimitForContract(
+          MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
+        ),
+      ),
     );
     expect(Number(gasEstimate)).to.be.lessThan(
       Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT),

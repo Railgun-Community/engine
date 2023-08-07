@@ -28,9 +28,6 @@ export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 // A low (or undefined) gas limit can cause the Relay Adapt module to fail.
 // Set a high default that can be overridden by a developer.
 export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigInt(3_200_000);
-// Contract call needs ~50,000 less gas than the gasLimit setting.
-// This can be more if there are complex UTXO sets for the unshield.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT = BigInt(3_000_000);
 
 export class RelayAdaptContract {
   private readonly contract: RelayAdapt;
@@ -167,6 +164,7 @@ export class RelayAdaptContract {
     relayShieldRequests: ShieldRequestStruct[],
     random: string,
     isRelayerTransaction: boolean,
+    minGasLimit?: bigint,
   ): Promise<string> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
@@ -181,12 +179,16 @@ export class RelayAdaptContract {
       isRelayerTransaction,
     );
 
+    const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
+    const minGasLimitForContract =
+      RelayAdaptContract.getMinimumGasLimitForContract(minimumGasLimit);
+
     return RelayAdaptHelper.getRelayAdaptParams(
       dummyUnshieldTransactions,
       random,
       requireSuccess,
       orderedCalls,
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT,
+      minGasLimitForContract,
     );
   }
 
@@ -197,6 +199,7 @@ export class RelayAdaptContract {
     random31Bytes: string,
     isGasEstimate: boolean,
     isRelayerTransaction: boolean,
+    minGasLimit?: bigint,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
@@ -208,19 +211,29 @@ export class RelayAdaptContract {
       isRelayerTransaction,
     );
 
+    const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
+    const minGasLimitForContract =
+      RelayAdaptContract.getMinimumGasLimitForContract(minimumGasLimit);
+
     const populatedTransaction = await this.populateRelay(
       unshieldTransactions,
       random31Bytes,
       requireSuccess,
       orderedCalls,
       {},
-      MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_MINIMUM_GAS_FOR_CONTRACT,
+      minGasLimitForContract,
     );
 
     // Set default gas limit for cross-contract calls.
-    populatedTransaction.gasLimit = MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
+    populatedTransaction.gasLimit = minimumGasLimit;
 
     return populatedTransaction;
+  }
+
+  static getMinimumGasLimitForContract(minimumGasLimit: bigint) {
+    // Contract call needs ~50,000-150,000 less gas than the gasLimit setting.
+    // This can be more if there are complex UTXO sets for the unshield.
+    return minimumGasLimit - 150_000n;
   }
 
   static async estimateGasWithErrorHandler(
