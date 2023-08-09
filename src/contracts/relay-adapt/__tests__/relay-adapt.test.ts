@@ -28,7 +28,11 @@ import {
   sendTransactionWithLatestNonce,
   testArtifactsGetter,
 } from '../../../test/helper.test';
-import { NFTTokenData, OutputType } from '../../../models/formatted-types';
+import {
+  NFTTokenData,
+  OutputType,
+  RelayAdaptShieldERC20Recipient,
+} from '../../../models/formatted-types';
 import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
@@ -85,7 +89,7 @@ const DEPLOYMENT_BLOCK = isDefined(process.env.DEPLOYMENT_BLOCK)
 
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe('Relay Adapt', function test() {
+describe.only('Relay Adapt', function test() {
   this.timeout(45000);
 
   beforeEach(async () => {
@@ -427,10 +431,9 @@ describe('Relay Adapt', function test() {
     // 4. Create shield inputs.
     const shieldRandom = '0x10203040506070809000102030405060';
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
-      wallet,
       shieldRandom,
       [],
-      [nftTokenData], // shieldNFTsTokenData
+      [{ nftTokenData, recipientAddress: wallet.getAddress() }], // shieldNFTRecipients
     );
 
     // 6. Get gas estimate from dummy txs.
@@ -632,12 +635,13 @@ describe('Relay Adapt', function test() {
 
     // 4. Create shield inputs.
     const shieldRandom = '0x10203040506070809000102030405060';
-    const shieldERC20Addresses: string[] = [WETH_TOKEN_ADDRESS];
+    const shieldERC20Addresses: RelayAdaptShieldERC20Recipient[] = [
+      { tokenAddress: WETH_TOKEN_ADDRESS, recipientAddress: wallet.getAddress() },
+    ];
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
-      wallet,
       shieldRandom,
       shieldERC20Addresses,
-      [], // shieldNFTsTokenData
+      [], // shieldNFTRecipients
     );
 
     // 5. Get gas estimate from dummy txs.
@@ -804,12 +808,13 @@ describe('Relay Adapt', function test() {
 
     // 4. Create shield inputs.
     const shieldRandom = '10203040506070809000102030405060';
-    const shieldERC20Addresses: string[] = [WETH_TOKEN_ADDRESS];
+    const shieldERC20Addresses: RelayAdaptShieldERC20Recipient[] = [
+      { tokenAddress: WETH_TOKEN_ADDRESS, recipientAddress: wallet.getAddress() },
+    ];
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
-      wallet,
       shieldRandom,
       shieldERC20Addresses,
-      [], // shieldNFTsTokenData
+      [], // shieldNFTRecipients
     );
 
     // 5. Get gas estimate from dummy txs. (Expect revert).
@@ -965,12 +970,13 @@ describe('Relay Adapt', function test() {
 
     // 4. Create shield inputs.
     const shieldRandom = '10203040506070809000102030405060';
-    const shieldERC20Addresses: string[] = [WETH_TOKEN_ADDRESS];
+    const shieldERC20Addresses: RelayAdaptShieldERC20Recipient[] = [
+      { tokenAddress: WETH_TOKEN_ADDRESS, recipientAddress: wallet.getAddress() },
+    ];
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
-      wallet,
       shieldRandom,
       shieldERC20Addresses,
-      [], // shieldNFTsTokenData
+      [], // shieldNFTRecipients
     );
 
     // 5. Get gas estimate from dummy txs.
@@ -1095,23 +1101,28 @@ describe('Relay Adapt', function test() {
   });
 
   it('Should generate relay shield notes and inputs', async () => {
-    const shieldERC20Addresses: string[] = [
-      config.contracts.weth9.toLowerCase(),
-      config.contracts.rail.toLowerCase(),
+    const shieldERC20Recipients: RelayAdaptShieldERC20Recipient[] = [
+      {
+        tokenAddress: config.contracts.weth9.toLowerCase(),
+        recipientAddress: wallet.getAddress(),
+      },
+      {
+        tokenAddress: config.contracts.rail.toLowerCase(),
+        recipientAddress: wallet.getAddress(),
+      },
     ];
 
     const random = '10203040506070809000102030405060';
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
-      wallet,
       random,
-      shieldERC20Addresses,
-      [], // shieldNFTsTokenData
+      shieldERC20Recipients,
+      [], // shieldNFTRecipients
     );
 
     expect(relayShieldInputs.length).to.equal(2);
     expect(
       relayShieldInputs.map((shieldInput) => shieldInput.preimage.token.tokenAddress),
-    ).to.deep.equal(shieldERC20Addresses);
+    ).to.deep.equal(shieldERC20Recipients.map((recipient) => recipient.tokenAddress.toLowerCase()));
     relayShieldInputs.forEach((relayShieldInput) => {
       expect(relayShieldInput.preimage.npk).to.equal(
         nToHex(

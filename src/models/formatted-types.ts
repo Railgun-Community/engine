@@ -194,3 +194,10 @@ export type CommitmentSummary = {
   commitmentCiphertext: CommitmentCiphertext;
   commitmentHash: string;
 };
+
+export type RelayAdaptShieldERC20Recipient = { tokenAddress: string; recipientAddress: string };
+
+export type RelayAdaptShieldNFTRecipient = {
+  nftTokenData: NFTTokenData;
+  recipientAddress: string;
+};

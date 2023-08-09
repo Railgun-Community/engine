@@ -1,45 +1,41 @@
 import { ContractTransaction, AbiCoder, keccak256 } from 'ethers';
 import { randomHex, hexToBytes } from '../../utils/bytes';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
-import { AddressData } from '../../key-derivation';
-import { NFTTokenData, TokenType } from '../../models/formatted-types';
+import { AddressData, decodeAddress } from '../../key-derivation';
+import {
+  NFTTokenData,
+  RelayAdaptShieldERC20Recipient,
+  RelayAdaptShieldNFTRecipient,
+  TokenType,
+} from '../../models/formatted-types';
 import { ShieldNoteNFT } from '../../note/nft/shield-note-nft';
 import { ERC721_NOTE_VALUE } from '../../note/note-util';
 import { RelayAdapt, ShieldRequestStruct, TransactionStruct } from '../../abi/typechain/RelayAdapt';
 
 class RelayAdaptHelper {
   static async generateRelayShieldRequests(
-    addressData: AddressData,
     random: string,
-    shieldERC20Addresses: string[],
-    shieldNFTsTokenData: NFTTokenData[],
+    shieldERC20Recipients: RelayAdaptShieldERC20Recipient[],
+    shieldNFTRecipients: RelayAdaptShieldNFTRecipient[],
   ): Promise<ShieldRequestStruct[]> {
     return Promise.all([
-      ...(await RelayAdaptHelper.createRelayShieldRequestsERC20s(
-        addressData,
-        random,
-        shieldERC20Addresses,
-      )),
-      ...(await RelayAdaptHelper.createRelayShieldRequestsNFTs(
-        addressData,
-        random,
-        shieldNFTsTokenData,
-      )),
+      ...(await RelayAdaptHelper.createRelayShieldRequestsERC20s(random, shieldERC20Recipients)),
+      ...(await RelayAdaptHelper.createRelayShieldRequestsNFTs(random, shieldNFTRecipients)),
     ]);
   }
 
   private static async createRelayShieldRequestsERC20s(
-    addressData: AddressData,
     random: string,
-    shieldERC20Addresses: string[],
+    shieldERC20Recipients: RelayAdaptShieldERC20Recipient[],
   ): Promise<ShieldRequestStruct[]> {
     return Promise.all(
-      shieldERC20Addresses.map((erc20Address) => {
+      shieldERC20Recipients.map(({ tokenAddress, recipientAddress }) => {
+        const addressData: AddressData = decodeAddress(recipientAddress);
         const shieldERC20 = new ShieldNoteERC20(
           addressData.masterPublicKey,
           random,
           0n, // 0n will automatically shield entire balance.
-          erc20Address,
+          tokenAddress,
         );
 
         // Random private key for Relay Adapt shield.
@@ -51,15 +47,14 @@ class RelayAdaptHelper {
   }
 
   private static async createRelayShieldRequestsNFTs(
-    addressData: AddressData,
     random: string,
-    shieldNFTsTokenData: NFTTokenData[],
+    shieldNFTRecipients: RelayAdaptShieldNFTRecipient[],
   ): Promise<ShieldRequestStruct[]> {
     return Promise.all(
-      shieldNFTsTokenData.map((nftTokenData) => {
+      shieldNFTRecipients.map(({ nftTokenData, recipientAddress }) => {
         const value = RelayAdaptHelper.valueForNFTShield(nftTokenData);
-
-        const shieldERC20 = new ShieldNoteNFT(
+        const addressData: AddressData = decodeAddress(recipientAddress);
+        const shieldNFT = new ShieldNoteNFT(
           addressData.masterPublicKey,
           random,
           value,
@@ -69,7 +64,7 @@ class RelayAdaptHelper {
         // Random private key for Relay Adapt shield.
         const shieldPrivateKey = hexToBytes(randomHex(32));
 
-        return shieldERC20.serialize(shieldPrivateKey, addressData.viewingPublicKey);
+        return shieldNFT.serialize(shieldPrivateKey, addressData.viewingPublicKey);
       }),
     );
   }
@@ -153,7 +148,7 @@ class RelayAdaptHelper {
     return calls.map((call) => ({
       to: call.to || '',
       data: call.data || '',
-      value: call.value || 0n,
+      value: call.value ?? 0n,
     }));
   }
 
