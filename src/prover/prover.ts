@@ -9,6 +9,7 @@ import {
   SnarkProof,
 } from '../models/prover-types';
 import { stringifySafe } from '../utils/stringify';
+import { ProofCache } from './proof-cache';
 
 type NativeProverFormattedJsonInputs = {
   merkleRoot: string;
@@ -210,6 +211,11 @@ export class Prover {
 
     const { publicInputs } = unprovedTransactionInputs;
 
+    const existingProof = ProofCache.get(unprovedTransactionInputs);
+    if (existingProof) {
+      return { proof: existingProof, publicInputs };
+    }
+
     // 1-2  1-3  2-2  2-3  8-2 [nullifiers, commitments]
     // Fetch artifacts
     progressCallback(5);
@@ -238,6 +244,8 @@ export class Prover {
       },
     );
     progressCallback(finalProgressProof);
+
+    ProofCache.store(unprovedTransactionInputs, proof);
 
     // Throw if proof is invalid
     if (!(await this.verify(publicInputs, proof))) {

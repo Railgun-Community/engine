@@ -152,12 +152,7 @@ describe('Transaction/Transaction Batch', function run() {
     }
 
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
-    const txs = await transactionBatch.generateTransactions(
-      prover,
-      wallet,
-      testEncryptionKey,
-      () => {},
-    );
+    const txs = await transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey);
     expect(txs.length).to.equal(2);
     expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
     expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
@@ -166,7 +161,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
       `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}`,
     );
@@ -178,11 +173,10 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(shieldValue));
     transactionBatch.addOutput(await makeNote(shieldValue));
     transactionBatch.addOutput(await makeNote(shieldValue));
-    const txs2 = await transactionBatch.generateTransactions(
+    const txs2 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
@@ -193,11 +187,10 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
     transactionBatch.addOutput(await makeNote(shieldValue + 1n));
-    const txs3 = await transactionBatch.generateTransactions(
+    const txs3 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs3.length).to.equal(1);
     expect(txs3.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
@@ -210,11 +203,10 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(5n * shieldValue + 1n)); // Should use all 6 notes, with a large 'change' output.
     transactionBatch.addOutput(await makeNote(1n)); // Can't add another note, because all are used up.
-    const txs4 = await transactionBatch.generateTransactions(
+    const txs4 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
     expect(txs4.map((tx) => tx.commitments.length)).to.deep.equal([1, 3]);
@@ -231,13 +223,13 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(0n));
     await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
       'Cannot prove transaction with null (zero value) inputs and outputs.',
       'Null input, null output notes should fail.',
     );
     // If this case is ever fixed, we can use these assertions instead:
-    // const txs0 = await transactionBatch.generateTransactions(
+    // const txs0 = await transactionBatch.generateDummyTransactions(
     //   prover,
     //   wallet,
     //   testEncryptionKey,
@@ -255,11 +247,10 @@ describe('Transaction/Transaction Batch', function run() {
       value: shieldValue * 6n,
       tokenData,
     });
-    const txs1 = await transactionBatch.generateTransactions(
+    const txs1 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs1.length).to.equal(2);
     expect(txs1.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
@@ -278,7 +269,7 @@ describe('Transaction/Transaction Batch', function run() {
       tokenData,
     });
     await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
       `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}`,
     );
@@ -295,11 +286,10 @@ describe('Transaction/Transaction Batch', function run() {
       value: shieldValue,
       tokenData,
     });
-    const txs2 = await transactionBatch.generateTransactions(
+    const txs2 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
@@ -323,11 +313,10 @@ describe('Transaction/Transaction Batch', function run() {
       value: shieldValue * 5n,
       tokenData,
     });
-    const txs3 = await transactionBatch.generateTransactions(
+    const txs3 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs3.length).to.equal(1);
     expect(txs3.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
@@ -344,11 +333,10 @@ describe('Transaction/Transaction Batch', function run() {
       value: shieldValue + 1n,
       tokenData,
     });
-    const txs4 = await transactionBatch.generateTransactions(
+    const txs4 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
       testEncryptionKey,
-      () => {},
     );
     expect(txs4.length).to.equal(1);
     expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);

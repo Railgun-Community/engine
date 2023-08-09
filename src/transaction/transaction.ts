@@ -324,14 +324,7 @@ class Transaction {
   ): Promise<TransactionStruct> {
     const { publicInputs, privateInputs, boundParams } = unprovedTransactionInputs;
 
-    if (
-      privateInputs.valueIn.length === 1 &&
-      privateInputs.valueOut.length === 1 &&
-      privateInputs.valueIn[0] === 0n &&
-      privateInputs.valueOut[0] === 0n
-    ) {
-      throw new Error('Cannot prove transaction with null (zero value) inputs and outputs.');
-    }
+    Transaction.assertCanProve(privateInputs);
 
     const { proof } = await prover.prove(unprovedTransactionInputs, progressCallback);
 
@@ -363,6 +356,17 @@ class Transaction {
       boundParams,
       this.unshieldNote.preImage,
     );
+  }
+
+  private static assertCanProve(privateInputs: PrivateInputs) {
+    if (
+      privateInputs.valueIn.length === 1 &&
+      privateInputs.valueOut.length === 1 &&
+      privateInputs.valueIn[0] === 0n &&
+      privateInputs.valueOut[0] === 0n
+    ) {
+      throw new Error('Cannot prove transaction with null (zero value) inputs and outputs.');
+    }
   }
 
   private static createTransactionStruct(
