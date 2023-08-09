@@ -30,7 +30,7 @@ export const createPollingJsonRpcProviderForListeners = async (
     return provider;
   }
 
-  if ('pollingInterval' in provider) {
+  if (provider instanceof JsonRpcProvider) {
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider._getConnection();
     const { chainId } = await provider.getNetwork();
@@ -44,7 +44,7 @@ export const createPollingJsonRpcProviderForListeners = async (
       throw new Error('Requires 1+ providers in FallbackProvider');
     }
     const firstProvider = provider.providerConfigs[0].provider as JsonRpcProvider;
-    if (!('pollingInterval' in firstProvider)) {
+    if (!(firstProvider instanceof JsonRpcProvider)) {
       throw new Error('First provider in FallbackProvider must be JsonRpcProvider');
     }
 
