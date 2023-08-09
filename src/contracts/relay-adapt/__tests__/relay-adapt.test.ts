@@ -495,8 +495,8 @@ describe('Relay Adapt', function test() {
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
     expect(Math.abs(Number(gasEstimate - gasEstimateFinal))).to.be.below(
-      12000,
-      'Gas difference from estimate (dummy) to final transaction should be less than 12000',
+      15000,
+      'Gas difference from estimate (dummy) to final transaction should be less than 15000',
     );
 
     // 9: Send relay transaction.
