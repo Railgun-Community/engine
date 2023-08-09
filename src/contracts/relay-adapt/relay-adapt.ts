@@ -7,6 +7,7 @@ import {
   TransactionRequest,
   Result,
   Log,
+  toUtf8String,
 } from 'ethers';
 import { ABIRelayAdapt } from '../../abi/abi';
 import { TransactionReceiptLog } from '../../models/formatted-types';
@@ -389,6 +390,14 @@ export class RelayAdaptContract {
       const result = AbiCoder.defaultAbiCoder().decode(['string'], strippedReturnValue);
       return result[0];
     }
-    return 'Unknown Relay Adapt error.';
+    try {
+      const utf8 = toUtf8String(revertReason);
+      if (utf8.length === 0) {
+        throw new Error('No utf8 string parsed from revert reason.');
+      }
+      return utf8;
+    } catch (err) {
+      return `Unknown Relay Adapt error.`;
+    }
   }
 }

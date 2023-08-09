@@ -1209,6 +1209,14 @@ describe('Relay Adapt', function test() {
     expect(parsed?.error).to.equal('RailgunLogic: Note already spent');
   });
 
+  it('Should parse relay adapt log revert data - string value from railgun cookbook transaction', () => {
+    const parsed = RelayAdaptContract.parseRelayAdaptReturnValue(
+      `0x5c0dee5d00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002d52656c617941646170743a205265667573696e6720746f2063616c6c205261696c67756e20636f6e747261637400000000000000000000000000000000000000`,
+    );
+    expect(parsed?.callIndex).to.equal(2);
+    expect(parsed?.error).to.equal('RelayAdapt: Refusing to call Railgun contract');
+  });
+
   it('Should extract call failed index and error message from non-parseable ethers error', () => {
     const errorText = `not a parseable error`;
     const { callFailedIndexString, errorMessage } =
