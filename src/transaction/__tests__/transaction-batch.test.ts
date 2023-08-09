@@ -66,7 +66,7 @@ const shieldLeaf = (txid: string): Commitment => ({
 
 const shieldValue = 9975062344139650872817n;
 
-describe('Transaction/Transaction Batch', function run() {
+describe.only('Transaction/Transaction Batch', function run() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());
@@ -223,7 +223,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(0n));
     await expect(
-      transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
     ).to.eventually.be.rejectedWith(
       'Cannot prove transaction with null (zero value) inputs and outputs.',
       'Null input, null output notes should fail.',
