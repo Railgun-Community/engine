@@ -1,4 +1,5 @@
-[![Node.js CI Actions Status](https://github.com/Railgun-Community/engine/actions/workflows/node.js.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/engine/actions)
+[![Unit Tests](https://github.com/Railgun-Community/engine/actions/workflows/unit-tests.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/engine/actions)
+[![Integration Tests](https://github.com/Railgun-Community/engine/actions/workflows/integration-tests.yml/badge.svg?branch=master)](https://github.com/Railgun-Community/engine/actions)
 
 # RAILGUN Engine SDK
 
