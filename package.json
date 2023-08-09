@@ -1,6 +1,6 @@
 {
   "name": "@railgun-community/engine",
-  "version": "5.2.2",
+  "version": "5.2.3",
   "description": "Wallet framework for RAILGUN smart contracts and private balances on Ethereum and more.",
   "author": "RAILGUN Contributors",
   "license": "MIT",
