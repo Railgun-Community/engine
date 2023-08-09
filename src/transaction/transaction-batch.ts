@@ -319,7 +319,8 @@ export class TransactionBatch {
       progressCallback(averageProgress);
     };
 
-    const provedTransactionPromises: TransactionStruct[] = [];
+    const provedTransactions: TransactionStruct[] = [];
+
     for (let index = 0; index < spendingSolutionGroups.length; index += 1) {
       const spendingSolutionGroup = spendingSolutionGroups[index];
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
@@ -350,10 +351,9 @@ export class TransactionBatch {
         unprovedTransactionInputs,
         individualProgressCallback,
       );
-      provedTransactionPromises.push(provedTransaction);
+      provedTransactions.push(provedTransaction);
     }
-    // return Promise.all(provedTransactionPromises);
-    return provedTransactionPromises;
+    return provedTransactions;
   }
 
   private static logDummySpendingSolutionGroupsSummary(
