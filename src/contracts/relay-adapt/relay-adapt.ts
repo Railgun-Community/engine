@@ -73,7 +73,6 @@ export class RelayAdaptContract {
   private populateRelayShields(
     shieldRequests: ShieldRequestStruct[],
   ): Promise<ContractTransaction> {
-    RelayAdaptHelper.validateShieldRequests(shieldRequests);
     return this.contract.shield.populateTransaction(shieldRequests);
   }
 

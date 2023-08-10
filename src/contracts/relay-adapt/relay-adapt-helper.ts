@@ -79,15 +79,6 @@ class RelayAdaptHelper {
     throw new Error('Unhandled NFT token type.');
   }
 
-  static validateShieldRequests(shieldRequests: ShieldRequestStruct[]) {
-    const { preimage } = shieldRequests[0];
-    shieldRequests.forEach((shieldInput) => {
-      if (shieldInput.preimage.npk !== preimage.npk) {
-        throw new Error('Relay shields must all contain the same npk/random.');
-      }
-    });
-  }
-
   /**
    * Format action data field for relay call.
    */
