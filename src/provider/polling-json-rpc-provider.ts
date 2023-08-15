@@ -15,4 +15,6 @@ export class PollingJsonRpcProvider extends JsonRpcProvider {
     super(url, network, options);
     this.pollingInterval = pollingInterval;
   }
+
+  readonly isPollingProvider: boolean = true;
 }

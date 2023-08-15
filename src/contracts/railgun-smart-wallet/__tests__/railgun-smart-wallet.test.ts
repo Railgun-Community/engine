@@ -69,7 +69,7 @@ import { isDefined } from '../../../utils/is-defined';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-let provider: JsonRpcProvider;
+let provider: PollingJsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
 let ethersWallet: Wallet;
@@ -168,7 +168,8 @@ describe('Railgun Smart Wallet', function runTests() {
   it('Should fail to instantiate without a polling provider', () => {
     const nonPollingProvider = new JsonRpcProvider(config.rpc);
     expect(() => {
-      return new RailgunSmartWalletContract('abc', nonPollingProvider, nonPollingProvider, chain);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+      return new RailgunSmartWalletContract('abc', nonPollingProvider as any, nonPollingProvider as any, chain);
     }).to.throw(
       'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
     );

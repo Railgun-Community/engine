@@ -42,11 +42,11 @@ import { ContractStore } from '../contracts/contract-store';
 import { mintNFTsID01ForTest, shieldNFTForTest } from '../test/shared-test.test';
 import { createPollingJsonRpcProviderForListeners } from '../provider/polling-util';
 import { isDefined } from '../utils/is-defined';
-import { AbstractWallet } from '../wallet';
+import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
 
 chai.use(chaiAsPromised);
 
-let provider: JsonRpcProvider;
+let provider: PollingJsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
 let ethersWallet: Wallet;
@@ -104,7 +104,7 @@ describe('RailgunEngine', function test() {
     }
 
     // EngineDebug.init(console); // uncomment for logs
-    provider = new JsonRpcProvider(config.rpc);
+    provider = new PollingJsonRpcProvider(config.rpc, config.chainId);
     chain = {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),

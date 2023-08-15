@@ -3,7 +3,6 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { JsonRpcProvider } from 'ethers';
 import { testArtifactsGetter } from '../../../test/helper.test';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
@@ -18,7 +17,7 @@ import { createPollingJsonRpcProviderForListeners } from '../../../provider/poll
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-let provider: JsonRpcProvider;
+let provider: PollingJsonRpcProvider;
 let chain: Chain;
 let engine: RailgunEngine;
 let railgunSmartWalletContract: RailgunSmartWalletContract;

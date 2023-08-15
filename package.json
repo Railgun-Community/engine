@@ -46,7 +46,7 @@
     "circomlibjs": "hsg88/circomlibjs#ffjavascrip.0.1.0",
     "encoding-down": "^7.1.0",
     "ethereum-cryptography": "^2.0.0",
-    "ethers": "github:Railgun-Community/ethers.js#v6.7.5",
+    "ethers": "github:Railgun-Community/ethers.js#v6.7.6",
     "fast-text-encoding": "^1.0.6",
     "levelup": "^5.1.1",
     "msgpack-lite": "^0.1.26"

@@ -1,17 +1,14 @@
 import { AbstractProvider, FallbackProvider, JsonRpcProvider } from 'ethers';
 import { PollingJsonRpcProvider } from './polling-json-rpc-provider';
-import { isDefined } from '../utils/is-defined';
 
-export const isNonPollingJsonRpcProvider = (provider: AbstractProvider) => {
-  if (!(provider instanceof JsonRpcProvider)) {
-    return false;
-  }
-  // eslint-disable-next-line no-underscore-dangle
-  return !isDefined(provider._getOption('polling')) || provider._getOption('polling') === false;
+const isPollingProvider = (provider: AbstractProvider): provider is PollingJsonRpcProvider => {
+  return (
+    provider.providerType === 'jsonrpc' && (provider as PollingJsonRpcProvider).isPollingProvider
+  );
 };
 
 export const assertIsPollingProvider = (provider: AbstractProvider) => {
-  if (isNonPollingJsonRpcProvider(provider)) {
+  if (!isPollingProvider(provider)) {
     throw new Error(
       'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
     );
@@ -26,25 +23,25 @@ export const createPollingJsonRpcProviderForListeners = async (
   provider: JsonRpcProvider | FallbackProvider,
   pollingInterval?: number,
 ): Promise<PollingJsonRpcProvider> => {
-  if (provider instanceof PollingJsonRpcProvider) {
+  if (isPollingProvider(provider)) {
     return provider;
   }
 
-  if (provider instanceof JsonRpcProvider) {
+  if (provider.providerType === 'jsonrpc') {
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider._getConnection();
     const { chainId } = await provider.getNetwork();
     return new PollingJsonRpcProvider(url, Number(chainId), pollingInterval);
   }
 
-  if ('quorum' in provider) {
+  if (provider.providerType === 'fallback') {
     // FallbackProvider only
 
     if (!provider.providerConfigs.length) {
       throw new Error('Requires 1+ providers in FallbackProvider');
     }
     const firstProvider = provider.providerConfigs[0].provider as JsonRpcProvider;
-    if (!(firstProvider instanceof JsonRpcProvider)) {
+    if (firstProvider.providerType !== 'jsonrpc') {
       throw new Error('First provider in FallbackProvider must be JsonRpcProvider');
     }
 
