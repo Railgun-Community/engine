@@ -10,7 +10,7 @@ on:
 
 jobs:
   integration-tests:
-    name: 🧪 Test
+    name: 🧪 Integration Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v3
@@ -20,10 +20,13 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: engine
+      - name: debug
+        shell: bash
+        run: echo "${{ secrets.FTP_USERNAME }}"
       - name: Checkout contract repo
         uses: actions/checkout@v3
         with:
-          repository: Railgun-Community/relayer
+          repository: Railgun-Privacy/contract
           token: ${{ secrets.RAILGUN_PRIVACY_ACCESS_TOKEN }}
           path: contract
       - name: Yarn in engine
