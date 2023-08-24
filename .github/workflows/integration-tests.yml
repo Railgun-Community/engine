@@ -10,19 +10,35 @@ on:
 
 jobs:
   integration-tests:
-    name: 🧪 Test
+    name: 🧪 Integration Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: '16'
-          cache: 'yarn'
-      - name: Install yarn
+      - name: Checkout engine repo
+        uses: actions/checkout@v3
+        with:
+          path: engine
+      - name: Checkout contract repo
+        uses: actions/checkout@v3
+        with:
+          repository: Railgun-Privacy/contract
+          token: ${{ secrets.RAILGUN_PRIVACY_ACCESS_TOKEN }}
+          path: contract
+      - name: Yarn in engine
         uses: borales/actions-yarn@v4
         with:
           cmd: install
-      - name: Yarn test up to 3 times
-        shell: bash
-        run: # Try yarn test 3 times before failing
-          r=3;while ! yarn test ; do ((--r))||exit;sleep 1;done
+          dir: 'engine'
+      - name: Yarn in contract
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install
+          dir: 'contract'
+      - name: Run contract hardhat and engine tests
+        uses: BerniWittmann/background-server-action@v1
+        with:
+          command: cd engine && yarn test-hardhat
+          start: cd contract && npx hardhat node >/dev/null, cd contract && sleep 5 && npx hardhat deploy:test --network localhost >/dev/null
+
