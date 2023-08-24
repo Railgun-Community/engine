@@ -12,6 +12,8 @@ jobs:
   integration-tests:
     name: 🧪 Integration Tests
     runs-on: ubuntu-latest
+    env:
+      FOOBAR: ${{ secrets.FTP_USERNAME }}
     steps:
       - uses: actions/setup-node@v3
         with:
@@ -23,8 +25,8 @@ jobs:
       - name: debug
         shell: bash
         run: |
-          foo_bar="${{ secrets.FTP_USERNAME }}"
-          echo "foo_bar length: ${#foo_bar}"
+          echo "$FOOBAR"
+          echo "foobar length: ${#FOOBAR}"
       - name: Checkout contract repo
         uses: actions/checkout@v3
         with:
