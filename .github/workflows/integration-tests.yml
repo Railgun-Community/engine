@@ -23,7 +23,7 @@ jobs:
       - name: Checkout contract repo
         uses: actions/checkout@v3
         with:
-          repository: Railgun-Privacy/contract
+          repository: Railgun-Community/relayer
           token: ${{ secrets.RAILGUN_PRIVACY_ACCESS_TOKEN }}
           path: contract
       - name: Yarn in engine
