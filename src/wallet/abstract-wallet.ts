@@ -728,7 +728,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get UTXOs for
    * @returns UTXOs list
    */
-  private async TXOs(chain: Chain): Promise<TXO[]> {
+  async TXOs(chain: Chain): Promise<TXO[]> {
     const recipientAddress = encodeAddress(this.addressKeys);
     const vpk = this.getViewingKeyPair().privateKey;
     const merkletree = this.getMerkletreeForChain(chain);
@@ -978,7 +978,7 @@ abstract class AbstractWallet extends EventEmitter {
     return TransactionHistoryItemVersion.UpdatedNov2022;
   }
 
-  private async getAllUnshieldEventsFromSpentNullifiers(
+  async getAllUnshieldEventsFromSpentNullifiers(
     chain: Chain,
     filteredTXOs: TXO[],
   ): Promise<UnshieldStoredEvent[]> {
