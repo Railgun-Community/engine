@@ -11,7 +11,13 @@ import { ByteLength, formatToByteLength, hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
-import { Commitment, Nullifier } from './models/formatted-types';
+import {
+  Commitment,
+  CommitmentType,
+  LegacyGeneratedCommitment,
+  Nullifier,
+  ShieldCommitment,
+} from './models/formatted-types';
 import {
   CommitmentEvent,
   EngineEvent,
@@ -827,6 +833,56 @@ class RailgunEngine extends EventEmitter {
     );
     this.loadWallet(wallet);
     return wallet;
+  }
+
+  async getAllShieldCommitments(
+    chain: Chain,
+    startingBlock: number,
+  ): Promise<(ShieldCommitment | LegacyGeneratedCommitment)[]> {
+    const merkletree = this.getMerkletreeForChain(chain);
+    const latestTree = await merkletree.latestTree();
+
+    const treeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
+      merkletree,
+      latestTree,
+      startingBlock,
+    );
+    if (!treeInfo) {
+      return [];
+    }
+
+    const shieldCommitments: (ShieldCommitment | LegacyGeneratedCommitment)[] = [];
+
+    const startScanTree = treeInfo.tree;
+
+    for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const treeHeight = await merkletree.getTreeLength(treeIndex);
+      const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
+
+      const isInitialTree = treeIndex === startScanTree;
+      const startScanHeight = isInitialTree ? treeInfo.position : 0;
+
+      for (let index = startScanHeight; index < treeHeight; index += 1) {
+        fetcher[index] = merkletree.getCommitment(treeIndex, index);
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      const leaves: Optional<Commitment>[] = await Promise.all(fetcher);
+      leaves.forEach((leaf) => {
+        if (!leaf) {
+          return;
+        }
+        if (
+          leaf.commitmentType === CommitmentType.LegacyGeneratedCommitment ||
+          leaf.commitmentType === CommitmentType.ShieldCommitment
+        ) {
+          shieldCommitments.push(leaf);
+        }
+      });
+    }
+
+    return shieldCommitments;
   }
 
   // Top-level exports:
