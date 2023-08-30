@@ -1264,6 +1264,53 @@ abstract class AbstractWallet extends EventEmitter {
     return tokenBalance;
   }
 
+  async getAllShieldCommitmentsFromStartingBlock(
+    chain: Chain,
+    startingBlock: number,
+  ): Promise<Commitment[]> {
+    const merkletree = this.getMerkletreeForChain(chain);
+    const latestTree = await merkletree.latestTree();
+
+    const treeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
+      merkletree,
+      latestTree,
+      startingBlock,
+    );
+    if (!treeInfo) {
+      return [];
+    }
+
+    const shieldCommitments: (ShieldCommitment | LegacyGeneratedCommitment)[] = [];
+
+    const startScanTree = treeInfo.tree ?? 0;
+
+    for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
+      const treeHeight = await merkletree.getTreeLength(treeIndex);
+      const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
+
+      const startScanHeight = treeIndex === startScanTree ? treeInfo.position : 0;
+
+      for (let index = startScanHeight; index < treeHeight; index += 1) {
+        fetcher[index] = merkletree.getCommitment(treeIndex, index);
+      }
+
+      const leaves = await Promise.all(fetcher);
+      leaves.forEach((leaf) => {
+        if (!leaf) {
+          return;
+        }
+        if (
+          leaf.commitmentType === CommitmentType.LegacyGeneratedCommitment ||
+          leaf.commitmentType === CommitmentType.ShieldCommitment
+        ) {
+          shieldCommitments.push(leaf);
+        }
+      });
+    }
+
+    return shieldCommitments;
+  }
+
   /**
    * Scans for new balances
    * @param chain - chain data to scan
@@ -1298,8 +1345,8 @@ abstract class AbstractWallet extends EventEmitter {
           creationBlockNumber,
         );
         if (creationTreeInfo != null) {
-          walletDetails.creationTree = creationTreeInfo.creationTree;
-          walletDetails.creationTreeHeight = creationTreeInfo.creationTreeHeight;
+          walletDetails.creationTree = creationTreeInfo.tree;
+          walletDetails.creationTreeHeight = creationTreeInfo.position;
         }
       }
 
@@ -1380,7 +1427,7 @@ abstract class AbstractWallet extends EventEmitter {
     merkletree: MerkleTree,
     latestTree: number,
     creationBlockNumber: number,
-  ): Promise<Optional<{ creationTree: number; creationTreeHeight: number }>> {
+  ): Promise<Optional<{ tree: number; position: number }>> {
     if (creationBlockNumber == null) {
       return undefined;
     }
@@ -1410,7 +1457,7 @@ abstract class AbstractWallet extends EventEmitter {
       );
 
       if (creationBlockIndex > -1) {
-        return { creationTree: tree, creationTreeHeight: creationBlockIndex };
+        return { tree, position: creationBlockIndex };
       }
     }
 
