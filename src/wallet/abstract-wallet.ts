@@ -1415,8 +1415,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
     }
 
-    // Default to the first index of the first tree.
-    return { tree: 0, position: 0 };
+    return undefined;
   }
 
   setCreationBlockNumbers(creationBlockNumbers: Optional<number[][]>): void {

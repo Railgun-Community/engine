@@ -847,13 +847,10 @@ class RailgunEngine extends EventEmitter {
       latestTree,
       startingBlock,
     );
-    if (!treeInfo) {
-      return [];
-    }
 
     const shieldCommitments: (ShieldCommitment | LegacyGeneratedCommitment)[] = [];
 
-    const startScanTree = treeInfo.tree;
+    const startScanTree = treeInfo?.tree ?? 0;
 
     for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
       // eslint-disable-next-line no-await-in-loop
@@ -861,7 +858,7 @@ class RailgunEngine extends EventEmitter {
       const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
       const isInitialTree = treeIndex === startScanTree;
-      const startScanHeight = isInitialTree ? treeInfo.position : 0;
+      const startScanHeight = isInitialTree && treeInfo ? treeInfo.position : 0;
 
       for (let index = startScanHeight; index < treeHeight; index += 1) {
         fetcher[index] = merkletree.getCommitment(treeIndex, index);
