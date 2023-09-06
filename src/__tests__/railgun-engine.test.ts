@@ -163,11 +163,14 @@ describe('RailgunEngine', function test() {
     );
   });
 
-  it('[HH] Should show balance after shield and rescan', async function run() {
+  it('[HH] Should get balances after shield and rescan', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
+
+    const shieldsPre = await engine.getAllShieldCommitments(chain, 0);
+    expect(shieldsPre.length).to.equal(0);
 
     const commitment: LegacyGeneratedCommitment = {
       commitmentType: CommitmentType.LegacyGeneratedCommitment,
@@ -189,6 +192,7 @@ describe('RailgunEngine', function test() {
       ],
       blockNumber: 0,
     };
+
     // Override root validator
     merkleTree.rootValidator = () => Promise.resolve(true);
     await merkleTree.queueLeaves(0, 0, [commitment]);
@@ -206,6 +210,9 @@ describe('RailgunEngine', function test() {
     await wallet.clearScannedBalances(chain);
     const balanceClear = await wallet.getBalance(chain, tokenAddress);
     expect(balanceClear).to.equal(undefined);
+
+    const shieldsPost = await engine.getAllShieldCommitments(chain, 0);
+    expect(shieldsPost.length).to.equal(1);
   });
 
   it('[HH] With a creation block number provided, should show balance after shield and rescan', async function run() {

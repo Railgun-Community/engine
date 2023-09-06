@@ -89,7 +89,7 @@ const DEPLOYMENT_BLOCK = isDefined(process.env.DEPLOYMENT_BLOCK)
 
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe.only('Relay Adapt', function test() {
+describe('Relay Adapt', function test() {
   this.timeout(45000);
 
   beforeEach(async () => {
