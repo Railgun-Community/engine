@@ -45,7 +45,7 @@ describe('Wallet', () => {
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
-      await wallet.generateShareableViewingKey(),
+      wallet.generateShareableViewingKey(),
       undefined, // creationBlockNumbers
     );
   });

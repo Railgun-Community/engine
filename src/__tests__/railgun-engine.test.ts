@@ -1,6 +1,6 @@
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Contract, JsonRpcProvider, Wallet } from 'ethers';
+import { Contract, Wallet } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { RailgunEngine } from '../railgun-engine';
