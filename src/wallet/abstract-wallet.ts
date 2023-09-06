@@ -1409,12 +1409,14 @@ abstract class AbstractWallet extends EventEmitter {
           commitment.blockNumber <= creationBlockNumber,
       );
 
-      if (creationBlockIndex > -1) {
-        return { tree, position: creationBlockIndex };
+      if (creationBlockIndex === -1) {
+        // First index in the tree.
+        return { tree, position: 0 };
       }
     }
 
-    return undefined;
+    // Default to the first index of the first tree.
+    return { tree: 0, position: 0 };
   }
 
   setCreationBlockNumbers(creationBlockNumbers: Optional<number[][]>): void {
