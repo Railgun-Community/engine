@@ -842,23 +842,27 @@ class RailgunEngine extends EventEmitter {
     const merkletree = this.getMerkletreeForChain(chain);
     const latestTree = await merkletree.latestTree();
 
-    const treeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
-      merkletree,
-      latestTree,
-      startingBlock,
-    );
+    // TODO: use blockNumber to find exact starting position...
+    // The logic is currently broken.
+
+    // const treeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
+    //   merkletree,
+    //   latestTree,
+    //   startingBlock,
+    // );
 
     const shieldCommitments: (ShieldCommitment | LegacyGeneratedCommitment)[] = [];
 
-    const startScanTree = treeInfo?.tree ?? 0;
+    const startScanTree = 0;
 
     for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
       // eslint-disable-next-line no-await-in-loop
       const treeHeight = await merkletree.getTreeLength(treeIndex);
       const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
-      const isInitialTree = treeIndex === startScanTree;
-      const startScanHeight = isInitialTree && treeInfo ? treeInfo.position : 0;
+      // const isInitialTree = treeIndex === startScanTree;
+      // const startScanHeight = isInitialTree && treeInfo ? treeInfo.position : 0;
+      const startScanHeight = 0;
 
       for (let index = startScanHeight; index < treeHeight; index += 1) {
         fetcher[index] = merkletree.getCommitment(treeIndex, index);
@@ -868,6 +872,9 @@ class RailgunEngine extends EventEmitter {
       const leaves: Optional<Commitment>[] = await Promise.all(fetcher);
       leaves.forEach((leaf) => {
         if (!leaf) {
+          return;
+        }
+        if (leaf.blockNumber < startingBlock) {
           return;
         }
         if (
