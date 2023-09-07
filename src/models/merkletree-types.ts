@@ -2,6 +2,9 @@ import { ByteLength, formatToByteLength, fromUTF8String, numberify } from '../ut
 import { SNARK_PRIME } from '../utils/constants';
 import { keccak256 } from '../utils/hash';
 
+export const TREE_DEPTH = 16;
+export const TREE_MAX_ITEMS = 65_536; // 2^16
+
 // eslint-disable-next-line no-unused-vars
 export type RootValidator = (tree: number, root: string) => Promise<boolean>;
 

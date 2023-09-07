@@ -25,11 +25,10 @@ import {
   MerkletreeLeaf,
   MerkletreesMetadata,
   RootValidator,
+  TREE_DEPTH,
 } from '../models/merkletree-types';
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
-
-const TREE_DEPTH = 16;
 
 // Optimization: process leaves for a many commitment groups before checking merkleroot against contract.
 // If merkleroot is invalid, scan leaves as medium batches, and individually as a final backup.
@@ -56,8 +55,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   private treeLengths: number[] = [];
 
-  // {tree: {startingIndex: [leaves]}}r
-  private writeQueue: T[][][] = [];
+  // {tree: {startingIndex: [leaves]}}
+  protected writeQueue: T[][][] = [];
+
+  protected lockUpdates = false;
 
   // Check function to test if merkle root is valid
   rootValidator: RootValidator;
@@ -295,6 +296,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       ...this.getTreeDBPrefix(tree),
       hexlify(new BN(0).notn(32)), // 2^32-1
     ]);
+  }
+
+  async getLatestTreeAndIndex(): Promise<{ tree: number; index: number }> {
+    const latestTree = await this.latestTree();
+    const treeLength = await this.getTreeLength(latestTree);
+    return { tree: latestTree, index: treeLength - 1 };
   }
 
   async clearLeavesFromDB(): Promise<void> {

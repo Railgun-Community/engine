@@ -136,6 +136,18 @@ export type TransactCommitment = CommitmentShared & {
   ciphertext: CommitmentCiphertext;
 };
 
+export type RailgunTransaction = {
+  graphID: string;
+  commitments: string[];
+  nullifiers: string[];
+  boundParamsHash: string;
+  hash: string;
+};
+
+export type RailgunTransactionWithTxid = RailgunTransaction & {
+  hash: string;
+};
+
 export type Commitment =
   | ShieldCommitment
   | TransactCommitment
