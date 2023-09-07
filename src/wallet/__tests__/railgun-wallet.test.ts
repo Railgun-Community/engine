@@ -8,17 +8,17 @@ import { ViewOnlyWallet } from '../view-only-wallet';
 import { config } from '../../test/config.test';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { MerkleTree } from '../../merkletree/merkletree';
 import { sha256 } from '../../utils/hash';
 import { combine } from '../../utils/bytes';
 import { RailgunEngine } from '../../railgun-engine';
 import { mnemonicToSeed } from '../../key-derivation/bip39';
+import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let db: Database;
-let merkletree: MerkleTree;
+let utxoMerkletree: UTXOMerkletree;
 let wallet: RailgunWallet;
 let viewOnlyWallet: ViewOnlyWallet;
 const chain: Chain = {
@@ -31,9 +31,8 @@ const testEncryptionKey = config.encryptionKey;
 
 describe('Wallet', () => {
   beforeEach(async () => {
-    // Create database and wallet
     db = new Database(memdown());
-    merkletree = await MerkleTree.create(db, chain, async () => true);
+    utxoMerkletree = await UTXOMerkletree.create(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -41,7 +40,7 @@ describe('Wallet', () => {
       0,
       undefined, // creationBlockNumbers
     );
-    wallet.loadMerkletree(merkletree);
+    wallet.loadUTXOMerkletree(utxoMerkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
@@ -272,7 +271,7 @@ describe('Wallet', () => {
 
   afterEach(async () => {
     // Clean up database
-    wallet.unloadMerkletree(merkletree.chain);
+    wallet.unloadUTXOMerkletree(utxoMerkletree.chain);
     await db.close();
   });
 });

@@ -169,7 +169,12 @@ describe('Railgun Smart Wallet', function runTests() {
     const nonPollingProvider = new JsonRpcProvider(config.rpc);
     expect(() => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-      return new RailgunSmartWalletContract('abc', nonPollingProvider as any, nonPollingProvider as any, chain);
+      return new RailgunSmartWalletContract(
+        'abc',
+        nonPollingProvider as any,
+        nonPollingProvider as any,
+        chain,
+      );
     }).to.throw(
       'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
     );
@@ -683,9 +688,9 @@ describe('Railgun Smart Wallet', function runTests() {
 
     const tree = 0;
 
-    const merkletree = engine.merkletrees[chain.type][chain.id];
+    const utxoMerkletree = engine.utxoMerkletrees[chain.type][chain.id];
 
-    expect(await merkletree.getTreeLength(tree)).to.equal(1);
+    expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChain!: Chain;
     const historyScanListener = (data: MerkletreeHistoryScanEventData) => {
       historyScanCompletedForChain = data.chain;
@@ -696,11 +701,11 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(await engine.getStartScanningBlock(chain)).to.be.above(0);
 
     await engine.clearSyncedMerkletreeLeaves(chain);
-    expect(await merkletree.getTreeLength(tree)).to.equal(0);
+    expect(await utxoMerkletree.getTreeLength(tree)).to.equal(0);
     expect(await engine.getStartScanningBlock(chain)).to.equal(0);
 
     await engine.fullRescanMerkletreesAndWallets(chain);
-    expect(await merkletree.getTreeLength(tree)).to.equal(1);
+    expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
   });
 
   it('[HH] Should get note hashes', async function run() {

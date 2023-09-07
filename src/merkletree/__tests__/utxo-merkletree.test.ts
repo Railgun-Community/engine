@@ -5,27 +5,29 @@ import { BN } from 'bn.js';
 import { Commitment, CommitmentType, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { MerkleTree, MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../merkletree';
+import { Merkletree } from '../merkletree';
+import { UTXOMerkletree } from '../utxo-merkletree';
 import { TOKEN_SUB_ID_NULL } from '../../models/transaction-constants';
 import { UnshieldStoredEvent } from '../../models';
+import { MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../../models/merkletree-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 // Database object
 let db: Database;
-let merkletree: MerkleTree;
+let merkletree: UTXOMerkletree;
 
 const chain: Chain = {
   type: 0,
   id: 0,
 };
 
-describe('MerkleTree', () => {
+describe('UTXO Merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
-    merkletree = await MerkleTree.create(db, chain, async () => true);
+    merkletree = await UTXOMerkletree.create(db, chain, async () => true);
   });
 
   it('Should hash left/right', () => {
@@ -48,7 +50,7 @@ describe('MerkleTree', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(MerkleTree.hashLeftRight(vector.left, vector.right)).to.equal(vector.result);
+      expect(Merkletree.hashLeftRight(vector.left, vector.right)).to.equal(vector.result);
     });
   });
 
@@ -116,7 +118,11 @@ describe('MerkleTree', () => {
 
     await Promise.all(
       vectors.map(async (vector) => {
-        const merkletreeVectorTest = await MerkleTree.create(db, vector.chain, async () => true);
+        const merkletreeVectorTest = await UTXOMerkletree.create(
+          db,
+          vector.chain,
+          async () => true,
+        );
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
           vector.result.slice(0, 3),
@@ -458,7 +464,7 @@ describe('MerkleTree', () => {
     });
 
     // Check proof verification
-    expect(MerkleTree.verifyProof(proof)).to.equal(true);
+    expect(Merkletree.verifyProof(proof)).to.equal(true);
 
     // Insert leaves
     await merkletree.queueLeaves(
@@ -509,16 +515,16 @@ describe('MerkleTree', () => {
     });
 
     // Check proof verification
-    expect(MerkleTree.verifyProof(proof2)).to.equal(true);
+    expect(Merkletree.verifyProof(proof2)).to.equal(true);
     proof2.root = proof.root;
-    expect(MerkleTree.verifyProof(proof2)).to.equal(false);
+    expect(Merkletree.verifyProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
-    expect(MerkleTree.verifyProof(proof2)).to.equal(false);
+    expect(Merkletree.verifyProof(proof2)).to.equal(false);
   }).timeout(1000);
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false
-    const merkletreeTest = await MerkleTree.create(db, chain, async () => false);
+    const merkletreeTest = await UTXOMerkletree.create(db, chain, async () => false);
 
     // Check root is empty tree root
     expect(await merkletreeTest.getRoot(0)).to.equal(

@@ -8,7 +8,6 @@ import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
 import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../key-derivation/wallet-node';
-import { MerkleTree } from '../merkletree/merkletree';
 import { EngineEvent, UnshieldStoredEvent, WalletScannedEventData } from '../models/event-types';
 import {
   BytesData,
@@ -71,6 +70,7 @@ import { getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined } from '../utils/is-defined';
 import { PublicInputs } from '../models/prover-types';
+import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -99,7 +99,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly nullifyingKey: bigint;
 
-  readonly merkletrees: MerkleTree[][] = [];
+  readonly utxoMerkletrees: UTXOMerkletree[][] = [];
 
   private creationBlockNumbers: Optional<number[][]>;
 
@@ -133,20 +133,18 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Loads merkle tree into wallet
-   * @param merkletree - merkletree to load
+   * Loads utxo merkle tree into wallet
    */
-  loadMerkletree(merkletree: MerkleTree) {
-    this.merkletrees[merkletree.chain.type] ??= [];
-    this.merkletrees[merkletree.chain.type][merkletree.chain.id] = merkletree;
+  loadUTXOMerkletree(utxoMerkletree: UTXOMerkletree) {
+    this.utxoMerkletrees[utxoMerkletree.chain.type] ??= [];
+    this.utxoMerkletrees[utxoMerkletree.chain.type][utxoMerkletree.chain.id] = utxoMerkletree;
   }
 
   /**
-   * Unload merkle tree by chain
-   * @param chain - chain type/id of tree to unload
+   * Unload utxo merkle tree by chain
    */
-  unloadMerkletree(chain: Chain) {
-    delete this.merkletrees[chain.type]?.[chain.id];
+  unloadUTXOMerkletree(chain: Chain) {
+    delete this.utxoMerkletrees[chain.type]?.[chain.id];
   }
 
   private createTokenDataGetter(chain: Chain): TokenDataGetter {
@@ -731,7 +729,7 @@ abstract class AbstractWallet extends EventEmitter {
   async TXOs(chain: Chain): Promise<TXO[]> {
     const recipientAddress = encodeAddress(this.addressKeys);
     const vpk = this.getViewingKeyPair().privateKey;
-    const merkletree = this.getMerkletreeForChain(chain);
+    const merkletree = this.getUTXOMerkletreeForChain(chain);
     const tokenDataGetter = this.createTokenDataGetter(chain);
 
     const storedReceiveCommitments = await this.queryAllStoredReceiveCommitments(chain);
@@ -982,7 +980,7 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     filteredTXOs: TXO[],
   ): Promise<UnshieldStoredEvent[]> {
-    const merkletree = this.getMerkletreeForChain(chain);
+    const merkletree = this.getUTXOMerkletreeForChain(chain);
     const unshieldEvents: UnshieldStoredEvent[] = [];
 
     const seenSpentTxids: string[] = [];
@@ -1168,10 +1166,10 @@ abstract class AbstractWallet extends EventEmitter {
     return history;
   }
 
-  private getMerkletreeForChain(chain: Chain): MerkleTree {
-    const merkletree = this.merkletrees[chain.type][chain.id];
+  private getUTXOMerkletreeForChain(chain: Chain): UTXOMerkletree {
+    const merkletree = this.utxoMerkletrees[chain.type][chain.id];
     if (!isDefined(merkletree)) {
-      throw new Error(`No merkletree for chain ${chain.type}:${chain.id}`);
+      throw new Error(`No utxo merkletree for chain ${chain.type}:${chain.id}`);
     }
     return merkletree;
   }
@@ -1271,13 +1269,13 @@ abstract class AbstractWallet extends EventEmitter {
   async scanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
     EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
-    const merkletree = this.getMerkletreeForChain(chain);
+    const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
 
     try {
       // Fetch wallet details and latest tree.
       const [walletDetails, latestTree] = await Promise.all([
         this.getWalletDetails(chain),
-        merkletree.latestTree(),
+        utxoMerkletree.latestTree(),
       ]);
 
       // Fill list of tree heights with 0s up to # of trees
@@ -1293,7 +1291,7 @@ abstract class AbstractWallet extends EventEmitter {
       ) {
         const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
         const creationTreeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
-          merkletree,
+          utxoMerkletree,
           latestTree,
           creationBlockNumber,
         );
@@ -1321,12 +1319,12 @@ abstract class AbstractWallet extends EventEmitter {
         }
 
         // Create sparse array of tree
-        const treeHeight = await merkletree.getTreeLength(treeIndex);
+        const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
         const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
         // Fetch each leaf we need to scan
         for (let index = startScanHeight; index < treeHeight; index += 1) {
-          fetcher[index] = merkletree.getCommitment(treeIndex, index);
+          fetcher[index] = utxoMerkletree.getCommitment(treeIndex, index);
         }
 
         // Wait until all leaves are fetched
@@ -1373,11 +1371,11 @@ abstract class AbstractWallet extends EventEmitter {
 
   /**
    * Searches for creation tree height for given merkletree.
-   * @param merkletree - MerkleTree
+   * @param merkletree - Merkletree
    * @param latestTree - number
    */
   static async getTreeAndPositionBeforeBlock(
-    merkletree: MerkleTree,
+    utxoMerkletree: UTXOMerkletree,
     latestTree: number,
     creationBlockNumber: number,
   ): Promise<Optional<{ tree: number; position: number }>> {
@@ -1387,12 +1385,12 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Loop through each tree, descending, and search commitments for creation tree height <= block number
     for (let tree = latestTree; tree > -1; tree -= 1) {
-      const treeHeight = await merkletree.getTreeLength(tree);
+      const treeHeight = await utxoMerkletree.getTreeLength(tree);
       const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
       // Build reverse list.
       for (let index = 0; index < treeHeight; index += 1) {
-        fetcher[index] = merkletree.getCommitment(tree, index);
+        fetcher[index] = utxoMerkletree.getCommitment(tree, index);
       }
 
       const leaves = await Promise.all(fetcher);

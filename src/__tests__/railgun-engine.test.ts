@@ -18,7 +18,6 @@ import {
   testArtifactsGetter,
 } from '../test/helper.test';
 import { ShieldNoteERC20 } from '../note/erc20/shield-note-erc20';
-import { MerkleTree } from '../merkletree/merkletree';
 import { ByteLength, formatToByteLength, hexToBigInt, hexToBytes, randomHex } from '../utils/bytes';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import {
@@ -43,6 +42,7 @@ import { mintNFTsID01ForTest, shieldNFTForTest } from '../test/shared-test.test'
 import { createPollingJsonRpcProviderForListeners } from '../provider/polling-util';
 import { isDefined } from '../utils/is-defined';
 import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
+import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 
 chai.use(chaiAsPromised);
 
@@ -55,7 +55,7 @@ let token: TestERC20;
 let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
-let merkleTree: MerkleTree;
+let utxoMerkletree: UTXOMerkletree;
 let tokenAddress: string;
 let railgunSmartWalletContract: RailgunSmartWalletContract;
 
@@ -133,7 +133,7 @@ describe('RailgunEngine', function test() {
       24,
     );
     await engine.scanHistory(chain);
-    merkleTree = engine.merkletrees[chain.type][chain.id];
+    utxoMerkletree = engine.utxoMerkletrees[chain.type][chain.id];
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
   });
 
@@ -194,9 +194,9 @@ describe('RailgunEngine', function test() {
     };
 
     // Override root validator
-    merkleTree.rootValidator = () => Promise.resolve(true);
-    await merkleTree.queueLeaves(0, 0, [commitment]);
-    await merkleTree.updateTrees();
+    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    await utxoMerkletree.queueLeaves(0, 0, [commitment]);
+    await utxoMerkletree.updateTrees();
 
     await wallet.scanBalances(chain, undefined);
     const balance = await wallet.getBalance(chain, tokenAddress);
@@ -248,9 +248,9 @@ describe('RailgunEngine', function test() {
       blockNumber: 0,
     };
     // Override root validator
-    merkleTree.rootValidator = () => Promise.resolve(true);
-    await merkleTree.queueLeaves(0, 0, [commitment]);
-    await merkleTree.updateTrees();
+    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    await utxoMerkletree.queueLeaves(0, 0, [commitment]);
+    await utxoMerkletree.updateTrees();
 
     await wallet.scanBalances(chain, undefined);
     const balance = await wallet.getBalance(chain, tokenAddress);

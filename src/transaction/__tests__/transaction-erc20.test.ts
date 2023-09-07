@@ -23,7 +23,6 @@ import {
 import { DECIMALS_18, getEthersWallet, testArtifactsGetter } from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
-import { MerkleTree } from '../../merkletree/merkletree';
 import { TransactNote } from '../../note/transact-note';
 import { Prover, Groth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
@@ -39,12 +38,13 @@ import { ContractStore } from '../../contracts/contract-store';
 import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
+import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 let db: Database;
-let merkletree: MerkleTree;
+let utxoMerkletree: UTXOMerkletree;
 let wallet: RailgunWallet;
 let tokenDataGetter: TokenDataGetter;
 let chain: Chain;
@@ -87,7 +87,7 @@ describe('Transaction/ERC20', function test() {
       type: ChainType.EVM,
       id: 1,
     };
-    merkletree = await MerkleTree.create(db, chain, async () => true);
+    utxoMerkletree = await UTXOMerkletree.create(db, chain, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -100,7 +100,7 @@ describe('Transaction/ERC20', function test() {
     prover = new Prover(testArtifactsGetter);
     prover.setSnarkJSGroth16(groth16 as Groth16);
     address = wallet.addressKeys;
-    wallet.loadMerkletree(merkletree);
+    wallet.loadUTXOMerkletree(utxoMerkletree);
 
     // Load fake contract
     ContractStore.railgunSmartWalletContracts[chain.type] = [];
@@ -130,9 +130,9 @@ describe('Transaction/ERC20', function test() {
         undefined, // memoText
       );
     };
-    merkletree.rootValidator = () => Promise.resolve(true);
-    await merkletree.queueLeaves(0, 0, [shieldLeaf]); // start with a shield
-    await merkletree.updateTrees();
+    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    await utxoMerkletree.queueLeaves(0, 0, [shieldLeaf]); // start with a shield
+    await utxoMerkletree.updateTrees();
 
     let scanProgress = 0;
     await wallet.scanBalances(chain, (progress: number) => {
@@ -756,7 +756,7 @@ describe('Transaction/ERC20', function test() {
 
   this.afterAll(async () => {
     // Clean up database
-    wallet.unloadMerkletree(merkletree.chain);
+    wallet.unloadUTXOMerkletree(utxoMerkletree.chain);
     await db.close();
   });
 });
