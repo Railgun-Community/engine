@@ -2,7 +2,11 @@ import BN from 'bn.js';
 import type { PutBatch } from 'abstract-leveldown';
 import { Database } from '../database/database';
 import { Chain } from '../models/engine-types';
-import { InvalidMerklerootDetails, RootValidator } from '../models/merkletree-types';
+import {
+  CommitmentProcessingGroupSize,
+  InvalidMerklerootDetails,
+  MerklerootValidator,
+} from '../models/merkletree-types';
 import { ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
@@ -15,16 +19,16 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
 
   protected merkletreeType = 'UTXO';
 
-  private constructor(db: Database, chain: Chain, rootValidator: RootValidator) {
-    super(db, chain, rootValidator);
+  private constructor(db: Database, chain: Chain, merklerootValidator: MerklerootValidator) {
+    super(db, chain, merklerootValidator, CommitmentProcessingGroupSize.XXXLarge);
   }
 
   static async create(
     db: Database,
     chain: Chain,
-    rootValidator: RootValidator,
+    merklerootValidator: MerklerootValidator,
   ): Promise<UTXOMerkletree> {
-    const merkletree = new UTXOMerkletree(db, chain, rootValidator);
+    const merkletree = new UTXOMerkletree(db, chain, merklerootValidator);
     await merkletree.init();
     return merkletree;
   }
@@ -33,15 +37,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * Gets Commitment from UTXO tree
    */
   async getCommitment(tree: number, index: number): Promise<Commitment> {
-    try {
-      const commitment = (await this.db.get(this.getDataDBPath(tree, index), 'json')) as Commitment;
-      return commitment;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
-      }
-      throw new Error(err.message);
-    }
+    return this.getData(tree, index);
   }
 
   /**
@@ -147,6 +143,12 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
         return unshieldEvent;
       }),
     );
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  protected storeMerkleroot(): Promise<void> {
+    // Unused for UTXO merkletree
+    return Promise.resolve();
   }
 
   protected validRootCallback(tree: number, lastValidLeafIndex: number): Promise<void> {

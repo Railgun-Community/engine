@@ -142,7 +142,7 @@ class RailgunSmartWalletContract extends EventEmitter {
    * @param root - root to validate
    * @returns isValid
    */
-  validateRoot(tree: number, root: string): Promise<boolean> {
+  validateMerkleroot(tree: number, root: string): Promise<boolean> {
     try {
       // Return result of root history lookup
       return this.contract.rootHistory(tree, hexlify(root, true));

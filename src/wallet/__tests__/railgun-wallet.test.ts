@@ -193,7 +193,7 @@ describe('Wallet', () => {
 
   // it('Should scan ERC20 balances', async () => {
   //   await merkletree.queueLeaves(0, 0, leaves);
-  // await merkletree.updateTrees();
+  // await merkletree.updateTreesFromWriteQueue();
 
   //   const process = wallet.scanBalances(1);
 
@@ -208,7 +208,7 @@ describe('Wallet', () => {
   //   });
 
   //   await merkletree.queueLeaves(0, 6, leaves2);
-  // await merkletree.updateTrees();
+  // await merkletree.updateTreesFromWriteQueue();
 
   //   await wallet.scanBalances(1);
 

@@ -393,13 +393,13 @@ describe('Railgun Smart Wallet', function runTests() {
       return;
     }
     expect(
-      await railgunSmartWalletContract.validateRoot(
+      await railgunSmartWalletContract.validateMerkleroot(
         0,
         '0x14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
       ),
     ).to.equal(true);
     expect(
-      await railgunSmartWalletContract.validateRoot(
+      await railgunSmartWalletContract.validateMerkleroot(
         0,
         '0x09981e69d3ecf345fb3e2e48243889aa4ff906423d6a686005cac572a3a9632d',
       ),

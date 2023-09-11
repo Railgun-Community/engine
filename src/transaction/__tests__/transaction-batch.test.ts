@@ -127,7 +127,7 @@ describe('Transaction/Transaction Batch', function run() {
         undefined, // memoText
       );
     };
-    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    utxoMerkletree.merklerootValidator = () => Promise.resolve(true);
     await utxoMerkletree.queueLeaves(0, 0, [shieldLeaf('a')]);
     await utxoMerkletree.queueLeaves(1, 0, [
       shieldLeaf('b'),
@@ -136,7 +136,7 @@ describe('Transaction/Transaction Batch', function run() {
       shieldLeaf('e'),
       shieldLeaf('f'),
     ]);
-    await utxoMerkletree.updateTrees();
+    await utxoMerkletree.updateTreesFromWriteQueue();
     await wallet.scanBalances(chain, undefined);
     expect((await wallet.getWalletDetails(chain)).treeScannedHeights).to.deep.equal([1, 5]);
   });
@@ -304,7 +304,7 @@ describe('Transaction/Transaction Batch', function run() {
     ]);
 
     await utxoMerkletree.queueLeaves(1, 0, [shieldLeaf('g'), shieldLeaf('h')]);
-    await utxoMerkletree.updateTrees();
+    await utxoMerkletree.updateTreesFromWriteQueue();
     transactionBatch.resetOutputs();
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(0n));

@@ -212,7 +212,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     expect(await merkletree.getTreeLength(0)).to.equal(0);
     expect(await merkletree.getRoot(0)).to.equal(
@@ -261,7 +261,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     expect(await merkletree.getTreeLength(0)).to.equal(4);
     expect(await merkletree.getRoot(0)).to.equal(
@@ -291,7 +291,7 @@ describe('UTXO Merkletree', () => {
         },
       ]),
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     await merkletree.queueLeaves(0, 4, [
       {
@@ -303,7 +303,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     expect(await merkletree.getTreeLength(0)).to.equal(12);
     expect(await merkletree.getRoot(0)).to.equal(
@@ -348,7 +348,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     expect(await merkletree.getCommitment(0, 0)).to.deep.equal({
       commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -433,7 +433,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     // Get proof
     const proof = await merkletree.getMerkleProof(0, 3);
@@ -483,7 +483,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       })),
     );
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     // Get proof
     const proof2 = await merkletree.getMerkleProof(1, 34);
@@ -588,7 +588,7 @@ describe('UTXO Merkletree', () => {
     ];
     // Insert leaves
     await merkletreeTest.queueLeaves(0, 0, leaves);
-    await merkletreeTest.updateTrees();
+    await merkletreeTest.updateTreesFromWriteQueue();
 
     // Batch should have been rejected
     expect(await merkletreeTest.getRoot(0)).to.equal(
@@ -662,7 +662,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     expect(await merkletree.latestTree()).to.equal(0);
     const expectedMetadata1: MerkletreesMetadata = {
@@ -686,7 +686,7 @@ describe('UTXO Merkletree', () => {
         timestamp: undefined,
       },
     ]);
-    await merkletree.updateTrees();
+    await merkletree.updateTreesFromWriteQueue();
 
     expect(await merkletree.latestTree()).to.equal(1);
     expect(await merkletree.getTreeLength(0)).to.equal(1);

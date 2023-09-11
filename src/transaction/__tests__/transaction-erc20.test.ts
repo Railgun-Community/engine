@@ -130,9 +130,9 @@ describe('Transaction/ERC20', function test() {
         undefined, // memoText
       );
     };
-    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    utxoMerkletree.merklerootValidator = () => Promise.resolve(true);
     await utxoMerkletree.queueLeaves(0, 0, [shieldLeaf]); // start with a shield
-    await utxoMerkletree.updateTrees();
+    await utxoMerkletree.updateTreesFromWriteQueue();
 
     let scanProgress = 0;
     await wallet.scanBalances(chain, (progress: number) => {

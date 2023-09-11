@@ -194,9 +194,9 @@ describe('RailgunEngine', function test() {
     };
 
     // Override root validator
-    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    utxoMerkletree.merklerootValidator = () => Promise.resolve(true);
     await utxoMerkletree.queueLeaves(0, 0, [commitment]);
-    await utxoMerkletree.updateTrees();
+    await utxoMerkletree.updateTreesFromWriteQueue();
 
     await wallet.scanBalances(chain, undefined);
     const balance = await wallet.getBalance(chain, tokenAddress);
@@ -248,9 +248,9 @@ describe('RailgunEngine', function test() {
       blockNumber: 0,
     };
     // Override root validator
-    utxoMerkletree.rootValidator = () => Promise.resolve(true);
+    utxoMerkletree.merklerootValidator = () => Promise.resolve(true);
     await utxoMerkletree.queueLeaves(0, 0, [commitment]);
-    await utxoMerkletree.updateTrees();
+    await utxoMerkletree.updateTreesFromWriteQueue();
 
     await wallet.scanBalances(chain, undefined);
     const balance = await wallet.getBalance(chain, tokenAddress);

@@ -117,7 +117,7 @@ class RailgunEngine extends EventEmitter {
     const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
     await utxoMerkletree.queueLeaves(treeNumber, startingIndex, leaves);
     if (shouldUpdateTrees) {
-      await utxoMerkletree.updateTrees();
+      await utxoMerkletree.updateTreesFromWriteQueue();
     }
   }
 
@@ -264,7 +264,7 @@ class RailgunEngine extends EventEmitter {
       // Scan after all leaves added.
       if (commitmentEvents.length) {
         this.emitScanUpdateEvent(chain, endProgress * 0.3); // 15% / 50%
-        await utxoMerkletree.updateTrees();
+        await utxoMerkletree.updateTreesFromWriteQueue();
         const preScanProgressMultiplier = 0.4;
         this.emitScanUpdateEvent(chain, endProgress * preScanProgressMultiplier); // 20% / 50%
         await this.scanAllWallets(chain, (progress: number) => {
@@ -535,8 +535,11 @@ class RailgunEngine extends EventEmitter {
 
     // Create utxo merkletrees
     this.utxoMerkletrees[chain.type] ??= [];
-    const utxoMerkletree = await UTXOMerkletree.create(this.db, chain, (tree, root) =>
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].validateRoot(tree, root),
+    const utxoMerkletree = await UTXOMerkletree.create(this.db, chain, (tree, index, merkleroot) =>
+      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].validateMerkleroot(
+        tree,
+        merkleroot,
+      ),
     );
     this.utxoMerkletrees[chain.type][chain.id] = utxoMerkletree;
 
