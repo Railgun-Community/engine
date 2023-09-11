@@ -684,11 +684,14 @@ class RailgunEngine extends EventEmitter {
 
     // Create utxo merkletrees
     this.utxoMerkletrees[chain.type] ??= [];
-    const utxoMerkletree = await UTXOMerkletree.create(this.db, chain, (tree, index, merkleroot) =>
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].validateMerkleroot(
-        tree,
-        merkleroot,
-      ),
+    const utxoMerkletree = await UTXOMerkletree.create(
+      this.db,
+      chain,
+      (_chain, tree, _index, merkleroot) =>
+        ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].validateMerkleroot(
+          tree,
+          merkleroot,
+        ),
     );
     this.utxoMerkletrees[chain.type][chain.id] = utxoMerkletree;
 
