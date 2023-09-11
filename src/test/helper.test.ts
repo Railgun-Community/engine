@@ -10,6 +10,7 @@ import {
   UnshieldStoredEvent,
   QuickSyncEvents,
   QuickSyncRailgunTransactions,
+  GetLatestValidatedRailgunTxid,
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
@@ -80,6 +81,9 @@ export const mockQuickSyncRailgunTransactions: QuickSyncRailgunTransactions = (
 
 export const mockRailgunTxidMerklerootValidator: MerklerootValidator = (): Promise<boolean> =>
   Promise.resolve(true);
+
+export const mockGetLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid = () =>
+  Promise.resolve({ txidIndex: 0, merkleroot: '0x00' });
 
 export const awaitScan = (wallet: AbstractWallet, chain: Chain) =>
   new Promise((resolve, reject) =>

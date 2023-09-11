@@ -20,6 +20,10 @@ export type QuickSyncRailgunTransactions = (
   latestGraphID: Optional<string>,
 ) => Promise<RailgunTransaction[]>;
 
+export type GetLatestValidatedRailgunTxid = (
+  chain: Chain,
+) => Promise<{ txidIndex: number; merkleroot: string }>;
+
 export type CommitmentEvent = {
   txid: string;
   treeNumber: number;

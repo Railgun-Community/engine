@@ -13,6 +13,7 @@ import {
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
+  mockGetLatestValidatedRailgunTxid,
   mockQuickSyncEvents,
   mockQuickSyncRailgunTransactions,
   mockRailgunTxidMerklerootValidator,
@@ -98,6 +99,7 @@ describe('RailgunEngine', function test() {
       mockQuickSyncEvents,
       mockQuickSyncRailgunTransactions,
       mockRailgunTxidMerklerootValidator,
+      mockGetLatestValidatedRailgunTxid,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

@@ -4,6 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import {
+  mockGetLatestValidatedRailgunTxid,
   mockQuickSyncEvents,
   mockQuickSyncRailgunTransactions,
   mockRailgunTxidMerklerootValidator,
@@ -89,6 +90,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       mockQuickSyncEvents,
       mockQuickSyncRailgunTransactions,
       mockRailgunTxidMerklerootValidator,
+      mockGetLatestValidatedRailgunTxid,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

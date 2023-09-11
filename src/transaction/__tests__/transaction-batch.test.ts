@@ -10,6 +10,7 @@ import { config } from '../../test/config.test';
 import {
   DECIMALS_18,
   getEthersWallet,
+  mockGetLatestValidatedRailgunTxid,
   mockQuickSyncEvents,
   mockQuickSyncRailgunTransactions,
   mockRailgunTxidMerklerootValidator,
@@ -97,6 +98,7 @@ describe('Transaction/Transaction Batch', function run() {
       mockQuickSyncEvents,
       mockQuickSyncRailgunTransactions,
       mockRailgunTxidMerklerootValidator,
+      mockGetLatestValidatedRailgunTxid,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

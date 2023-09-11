@@ -99,7 +99,7 @@ describe('Railgun TXID Merkletree', () => {
       },
     ];
 
-    await merkletree.queueRailgunTransactions(railgunTransactions);
+    await merkletree.queueRailgunTransactions(railgunTransactions, 1);
     expect(await merkletree.getTreeLength(0)).to.equal(0);
 
     await merkletree.updateTreesFromWriteQueue();
@@ -147,7 +147,7 @@ describe('Railgun TXID Merkletree', () => {
       },
     ];
 
-    await merkletree.queueRailgunTransactions(moreRailgunTransactions);
+    await merkletree.queueRailgunTransactions(moreRailgunTransactions, undefined);
     await merkletree.updateTreesFromWriteQueue();
 
     // Current root (4 elements)

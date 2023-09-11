@@ -10,6 +10,7 @@ import { Merkletree } from './merkletree';
 import { RailgunTransaction, RailgunTransactionWithTxid } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify } from '../utils/bytes';
 import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
+import { isDefined } from '../utils';
 
 export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   // DO NOT MODIFY
@@ -94,7 +95,10 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     return railgunTransaction?.graphID;
   }
 
-  async queueRailgunTransactions(railgunTransactions: RailgunTransaction[]): Promise<void> {
+  async queueRailgunTransactions(
+    railgunTransactions: RailgunTransaction[],
+    maxTxidIndex: Optional<number>,
+  ): Promise<void> {
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
     let nextTree = latestTree;
     let nextIndex = latestIndex;
@@ -103,6 +107,9 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
       const { tree, index } = RailgunTXIDMerkletree.nextTreeAndIndex(nextTree, nextIndex);
       nextTree = tree;
       nextIndex = index;
+      if (RailgunTXIDMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
+        return;
+      }
 
       const railgunTransaction = railgunTransactions[i];
       const railgunTransactionWithID: RailgunTransactionWithTxid =
@@ -111,6 +118,13 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
       // eslint-disable-next-line no-await-in-loop
       await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithID]);
     }
+  }
+
+  static isOutOfBounds(tree: number, index: number, maxTxidIndex?: number) {
+    if (!isDefined(maxTxidIndex)) {
+      return false;
+    }
+    return RailgunTXIDMerkletree.getTXIDIndex(tree, index) > maxTxidIndex;
   }
 
   static nextTreeAndIndex(tree: number, index: number): { tree: number; index: number } {
@@ -161,6 +175,10 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   async getCurrentTXIDIndex(): Promise<number> {
     const { tree, index } = await this.getLatestTreeAndIndex();
+    return RailgunTXIDMerkletree.getTXIDIndex(tree, index);
+  }
+
+  static getTXIDIndex(tree: number, index: number): number {
     return tree * TREE_MAX_ITEMS + index;
   }
 

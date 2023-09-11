@@ -21,6 +21,7 @@ import {
 import {
   CommitmentEvent,
   EngineEvent,
+  GetLatestValidatedRailgunTxid,
   MerkletreeHistoryScanEventData,
   MerkletreeHistoryScanUpdateData,
   QuickSyncEvents,
@@ -61,6 +62,8 @@ class RailgunEngine extends EventEmitter {
 
   readonly validateRailgunTxidMerkleroot: MerklerootValidator;
 
+  readonly getLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid;
+
   static walletSource: Optional<string>;
 
   private readonly skipMerkletreeScans: boolean;
@@ -84,6 +87,7 @@ class RailgunEngine extends EventEmitter {
     quickSyncEvents: QuickSyncEvents,
     quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
     validateRailgunTxidMerkleroot: MerklerootValidator,
+    getLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid,
     engineDebugger: Optional<EngineDebugger>,
     skipMerkletreeScans: boolean = false,
     isPOINode: boolean = false,
@@ -97,6 +101,7 @@ class RailgunEngine extends EventEmitter {
     this.quickSyncEvents = quickSyncEvents;
     this.quickSyncRailgunTransactions = quickSyncRailgunTransactions;
     this.validateRailgunTxidMerkleroot = validateRailgunTxidMerkleroot;
+    this.getLatestValidatedRailgunTxid = getLatestValidatedRailgunTxid;
 
     if (engineDebugger) {
       EngineDebug.init(engineDebugger);
@@ -489,25 +494,34 @@ class RailgunEngine extends EventEmitter {
     txidMerkletree.isScanning = false;
   }
 
-  private async performSyncRailgunTransactions(chain: Chain, retryCount = 0) {
+  private async performSyncRailgunTransactions(chain: Chain) {
     try {
       EngineDebug.log(`sync railgun txids: chain ${chain.type}:${chain.id}`);
       const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+
+      let maxTxidIndex: Optional<number>;
+      if (!this.isPOINode) {
+        const { txidIndex: latestTxidIndex } = await this.getLatestRailgunTxidData(chain);
+        // TODO: Optimization - use this merkleroot from validated railgun txid to auto-validate merkletree.
+        const { txidIndex: latestValidatedTxidIndex /* merkleroot */ } =
+          await this.getLatestValidatedRailgunTxid(chain);
+        if (latestTxidIndex > latestValidatedTxidIndex) {
+          // Do not sync. Wait for POI node to sync / validate.
+          return;
+        }
+        maxTxidIndex = latestValidatedTxidIndex;
+      }
 
       const latestGraphID: Optional<string> = await txidMerkletree.getLatestGraphID();
       const railgunTransactions: RailgunTransaction[] = await this.quickSyncRailgunTransactions(
         chain,
         latestGraphID,
       );
-      await txidMerkletree.queueRailgunTransactions(railgunTransactions);
+      await txidMerkletree.queueRailgunTransactions(railgunTransactions, maxTxidIndex);
       await txidMerkletree.updateTreesFromWriteQueue();
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
-      }
-      if (retryCount < 1) {
-        await this.performSyncRailgunTransactions(chain, retryCount + 1);
-        return;
       }
       EngineDebug.error(err);
     }
@@ -525,6 +539,14 @@ class RailgunEngine extends EventEmitter {
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
     const historicalMerkleroot = await txidMerkletree.getHistoricalMerkleroot(tree, index);
     return historicalMerkleroot === merkleroot;
+  }
+
+  async getLatestRailgunTxidData(chain: Chain): Promise<{ txidIndex: number; merkleroot: string }> {
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+    const { tree, index } = await txidMerkletree.getLatestTreeAndIndex();
+    const merkleroot = await txidMerkletree.getRoot(tree);
+    const txidIndex = RailgunTXIDMerkletree.getTXIDIndex(tree, index);
+    return { txidIndex, merkleroot };
   }
 
   /**
