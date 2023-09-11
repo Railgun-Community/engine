@@ -502,10 +502,14 @@ class RailgunEngine extends EventEmitter {
       let maxTxidIndex: Optional<number>;
       if (!this.isPOINode) {
         const { txidIndex: latestTxidIndex } = await this.getLatestRailgunTxidData(chain);
+
         // TODO: Optimization - use this merkleroot from validated railgun txid to auto-validate merkletree.
         const { txidIndex: latestValidatedTxidIndex /* merkleroot */ } =
           await this.getLatestValidatedRailgunTxid(chain);
-        if (latestTxidIndex > latestValidatedTxidIndex) {
+
+        const isAheadOfValidatedTxids =
+          !isDefined(latestValidatedTxidIndex) || latestTxidIndex >= latestValidatedTxidIndex;
+        if (isAheadOfValidatedTxids) {
           // Do not sync. Wait for POI node to sync / validate.
           return;
         }
