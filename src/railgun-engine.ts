@@ -513,6 +513,20 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
+  async validateHistoricalRailgunTxidMerkleroot(
+    chain: Chain,
+    tree: number,
+    index: number,
+    merkleroot: string,
+  ): Promise<boolean> {
+    if (!this.isPOINode) {
+      throw new Error('Only POI nodes process historical merkleroots');
+    }
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+    const historicalMerkleroot = await txidMerkletree.getHistoricalMerkleroot(tree, index);
+    return historicalMerkleroot === merkleroot;
+  }
+
   /**
    * Clears all merkletree leaves stored in database.
    * @param chain - chain type/id to clear
