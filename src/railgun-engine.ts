@@ -457,8 +457,8 @@ class RailgunEngine extends EventEmitter {
   async startSyncRailgunTransactionsPoller(chain: Chain) {
     await this.syncRailgunTransactions(chain);
 
-    // 3 minutes
-    await delay(3 * 60 * 1000);
+    // Every 1 min for POI nodes, 3 min for wallets
+    await delay(this.isPOINode ? 1 * 60 * 1000 : 3 * 60 * 1000);
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.startSyncRailgunTransactionsPoller(chain);

@@ -1407,9 +1407,8 @@ abstract class AbstractWallet extends EventEmitter {
           commitment.blockNumber <= creationBlockNumber,
       );
 
-      if (creationBlockIndex === -1) {
-        // First index in the tree.
-        return { tree, position: 0 };
+      if (creationBlockIndex > -1) {
+        return { tree, position: creationBlockIndex };
       }
     }
 
