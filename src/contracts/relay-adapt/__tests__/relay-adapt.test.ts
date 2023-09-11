@@ -25,6 +25,9 @@ import {
   awaitRailgunSmartWalletUnshield,
   awaitScan,
   getEthersWallet,
+  mockQuickSyncEvents,
+  mockQuickSyncRailgunTransactions,
+  mockRailgunTxidMerklerootValidator,
   sendTransactionWithLatestNonce,
   testArtifactsGetter,
 } from '../../../test/helper.test';
@@ -97,7 +100,9 @@ describe('Relay Adapt', function test() {
       'TestRelayAdapt',
       memdown(),
       testArtifactsGetter,
-      undefined, // quickSync
+      mockQuickSyncEvents,
+      mockQuickSyncRailgunTransactions,
+      mockRailgunTxidMerklerootValidator,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

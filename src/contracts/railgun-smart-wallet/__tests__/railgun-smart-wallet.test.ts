@@ -22,6 +22,9 @@ import {
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
+  mockQuickSyncEvents,
+  mockQuickSyncRailgunTransactions,
+  mockRailgunTxidMerklerootValidator,
   sendTransactionWithLatestNonce,
   testArtifactsGetter,
 } from '../../../test/helper.test';
@@ -99,7 +102,9 @@ describe('Railgun Smart Wallet', function runTests() {
       'Test RSW',
       memdown(),
       testArtifactsGetter,
-      undefined, // quickSync
+      mockQuickSyncEvents,
+      mockQuickSyncRailgunTransactions,
+      mockRailgunTxidMerklerootValidator,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

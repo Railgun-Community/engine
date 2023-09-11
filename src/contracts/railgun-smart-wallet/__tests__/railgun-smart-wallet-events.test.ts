@@ -3,7 +3,12 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
-import { testArtifactsGetter } from '../../../test/helper.test';
+import {
+  mockQuickSyncEvents,
+  mockQuickSyncRailgunTransactions,
+  mockRailgunTxidMerklerootValidator,
+  testArtifactsGetter,
+} from '../../../test/helper.test';
 import { Groth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
@@ -81,7 +86,9 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       'Test RSW',
       memdown(),
       testArtifactsGetter,
-      undefined, // quickSync
+      mockQuickSyncEvents,
+      mockQuickSyncRailgunTransactions,
+      mockRailgunTxidMerklerootValidator,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

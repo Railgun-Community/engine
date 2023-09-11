@@ -1,4 +1,4 @@
-import { Commitment, Nullifier } from './formatted-types';
+import { Commitment, Nullifier, RailgunTransaction } from './formatted-types';
 import { Chain } from './engine-types';
 
 export enum EngineEvent {
@@ -10,10 +10,15 @@ export enum EngineEvent {
   MerkletreeHistoryScanIncomplete = 'merkletree-history-scan-incomplete',
 }
 
-export type QuickSync = (chain: Chain, startingBlock: number) => Promise<AccumulatedEvents>;
+export type QuickSyncEvents = (chain: Chain, startingBlock: number) => Promise<AccumulatedEvents>;
 export type EventsCommitmentListener = (event: CommitmentEvent) => Promise<void>;
 export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
 export type EventsUnshieldListener = (unshields: UnshieldStoredEvent[]) => Promise<void>;
+
+export type QuickSyncRailgunTransactions = (
+  chain: Chain,
+  latestGraphID: Optional<string>,
+) => Promise<RailgunTransaction[]>;
 
 export type CommitmentEvent = {
   txid: string;

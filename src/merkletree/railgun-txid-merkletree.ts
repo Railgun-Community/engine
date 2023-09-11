@@ -9,7 +9,6 @@ import {
 import { Merkletree } from './merkletree';
 import { RailgunTransaction, RailgunTransactionWithTxid } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify } from '../utils/bytes';
-import EngineDebug from '../debugger/debugger';
 import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
 
 export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
@@ -87,6 +86,12 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     } catch (err) {
       return undefined;
     }
+  }
+
+  async getLatestGraphID(): Promise<Optional<string>> {
+    const { tree, index } = await this.getLatestTreeAndIndex();
+    const railgunTransaction = await this.getRailgunTransaction(tree, index);
+    return railgunTransaction?.graphID;
   }
 
   async queueRailgunTransactions(railgunTransactions: RailgunTransaction[]): Promise<void> {

@@ -13,7 +13,9 @@ import {
   awaitScan,
   DECIMALS_18,
   getEthersWallet,
-  mockQuickSync,
+  mockQuickSyncEvents,
+  mockQuickSyncRailgunTransactions,
+  mockRailgunTxidMerklerootValidator,
   sendTransactionWithLatestNonce,
   testArtifactsGetter,
 } from '../test/helper.test';
@@ -93,7 +95,9 @@ describe('RailgunEngine', function test() {
       'Test Wallet',
       memdown(),
       testArtifactsGetter,
-      mockQuickSync,
+      mockQuickSyncEvents,
+      mockQuickSyncRailgunTransactions,
+      mockRailgunTxidMerklerootValidator,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

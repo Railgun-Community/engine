@@ -10,7 +10,9 @@ import { config } from '../../test/config.test';
 import {
   DECIMALS_18,
   getEthersWallet,
-  mockQuickSync,
+  mockQuickSyncEvents,
+  mockQuickSyncRailgunTransactions,
+  mockRailgunTxidMerklerootValidator,
   testArtifactsGetter,
 } from '../../test/helper.test';
 import { Database } from '../../database/database';
@@ -92,7 +94,9 @@ describe('Transaction/Transaction Batch', function run() {
       'Tx Batch Tests',
       memdown(),
       testArtifactsGetter,
-      mockQuickSync,
+      mockQuickSyncEvents,
+      mockQuickSyncRailgunTransactions,
+      mockRailgunTxidMerklerootValidator,
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );

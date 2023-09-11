@@ -1,14 +1,15 @@
 /// <reference types="../types/global" />
 import { ContractTransaction, Provider, TransactionResponse, Wallet } from 'ethers';
 import artifacts from './test-artifacts-lite';
-import { Nullifier } from '../models/formatted-types';
+import { Nullifier, RailgunTransaction } from '../models/formatted-types';
 import {
   AccumulatedEvents,
   CommitmentEvent,
   EngineEvent,
-  QuickSync,
   WalletScannedEventData,
   UnshieldStoredEvent,
+  QuickSyncEvents,
+  QuickSyncRailgunTransactions,
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
@@ -17,6 +18,7 @@ import { mnemonicToPrivateKey } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { promiseTimeout } from '../utils';
+import { MerklerootValidator } from '../models/merkletree-types';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -57,7 +59,7 @@ export const testArtifactsGetter: ArtifactGetter = {
   assertArtifactExists: assertTestNodeArtifactExists,
 };
 
-export const mockQuickSync: QuickSync = (
+export const mockQuickSyncEvents: QuickSyncEvents = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _chain: Chain,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -68,6 +70,16 @@ export const mockQuickSync: QuickSync = (
     unshieldEvents: [] as UnshieldStoredEvent[],
     nullifierEvents: [] as Nullifier[],
   });
+
+export const mockQuickSyncRailgunTransactions: QuickSyncRailgunTransactions = (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _chain: Chain,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _latestGraphID: Optional<string>,
+): Promise<RailgunTransaction[]> => Promise.resolve([]);
+
+export const mockRailgunTxidMerklerootValidator: MerklerootValidator = (): Promise<boolean> =>
+  Promise.resolve(true);
 
 export const awaitScan = (wallet: AbstractWallet, chain: Chain) =>
   new Promise((resolve, reject) =>
