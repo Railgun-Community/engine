@@ -533,12 +533,21 @@ class RailgunEngine extends EventEmitter {
     index: number,
     merkleroot: string,
   ): Promise<boolean> {
+    const historicalMerkleroot = await this.getHistoricalRailgunTxidMerkleroot(chain, tree, index);
+    return historicalMerkleroot === merkleroot;
+  }
+
+  async getHistoricalRailgunTxidMerkleroot(
+    chain: Chain,
+    tree: number,
+    index: number,
+  ): Promise<Optional<string>> {
     if (!this.isPOINode) {
       throw new Error('Only POI nodes process historical merkleroots');
     }
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
     const historicalMerkleroot = await txidMerkletree.getHistoricalMerkleroot(tree, index);
-    return historicalMerkleroot === merkleroot;
+    return historicalMerkleroot;
   }
 
   async getLatestRailgunTxidData(chain: Chain): Promise<{ txidIndex: number; merkleroot: string }> {
