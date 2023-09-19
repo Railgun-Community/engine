@@ -898,18 +898,33 @@ describe('RailgunEngine', function test() {
     expect(lastSyncedBlock).to.equal(100000);
   });
 
-  it('Should set/get merkletree history version', async () => {
+  it('Should set/get utxo merkletree history version', async () => {
     const chainForSyncedBlock = {
       type: ChainType.EVM,
       id: 10010,
     };
     let lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setMerkletreeHistoryVersion(chainForSyncedBlock, 100);
-    lastSyncedBlock = await engine.getMerkletreeHistoryVersion(chainForSyncedBlock);
+    await engine.setUTXOMerkletreeHistoryVersion(chainForSyncedBlock, 100);
+    lastSyncedBlock = await engine.getUTXOMerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
-    lastSyncedBlock = await engine.getMerkletreeHistoryVersion(chainForSyncedBlock);
+    await engine.setUTXOMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
+    lastSyncedBlock = await engine.getUTXOMerkletreeHistoryVersion(chainForSyncedBlock);
+    expect(lastSyncedBlock).to.equal(100000);
+  });
+
+  it('Should set/get txid merkletree history version', async () => {
+    const chainForSyncedBlock = {
+      type: ChainType.EVM,
+      id: 10010,
+    };
+    let lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
+    expect(lastSyncedBlock).to.equal(undefined);
+    await engine.setTXIDMerkletreeHistoryVersion(chainForSyncedBlock, 100);
+    lastSyncedBlock = await engine.getTXIDMerkletreeHistoryVersion(chainForSyncedBlock);
+    expect(lastSyncedBlock).to.equal(100);
+    await engine.setTXIDMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
+    lastSyncedBlock = await engine.getTXIDMerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 

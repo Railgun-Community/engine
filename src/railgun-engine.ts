@@ -34,7 +34,10 @@ import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
-import { CURRENT_UTXO_MERKLETREE_HISTORY_VERSION } from './utils/constants';
+import {
+  CURRENT_TXID_MERKLETREE_HISTORY_VERSION,
+  CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
+} from './utils/constants';
 import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
 import { assertIsPollingProvider } from './provider/polling-util';
 import { isDefined } from './utils/is-defined';
@@ -361,13 +364,13 @@ class RailgunEngine extends EventEmitter {
       return;
     }
 
-    const merkletreeHistoryVersion = await this.getMerkletreeHistoryVersion(chain);
+    const utxoMerkletreeHistoryVersion = await this.getUTXOMerkletreeHistoryVersion(chain);
     if (
-      !isDefined(merkletreeHistoryVersion) ||
-      merkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
+      !isDefined(utxoMerkletreeHistoryVersion) ||
+      utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
       await this.clearMerkletreeAndWallets(chain);
-      await this.setMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
+      await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
     const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
@@ -479,6 +482,15 @@ class RailgunEngine extends EventEmitter {
         `Cannot sync txids. TXID merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
       return;
+    }
+
+    const txidMerkletreeHistoryVersion = await this.getTXIDMerkletreeHistoryVersion(chain);
+    if (
+      !isDefined(txidMerkletreeHistoryVersion) ||
+      txidMerkletreeHistoryVersion < CURRENT_TXID_MERKLETREE_HISTORY_VERSION
+    ) {
+      await this.clearMerkletreeAndWallets(chain);
+      await this.setTXIDMerkletreeHistoryVersion(chain, CURRENT_TXID_MERKLETREE_HISTORY_VERSION);
     }
 
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
@@ -837,7 +849,7 @@ class RailgunEngine extends EventEmitter {
       .catch(() => Promise.resolve(undefined));
   }
 
-  private static getMerkletreeHistoryVersionDBPrefix(chain?: Chain): string[] {
+  private static getUTXOMerkletreeHistoryVersionDBPrefix(chain?: Chain): string[] {
     const path = [DatabaseNamespace.ChainSyncInfo, 'merkleetree_history_version'];
     if (chain != null) {
       path.push(getChainFullNetworkID(chain));
@@ -845,17 +857,40 @@ class RailgunEngine extends EventEmitter {
     return path;
   }
 
-  setMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+  private static getTXIDMerkletreeHistoryVersionDBPrefix(chain?: Chain): string[] {
+    const path = [DatabaseNamespace.ChainSyncInfo, 'txid_merkletree_history_version'];
+    if (chain != null) {
+      path.push(getChainFullNetworkID(chain));
+    }
+    return path;
+  }
+
+  setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
     return this.db.put(
-      RailgunEngine.getMerkletreeHistoryVersionDBPrefix(chain),
+      RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain),
       merkletreeHistoryVersion,
       'utf8',
     );
   }
 
-  getMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+  getUTXOMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
     return this.db
-      .get(RailgunEngine.getMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
+      .get(RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
+      .then((val: string) => parseInt(val, 10))
+      .catch(() => Promise.resolve(undefined));
+  }
+
+  setTXIDMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+    return this.db.put(
+      RailgunEngine.getTXIDMerkletreeHistoryVersionDBPrefix(chain),
+      merkletreeHistoryVersion,
+      'utf8',
+    );
+  }
+
+  getTXIDMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+    return this.db
+      .get(RailgunEngine.getTXIDMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
