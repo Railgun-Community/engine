@@ -197,6 +197,8 @@ describe('RailgunEngine', function test() {
         '0x3d321af08b8fa7a8f70379407706b752',
       ],
       blockNumber: 0,
+      utxoTree: 0,
+      utxoStartingIndex: 0,
     };
 
     // Override root validator
@@ -252,6 +254,8 @@ describe('RailgunEngine', function test() {
         '0x3d321af08b8fa7a8f70379407706b752',
       ],
       blockNumber: 0,
+      utxoTree: 0,
+      utxoStartingIndex: 0,
     };
     // Override root validator
     utxoMerkletree.merklerootValidator = () => Promise.resolve(true);

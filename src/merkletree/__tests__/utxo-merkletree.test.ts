@@ -162,6 +162,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -170,6 +172,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -178,6 +182,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -186,6 +192,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -194,6 +202,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -202,6 +212,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -210,6 +222,8 @@ describe('UTXO Merkletree', () => {
         ciphertext,
         timestamp: undefined,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
       },
     ]);
     await merkletree.updateTreesFromWriteQueue();
@@ -226,6 +240,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);
@@ -242,6 +258,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -250,6 +268,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -258,6 +278,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);
@@ -277,6 +299,8 @@ describe('UTXO Merkletree', () => {
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           ciphertext,
           blockNumber: 0,
+          utxoTree: 0,
+          utxoStartingIndex: 0,
           timestamp: undefined,
         },
       ]),
@@ -287,6 +311,8 @@ describe('UTXO Merkletree', () => {
           txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
           ciphertext,
           blockNumber: 0,
+          utxoTree: 0,
+          utxoStartingIndex: 0,
           timestamp: undefined,
         },
       ]),
@@ -300,6 +326,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);
@@ -328,6 +356,8 @@ describe('UTXO Merkletree', () => {
           memo: [''],
         },
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -345,6 +375,8 @@ describe('UTXO Merkletree', () => {
         },
         encryptedRandom: ['01', '01'],
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);
@@ -360,6 +392,8 @@ describe('UTXO Merkletree', () => {
         ephemeralKeys: ['00', '00'],
       },
       blockNumber: 0,
+      utxoTree: 0,
+      utxoStartingIndex: 0,
     });
 
     expect(await merkletree.getCommitment(0, 1)).to.deep.equal({
@@ -373,6 +407,8 @@ describe('UTXO Merkletree', () => {
       },
       encryptedRandom: ['01', '01'],
       blockNumber: 0,
+      utxoTree: 0,
+      utxoStartingIndex: 0,
     });
   }).timeout(1000);
 
@@ -390,6 +426,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -398,6 +436,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -406,6 +446,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -414,6 +456,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -422,6 +466,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -430,6 +476,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);
@@ -480,6 +528,8 @@ describe('UTXO Merkletree', () => {
           memo: [''],
         },
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       })),
     );
@@ -543,6 +593,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -551,6 +603,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -559,6 +613,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -567,6 +623,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -575,6 +633,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
       {
@@ -583,6 +643,8 @@ describe('UTXO Merkletree', () => {
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext,
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ];
@@ -659,6 +721,8 @@ describe('UTXO Merkletree', () => {
           memo: [''],
         },
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);
@@ -683,6 +747,8 @@ describe('UTXO Merkletree', () => {
           memo: [''],
         },
         blockNumber: 0,
+        utxoTree: 0,
+        utxoStartingIndex: 0,
         timestamp: undefined,
       },
     ]);

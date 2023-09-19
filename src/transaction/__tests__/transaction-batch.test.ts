@@ -65,6 +65,8 @@ const shieldLeaf = (txid: string): Commitment => ({
     '0x118beef50353ab8512be871c0473e219',
   ] as [string, string],
   blockNumber: 0,
+  utxoTree: 0,
+  utxoStartingIndex: 0,
 });
 
 const shieldValue = 9975062344139650872817n;

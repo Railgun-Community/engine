@@ -121,6 +121,8 @@ type CommitmentShared = {
   txid: string;
   blockNumber: number;
   timestamp: Optional<number>;
+  utxoTree: number;
+  utxoStartingIndex: number;
 };
 
 export type ShieldCommitment = CommitmentShared & {

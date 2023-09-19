@@ -31,13 +31,15 @@ import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-lega
 /**
  * Parse event data for database
  */
-export function formatShieldCommitments(
+export const formatShieldCommitments = (
   transactionHash: string,
   preImages: CommitmentPreimageStructOutput[],
   shieldCiphertext: ShieldCiphertextStructOutput[],
   blockNumber: number,
+  utxoTree: number,
+  utxoStartingIndex: number,
   fees: Optional<bigint[]>,
-): ShieldCommitment[] {
+): ShieldCommitment[] => {
   const shieldCommitments = preImages.map((commitmentPreImage, index) => {
     const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
     const tokenData = serializeTokenData(
@@ -59,18 +61,20 @@ export function formatShieldCommitments(
       encryptedBundle: shieldCiphertext[index].encryptedBundle,
       shieldKey: shieldCiphertext[index].shieldKey,
       fee: fees && fees[index] ? fees[index].toString() : undefined,
+      utxoTree,
+      utxoStartingIndex,
     };
     return commitment;
   });
   return shieldCommitments;
-}
+};
 
-export function formatShieldEvent(
+export const formatShieldEvent = (
   shieldEventArgs: ShieldEvent.OutputObject | ShieldEvent_LegacyShield_PreMar23.OutputObject,
   transactionHash: string,
   blockNumber: number,
   fees: Optional<bigint[]>,
-): CommitmentEvent {
+): CommitmentEvent => {
   const { treeNumber, startPosition, commitments, shieldCiphertext } = shieldEventArgs;
   if (
     treeNumber == null ||
@@ -83,25 +87,30 @@ export function formatShieldEvent(
     throw err;
   }
 
+  const utxoTree = Number(treeNumber);
+  const utxoStartingIndex = Number(startPosition);
+
   const formattedCommitments = formatShieldCommitments(
     transactionHash,
     commitments,
     shieldCiphertext,
     blockNumber,
+    utxoTree,
+    utxoStartingIndex,
     fees,
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: Number(treeNumber),
-    startPosition: Number(startPosition),
+    treeNumber: utxoTree,
+    startPosition: utxoStartingIndex,
     commitments: formattedCommitments,
     blockNumber,
   };
-}
+};
 
-export function formatCommitmentCiphertext(
+export const formatCommitmentCiphertext = (
   commitmentCiphertext: CommitmentCiphertextStructOutput,
-): CommitmentCiphertext {
+): CommitmentCiphertext => {
   const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } =
     commitmentCiphertext;
   const ciphertext = commitmentCiphertext.ciphertext.map(
@@ -120,14 +129,16 @@ export function formatCommitmentCiphertext(
     annotationData,
     memo,
   };
-}
+};
 
-export function formatTransactCommitments(
+export const formatTransactCommitments = (
   transactionHash: string,
   hash: string[],
   commitments: CommitmentCiphertextStructOutput[],
   blockNumber: number,
-): TransactCommitment[] {
+  utxoTree: number,
+  utxoStartingIndex: number,
+): TransactCommitment[] => {
   return commitments.map((commitment, index) => {
     return {
       commitmentType: CommitmentType.TransactCommitment,
@@ -136,15 +147,17 @@ export function formatTransactCommitments(
       timestamp: undefined,
       blockNumber,
       ciphertext: formatCommitmentCiphertext(commitment),
+      utxoTree,
+      utxoStartingIndex,
     };
   });
-}
+};
 
-export function formatTransactEvent(
+export const formatTransactEvent = (
   transactEventArgs: TransactEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
-): CommitmentEvent {
+): CommitmentEvent => {
   const { treeNumber, startPosition, hash, ciphertext } = transactEventArgs;
   if (treeNumber == null || startPosition == null || hash == null || ciphertext == null) {
     const err = new Error('Invalid TransactEventObject');
@@ -152,27 +165,32 @@ export function formatTransactEvent(
     throw err;
   }
 
+  const utxoTree = Number(treeNumber);
+  const utxoStartingIndex = Number(startPosition);
+
   const formattedCommitments = formatTransactCommitments(
     transactionHash,
     hash,
     ciphertext,
     blockNumber,
+    utxoTree,
+    utxoStartingIndex,
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: Number(treeNumber),
-    startPosition: Number(startPosition),
+    treeNumber: utxoTree,
+    startPosition: utxoStartingIndex,
     commitments: formattedCommitments,
     blockNumber,
   };
-}
+};
 
-export function formatUnshieldEvent(
+export const formatUnshieldEvent = (
   unshieldEventArgs: UnshieldEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
   eventLogIndex: number,
-): UnshieldStoredEvent {
+): UnshieldStoredEvent => {
   const { to, token, amount, fee } = unshieldEventArgs;
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
@@ -186,12 +204,12 @@ export function formatUnshieldEvent(
     blockNumber,
     eventLogIndex,
   };
-}
+};
 
-export async function processShieldEvents(
+export const processShieldEvents = async (
   eventsListener: EventsCommitmentListener,
   logs: ShieldEvent.Log[],
-): Promise<void> {
+): Promise<void> => {
   const filtered = logs.filter((log) => log.args);
   if (logs.length !== filtered.length) {
     throw new Error('Args required for Shield events');
@@ -203,12 +221,12 @@ export async function processShieldEvents(
       return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
     }),
   );
-}
+};
 
-export async function processShieldEvents_LegacyShield_PreMar23(
+export const processShieldEvents_LegacyShield_PreMar23 = async (
   eventsListener: EventsCommitmentListener,
   logs: ShieldEvent_LegacyShield_PreMar23.Log[],
-): Promise<void> {
+): Promise<void> => {
   // NOTE: Legacy "Shield" event of the same name conflicts with the current ABI's Shield event.
   // It seems that the first ABI to load, with "Shield" event, for a given contract address,
   // sets a cached version of the ABI interface.
@@ -236,12 +254,12 @@ export async function processShieldEvents_LegacyShield_PreMar23(
       return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
     }),
   );
-}
+};
 
-export async function processTransactEvents(
+export const processTransactEvents = async (
   eventsListener: EventsCommitmentListener,
   logs: TransactEvent.Log[],
-): Promise<void> {
+): Promise<void> => {
   const filtered = logs.filter((log) => log.args);
   if (logs.length !== filtered.length) {
     throw new Error('Args required for Transact events');
@@ -252,12 +270,12 @@ export async function processTransactEvents(
       return eventsListener(formatTransactEvent(args, transactionHash, blockNumber));
     }),
   );
-}
+};
 
-export async function processUnshieldEvents(
+export const processUnshieldEvents = async (
   eventsUnshieldListener: EventsUnshieldListener,
   logs: UnshieldEvent.Log[],
-): Promise<void> {
+): Promise<void> => {
   const unshields: UnshieldStoredEvent[] = [];
 
   const filtered = logs.filter((log) => log.args);
@@ -270,13 +288,13 @@ export async function processUnshieldEvents(
   });
 
   await eventsUnshieldListener(unshields);
-}
+};
 
-export function formatNullifiedEvents(
+export const formatNullifiedEvents = (
   nullifierEventArgs: NullifiedEvent.OutputObject,
   transactionHash: string,
   blockNumber: number,
-): Nullifier[] {
+): Nullifier[] => {
   const nullifiers: Nullifier[] = [];
 
   nullifierEventArgs.nullifier.forEach((nullifier: string) => {
@@ -289,12 +307,12 @@ export function formatNullifiedEvents(
   });
 
   return nullifiers;
-}
+};
 
-export async function processNullifiedEvents(
+export const processNullifiedEvents = async (
   eventsNullifierListener: EventsNullifierListener,
   logs: NullifiedEvent.Log[],
-): Promise<void> {
+): Promise<void> => {
   const nullifiers: Nullifier[] = [];
 
   const filtered = logs.filter((log) => log.args);
@@ -308,4 +326,4 @@ export async function processNullifiedEvents(
   });
 
   await eventsNullifierListener(nullifiers);
-}
+};

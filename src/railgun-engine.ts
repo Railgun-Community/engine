@@ -34,7 +34,7 @@ import WalletInfo from './wallet/wallet-info';
 import { getChainFullNetworkID } from './chain/chain';
 import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
-import { CURRENT_MERKLETREE_HISTORY_VERSION } from './utils/constants';
+import { CURRENT_UTXO_MERKLETREE_HISTORY_VERSION } from './utils/constants';
 import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
 import { assertIsPollingProvider } from './provider/polling-util';
 import { isDefined } from './utils/is-defined';
@@ -364,10 +364,10 @@ class RailgunEngine extends EventEmitter {
     const merkletreeHistoryVersion = await this.getMerkletreeHistoryVersion(chain);
     if (
       !isDefined(merkletreeHistoryVersion) ||
-      merkletreeHistoryVersion < CURRENT_MERKLETREE_HISTORY_VERSION
+      merkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
       await this.clearMerkletreeAndWallets(chain);
-      await this.setMerkletreeHistoryVersion(chain, CURRENT_MERKLETREE_HISTORY_VERSION);
+      await this.setMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
     const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
@@ -1037,8 +1037,7 @@ class RailgunEngine extends EventEmitter {
     const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
     const latestTree = await utxoMerkletree.latestTree();
 
-    // TODO: use blockNumber to find exact starting position...
-    // The logic is currently broken.
+    // TODO: use blockNumber to find exact starting position... But the logic is currently broken.
 
     // const treeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
     //   merkletree,

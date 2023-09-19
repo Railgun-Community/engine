@@ -26,6 +26,8 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
   preImages: LegacyCommitmentPreimageStructOutput[],
   encryptedRandoms: [bigint, bigint][],
   blockNumber: number,
+  utxoTree: number,
+  utxoStartingIndex: number,
 ): LegacyGeneratedCommitment[] {
   const randomFormatted: [string, string][] = encryptedRandoms.map((encryptedRandom) => [
     nToHex(encryptedRandom[0], ByteLength.UINT_256),
@@ -50,6 +52,8 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
       blockNumber,
       preImage,
       encryptedRandom: randomFormatted[index],
+      utxoTree,
+      utxoStartingIndex,
     };
   });
 }
@@ -71,17 +75,22 @@ export function formatLegacyGeneratedCommitmentBatchEvent(
     throw err;
   }
 
+  const utxoTree = Number(treeNumber);
+  const utxoStartingIndex = Number(startPosition);
+
   const formattedCommitments: LegacyGeneratedCommitment[] =
     formatLegacyGeneratedCommitmentBatchCommitments(
       transactionHash,
       commitments,
       encryptedRandom,
       blockNumber,
+      utxoTree,
+      utxoStartingIndex,
     );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: Number(treeNumber),
-    startPosition: Number(startPosition),
+    treeNumber: utxoTree,
+    startPosition: utxoStartingIndex,
     commitments: formattedCommitments,
     blockNumber,
   };
@@ -116,6 +125,8 @@ export function formatLegacyCommitmentBatchCommitments(
   hash: bigint[],
   commitments: LegacyCommitmentCiphertextStructOutput[],
   blockNumber: number,
+  utxoTree: number,
+  utxoStartingIndex: number,
 ): LegacyEncryptedCommitment[] {
   return commitments.map((commitment, index) => {
     return {
@@ -125,6 +136,8 @@ export function formatLegacyCommitmentBatchCommitments(
       timestamp: undefined,
       blockNumber,
       ciphertext: formatLegacyCommitmentCiphertext(commitment),
+      utxoTree,
+      utxoStartingIndex,
     };
   });
 }
@@ -141,16 +154,21 @@ export function formatLegacyCommitmentBatchEvent(
     throw err;
   }
 
+  const utxoTree = Number(treeNumber);
+  const utxoStartingIndex = Number(startPosition);
+
   const formattedCommitments: LegacyEncryptedCommitment[] = formatLegacyCommitmentBatchCommitments(
     transactionHash,
     hash,
     ciphertext,
     blockNumber,
+    utxoTree,
+    utxoStartingIndex,
   );
   return {
     txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-    treeNumber: Number(treeNumber),
-    startPosition: Number(startPosition),
+    treeNumber: utxoTree,
+    startPosition: utxoStartingIndex,
     commitments: formattedCommitments,
     blockNumber,
   };
