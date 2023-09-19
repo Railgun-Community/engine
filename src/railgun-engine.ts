@@ -541,6 +541,20 @@ class RailgunEngine extends EventEmitter {
     return historicalMerkleroot === merkleroot;
   }
 
+  async validateRailgunTxidOccurredBeforeBlockNumber(
+    chain: Chain,
+    tree: number,
+    index: number,
+    blockNumber: number,
+  ): Promise<boolean> {
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+    const railgunTransaction = await txidMerkletree.getRailgunTransaction(tree, index);
+    if (!railgunTransaction) {
+      throw new Error(`Railgun transaction at TXID tree ${tree} and index ${index} not found.`);
+    }
+    return railgunTransaction.blockNumber < blockNumber;
+  }
+
   async getHistoricalRailgunTxidMerkleroot(
     chain: Chain,
     tree: number,

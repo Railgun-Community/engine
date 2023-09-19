@@ -90,12 +90,14 @@ describe('Railgun TXID Merkletree', () => {
         commitments: ['0x01', '0x02'],
         nullifiers: ['0x03', '0x04'],
         boundParamsHash: '0x05',
+        blockNumber: 0,
       },
       {
         graphID: '0x10',
         commitments: ['0x11', '0x12'],
         nullifiers: ['0x13', '0x14'],
         boundParamsHash: '0x15',
+        blockNumber: 0,
       },
     ];
 
@@ -138,12 +140,14 @@ describe('Railgun TXID Merkletree', () => {
         commitments: ['0x0101', '0x0102'],
         nullifiers: ['0x0103', '0x0104'],
         boundParamsHash: '0x0105',
+        blockNumber: 0,
       },
       {
         graphID: '0x13',
         commitments: ['0x0211', '0x0212'],
         nullifiers: ['0x0213', '0x0214'],
         boundParamsHash: '0x0215',
+        blockNumber: 0,
       },
     ];
 

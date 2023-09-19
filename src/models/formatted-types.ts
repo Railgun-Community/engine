@@ -143,6 +143,7 @@ export type RailgunTransaction = {
   commitments: string[];
   nullifiers: string[];
   boundParamsHash: string;
+  blockNumber: number;
 };
 
 export type RailgunTransactionWithTxid = RailgunTransaction & {
