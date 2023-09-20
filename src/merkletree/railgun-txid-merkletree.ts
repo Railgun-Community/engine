@@ -105,11 +105,8 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       throw new Error('merkleroot not found');
     }
 
-    const merkleproof = await this.getMerkleProof(tree, index);
-
     return {
       railgunTransactionWithTxid,
-      merkleproof,
       merkleroot,
       txidIndex,
     };

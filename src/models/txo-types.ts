@@ -1,5 +1,6 @@
 import { TransactNote } from '../note/transact-note';
-import { NoteAnnotationData, POIsPerList, TokenData } from './formatted-types';
+import { CommitmentType, NoteAnnotationData, TokenData } from './formatted-types';
+import { POIsPerList } from './poi-types';
 
 export type TXO = {
   tree: number;
@@ -11,6 +12,7 @@ export type TXO = {
   creationRailgunTxid: Optional<string>;
   creationPOIs: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
+  commitmentType: CommitmentType;
 };
 
 export type SentCommitment = {
@@ -24,6 +26,7 @@ export type SentCommitment = {
   spentRailgunTxid: Optional<string>;
   spentPOIs: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
+  commitmentType: CommitmentType;
 };
 
 export type SpendingSolutionGroup = {

@@ -7,6 +7,7 @@ import { TransactNote } from '../note/transact-note';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, formatToByteLength } from '../utils';
 import { isDefined } from '../utils/is-defined';
+import { CommitmentType } from '../models/formatted-types';
 
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
@@ -64,6 +65,7 @@ const createNullUTXO = (nullNote: TransactNote): TXO => {
     creationRailgunTxid: undefined,
     creationPOIs: undefined,
     blindedCommitment: undefined,
+    commitmentType: CommitmentType.TransactCommitment,
   };
 };
 

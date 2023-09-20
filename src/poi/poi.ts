@@ -1,9 +1,8 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
-import { Proof } from '../models';
 import { Chain } from '../models/engine-types';
-import { POIsPerList, TXOPOIListStatus } from '../models/formatted-types';
+import { BlindedCommitmentData, POIsPerList, TXOPOIListStatus } from '../models/poi-types';
 import { SentCommitment, TXO } from '../models/txo-types';
 import { isDefined } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
@@ -114,18 +113,13 @@ export class POI {
 
   static async retrievePOIsForBlindedCommitments(
     chain: Chain,
-    blindedCommitments: string[],
+    blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }> {
     if (!isDefined(this.nodeInterface)) {
       throw new Error('POI node interface not initialized');
     }
     const listKeys = this.getAllListKeys();
-    return this.nodeInterface.getPOIsPerList(chain, listKeys, blindedCommitments);
-  }
-
-  private static async generateProof(): Promise<Proof> {
-    // TODO
-    throw new Error('Not implemented');
+    return this.nodeInterface.getPOIsPerList(chain, listKeys, blindedCommitmentDatas);
   }
 
   static async generateAndSubmitPOIAllLists(
@@ -149,20 +143,11 @@ export class POI {
       // TODO: Get blindedCommitments
       const blindedCommitments: string[] = [];
 
-      // TODO: Get poiMerkleroots
-      const poiMerkleroots: string[] = [];
-
-      // TODO: Generate proof
-      const snarkProof = await this.generateProof();
-
-      await this.nodeInterface.submitPOI(
+      await this.nodeInterface.generateAndSubmitPOI(
         chain,
         listKey,
-        snarkProof,
-        poiMerkleroots,
-        txidMerkletreeData.merkleroot,
-        txidMerkletreeData.txidIndex,
         blindedCommitments,
+        txidMerkletreeData,
       );
     }
   }

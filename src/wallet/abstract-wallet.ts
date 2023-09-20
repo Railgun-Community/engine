@@ -20,7 +20,6 @@ import {
   NoteAnnotationData,
   NoteSerialized,
   OutputType,
-  POIsPerList,
   ShieldCommitment,
   StoredReceiveCommitment,
   StoredSendCommitment,
@@ -72,10 +71,15 @@ import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined } from '../utils/is-defined';
 import { PublicInputs } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
-import { isReceiveShieldCommitment, isSentCommitment } from '../utils/commitment';
+import {
+  isReceiveShieldCommitment,
+  isSentCommitment,
+  isSentCommitmentType,
+} from '../utils/commitment';
 import { POI } from '../poi/poi';
 import { getBlindedCommitment } from '../poi/blinded-commitment';
 import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
+import { BlindedCommitmentData, BlindedCommitmentType, POIsPerList } from '../models/poi-types';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -817,6 +821,7 @@ abstract class AbstractWallet extends EventEmitter {
           creationRailgunTxid: receiveCommitment.creationRailgunTxid,
           creationPOIs: receiveCommitment.creationPOIs,
           blindedCommitment: receiveCommitment.blindedCommitment,
+          commitmentType: receiveCommitment.commitmentType,
         };
         return txo;
       }),
@@ -887,6 +892,7 @@ abstract class AbstractWallet extends EventEmitter {
           spentRailgunTxid: sentCommitment.spentRailgunTxid,
           spentPOIs: sentCommitment.spentPOIs,
           blindedCommitment: sentCommitment.blindedCommitment,
+          commitmentType: sentCommitment.commitmentType,
         });
       }),
     );
@@ -938,11 +944,15 @@ abstract class AbstractWallet extends EventEmitter {
     if (txosNeedCreationPOIs.length === 0) {
       return;
     }
-    const blindedCommitments = txosNeedCreationPOIs.map((txo) => txo.blindedCommitment as string);
-
+    const blindedCommitmentDatas: BlindedCommitmentData[] = txosNeedCreationPOIs.map((txo) => ({
+      type: isSentCommitmentType(txo.commitmentType)
+        ? BlindedCommitmentType.Transact
+        : BlindedCommitmentType.Shield,
+      blindedCommitment: txo.blindedCommitment as string,
+    }));
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
       chain,
-      blindedCommitments,
+      blindedCommitmentDatas,
     );
 
     // eslint-disable-next-line no-restricted-syntax
@@ -966,23 +976,27 @@ abstract class AbstractWallet extends EventEmitter {
 
   async refreshSpentPOIsAllSentCommitments(chain: Chain): Promise<void> {
     const sentCommitments = await this.getSentCommitments(chain, undefined);
-    const sentCommitmentsNeedSpendPOIs = sentCommitments.filter((sendCommitment) =>
+    const sentCommitmentsNeedSpentPOIs = sentCommitments.filter((sendCommitment) =>
       POI.shouldRetrieveSpentPOIs(sendCommitment),
     );
-    if (sentCommitmentsNeedSpendPOIs.length === 0) {
+    if (sentCommitmentsNeedSpentPOIs.length === 0) {
       return;
     }
-    const blindedCommitments = sentCommitmentsNeedSpendPOIs.map(
-      (sentCommitment) => sentCommitment.blindedCommitment as string,
+    const blindedCommitmentDatas: BlindedCommitmentData[] = sentCommitmentsNeedSpentPOIs.map(
+      (sentCommitment) => ({
+        type: isSentCommitmentType(sentCommitment.commitmentType)
+          ? BlindedCommitmentType.Transact
+          : BlindedCommitmentType.Shield,
+        blindedCommitment: sentCommitment.blindedCommitment as string,
+      }),
     );
-
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
       chain,
-      blindedCommitments,
+      blindedCommitmentDatas,
     );
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const sentCommitment of sentCommitmentsNeedSpendPOIs) {
+    for (const sentCommitment of sentCommitmentsNeedSpentPOIs) {
       if (!isDefined(sentCommitment.blindedCommitment)) {
         continue;
       }
@@ -1015,6 +1029,8 @@ abstract class AbstractWallet extends EventEmitter {
     for (const sentCommitment of sentCommitmentsNeedSpendPOIs) {
       await POI.generateAndSubmitPOIAllLists(chain, sentCommitment, railgunTxidMerkletree);
     }
+
+    await this.refreshSpentPOIsAllSentCommitments(chain);
   }
 
   private async updateReceiveCommitmentCreatedPOIs(

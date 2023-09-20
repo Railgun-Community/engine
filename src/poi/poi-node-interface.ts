@@ -1,21 +1,18 @@
-import { POIsPerList } from '../models/formatted-types';
+import { RailgunTxidMerkletreeData } from '../models/formatted-types';
 import { Chain } from '../models/engine-types';
-import { Proof } from '../models/prover-types';
+import { BlindedCommitmentData, POIsPerList } from '../models/poi-types';
 
 export abstract class POINodeInterface {
   abstract getPOIsPerList(
     chain: Chain,
     listKeys: string[],
-    blindedCommitments: string[],
+    blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }>;
 
-  abstract submitPOI(
+  abstract generateAndSubmitPOI(
     chain: Chain,
     listKey: string,
-    proof: Proof,
-    poiMerkleroots: string[],
-    txidMerkleroot: string,
-    txidMerklerootIndex: number,
-    blindedCommitmentOutputs: string[],
+    blindedCommitments: string[],
+    txidMerkletreeData: RailgunTxidMerkletreeData,
   ): Promise<void>;
 }

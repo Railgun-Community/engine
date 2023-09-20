@@ -1,4 +1,5 @@
 import BN from 'bn.js';
+import { POIsPerList } from './poi-types';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
@@ -153,7 +154,6 @@ export type RailgunTransactionWithTxid = RailgunTransaction & {
 
 export type RailgunTxidMerkletreeData = {
   railgunTransactionWithTxid: RailgunTransactionWithTxid;
-  merkleproof: MerkleProof;
   merkleroot: string;
   txidIndex: number;
 };
@@ -170,19 +170,6 @@ export type Nullifier = {
   txid: string;
   blockNumber: number;
   spentRailgunTxid: Optional<string>;
-};
-
-export enum TXOPOIListStatus {
-  Valid = 'Valid',
-  ShieldBlocked = 'ShieldBlocked',
-  ShieldPending = 'ShieldPending',
-  TransactProofSubmitted = 'TransactProofSubmitted',
-  Missing = 'Missing',
-}
-
-// !! DO NOT MODIFY THIS TYPE !!
-export type POIsPerList = {
-  [key: string]: TXOPOIListStatus;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!

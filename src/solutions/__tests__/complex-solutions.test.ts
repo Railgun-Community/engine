@@ -8,7 +8,7 @@ import {
 } from '../complex-solutions';
 import { filterZeroUTXOs, sortUTXOsByAscendingValue } from '../utxos';
 import { TransactionBatch } from '../../transaction/transaction-batch';
-import { OutputType } from '../../models/formatted-types';
+import { CommitmentType, OutputType } from '../../models/formatted-types';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
 import { randomHex } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
@@ -73,6 +73,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     creationRailgunTxid: undefined,
     creationPOIs: undefined,
     blindedCommitment: undefined,
+    commitmentType: CommitmentType.TransactCommitment,
   };
 };
 

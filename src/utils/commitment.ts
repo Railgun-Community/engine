@@ -44,10 +44,8 @@ export const isReceiveShieldCommitment = (receiveCommitment: StoredReceiveCommit
   return false;
 };
 
-export const isSentCommitment = (
-  commitment: Commitment,
-): commitment is TransactCommitment | LegacyEncryptedCommitment => {
-  switch (commitment.commitmentType) {
+export const isSentCommitmentType = (commitmentType: CommitmentType): boolean => {
+  switch (commitmentType) {
     case CommitmentType.TransactCommitment:
     case CommitmentType.LegacyEncryptedCommitment:
       return true;
@@ -56,4 +54,10 @@ export const isSentCommitment = (
       return false;
   }
   return false;
+};
+
+export const isSentCommitment = (
+  commitment: Commitment,
+): commitment is TransactCommitment | LegacyEncryptedCommitment => {
+  return isSentCommitmentType(commitment.commitmentType);
 };
