@@ -431,10 +431,11 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Batch write to DB
     await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(dataWriteBatch, 'json')]);
 
-    // Call merkleroot storage (implemented in txid tree only)
-    const merkleroot = hashWriteGroup[TREE_DEPTH][0];
+    // Call leaf/merkleroot storage (implemented in txid tree only)
     const lastIndex = newTreeLength - 1;
-    await this.storeMerkleroot(treeIndex, lastIndex, merkleroot);
+    const leaf = hashWriteGroup[0][lastIndex];
+    const merkleroot = hashWriteGroup[TREE_DEPTH][0];
+    await this.newLeafRootTrigger(treeIndex, lastIndex, leaf, merkleroot);
 
     // Update tree length
     this.treeLengths[treeIndex] = newTreeLength;
@@ -593,9 +594,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     return hashWriteGroup;
   }
 
-  protected abstract storeMerkleroot(
+  protected abstract newLeafRootTrigger(
     tree: number,
     index: number,
+    leaf: string,
     merkleroot: string,
   ): Promise<void>;
 

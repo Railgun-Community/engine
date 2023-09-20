@@ -163,7 +163,7 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-restricted-syntax
       for (const leaf of leaves) {
         const railgunTxid = commitmentsToRailgunTxids[leaf.hash];
-        (leaf as TransactCommitment | LegacyEncryptedCommitment).createdRailgunTxid = railgunTxid;
+        (leaf as TransactCommitment | LegacyEncryptedCommitment).creationRailgunTxid = railgunTxid;
       }
     }
 
@@ -607,7 +607,7 @@ class RailgunEngine extends EventEmitter {
     for (const commitmentHash of commitmentHashes) {
       const commitment = hashesToCommitment[commitmentHash];
       if (commitment && isSentCommitment(commitment)) {
-        commitment.createdRailgunTxid = railgunTxid;
+        commitment.creationRailgunTxid = railgunTxid;
       }
     }
 
@@ -816,18 +816,19 @@ class RailgunEngine extends EventEmitter {
 
     // Create railgun txid merkletrees
     this.railgunTxidMerkletrees[chain.type] ??= [];
+    let railgunTxidMerkletree: RailgunTxidMerkletree;
     if (this.isPOINode) {
       // POI Node Txid merkletree
-      const txidMerkletree = await RailgunTxidMerkletree.createForPOINode(this.db, chain);
-      this.railgunTxidMerkletrees[chain.type][chain.id] = txidMerkletree;
+      railgunTxidMerkletree = await RailgunTxidMerkletree.createForPOINode(this.db, chain);
+      this.railgunTxidMerkletrees[chain.type][chain.id] = railgunTxidMerkletree;
     } else {
       // Wallet Txid merkletree
-      const txidMerkletree = await RailgunTxidMerkletree.createForWallet(
+      railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
         this.db,
         chain,
         this.validateRailgunTxidMerkleroot,
       );
-      this.railgunTxidMerkletrees[chain.type][chain.id] = txidMerkletree;
+      this.railgunTxidMerkletrees[chain.type][chain.id] = railgunTxidMerkletree;
     }
 
     this.deploymentBlocks[chain.type] ??= [];
@@ -840,6 +841,7 @@ class RailgunEngine extends EventEmitter {
     // Load merkletree to all wallets
     Object.values(this.wallets).forEach((wallet) => {
       wallet.loadUTXOMerkletree(utxoMerkletree);
+      wallet.loadRailgunTXIDMerkletree(railgunTxidMerkletree);
     });
 
     // Setup listeners
@@ -879,11 +881,7 @@ class RailgunEngine extends EventEmitter {
     // Unload merkletrees from wallets
     Object.values(this.wallets).forEach((wallet) => {
       wallet.unloadUTXOMerkletree(chain);
-    });
-
-    // Unload merkletrees from wallets
-    Object.values(this.wallets).forEach((wallet) => {
-      wallet.unloadUTXOMerkletree(chain);
+      wallet.unloadRailgunTXIDMerkletree(chain);
     });
 
     // Unload listeners
@@ -1079,10 +1077,15 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
-    // Load merkletrees for wallet
+    // Load UTXO and TXID merkletrees for wallet
     this.utxoMerkletrees.forEach((merkletreesForChainType) => {
       merkletreesForChainType.forEach((merkletree) => {
         wallet.loadUTXOMerkletree(merkletree);
+      });
+    });
+    this.railgunTxidMerkletrees.forEach((merkletreesForChainType) => {
+      merkletreesForChainType.forEach((merkletree) => {
+        wallet.loadRailgunTXIDMerkletree(merkletree);
       });
     });
   }

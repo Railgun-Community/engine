@@ -7,7 +7,7 @@ import {
   TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
 import { Merkletree } from './merkletree';
-import { RailgunTransactionWithTxid } from '../models/formatted-types';
+import { RailgunTxidMerkletreeData, RailgunTransactionWithTxid } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify } from '../utils/bytes';
 import { isDefined } from '../utils';
 
@@ -86,6 +86,33 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     } catch (err) {
       return undefined;
     }
+  }
+
+  async getTxidMerkletreeData(railgunTxid: string): Promise<RailgunTxidMerkletreeData> {
+    const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
+    if (!isDefined(txidIndex)) {
+      throw new Error('txid index not found');
+    }
+
+    const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+    const railgunTransactionWithTxid = await this.getRailgunTransaction(tree, index);
+    if (!isDefined(railgunTransactionWithTxid)) {
+      throw new Error('railgun transaction not found');
+    }
+
+    const merkleroot = await this.getHistoricalMerkleroot(tree, index);
+    if (!isDefined(merkleroot)) {
+      throw new Error('merkleroot not found');
+    }
+
+    const merkleproof = await this.getMerkleProof(tree, index);
+
+    return {
+      railgunTransactionWithTxid,
+      merkleproof,
+      merkleroot,
+      txidIndex,
+    };
   }
 
   async getRailgunTxidsForNullifiers(
@@ -180,6 +207,12 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       const max = currentTree === latestTree ? latestIndex : TREE_MAX_ITEMS - 1;
       for (let currentIndex = startIndex; currentIndex <= max; currentIndex += 1) {
         // eslint-disable-next-line no-await-in-loop
+        const railgunTransaction = await this.getRailgunTransaction(currentTree, currentIndex);
+        if (isDefined(railgunTransaction)) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.db.del(this.getRailgunTxidLookupDBPath(railgunTransaction.hash));
+        }
+        // eslint-disable-next-line no-await-in-loop
         await this.db.del(this.getHistoricalMerklerootDBPath(currentTree, currentIndex));
         // eslint-disable-next-line no-await-in-loop
         await this.db.del(this.getDataDBPath(currentTree, currentIndex));
@@ -234,6 +267,54 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     return Promise.resolve();
   }
 
+  private getRailgunTxidLookupDBPath(railgunTxid: string): string[] {
+    const railgunTxidPrefix = fromUTF8String('railgun-txid-lookup');
+    return [...this.getChainDBPrefix(), railgunTxidPrefix, railgunTxid].map((el) =>
+      formatToByteLength(el, ByteLength.UINT_256),
+    );
+  }
+
+  private async getTxidIndexByRailgunTxid(railgunTxid: string): Promise<Optional<number>> {
+    try {
+      const txidIndex = Number(
+        (await this.db.get(this.getRailgunTxidLookupDBPath(railgunTxid))) as string,
+      );
+      return txidIndex;
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      return undefined;
+    }
+  }
+
+  private async getRailgunTransactionByTxid(
+    railgunTxid: string,
+  ): Promise<Optional<RailgunTransactionWithTxid>> {
+    try {
+      const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
+      if (!isDefined(txidIndex)) {
+        throw new Error('Txid index not found');
+      }
+      const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+      return await this.getRailgunTransaction(tree, index);
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      return undefined;
+    }
+  }
+
+  private async storeRailgunTxidIndexLookup(
+    railgunTxid: string,
+    tree: number,
+    index: number,
+  ): Promise<void> {
+    const txidIndex = RailgunTxidMerkletree.getTxidIndex(tree, index);
+    await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), String(txidIndex));
+  }
+
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {
     const merklerootPrefix = fromUTF8String('merkleroots');
     return [
@@ -244,11 +325,17 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
-  protected async storeMerkleroot(tree: number, index: number, merkleroot: string): Promise<void> {
-    if (!this.shouldStoreMerkleroots) {
-      return;
+  protected async newLeafRootTrigger(
+    tree: number,
+    index: number,
+    leaf: string,
+    merkleroot: string,
+  ): Promise<void> {
+    await this.storeRailgunTxidIndexLookup(leaf, tree, index);
+
+    if (this.shouldStoreMerkleroots) {
+      await this.db.put(this.getHistoricalMerklerootDBPath(tree, index), merkleroot);
     }
-    await this.db.put(this.getHistoricalMerklerootDBPath(tree, index), merkleroot);
   }
 
   async getHistoricalMerkleroot(tree: number, index: number): Promise<Optional<string>> {

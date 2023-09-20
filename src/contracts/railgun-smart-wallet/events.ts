@@ -149,7 +149,7 @@ export const formatTransactCommitments = (
       ciphertext: formatCommitmentCiphertext(commitment),
       utxoTree,
       utxoIndex: utxoStartingIndex + index,
-      createdRailgunTxid: undefined,
+      creationRailgunTxid: undefined,
     };
   });
 };

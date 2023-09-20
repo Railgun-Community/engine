@@ -178,7 +178,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  protected storeMerkleroot(): Promise<void> {
+  protected newLeafRootTrigger(): Promise<void> {
     // Unused for UTXO merkletree
     return Promise.resolve();
   }

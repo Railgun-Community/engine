@@ -164,7 +164,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -175,7 +175,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -186,7 +186,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -197,7 +197,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -208,7 +208,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -219,7 +219,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -230,7 +230,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
       },
     ]);
     await merkletree.updateTreesFromWriteQueue();
@@ -249,7 +249,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -268,7 +268,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -279,7 +279,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -290,7 +290,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -312,7 +312,7 @@ describe('UTXO Merkletree', () => {
           blockNumber: 0,
           utxoTree: 0,
           utxoIndex: 0,
-          createdRailgunTxid: undefined,
+          creationRailgunTxid: undefined,
           timestamp: undefined,
         },
       ]),
@@ -325,7 +325,7 @@ describe('UTXO Merkletree', () => {
           blockNumber: 0,
           utxoTree: 0,
           utxoIndex: 0,
-          createdRailgunTxid: undefined,
+          creationRailgunTxid: undefined,
           timestamp: undefined,
         },
       ]),
@@ -341,7 +341,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -372,7 +372,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -461,7 +461,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -472,7 +472,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -483,7 +483,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -494,7 +494,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -505,7 +505,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -516,7 +516,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -569,7 +569,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       })),
     );
@@ -635,7 +635,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -646,7 +646,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -657,7 +657,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -668,7 +668,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -679,7 +679,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -690,7 +690,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ];
@@ -771,7 +771,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -798,7 +798,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        createdRailgunTxid: undefined,
+        creationRailgunTxid: undefined,
         timestamp: undefined,
       },
     ]);

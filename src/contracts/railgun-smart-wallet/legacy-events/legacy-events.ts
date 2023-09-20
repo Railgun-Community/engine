@@ -138,7 +138,7 @@ export function formatLegacyCommitmentBatchCommitments(
       ciphertext: formatLegacyCommitmentCiphertext(commitment),
       utxoTree,
       utxoIndex: utxoStartingIndex + index,
-      createdRailgunTxid: undefined,
+      creationRailgunTxid: undefined,
     };
   });
 }

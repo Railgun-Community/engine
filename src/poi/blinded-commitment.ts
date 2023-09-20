@@ -9,7 +9,7 @@ const bitwiseMerge = (tree: number, index: number) => {
 
 export const getBlindedCommitment = (
   commitment: Commitment,
-  npk: string,
+  npk: bigint,
   railgunTxid: string,
 ): string => {
   const hash: bigint = getBlindedCommitmentHash(commitment, npk, railgunTxid);
@@ -18,7 +18,7 @@ export const getBlindedCommitment = (
 
 const getBlindedCommitmentHash = (
   commitment: Commitment,
-  npk: string,
+  npk: bigint,
   railgunTxid: string,
 ): bigint => {
   switch (commitment.commitmentType) {

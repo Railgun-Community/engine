@@ -24,9 +24,9 @@ export type SnarkProof = {
 };
 
 export type Proof = {
-  pi_a: string[];
-  pi_b: string[][];
-  pi_c: string[];
+  pi_a: [string, string];
+  pi_b: [[string, string], [string, string]];
+  pi_c: [string, string];
 };
 
 export type PublicInputs = {
