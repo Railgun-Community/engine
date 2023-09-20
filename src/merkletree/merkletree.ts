@@ -63,6 +63,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   private defaultCommitmentProcessingSize: CommitmentProcessingGroupSize;
 
+  // TODO: Remove after V3, when we no longer need to pair all commitments and railgun transactions.
+  protected cacheAllData: Optional<T[]>;
+
   /**
    * Create Merkletree controller from database
    * @param db - database object to use
@@ -204,6 +207,36 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+  async queryAllData(): Promise<T[]> {
+    if (this.cacheAllData) {
+      return this.cacheAllData;
+    }
+
+    const allData: T[] = [];
+
+    const latestTree = await this.latestTree();
+    for (let treeIndex = 0; treeIndex <= latestTree; treeIndex += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const treeHeight = await this.getTreeLength(treeIndex);
+
+      const fetcher = new Array<Promise<Optional<T>>>(treeHeight);
+      for (let index = 0; index < treeHeight; index += 1) {
+        fetcher[index] = this.getData(treeIndex, index);
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      const leaves: Optional<T>[] = await Promise.all(fetcher);
+      leaves.forEach((leaf) => {
+        if (leaf) {
+          allData.push(leaf);
+        }
+      });
+    }
+
+    this.cacheAllData = allData;
+    return allData;
+  }
+
   /**
    * Gets node from tree
    * @param tree - tree to get node from
@@ -340,6 +373,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearLeavesFromDB(): Promise<void> {
+    this.cacheAllData = undefined;
     await this.db.clearNamespace(this.getChainDBPrefix());
     this.cachedNodeHashes = {};
     this.treeLengths = [];
@@ -405,6 +439,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Update tree length
     this.treeLengths[treeIndex] = newTreeLength;
     await this.updateStoredMerkletreesMetadata(treeIndex);
+
+    this.cacheAllData?.push(...dataWriteGroup);
   }
 
   /**

@@ -3,30 +3,33 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { RailgunTXIDMerkletree } from '../railgun-txid-merkletree';
+import { RailgunTxidMerkletree } from '../railgun-txid-merkletree';
 import { RailgunTransaction } from '../../models';
-import { getRailgunTransactionID } from '../../transaction/railgun-txid';
+import {
+  createRailgunTransactionWithID,
+  getRailgunTransactionID,
+} from '../../transaction/railgun-txid';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 // Database object
 let db: Database;
-let merkletree: RailgunTXIDMerkletree;
+let merkletree: RailgunTxidMerkletree;
 
 const chain: Chain = {
   type: 0,
   id: 0,
 };
 
-describe('Railgun TXID Merkletree', () => {
+describe('Railgun Txid Merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
-    merkletree = await RailgunTXIDMerkletree.createForPOINode(db, chain);
+    merkletree = await RailgunTxidMerkletree.createForPOINode(db, chain);
   });
 
-  it('Should get TXID merkletree DB paths', async () => {
+  it('Should get Txid merkletree DB paths', async () => {
     type Vector = {
       chain: Chain;
       treeNumber: number;
@@ -66,7 +69,7 @@ describe('Railgun TXID Merkletree', () => {
 
     await Promise.all(
       vectors.map(async (vector) => {
-        const merkletreeVectorTest = await RailgunTXIDMerkletree.createForPOINode(db, vector.chain);
+        const merkletreeVectorTest = await RailgunTxidMerkletree.createForPOINode(db, vector.chain);
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
           vector.result.slice(0, 3),
@@ -79,7 +82,7 @@ describe('Railgun TXID Merkletree', () => {
     );
   });
 
-  it('Should update TXID merkle tree correctly', async () => {
+  it('Should update railgun txid merkle tree correctly', async () => {
     expect(await merkletree.getRoot(0)).to.equal(
       '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
     );
@@ -100,8 +103,9 @@ describe('Railgun TXID Merkletree', () => {
         blockNumber: 0,
       },
     ];
+    const railgunTransactionsWithTxids = railgunTransactions.map(createRailgunTransactionWithID);
 
-    await merkletree.queueRailgunTransactions(railgunTransactions, 1);
+    await merkletree.queueRailgunTransactions(railgunTransactionsWithTxids, 1);
     expect(await merkletree.getTreeLength(0)).to.equal(0);
 
     await merkletree.updateTreesFromWriteQueue();
@@ -129,8 +133,25 @@ describe('Railgun TXID Merkletree', () => {
       hash,
     });
 
+    expect(
+      await merkletree.getRailgunTxidsForNullifiers(['0x03', '0x0103', '0x0213', '0x1111111']),
+    ).to.deep.equal({
+      '0x0103': undefined,
+      '0x0213': undefined,
+      '0x03': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      '0x1111111': undefined,
+    });
+    expect(
+      await merkletree.getRailgunTxidsForCommitments(['0x01', '0x0101', '0x0211', '0x1111111']),
+    ).to.deep.equal({
+      '0x0101': undefined,
+      '0x0211': undefined,
+      '0x01': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      '0x1111111': undefined,
+    });
+
     // Make sure new constructed tree inherits db values
-    const merkletree2 = await RailgunTXIDMerkletree.createForPOINode(db, chain);
+    const merkletree2 = await RailgunTxidMerkletree.createForPOINode(db, chain);
     const treeLength2 = await merkletree2.getTreeLength(0);
     expect(treeLength2).to.equal(2);
 
@@ -150,9 +171,29 @@ describe('Railgun TXID Merkletree', () => {
         blockNumber: 0,
       },
     ];
+    const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map(
+      createRailgunTransactionWithID,
+    );
 
-    await merkletree.queueRailgunTransactions(moreRailgunTransactions, undefined);
+    await merkletree.queueRailgunTransactions(moreRailgunTransactionsWithTxids, undefined);
     await merkletree.updateTreesFromWriteQueue();
+
+    expect(
+      await merkletree.getRailgunTxidsForNullifiers(['0x03', '0x0103', '0x0213', '0x1111111']),
+    ).to.deep.equal({
+      '0x0103': '16202346701867999176730450400871741378312930716998375241294817425983735234446',
+      '0x0213': '13108638026526642281447854845434934239544749734798020789855247093078646267284',
+      '0x03': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      '0x1111111': undefined,
+    });
+    expect(
+      await merkletree.getRailgunTxidsForCommitments(['0x01', '0x0101', '0x0211', '0x1111111']),
+    ).to.deep.equal({
+      '0x0101': '16202346701867999176730450400871741378312930716998375241294817425983735234446',
+      '0x0211': '13108638026526642281447854845434934239544749734798020789855247093078646267284',
+      '0x01': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      '0x1111111': undefined,
+    });
 
     // Current root (4 elements)
     expect(await merkletree.getRoot(0)).to.equal(
@@ -181,20 +222,20 @@ describe('Railgun TXID Merkletree', () => {
   }).timeout(20000);
 
   it('Should get next tree and index', async () => {
-    expect(RailgunTXIDMerkletree.nextTreeAndIndex(0, 0)).to.deep.equal({ tree: 0, index: 1 });
-    expect(RailgunTXIDMerkletree.nextTreeAndIndex(1, 65535)).to.deep.equal({ tree: 2, index: 0 });
+    expect(RailgunTxidMerkletree.nextTreeAndIndex(0, 0)).to.deep.equal({ tree: 0, index: 1 });
+    expect(RailgunTxidMerkletree.nextTreeAndIndex(1, 65535)).to.deep.equal({ tree: 2, index: 0 });
   });
 
   it('Should get tree and index from txidIndex', async () => {
-    expect(RailgunTXIDMerkletree.getTreeAndIndexFromTxidIndex(9)).to.deep.equal({
+    expect(RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(9)).to.deep.equal({
       tree: 0,
       index: 9,
     });
-    expect(RailgunTXIDMerkletree.getTreeAndIndexFromTxidIndex(65535)).to.deep.equal({
+    expect(RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(65535)).to.deep.equal({
       tree: 0,
       index: 65535,
     });
-    expect(RailgunTXIDMerkletree.getTreeAndIndexFromTxidIndex(65536)).to.deep.equal({
+    expect(RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(65536)).to.deep.equal({
       tree: 1,
       index: 0,
     });

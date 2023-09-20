@@ -20,6 +20,7 @@ import {
   NoteAnnotationData,
   NoteSerialized,
   OutputType,
+  POIsPerList,
   ShieldCommitment,
   StoredReceiveCommitment,
   StoredSendCommitment,
@@ -71,6 +72,7 @@ import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined } from '../utils/is-defined';
 import { PublicInputs } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
+import { isReceiveShieldCommitment, isSentCommitment } from '../utils/commitment';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -542,6 +544,11 @@ abstract class AbstractWallet extends EventEmitter {
         senderAddress: noteReceive.senderAddressData
           ? encodeAddress(noteReceive.senderAddressData)
           : undefined,
+        commitmentType: leaf.commitmentType,
+        createdRailgunTxid: isSentCommitment(leaf) ? leaf.createdRailgunTxid : undefined,
+        spentRailgunTxid: undefined,
+        spentPOIs: undefined,
+        createdPOIs: undefined,
       };
       EngineDebug.log(`Adding RECEIVE commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
@@ -561,6 +568,7 @@ abstract class AbstractWallet extends EventEmitter {
         txid: leaf.txid,
         timestamp: leaf.timestamp,
         decrypted: serializedNoteSend,
+        commitmentType: leaf.commitmentType,
         noteExtraData: Memo.decryptNoteAnnotationData(noteSend.annotationData, viewingPrivateKey),
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
       };
@@ -663,9 +671,7 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    if (!isDefined(this.cachedReceiveCommitments[chain.type])) {
-      this.cachedReceiveCommitments[chain.type] = [];
-    }
+    this.cachedReceiveCommitments[chain.type] ??= [];
     this.cachedReceiveCommitments[chain.type][chain.id] = dbStoredReceiveCommitments;
     return dbStoredReceiveCommitments;
   }
@@ -736,38 +742,64 @@ abstract class AbstractWallet extends EventEmitter {
 
     return Promise.all(
       storedReceiveCommitments.map(async ({ storedReceiveCommitment, tree, position }) => {
-        const txo = storedReceiveCommitment;
+        const receiveCommitment = storedReceiveCommitment;
 
         // Check if TXO has been spent.
-        if (txo.spendtxid === false) {
-          const storedNullifier = await merkletree.getStoredNullifierTxid(txo.nullifier);
+        if (receiveCommitment.spendtxid === false) {
+          const storedNullifier = await merkletree.getStoredNullifierData(
+            receiveCommitment.nullifier,
+          );
           if (isDefined(storedNullifier)) {
-            txo.spendtxid = storedNullifier;
-            // Write nullifier spend txid to db.
-            await this.db.put(
-              this.getWalletReceiveCommitmentDBPrefix(chain, tree, position),
-              msgpack.encode(txo),
+            receiveCommitment.spendtxid = storedNullifier.txid;
+            await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+          }
+        }
+
+        const isShield = isReceiveShieldCommitment(receiveCommitment);
+        if (!isShield) {
+          // Look up created-in railgunTxid in commitments.
+          if (!isDefined(receiveCommitment.spentRailgunTxid)) {
+            const commitment = await merkletree.getCommitment(tree, position);
+            if (isSentCommitment(commitment)) {
+              receiveCommitment.createdRailgunTxid = commitment.createdRailgunTxid;
+              await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+            }
+          }
+          // Look up spent-in railgunTxid in nullifiers.
+          if (
+            !isDefined(receiveCommitment.spentRailgunTxid) &&
+            isDefined(receiveCommitment.spendtxid)
+          ) {
+            const storedNullifier = await merkletree.getStoredNullifierData(
+              receiveCommitment.nullifier,
             );
+            if (isDefined(storedNullifier)) {
+              receiveCommitment.spentRailgunTxid = storedNullifier.spentRailgunTxid;
+              await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+            }
           }
         }
 
         const note = await TransactNote.deserialize(
           {
-            ...txo.decrypted,
+            ...receiveCommitment.decrypted,
             recipientAddress,
           },
           vpk,
           tokenDataGetter,
         );
 
-        return {
+        const txo: TXO = {
           tree,
           position,
-          txid: txo.txid,
-          timestamp: txo.timestamp,
-          spendtxid: txo.spendtxid,
+          txid: receiveCommitment.txid,
+          timestamp: receiveCommitment.timestamp,
+          spendtxid: receiveCommitment.spendtxid,
           note,
+          createdRailgunTxid: receiveCommitment.createdRailgunTxid,
+          spentRailgunTxid: receiveCommitment.spentRailgunTxid,
         };
+        return txo;
       }),
     );
   }
@@ -815,6 +847,50 @@ abstract class AbstractWallet extends EventEmitter {
     );
 
     return sentCommitments;
+  }
+
+  private async updateReceiveCommitmentInDB(
+    chain: Chain,
+    tree: number,
+    position: number,
+    receiveCommitment: StoredReceiveCommitment,
+  ): Promise<void> {
+    await this.db.put(
+      this.getWalletReceiveCommitmentDBPrefix(chain, tree, position),
+      msgpack.encode(receiveCommitment),
+    );
+
+    // Update cache
+    this.cachedReceiveCommitments?.[chain.type]?.[chain.id].forEach((cachedCommitment) => {
+      if (cachedCommitment.tree === tree && cachedCommitment.position === position) {
+        // eslint-disable-next-line no-param-reassign
+        cachedCommitment.storedReceiveCommitment = receiveCommitment;
+      }
+    });
+  }
+
+  private async updateReceiveCommitmentCreatedPOIs(
+    chain: Chain,
+    tree: number,
+    position: number,
+    createdPOIs: POIsPerList,
+  ): Promise<void> {
+    const dbPath = this.getWalletReceiveCommitmentDBPrefix(chain, tree, position);
+    const receiveCommitment = (await this.db.get(dbPath)) as StoredReceiveCommitment;
+    receiveCommitment.createdPOIs = createdPOIs;
+    await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+  }
+
+  private async updateReceiveCommitmentSpentPOIs(
+    chain: Chain,
+    tree: number,
+    position: number,
+    spentPOIs: POIsPerList,
+  ): Promise<void> {
+    const dbPath = this.getWalletReceiveCommitmentDBPrefix(chain, tree, position);
+    const receiveCommitment = (await this.db.get(dbPath)) as StoredReceiveCommitment;
+    receiveCommitment.spentPOIs = spentPOIs;
+    await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
   }
 
   private static getPossibleChangeTokenAmounts(
@@ -1425,11 +1501,13 @@ abstract class AbstractWallet extends EventEmitter {
    */
   async clearScannedBalances(chain: Chain) {
     const walletDetails = await this.getWalletDetails(chain);
-    walletDetails.treeScannedHeights = [];
     this.cachedReceiveCommitments = [];
+
     // Clear namespace and then resave the walletDetails
     const namespace = this.getWalletDetailsPath(chain);
     await this.db.clearNamespace(namespace);
+
+    walletDetails.treeScannedHeights = [];
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
   }
 

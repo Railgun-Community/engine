@@ -707,11 +707,11 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(historyScanCompletedForChain).to.equal(chain);
     expect(await engine.getStartScanningBlock(chain)).to.be.above(0);
 
-    await engine.clearSyncedMerkletreeLeaves(chain);
+    await engine.clearSyncedUTXOMerkletreeLeaves(chain);
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(0);
     expect(await engine.getStartScanningBlock(chain)).to.equal(0);
 
-    await engine.fullRescanMerkletreesAndWallets(chain);
+    await engine.fullRescanUTXOMerkletreesAndWallets(chain);
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
   });
 

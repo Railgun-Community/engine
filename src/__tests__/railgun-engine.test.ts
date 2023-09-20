@@ -198,7 +198,7 @@ describe('RailgunEngine', function test() {
       ],
       blockNumber: 0,
       utxoTree: 0,
-      utxoStartingIndex: 0,
+      utxoIndex: 0,
     };
 
     // Override root validator
@@ -255,7 +255,7 @@ describe('RailgunEngine', function test() {
       ],
       blockNumber: 0,
       utxoTree: 0,
-      utxoStartingIndex: 0,
+      utxoIndex: 0,
     };
     // Override root validator
     utxoMerkletree.merklerootValidator = () => Promise.resolve(true);
@@ -920,11 +920,11 @@ describe('RailgunEngine', function test() {
     };
     let lastSyncedBlock = await engine.getLastSyncedBlock(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setTXIDMerkletreeHistoryVersion(chainForSyncedBlock, 100);
-    lastSyncedBlock = await engine.getTXIDMerkletreeHistoryVersion(chainForSyncedBlock);
+    await engine.setTxidMerkletreeHistoryVersion(chainForSyncedBlock, 100);
+    lastSyncedBlock = await engine.getTxidMerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setTXIDMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
-    lastSyncedBlock = await engine.getTXIDMerkletreeHistoryVersion(chainForSyncedBlock);
+    await engine.setTxidMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
+    lastSyncedBlock = await engine.getTxidMerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 

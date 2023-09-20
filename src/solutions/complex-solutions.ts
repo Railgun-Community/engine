@@ -61,6 +61,8 @@ const createNullUTXO = (nullNote: TransactNote): TXO => {
     spendtxid: false,
     note: nullNote,
     txid: nullTxid,
+    createdRailgunTxid: undefined,
+    spentRailgunTxid: undefined,
   };
 };
 

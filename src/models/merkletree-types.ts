@@ -24,7 +24,7 @@ export type InvalidMerklerootDetails = {
 
 // Optimization: process leaves for a many commitment groups before checking merkleroot against contract.
 // If merkleroot is invalid, scan leaves as medium batches, and individually as a final backup.
-// For TXID merkletree on POI Nodes, re-calculate for every Single tree update, in order to capture its merkleroot.
+// For Txid merkletree on POI Nodes, re-calculate for every Single tree update, in order to capture its merkleroot.
 export enum CommitmentProcessingGroupSize {
   XXXLarge = 8000,
   XXLarge = 1600,

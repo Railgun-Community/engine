@@ -3,7 +3,15 @@ import {
   TransactionStruct,
 } from '../abi/typechain/RailgunSmartWallet';
 import { formatCommitmentCiphertext } from '../contracts/railgun-smart-wallet/events';
-import { CommitmentCiphertext, CommitmentSummary } from '../models/formatted-types';
+import {
+  Commitment,
+  CommitmentCiphertext,
+  CommitmentSummary,
+  CommitmentType,
+  LegacyEncryptedCommitment,
+  StoredReceiveCommitment,
+  TransactCommitment,
+} from '../models/formatted-types';
 
 export const convertTransactionStructToCommitmentSummary = (
   transactionStruct: TransactionStruct,
@@ -22,4 +30,30 @@ export const convertTransactionStructToCommitmentSummary = (
     commitmentCiphertext,
     commitmentHash,
   };
+};
+
+export const isReceiveShieldCommitment = (receiveCommitment: StoredReceiveCommitment): boolean => {
+  switch (receiveCommitment.commitmentType) {
+    case CommitmentType.ShieldCommitment:
+    case CommitmentType.LegacyGeneratedCommitment:
+      return true;
+    case CommitmentType.TransactCommitment:
+    case CommitmentType.LegacyEncryptedCommitment:
+      return false;
+  }
+  return false;
+};
+
+export const isSentCommitment = (
+  commitment: Commitment,
+): commitment is TransactCommitment | LegacyEncryptedCommitment => {
+  switch (commitment.commitmentType) {
+    case CommitmentType.TransactCommitment:
+    case CommitmentType.LegacyEncryptedCommitment:
+      return true;
+    case CommitmentType.ShieldCommitment:
+    case CommitmentType.LegacyGeneratedCommitment:
+      return false;
+  }
+  return false;
 };

@@ -122,7 +122,7 @@ type CommitmentShared = {
   blockNumber: number;
   timestamp: Optional<number>;
   utxoTree: number;
-  utxoStartingIndex: number;
+  utxoIndex: number;
 };
 
 export type ShieldCommitment = CommitmentShared & {
@@ -136,6 +136,7 @@ export type ShieldCommitment = CommitmentShared & {
 export type TransactCommitment = CommitmentShared & {
   commitmentType: CommitmentType.TransactCommitment;
   ciphertext: CommitmentCiphertext;
+  createdRailgunTxid: Optional<string>;
 };
 
 export type RailgunTransaction = {
@@ -161,6 +162,20 @@ export type Nullifier = {
   treeNumber: number;
   txid: string;
   blockNumber: number;
+  spentRailgunTxid: Optional<string>;
+};
+
+export enum TXOPOIListStatus {
+  Valid = 'Valid',
+  ShieldBlocked = 'ShieldBlocked',
+  ShieldPending = 'ShieldPending',
+  TransactProofSubmitted = 'TransactProofSubmitted',
+  Missing = 'Missing',
+}
+
+// !! DO NOT MODIFY THIS TYPE !!
+export type POIsPerList = {
+  [key: string]: TXOPOIListStatus;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
@@ -171,6 +186,11 @@ export type StoredReceiveCommitment = {
   nullifier: string;
   decrypted: NoteSerialized | LegacyNoteSerialized;
   senderAddress: Optional<string>;
+  commitmentType: CommitmentType;
+  spentRailgunTxid: Optional<string>;
+  createdRailgunTxid: Optional<string>;
+  spentPOIs: Optional<POIsPerList>;
+  createdPOIs: Optional<POIsPerList>;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
@@ -178,6 +198,7 @@ export type StoredSendCommitment = {
   txid: string;
   timestamp: Optional<number>;
   decrypted: NoteSerialized | LegacyNoteSerialized;
+  commitmentType: CommitmentType;
   noteExtraData?: NoteAnnotationData;
   recipientAddress: string;
 };
@@ -202,6 +223,7 @@ export type LegacyCommitmentCiphertext = {
 export type LegacyEncryptedCommitment = CommitmentShared & {
   commitmentType: CommitmentType.LegacyEncryptedCommitment;
   ciphertext: LegacyCommitmentCiphertext;
+  createdRailgunTxid: Optional<string>;
 };
 
 export type CommitmentSummary = {

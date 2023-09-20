@@ -7,16 +7,15 @@ import {
   TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
 import { Merkletree } from './merkletree';
-import { RailgunTransaction, RailgunTransactionWithTxid } from '../models/formatted-types';
+import { RailgunTransactionWithTxid } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify } from '../utils/bytes';
-import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
 import { isDefined } from '../utils';
 
-export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
+export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   // DO NOT MODIFY
   protected merkletreePrefix = 'railgun-transaction-ids';
 
-  protected merkletreeType = 'Railgun TXID';
+  protected merkletreeType = 'Railgun Txid';
 
   private shouldStoreMerkleroots: boolean;
 
@@ -26,7 +25,7 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     merklerootValidator: MerklerootValidator,
     shouldStoreMerkleroots: boolean,
   ) {
-    // For TXID merkletree on POI Nodes, we will calculate for every Single tree update, in order to capture its merkleroot.
+    // For Txid merkletree on POI Nodes, we will calculate for every Single tree update, in order to capture its merkleroot.
     const commitmentProcessingGroupSize = shouldStoreMerkleroots
       ? CommitmentProcessingGroupSize.Single
       : CommitmentProcessingGroupSize.XXXLarge;
@@ -42,9 +41,9 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     db: Database,
     chain: Chain,
     merklerootValidator: MerklerootValidator,
-  ): Promise<RailgunTXIDMerkletree> {
+  ): Promise<RailgunTxidMerkletree> {
     const shouldStoreMerkleroots = false;
-    const merkletree = new RailgunTXIDMerkletree(
+    const merkletree = new RailgunTxidMerkletree(
       db,
       chain,
       merklerootValidator,
@@ -58,14 +57,14 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
    * POI Node is the source of truth, so it will not validate merkleroots.
    * Instead, it will process every tree update individually, and store each in the database.
    */
-  static async createForPOINode(db: Database, chain: Chain): Promise<RailgunTXIDMerkletree> {
+  static async createForPOINode(db: Database, chain: Chain): Promise<RailgunTxidMerkletree> {
     // Assume all merkleroots are valid.
     const merklerootValidator = async () => true;
 
-    // For TXID merkletree on POI Nodes, store all merkleroots.
+    // For Txid merkletree on POI Nodes, store all merkleroots.
     const shouldStoreMerkleroots = true;
 
-    const merkletree = new RailgunTXIDMerkletree(
+    const merkletree = new RailgunTxidMerkletree(
       db,
       chain,
       merklerootValidator,
@@ -89,6 +88,36 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     }
   }
 
+  async getRailgunTxidsForNullifiers(
+    nullifiers: string[],
+  ): Promise<{ [nullifier: string]: Optional<string> }> {
+    const nullifierToTxid: { [nullifier: string]: Optional<string> } = {};
+
+    const railgunTransactions: RailgunTransactionWithTxid[] = await this.queryAllData();
+
+    nullifiers.forEach((nullifier) => {
+      const txid = railgunTransactions.find((tx) => tx?.nullifiers.includes(nullifier))?.hash;
+      nullifierToTxid[nullifier] = txid;
+    });
+
+    return nullifierToTxid;
+  }
+
+  async getRailgunTxidsForCommitments(
+    commitments: string[],
+  ): Promise<{ [commitment: string]: Optional<string> }> {
+    const commitmentToTxid: { [commitment: string]: Optional<string> } = {};
+
+    const railgunTransactions: RailgunTransactionWithTxid[] = await this.queryAllData();
+
+    commitments.forEach((commitment) => {
+      const txid = railgunTransactions.find((tx) => tx?.commitments.includes(commitment))?.hash;
+      commitmentToTxid[commitment] = txid;
+    });
+
+    return commitmentToTxid;
+  }
+
   async getLatestGraphID(): Promise<Optional<string>> {
     const { tree, index } = await this.getLatestTreeAndIndex();
     const railgunTransaction = await this.getRailgunTransaction(tree, index);
@@ -96,27 +125,25 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
   }
 
   async queueRailgunTransactions(
-    railgunTransactions: RailgunTransaction[],
+    railgunTransactionsWithTxids: RailgunTransactionWithTxid[],
     maxTxidIndex: Optional<number>,
   ): Promise<void> {
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
     let nextTree = latestTree;
     let nextIndex = latestIndex;
 
-    for (let i = 0; i < railgunTransactions.length; i += 1) {
-      const { tree, index } = RailgunTXIDMerkletree.nextTreeAndIndex(nextTree, nextIndex);
+    for (let i = 0; i < railgunTransactionsWithTxids.length; i += 1) {
+      const { tree, index } = RailgunTxidMerkletree.nextTreeAndIndex(nextTree, nextIndex);
       nextTree = tree;
       nextIndex = index;
-      if (RailgunTXIDMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
+      if (RailgunTxidMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
         return;
       }
 
-      const railgunTransaction = railgunTransactions[i];
-      const railgunTransactionWithID: RailgunTransactionWithTxid =
-        createRailgunTransactionWithID(railgunTransaction);
+      const railgunTransactionWithTxid = railgunTransactionsWithTxids[i];
 
       // eslint-disable-next-line no-await-in-loop
-      await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithID]);
+      await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithTxid]);
     }
   }
 
@@ -124,7 +151,7 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     if (!isDefined(maxTxidIndex)) {
       return false;
     }
-    return RailgunTXIDMerkletree.getTXIDIndex(tree, index) > maxTxidIndex;
+    return RailgunTxidMerkletree.getTxidIndex(tree, index) > maxTxidIndex;
   }
 
   static nextTreeAndIndex(tree: number, index: number): { tree: number; index: number } {
@@ -141,7 +168,10 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     // Remove any queued items
     this.writeQueue = [];
 
-    const { tree, index } = RailgunTXIDMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+    // Clear cache
+    this.cacheAllData = undefined;
+
+    const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
 
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
 
@@ -173,12 +203,12 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
     this.lockUpdates = false;
   }
 
-  async getCurrentTXIDIndex(): Promise<number> {
+  async getCurrentTxidIndex(): Promise<number> {
     const { tree, index } = await this.getLatestTreeAndIndex();
-    return RailgunTXIDMerkletree.getTXIDIndex(tree, index);
+    return RailgunTxidMerkletree.getTxidIndex(tree, index);
   }
 
-  static getTXIDIndex(tree: number, index: number): number {
+  static getTxidIndex(tree: number, index: number): number {
     return tree * TREE_MAX_ITEMS + index;
   }
 
@@ -194,13 +224,13 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   // eslint-disable-next-line class-methods-use-this
   protected validRootCallback(): Promise<void> {
-    // Unused for TXID merkletree
+    // Unused for Txid merkletree
     return Promise.resolve();
   }
 
   // eslint-disable-next-line class-methods-use-this
   protected invalidRootCallback(): Promise<void> {
-    // Unused for TXID merkletree
+    // Unused for Txid merkletree
     return Promise.resolve();
   }
 
@@ -236,7 +266,7 @@ export class RailgunTXIDMerkletree extends Merkletree<RailgunTransactionWithTxid
   }
 
   async getHistoricalMerklerootForTxidIndex(txidIndex: number): Promise<Optional<string>> {
-    const { tree, index } = RailgunTXIDMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+    const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
     return this.getHistoricalMerkleroot(tree, index);
   }
 }

@@ -53,7 +53,7 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
       preImage,
       encryptedRandom: randomFormatted[index],
       utxoTree,
-      utxoStartingIndex,
+      utxoIndex: utxoStartingIndex + index,
     };
   });
 }
@@ -137,7 +137,8 @@ export function formatLegacyCommitmentBatchCommitments(
       blockNumber,
       ciphertext: formatLegacyCommitmentCiphertext(commitment),
       utxoTree,
-      utxoStartingIndex,
+      utxoIndex: utxoStartingIndex + index,
+      createdRailgunTxid: undefined,
     };
   });
 }
@@ -215,6 +216,7 @@ export function formatLegacyNullifierEvents(
       nullifier: nToHex(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
+      spentRailgunTxid: undefined,
     });
   });
 

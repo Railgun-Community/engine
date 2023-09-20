@@ -8,6 +8,8 @@ export type TXO = {
   timestamp: Optional<number>;
   spendtxid: string | false;
   note: TransactNote;
+  createdRailgunTxid: Optional<string>;
+  spentRailgunTxid: Optional<string>;
 };
 
 export type SentCommitment = {

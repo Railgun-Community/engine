@@ -62,7 +62,7 @@ export const formatShieldCommitments = (
       shieldKey: shieldCiphertext[index].shieldKey,
       fee: fees && fees[index] ? fees[index].toString() : undefined,
       utxoTree,
-      utxoStartingIndex,
+      utxoIndex: utxoStartingIndex + index,
     };
     return commitment;
   });
@@ -148,7 +148,8 @@ export const formatTransactCommitments = (
       blockNumber,
       ciphertext: formatCommitmentCiphertext(commitment),
       utxoTree,
-      utxoStartingIndex,
+      utxoIndex: utxoStartingIndex + index,
+      createdRailgunTxid: undefined,
     };
   });
 };
@@ -303,6 +304,7 @@ export const formatNullifiedEvents = (
       nullifier: formatToByteLength(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
+      spentRailgunTxid: undefined,
     });
   });
 

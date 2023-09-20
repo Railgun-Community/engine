@@ -40,6 +40,21 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     return this.getData(tree, index);
   }
 
+  async getCommitmentsForHashes(
+    hashes: string[],
+  ): Promise<{ [hash: string]: Optional<Commitment> }> {
+    const hashToCommitment: { [hash: string]: Optional<Commitment> } = {};
+
+    const commitments: Commitment[] = await this.queryAllData();
+
+    hashes.forEach((hash) => {
+      const commitment = commitments.find((commitment) => commitment.hash === hash);
+      hashToCommitment[hash] = commitment;
+    });
+
+    return hashToCommitment;
+  }
+
   /**
    * Construct DB path from nullifier
    * @param tree - tree nullifier is for
@@ -76,22 +91,37 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   /**
    * Gets nullifier by its id
    * @param {string} nullifier - nullifier to check
-   * @returns txid of spend transaction if spent, else undefined
+   * @returns Nullifier data, including txid of spent transaction
    */
-  async getStoredNullifierTxid(nullifier: string): Promise<Optional<string>> {
+  async getStoredNullifierData(nullifier: string): Promise<Optional<Nullifier>> {
     // Return if nullifier is set
-    let txid: Optional<string>;
+    let nullifierData: Optional<Nullifier>;
     const latestTree = await this.latestTree();
     for (let tree = latestTree; tree >= 0; tree -= 1) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        txid = (await this.db.get(this.getNullifierDBPath(tree, nullifier))) as string;
+        nullifierData = (await this.db.get(
+          this.getNullifierDBPath(tree, nullifier),
+          'json',
+        )) as Nullifier;
         break;
       } catch {
-        txid = undefined;
+        nullifierData = undefined;
       }
     }
-    return txid;
+    return nullifierData;
+  }
+
+  async updatedStoredNullifierSpentRailgunTxid(
+    nullifier: string,
+    railgunTxid: string,
+  ): Promise<void> {
+    const nullifierData = await this.getStoredNullifierData(nullifier);
+    if (nullifierData && !isDefined(nullifierData.spentRailgunTxid)) {
+      nullifierData.spentRailgunTxid = railgunTxid;
+      // eslint-disable-next-line no-await-in-loop
+      await this.nullify([nullifierData]);
+    }
   }
 
   /**
@@ -99,15 +129,17 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * @param nullifiers - nullifiers to add to db
    */
   async nullify(nullifiers: Nullifier[]): Promise<void> {
+    // Find railgunTxids per nullifier
+
     // Build write batch for nullifiers
     const nullifierWriteBatch: PutBatch[] = nullifiers.map((nullifier) => ({
       type: 'put',
       key: this.getNullifierDBPath(nullifier.treeNumber, nullifier.nullifier).join(':'),
-      value: nullifier.txid,
+      value: nullifier,
     }));
 
     // Write to DB
-    return this.db.batch(nullifierWriteBatch);
+    return this.db.batch(nullifierWriteBatch, 'json');
   }
 
   /**

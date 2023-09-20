@@ -78,7 +78,7 @@ const shieldLeaf: LegacyGeneratedCommitment = {
   ] as [string, string],
   blockNumber: 0,
   utxoTree: 0,
-  utxoStartingIndex: 0,
+  utxoIndex: 0,
 };
 
 describe('Transaction/ERC20', function test() {

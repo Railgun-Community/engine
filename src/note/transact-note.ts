@@ -1,4 +1,4 @@
-import { poseidon, Signature } from 'circomlibjs';
+import { poseidon } from 'circomlibjs';
 import { AddressData, decodeAddress, encodeAddress } from '../key-derivation/bech32';
 import { ViewingKeyPair } from '../key-derivation/wallet-node';
 import {
@@ -10,7 +10,6 @@ import {
   TokenData,
   TokenType,
 } from '../models/formatted-types';
-import { PublicInputs } from '../models/prover-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 import { TokenDataGetter } from '../token/token-data-getter';
 import {
@@ -26,7 +25,7 @@ import {
 } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { aes } from '../utils/encryption';
-import { signEDDSA, unblindNoteKey } from '../utils/keys-utils';
+import { unblindNoteKey } from '../utils/keys-utils';
 import { unblindNoteKeyLegacy } from '../utils/keys-utils-legacy';
 import { LEGACY_MEMO_METADATA_BYTE_CHUNKS, Memo } from './memo';
 import {
@@ -122,6 +121,7 @@ export class TransactNote {
     this.notePublicKey = this.getNotePublicKey();
     this.hash = this.getHash();
     this.annotationData = annotationData;
+    this.outputType = outputType;
     this.memoText = memoText;
     this.shieldFee = shieldFee;
     this.blockNumber = blockNumber;
