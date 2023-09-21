@@ -12,5 +12,6 @@ export abstract class POINodeInterface {
     chain: Chain,
     listKey: string,
     proofInputs: POIEngineProofInputs,
+    railgunTxidMerkleProofIndex: number,
   ): Promise<void>;
 }

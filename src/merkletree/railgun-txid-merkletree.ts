@@ -105,10 +105,12 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     const currentIndex = await this.getLatestIndexForTree(tree);
     const currentMerkleProofForTree = await this.getMerkleProof(tree, currentIndex);
 
+    const currentTxidIndexForTree = RailgunTxidMerkletree.getTxidIndex(tree, currentIndex);
+
     return {
-      txidIndex,
       railgunTransaction,
       currentMerkleProofForTree,
+      currentTxidIndexForTree,
     };
   }
 

@@ -132,6 +132,7 @@ export class POI {
     spentPOIs: Optional<POIsPerList>,
     railgunTxid: string,
     proofInputs: POIEngineProofInputs,
+    railgunTxidMerkleProofIndex: number,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
@@ -149,7 +150,12 @@ export class POI {
         `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}% (List ${listKey})`,
       );
 
-      await this.nodeInterface.generateAndSubmitPOI(chain, listKey, proofInputs);
+      await this.nodeInterface.generateAndSubmitPOI(
+        chain,
+        listKey,
+        proofInputs,
+        railgunTxidMerkleProofIndex,
+      );
     }
   }
 }
