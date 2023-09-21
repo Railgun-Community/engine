@@ -1,16 +1,16 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Merkletree } from '../merkletree';
+import { createDummyMerkleProof, verifyMerkleProof } from '../merkle-proof';
 import { randomHex } from '../../utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Merkletree', () => {
+describe('MerkleProof', () => {
   beforeEach(async () => {});
 
   it('Should create valid dummy merkle proof', () => {
-    const merkleProof = Merkletree.createDummyMerkleProof(randomHex(31));
-    expect(Merkletree.verifyMerkleProof(merkleProof)).to.equal(true);
+    const merkleProof = createDummyMerkleProof(randomHex(31));
+    expect(verifyMerkleProof(merkleProof)).to.equal(true);
   });
 });

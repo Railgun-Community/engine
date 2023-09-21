@@ -133,6 +133,7 @@ export class POI {
     railgunTxid: string,
     proofInputs: POIEngineProofInputs,
     railgunTxidMerkleProofIndex: number,
+    railgunTransactionBlockNumber: number,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
@@ -155,6 +156,7 @@ export class POI {
         listKey,
         proofInputs,
         railgunTxidMerkleProofIndex,
+        railgunTransactionBlockNumber,
       );
     }
   }

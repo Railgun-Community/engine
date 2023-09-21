@@ -9,6 +9,7 @@ export * from './models';
 export * from './note';
 export * from './prover/prover';
 export * from './poi';
+export * from './merkletree';
 export * from './provider';
 export * from './solutions';
 export * from './transaction';

@@ -10,6 +10,7 @@ import { UTXOMerkletree } from '../utxo-merkletree';
 import { TOKEN_SUB_ID_NULL } from '../../models/transaction-constants';
 import { UnshieldStoredEvent } from '../../models';
 import { MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../../models/merkletree-types';
+import { verifyMerkleProof } from '../merkle-proof';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -551,7 +552,7 @@ describe('UTXO Merkletree', () => {
     });
 
     // Check proof verification
-    expect(Merkletree.verifyMerkleProof(proof)).to.equal(true);
+    expect(verifyMerkleProof(proof)).to.equal(true);
 
     // Insert leaves
     await merkletree.queueLeaves(
@@ -605,11 +606,11 @@ describe('UTXO Merkletree', () => {
     });
 
     // Check proof verification
-    expect(Merkletree.verifyMerkleProof(proof2)).to.equal(true);
+    expect(verifyMerkleProof(proof2)).to.equal(true);
     proof2.root = proof.root;
-    expect(Merkletree.verifyMerkleProof(proof2)).to.equal(false);
+    expect(verifyMerkleProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
-    expect(Merkletree.verifyMerkleProof(proof2)).to.equal(false);
+    expect(verifyMerkleProof(proof2)).to.equal(false);
   }).timeout(1000);
 
   it("Shouldn't write invalid batches", async () => {

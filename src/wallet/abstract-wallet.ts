@@ -1132,6 +1132,7 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid,
         poiProofInputs,
         railgunTxidMerkletreeData.currentTxidIndexForTree,
+        railgunTransaction.blockNumber,
         (progress: number) => {
           EngineDebug.log(
             `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}%`,
