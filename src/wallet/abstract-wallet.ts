@@ -69,7 +69,7 @@ import { ShieldNote } from '../note';
 import { getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined, removeUndefineds } from '../utils/is-defined';
-import { PublicInputs } from '../models/prover-types';
+import { PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import {
   isReceiveShieldCommitment,
@@ -1818,7 +1818,7 @@ abstract class AbstractWallet extends EventEmitter {
     return this.scanBalances(chain, progressCallback);
   }
 
-  abstract sign(publicInputs: PublicInputs, encryptionKey: string): Promise<Signature>;
+  abstract sign(publicInputs: PublicInputsRailgun, encryptionKey: string): Promise<Signature>;
 
   static dbPath(id: string): BytesData[] {
     return [fromUTF8String('wallet'), id];

@@ -24,7 +24,7 @@ import { DECIMALS_18, getEthersWallet, testArtifactsGetter } from '../../test/he
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { TransactNote } from '../../note/transact-note';
-import { Prover, Groth16 } from '../../prover/prover';
+import { Prover, SnarkJSGroth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
 import { hashBoundParams } from '../bound-params';
@@ -100,7 +100,7 @@ describe('Transaction/ERC20', function test() {
     WalletInfo.setWalletSource('erc20 Wallet');
     ethersWallet = getEthersWallet(testMnemonic);
     prover = new Prover(testArtifactsGetter);
-    prover.setSnarkJSGroth16(groth16 as Groth16);
+    prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
     wallet.loadUTXOMerkletree(utxoMerkletree);
 

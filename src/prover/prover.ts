@@ -1,43 +1,39 @@
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, nToHex } from '../utils/bytes';
+import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import {
   ArtifactGetter,
-  FormattedCircuitInputs,
+  FormattedCircuitInputsRailgun,
   UnprovedTransactionInputs,
   Proof,
-  PublicInputs,
+  PublicInputsRailgun,
   SnarkProof,
+  NativeProverFormattedJsonInputsRailgun,
+  FormattedCircuitInputsPOI,
+  NativeProverFormattedJsonInputsPOI,
+  PublicInputsPOI,
 } from '../models/prover-types';
 import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
+import { POIEngineProofInputsWithListPOIData } from '../models/poi-types';
+import { getArtifactsForPOI } from './poi-artifacts';
 
-type NativeProverFormattedJsonInputs = {
-  merkleRoot: string;
-  boundParamsHash: string;
-  nullifiers: string[];
-  commitmentsOut: string[];
-  token: string;
-  publicKey: string[];
-  signature: string[];
-  randomIn: string[];
-  valueIn: string[];
-  pathElements: string[];
-  leavesIndices: string[];
-  nullifyingKey: string;
-  npkOut: string[];
-  valueOut: string[];
-};
-
-type NativeProve = (
+type NativeProveRailgun = (
   circuitId: number,
   datBuffer: Buffer,
   zkeyBuffer: Buffer,
-  inputJson: NativeProverFormattedJsonInputs,
+  inputJson: NativeProverFormattedJsonInputsRailgun,
   progressCallback: ProverProgressCallback,
 ) => Proof;
 
-type Groth16FullProve = (
-  formattedInputs: FormattedCircuitInputs,
+type NativeProvePOI = (
+  datBuffer: Buffer,
+  zkeyBuffer: Buffer,
+  inputJson: NativeProverFormattedJsonInputsPOI,
+  progressCallback: ProverProgressCallback,
+) => Proof;
+
+type Groth16FullProveRailgun = (
+  formattedInputs: FormattedCircuitInputsRailgun,
   wasm: Optional<ArrayLike<number>>,
   zkey: ArrayLike<number>,
   logger: { debug: (log: string) => void },
@@ -45,9 +41,33 @@ type Groth16FullProve = (
   progressCallback: ProverProgressCallback,
 ) => Promise<{ proof: Proof }>;
 
-export type Groth16 = {
-  fullProve: Groth16FullProve;
-  verify: Optional<(vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>>;
+type Groth16FullProvePOI = (
+  formattedInputs: FormattedCircuitInputsPOI,
+  wasm: Optional<ArrayLike<number>>,
+  zkey: ArrayLike<number>,
+  logger: { debug: (log: string) => void },
+  dat: Optional<ArrayLike<number>>,
+  progressCallback: ProverProgressCallback,
+) => Promise<{ proof: Proof }>;
+
+type Groth16Verify = Optional<
+  (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>
+>;
+
+export type SnarkJSGroth16 = {
+  fullProve: (
+    formattedInputs: Partial<Record<string, bigint | bigint[] | bigint[][]>>,
+    wasm: Optional<ArrayLike<number>>,
+    zkey: ArrayLike<number>,
+    logger: { debug: (log: string) => void },
+  ) => Promise<{ proof: Proof }>;
+  verify: Groth16Verify;
+};
+
+export type Groth16Implementation = {
+  fullProveRailgun: Groth16FullProveRailgun;
+  fullProvePOI: Groth16FullProvePOI;
+  verify: Groth16Verify;
 };
 
 export type ProverProgressCallback = (progress: number) => void;
@@ -55,7 +75,7 @@ export type ProverProgressCallback = (progress: number) => void;
 export class Prover {
   private artifactGetter: ArtifactGetter;
 
-  private groth16: Optional<Groth16>;
+  groth16: Optional<Groth16Implementation>;
 
   constructor(artifactGetter: ArtifactGetter) {
     this.artifactGetter = artifactGetter;
@@ -64,24 +84,23 @@ export class Prover {
   /**
    * Used to set Groth16 implementation from snarkjs.min.js or snarkjs.
    */
-  setSnarkJSGroth16(snarkJSGroth16: Groth16) {
+  setSnarkJSGroth16(snarkJSGroth16: SnarkJSGroth16) {
+    const suppressDebugLogger = { debug: () => {} };
+
     this.groth16 = {
-      fullProve: (
-        formattedInputs: FormattedCircuitInputs,
+      fullProveRailgun: (
+        formattedInputs: FormattedCircuitInputsRailgun,
         wasm: Optional<ArrayLike<number>>,
         zkey: ArrayLike<number>,
       ) => {
-        const suppressDebugLogger = { debug: () => {} };
-
-        // snarkjs: groth16FullProve(_input, wasmFile, zkeyFileName, logger)
-        return snarkJSGroth16.fullProve(
-          formattedInputs,
-          wasm,
-          zkey,
-          suppressDebugLogger,
-          undefined, // unused by snarkjs
-          () => {}, // unused by snarkjs
-        );
+        return snarkJSGroth16.fullProve(formattedInputs, wasm, zkey, suppressDebugLogger);
+      },
+      fullProvePOI: (
+        formattedInputs: FormattedCircuitInputsPOI,
+        wasm: Optional<ArrayLike<number>>,
+        zkey: ArrayLike<number>,
+      ) => {
+        return snarkJSGroth16.fullProve(formattedInputs, wasm, zkey, suppressDebugLogger);
       },
       verify: snarkJSGroth16.verify,
     };
@@ -90,7 +109,11 @@ export class Prover {
   /**
    * Used to set Groth16 implementation from RAILGUN Native Prover.
    */
-  setNativeProverGroth16(nativeProve: NativeProve, circuits: { [name: string]: number }) {
+  setNativeProverGroth16(
+    nativeProveRailgun: NativeProveRailgun,
+    nativeProvePOI: NativeProvePOI,
+    circuits: { [name: string]: number },
+  ) {
     const circuitIdForInputsOutputs = (inputs: number, outputs: number): number => {
       const circuitString = `${inputs}X${outputs}`;
       const circuitName = `JOINSPLIT_${circuitString}`;
@@ -101,8 +124,8 @@ export class Prover {
       return circuitId;
     };
 
-    const fullProve = (
-      formattedInputs: FormattedCircuitInputs,
+    const fullProveRailgun = (
+      formattedInputs: FormattedCircuitInputsRailgun,
       _wasm: ArrayLike<number> | undefined,
       zkey: ArrayLike<number>,
       logger: { debug: (log: string) => void },
@@ -122,14 +145,14 @@ export class Prover {
         const stringInputs = stringifySafe(formattedInputs);
         logger.debug(stringInputs);
 
-        const jsonInputs = JSON.parse(stringInputs) as NativeProverFormattedJsonInputs;
+        const jsonInputs = JSON.parse(stringInputs) as NativeProverFormattedJsonInputsRailgun;
 
         const datBuffer = dat as Buffer;
         const zkeyBuffer = zkey as Buffer;
 
         const start = Date.now();
 
-        const proof: Proof = nativeProve(
+        const proof: Proof = nativeProveRailgun(
           circuitId,
           datBuffer,
           zkeyBuffer,
@@ -149,17 +172,61 @@ export class Prover {
       }
     };
 
+    const fullProvePOI = (
+      formattedInputs: FormattedCircuitInputsPOI,
+      _wasm: ArrayLike<number> | undefined,
+      zkey: ArrayLike<number>,
+      logger: { debug: (log: string) => void },
+      dat: ArrayLike<number> | undefined,
+      progressCallback: ProverProgressCallback,
+    ): Promise<{
+      proof: Proof;
+    }> => {
+      try {
+        if (!dat) {
+          throw new Error('DAT artifact is required.');
+        }
+
+        const stringInputs = stringifySafe(formattedInputs);
+        logger.debug(stringInputs);
+
+        const jsonInputs = JSON.parse(stringInputs) as NativeProverFormattedJsonInputsPOI;
+
+        const datBuffer = dat as Buffer;
+        const zkeyBuffer = zkey as Buffer;
+
+        const start = Date.now();
+
+        const proof: Proof = nativeProvePOI(datBuffer, zkeyBuffer, jsonInputs, progressCallback);
+
+        logger.debug(`Proof lapsed ${Date.now() - start} ms`);
+
+        return Promise.resolve({ proof });
+      } catch (err) {
+        if (!(err instanceof Error)) {
+          throw err;
+        }
+        logger.debug(err.message);
+        throw new Error(`Unable to generate proof: ${err.message}`);
+      }
+    };
+
     this.groth16 = {
-      fullProve,
+      fullProveRailgun,
+      fullProvePOI,
 
       // Proof will be verified during gas estimate, and on-chain.
       verify: undefined,
     };
   }
 
-  async verify(publicInputs: PublicInputs, proof: Proof): Promise<boolean> {
+  async verifyRailgunProof(
+    publicInputs: PublicInputsRailgun,
+    proof: Proof,
+    artifacts: Artifact,
+  ): Promise<boolean> {
     if (!this.groth16) {
-      throw new Error('Requires groth16 verification implementation');
+      throw new Error('Requires groth16 implementation');
     }
     if (!this.groth16.verify) {
       // Wallet-side verification is a fail-safe.
@@ -167,15 +234,35 @@ export class Prover {
       return true;
     }
 
-    // Fetch artifacts
-    const artifacts = await this.artifactGetter.getArtifacts(publicInputs);
-
     // Return output of groth16 verify
     const publicSignals: bigint[] = [
       publicInputs.merkleRoot,
       publicInputs.boundParamsHash,
       ...publicInputs.nullifiers,
       ...publicInputs.commitmentsOut,
+    ];
+
+    return this.groth16.verify(artifacts.vkey, publicSignals, proof);
+  }
+
+  async verifyPOIProof(
+    publicInputs: PublicInputsPOI,
+    proof: Proof,
+    artifacts: Artifact,
+  ): Promise<boolean> {
+    if (!this.groth16) {
+      throw new Error('Requires groth16 implementation');
+    }
+    if (!this.groth16.verify) {
+      // Wallet-side verification is a fail-safe.
+      // Snark verification will occur during gas estimate (and on-chain) regardless.
+      return true;
+    }
+
+    const publicSignals: bigint[] = [
+      publicInputs.anyRailgunTxidMerklerootAfterTransaction,
+      ...publicInputs.poiMerkleroots,
+      ...publicInputs.blindedCommitmentsOut,
     ];
 
     return this.groth16.verify(artifacts.vkey, publicSignals, proof);
@@ -191,7 +278,7 @@ export class Prover {
     };
   }
 
-  dummyProve(publicInputs: PublicInputs): Proof {
+  dummyProveRailgun(publicInputs: PublicInputsRailgun): Proof {
     // Make sure we have valid artifacts for this number of inputs.
     // Note that the artifacts are not used in the dummy proof.
     this.artifactGetter.assertArtifactExists(
@@ -201,10 +288,10 @@ export class Prover {
     return Prover.zeroProof;
   }
 
-  async prove(
+  async proveRailgun(
     unprovedTransactionInputs: UnprovedTransactionInputs,
     progressCallback: ProverProgressCallback,
-  ): Promise<{ proof: Proof; publicInputs: PublicInputs }> {
+  ): Promise<{ proof: Proof; publicInputs: PublicInputsRailgun }> {
     if (!this.groth16) {
       throw new Error('Requires groth16 full prover implementation');
     }
@@ -225,13 +312,13 @@ export class Prover {
     }
 
     // Get formatted inputs
-    const formattedInputs = Prover.formatInputs(unprovedTransactionInputs);
+    const formattedInputs = Prover.formatRailgunInputs(unprovedTransactionInputs);
 
     // Generate proof: Progress from 20 - 99%
     const initialProgressProof = 20;
     const finalProgressProof = 99;
     progressCallback(initialProgressProof);
-    const { proof } = await this.groth16.fullProve(
+    const { proof } = await this.groth16.fullProveRailgun(
       formattedInputs,
       artifacts.wasm,
       artifacts.zkey,
@@ -248,8 +335,65 @@ export class Prover {
     ProofCache.store(unprovedTransactionInputs, proof);
 
     // Throw if proof is invalid
-    if (!(await this.verify(publicInputs, proof))) {
-      throw new Error('Proof generation failed');
+    if (!(await this.verifyRailgunProof(publicInputs, proof, artifacts))) {
+      throw new Error('Proof verification failed');
+    }
+    progressCallback(100);
+
+    // Return proof with inputs
+    return {
+      proof,
+      publicInputs,
+    };
+  }
+
+  async provePOI(
+    inputs: POIEngineProofInputsWithListPOIData,
+    progressCallback: ProverProgressCallback,
+  ): Promise<{ proof: Proof; publicInputs: PublicInputsPOI }> {
+    if (!this.groth16) {
+      throw new Error('Requires groth16 full prover implementation');
+    }
+
+    // TODO: Add a proof cache?
+
+    progressCallback(5);
+
+    const artifacts = getArtifactsForPOI();
+    if (!artifacts.wasm && !artifacts.dat) {
+      throw new Error('Requires WASM or DAT prover artifact');
+    }
+
+    const formattedInputs = Prover.formatPOIInputs(inputs);
+
+    // Generate proof: Progress from 20 - 99%
+    const initialProgressProof = 20;
+    const finalProgressProof = 99;
+    progressCallback(initialProgressProof);
+    const { proof } = await this.groth16.fullProvePOI(
+      formattedInputs,
+      artifacts.wasm,
+      artifacts.zkey,
+      { debug: (msg: string) => EngineDebug.log(msg) },
+      artifacts.dat,
+      (progress: number) => {
+        progressCallback(
+          (progress * (finalProgressProof - initialProgressProof)) / 100 + initialProgressProof,
+        );
+      },
+    );
+    progressCallback(finalProgressProof);
+
+    const publicInputs: PublicInputsPOI = {
+      anyRailgunTxidMerklerootAfterTransaction:
+        formattedInputs.anyRailgunTxidMerklerootAfterTransaction,
+      blindedCommitmentsOut: formattedInputs.blindedCommitmentsOut,
+      poiMerkleroots: formattedInputs.poiMerkleroots,
+    };
+
+    // Throw if proof is invalid
+    if (!(await this.verifyPOIProof(publicInputs, proof, artifacts))) {
+      throw new Error('Proof verification failed');
     }
     progressCallback(100);
 
@@ -277,7 +421,9 @@ export class Prover {
     };
   }
 
-  static formatInputs(transactionInputs: UnprovedTransactionInputs): FormattedCircuitInputs {
+  private static formatRailgunInputs(
+    transactionInputs: UnprovedTransactionInputs,
+  ): FormattedCircuitInputsRailgun {
     const { publicInputs, privateInputs } = transactionInputs;
 
     return {
@@ -295,6 +441,85 @@ export class Prover {
       nullifyingKey: privateInputs.nullifyingKey,
       npkOut: privateInputs.npkOut,
       valueOut: privateInputs.valueOut,
+    };
+  }
+
+  private static padWithZerosToMax(array: bigint[], max: number): bigint[] {
+    const padded = [...array];
+    while (padded.length < max) {
+      padded.push(0n);
+    }
+    return padded;
+  }
+
+  private static padWithArraysOfZerosToMaxAndLength(
+    doubleArray: bigint[][],
+    max: number,
+    length: number,
+  ): bigint[][] {
+    const padded = [...doubleArray];
+    while (padded.length < max) {
+      padded.push(new Array<bigint>(length).fill(0n));
+    }
+    return padded;
+  }
+
+  private static formatPOIInputs(
+    proofInputs: POIEngineProofInputsWithListPOIData,
+  ): FormattedCircuitInputsPOI {
+    const maxInputs = 13;
+    const maxOutputs = 13;
+
+    return {
+      anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
+        proofInputs.anyRailgunTxidMerklerootAfterTransaction,
+      ),
+      blindedCommitmentsOut: this.padWithZerosToMax(
+        proofInputs.blindedCommitmentsOut.map(hexToBigInt),
+        maxOutputs,
+      ),
+      boundParamsHash: hexToBigInt(proofInputs.boundParamsHash),
+      nullifiers: this.padWithZerosToMax(proofInputs.nullifiers.map(hexToBigInt), maxInputs),
+      commitmentsOut: this.padWithZerosToMax(
+        proofInputs.commitmentsOut.map(hexToBigInt),
+        maxOutputs,
+      ),
+      spendingPublicKey: proofInputs.spendingPublicKey,
+      nullifyingKey: proofInputs.nullifyingKey,
+      token: hexToBigInt(proofInputs.token),
+      randomsIn: this.padWithZerosToMax(proofInputs.randomsIn.map(hexToBigInt), maxInputs),
+      valuesIn: proofInputs.valuesIn,
+      utxoPositionsIn: this.padWithZerosToMax(proofInputs.utxoPositionsIn.map(BigInt), maxInputs),
+      blindedCommitmentsIn: this.padWithZerosToMax(
+        proofInputs.blindedCommitmentsIn.map(hexToBigInt),
+        maxInputs,
+      ),
+      creationTxidsIn: this.padWithZerosToMax(
+        proofInputs.creationTxidsIn.map(hexToBigInt),
+        maxInputs,
+      ),
+      npksOut: proofInputs.npksOut,
+      valuesOut: proofInputs.valuesOut,
+      anyRailgunTxidAfterTransactionMerkleProofIndices: hexToBigInt(
+        proofInputs.anyRailgunTxidAfterTransactionMerkleProofIndices,
+      ),
+      anyRailgunTxidAfterTransactionMerkleProofPathElements:
+        proofInputs.anyRailgunTxidAfterTransactionMerkleProofPathElements.map(hexToBigInt),
+      poiMerkleroots: this.padWithZerosToMax(
+        proofInputs.poiMerkleroots.map(hexToBigInt),
+        maxInputs,
+      ),
+      poiInMerkleProofIndices: this.padWithZerosToMax(
+        proofInputs.poiInMerkleProofIndices.map(hexToBigInt),
+        maxInputs,
+      ),
+      poiInMerkleProofPathElements: this.padWithArraysOfZerosToMaxAndLength(
+        proofInputs.poiInMerkleProofPathElements.map((pathElements) =>
+          pathElements.map(hexToBigInt),
+        ),
+        maxInputs,
+        16,
+      ),
     };
   }
 }

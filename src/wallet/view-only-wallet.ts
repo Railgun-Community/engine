@@ -1,7 +1,7 @@
 import { Signature } from 'circomlibjs';
 import { Database } from '../database/database';
 import { ViewingKeyPair } from '../key-derivation/wallet-node';
-import { PublicInputs } from '../models';
+import { PublicInputsRailgun } from '../models';
 import { ViewOnlyWalletData } from '../models/wallet-types';
 import { hexStringToBytes } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
@@ -10,7 +10,7 @@ import { AbstractWallet } from './abstract-wallet';
 
 class ViewOnlyWallet extends AbstractWallet {
   // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-unused-vars
-  sign(_publicInputs: PublicInputs, _encryptionKey: string): Promise<Signature> {
+  sign(_publicInputs: PublicInputsRailgun, _encryptionKey: string): Promise<Signature> {
     throw new Error('View-Only wallet cannot generate signatures.');
   }
 

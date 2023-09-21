@@ -163,7 +163,7 @@ describe('Railgun Txid Merkletree', () => {
         blockNumber: 0,
         hash: '17950133044911973828130962356772411646037989291035973150567495873917534644512',
       },
-      txidIndex: 0,
+      currentTxidIndexForTree: 1,
       currentMerkleProofForTree: {
         elements: [
           '17950133044911973828130962356772411646037989291035973150567495873917534644512',

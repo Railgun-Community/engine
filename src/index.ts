@@ -13,6 +13,5 @@ export * from './provider';
 export * from './solutions';
 export * from './transaction';
 export * from './token';
-export * from './poi';
 export * from './utils';
 export * from './wallet';

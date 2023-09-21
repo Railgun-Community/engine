@@ -29,14 +29,14 @@ export type Proof = {
   pi_c: [string, string];
 };
 
-export type PublicInputs = {
+export type PublicInputsRailgun = {
   merkleRoot: bigint;
   boundParamsHash: bigint;
   nullifiers: bigint[];
   commitmentsOut: bigint[];
 };
 
-export type PrivateInputs = {
+export type PrivateInputsRailgun = {
   tokenAddress: bigint;
   publicKey: [bigint, bigint];
   randomIn: bigint[];
@@ -49,8 +49,8 @@ export type PrivateInputs = {
 };
 
 export type RailgunTransactionRequest = {
-  privateInputs: PrivateInputs;
-  publicInputs: PublicInputs;
+  privateInputs: PrivateInputsRailgun;
+  publicInputs: PublicInputsRailgun;
   boundParams: BoundParamsStruct;
 };
 
@@ -58,7 +58,7 @@ export type UnprovedTransactionInputs = RailgunTransactionRequest & {
   signature: [bigint, bigint, bigint];
 };
 
-export type FormattedCircuitInputs = {
+export type FormattedCircuitInputsRailgun = {
   merkleRoot: bigint;
   boundParamsHash: bigint;
   nullifiers: bigint[];
@@ -75,7 +75,82 @@ export type FormattedCircuitInputs = {
   valueOut: bigint[];
 };
 
+export type NativeProverFormattedJsonInputsRailgun = {
+  merkleRoot: string;
+  boundParamsHash: string;
+  nullifiers: string[];
+  commitmentsOut: string[];
+  token: string;
+  publicKey: string[];
+  signature: string[];
+  randomIn: string[];
+  valueIn: string[];
+  pathElements: string[];
+  leavesIndices: string[];
+  nullifyingKey: string;
+  npkOut: string[];
+  valueOut: string[];
+};
+
+export type PublicInputsPOI = {
+  anyRailgunTxidMerklerootAfterTransaction: bigint;
+  poiMerkleroots: bigint[];
+  blindedCommitmentsOut: bigint[];
+};
+
+export type FormattedCircuitInputsPOI = {
+  // Public inputs
+  anyRailgunTxidMerklerootAfterTransaction: bigint;
+  blindedCommitmentsOut: bigint[];
+  poiMerkleroots: bigint[];
+
+  // Private inputs
+  boundParamsHash: bigint;
+  nullifiers: bigint[];
+  commitmentsOut: bigint[];
+  spendingPublicKey: [bigint, bigint];
+  nullifyingKey: bigint;
+  token: bigint;
+  randomsIn: bigint[];
+  valuesIn: bigint[];
+  utxoPositionsIn: bigint[];
+  blindedCommitmentsIn: bigint[];
+  creationTxidsIn: bigint[];
+  npksOut: bigint[];
+  valuesOut: bigint[];
+  anyRailgunTxidAfterTransactionMerkleProofIndices: bigint;
+  anyRailgunTxidAfterTransactionMerkleProofPathElements: bigint[];
+  poiInMerkleProofIndices: bigint[];
+  poiInMerkleProofPathElements: bigint[][];
+};
+
+export type NativeProverFormattedJsonInputsPOI = {
+  // Public inputs
+  anyRailgunTxidMerklerootAfterTransaction: string;
+  blindedCommitmentsOut: string[];
+  poiMerkleroots: string[];
+
+  // Private inputs
+  boundParamsHash: string;
+  nullifiers: string[];
+  commitmentsOut: string[];
+  spendingPublicKey: [string, string];
+  nullifyingKey: string;
+  token: string;
+  randomsIn: string[];
+  valuesIn: string[];
+  utxoPositionsIn: string[];
+  blindedCommitmentsIn: string[];
+  creationTxidsIn: string[];
+  npksOut: string[];
+  valuesOut: string[];
+  anyRailgunTxidAfterTransactionMerkleProofIndices: string;
+  anyRailgunTxidAfterTransactionMerkleProofPathElements: string[];
+  poiInMerkleProofIndices: string[];
+  poiInMerkleProofPathElements: string[][];
+};
+
 export type ArtifactGetter = {
   assertArtifactExists: (nullifiers: number, commitments: number) => void;
-  getArtifacts: (publicInputs: PublicInputs) => Promise<Artifact>;
+  getArtifacts: (publicInputs: PublicInputsRailgun) => Promise<Artifact>;
 };

@@ -3,6 +3,7 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import { poseidon } from 'circomlibjs';
 import msgpack from 'msgpack-lite';
+import { getRandomBytes } from 'ethereum-cryptography/random';
 import type { Database } from '../database/database';
 import {
   fromUTF8String,
@@ -13,6 +14,7 @@ import {
   nToHex,
   hexToBigInt,
   arrayify,
+  randomHex,
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
 import { BytesData, MerkleProof } from '../models/formatted-types';
@@ -826,6 +828,25 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+  static createDummyMerkleProof(leaf: string): MerkleProof {
+    const indices = nToHex(0n, ByteLength.UINT_256);
+
+    const elements: bigint[] = new Array<bigint>(TREE_DEPTH - 1).fill(hexToBigInt(randomHex(31)));
+
+    let latestHash = hexToBigInt(leaf);
+
+    for (let level = 0; level < elements.length; level += 1) {
+      latestHash = poseidon([latestHash, elements[level]]);
+    }
+
+    return {
+      leaf,
+      indices,
+      elements: elements.map((el) => nToHex(el, ByteLength.UINT_256)),
+      root: nToHex(latestHash, ByteLength.UINT_256),
+    };
+  }
+
   /**
    * Gets latest tree
    * @returns latest tree
@@ -841,7 +862,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * @param proof - proof to verify
    * @returns is valid
    */
-  static verifyProof(proof: MerkleProof): boolean {
+  static verifyMerkleProof(proof: MerkleProof): boolean {
     // Get indices as BN form
     const indices = numberify(proof.indices);
 

@@ -10,7 +10,7 @@ import {
   mockRailgunTxidMerklerootValidator,
   testArtifactsGetter,
 } from '../../../test/helper.test';
-import { Groth16 } from '../../../prover/prover';
+import { SnarkJSGroth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunSmartWalletContract } from '../railgun-smart-wallet';
@@ -95,7 +95,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       undefined, // skipMerkletreeScans
     );
 
-    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
 
     provider = new PollingJsonRpcProvider('https://rpc.ankr.com/eth', 1, 100);
 

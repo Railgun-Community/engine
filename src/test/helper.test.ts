@@ -14,7 +14,7 @@ import {
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
-import { ArtifactGetter, PublicInputs } from '../models/prover-types';
+import { ArtifactGetter, PublicInputsRailgun } from '../models/prover-types';
 import { mnemonicToPrivateKey } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
@@ -24,7 +24,7 @@ import { MerklerootValidator } from '../models/merkletree-types';
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-const testNodeArtifactGetter = async (inputs: PublicInputs): Promise<Artifact> => {
+const testNodeArtifactGetter = async (inputs: PublicInputsRailgun): Promise<Artifact> => {
   const nullifiers = inputs.nullifiers.length;
   const commitments = inputs.commitmentsOut.length;
   assertTestNodeArtifactExists(nullifiers, commitments);

@@ -45,7 +45,7 @@ import {
 } from '../../../models/event-types';
 import { Memo } from '../../../note/memo';
 import { ViewOnlyWallet } from '../../../wallet/view-only-wallet';
-import { Groth16 } from '../../../prover/prover';
+import { SnarkJSGroth16 } from '../../../prover/prover';
 import { promiseTimeout } from '../../../utils/promises';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
@@ -111,7 +111,7 @@ describe('Railgun Smart Wallet', function runTests() {
       undefined, // skipMerkletreeScans
     );
 
-    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
 
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;

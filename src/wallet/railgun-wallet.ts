@@ -7,7 +7,7 @@ import { combine } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
 import { AbstractWallet } from './abstract-wallet';
 import { mnemonicToSeed } from '../key-derivation/bip39';
-import { PublicInputs } from '../models';
+import { PublicInputsRailgun } from '../models';
 import { signEDDSA } from '../utils/keys-utils';
 
 class RailgunWallet extends AbstractWallet {
@@ -21,7 +21,7 @@ class RailgunWallet extends AbstractWallet {
     return node.getSpendingKeyPair();
   }
 
-  async sign(publicInputs: PublicInputs, encryptionKey: string): Promise<Signature> {
+  async sign(publicInputs: PublicInputsRailgun, encryptionKey: string): Promise<Signature> {
     const spendingKeyPair = await this.getSpendingKeyPair(encryptionKey);
     const entries = Object.values(publicInputs).flatMap((x) => x);
     const msg = poseidon(entries);

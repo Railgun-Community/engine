@@ -19,7 +19,7 @@ import {
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { TransactNote } from '../../note/transact-note';
-import { Prover, Groth16 } from '../../prover/prover';
+import { Prover, SnarkJSGroth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
@@ -118,7 +118,7 @@ describe('Transaction/Transaction Batch', function run() {
     );
 
     prover = engine.prover;
-    prover.setSnarkJSGroth16(groth16 as Groth16);
+    prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
 
     wallet.loadUTXOMerkletree(utxoMerkletree);

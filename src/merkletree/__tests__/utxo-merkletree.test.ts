@@ -551,7 +551,7 @@ describe('UTXO Merkletree', () => {
     });
 
     // Check proof verification
-    expect(Merkletree.verifyProof(proof)).to.equal(true);
+    expect(Merkletree.verifyMerkleProof(proof)).to.equal(true);
 
     // Insert leaves
     await merkletree.queueLeaves(
@@ -605,11 +605,11 @@ describe('UTXO Merkletree', () => {
     });
 
     // Check proof verification
-    expect(Merkletree.verifyProof(proof2)).to.equal(true);
+    expect(Merkletree.verifyMerkleProof(proof2)).to.equal(true);
     proof2.root = proof.root;
-    expect(Merkletree.verifyProof(proof2)).to.equal(false);
+    expect(Merkletree.verifyMerkleProof(proof2)).to.equal(false);
     proof2.elements = proof.elements;
-    expect(Merkletree.verifyProof(proof2)).to.equal(false);
+    expect(Merkletree.verifyMerkleProof(proof2)).to.equal(false);
   }).timeout(1000);
 
   it("Shouldn't write invalid batches", async () => {

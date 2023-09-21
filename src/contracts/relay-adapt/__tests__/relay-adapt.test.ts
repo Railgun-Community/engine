@@ -38,7 +38,7 @@ import {
   RelayAdaptShieldERC20Recipient,
 } from '../../../models/formatted-types';
 import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
-import { Groth16 } from '../../../prover/prover';
+import { SnarkJSGroth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
 import { RailgunSmartWalletContract } from '../../railgun-smart-wallet/railgun-smart-wallet';
@@ -109,7 +109,7 @@ describe('Relay Adapt', function test() {
       undefined, // skipMerkletreeScans
     );
 
-    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 0);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);

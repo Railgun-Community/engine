@@ -19,9 +19,9 @@ import { TransactNote } from '../note/transact-note';
 import {
   UnprovedTransactionInputs,
   Proof,
-  PublicInputs,
+  PublicInputsRailgun,
   RailgunTransactionRequest,
-  PrivateInputs,
+  PrivateInputsRailgun,
 } from '../models/prover-types';
 import {
   BoundParamsStruct,
@@ -282,14 +282,14 @@ class Transaction {
       commitmentCiphertext,
     };
 
-    const publicInputs: PublicInputs = {
+    const publicInputs: PublicInputsRailgun = {
       merkleRoot: hexToBigInt(merkleRoot),
       boundParamsHash: hashBoundParams(boundParams),
       nullifiers,
       commitmentsOut: allOutputs.map((note) => note.hash),
     };
 
-    const privateInputs: PrivateInputs = {
+    const privateInputs: PrivateInputsRailgun = {
       tokenAddress: hexToBigInt(this.tokenHash),
       randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
@@ -326,7 +326,7 @@ class Transaction {
 
     Transaction.assertCanProve(privateInputs);
 
-    const { proof } = await prover.prove(unprovedTransactionInputs, progressCallback);
+    const { proof } = await prover.proveRailgun(unprovedTransactionInputs, progressCallback);
 
     return Transaction.createTransactionStruct(
       proof,
@@ -348,7 +348,7 @@ class Transaction {
   ): Promise<TransactionStruct> {
     const { publicInputs, boundParams } = transactionRequest;
 
-    const dummyProof: Proof = prover.dummyProve(publicInputs);
+    const dummyProof: Proof = prover.dummyProveRailgun(publicInputs);
 
     return Transaction.createTransactionStruct(
       dummyProof,
@@ -358,7 +358,7 @@ class Transaction {
     );
   }
 
-  private static assertCanProve(privateInputs: PrivateInputs) {
+  private static assertCanProve(privateInputs: PrivateInputsRailgun) {
     if (
       privateInputs.valueIn.length === 1 &&
       privateInputs.valueOut.length === 1 &&
@@ -371,7 +371,7 @@ class Transaction {
 
   private static createTransactionStruct(
     proof: Proof,
-    publicInputs: PublicInputs,
+    publicInputs: PublicInputsRailgun,
     boundParams: BoundParamsStruct,
     unshieldPreimage: CommitmentPreimageStruct,
   ): TransactionStruct {

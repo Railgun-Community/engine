@@ -30,7 +30,7 @@ import {
   OutputType,
   TokenType,
 } from '../models/formatted-types';
-import { Groth16 } from '../prover/prover';
+import { SnarkJSGroth16 } from '../prover/prover';
 import { TestERC20 } from '../test/abi/typechain/TestERC20';
 import { TestERC721 } from '../test/abi/typechain/TestERC721';
 import { promiseTimeout } from '../utils/promises';
@@ -103,7 +103,7 @@ describe('RailgunEngine', function test() {
       undefined, // engineDebugger
       undefined, // skipMerkletreeScans
     );
-    engine.prover.setSnarkJSGroth16(groth16 as Groth16);
+    engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
 
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
