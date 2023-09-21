@@ -3,7 +3,7 @@ import { Commitment, CommitmentType } from '../models/formatted-types';
 import { ByteLength, nToHex } from '../utils/bytes';
 import { TREE_DEPTH } from '../models/merkletree-types';
 
-const bitwiseMerge = (tree: number, index: number) => {
+export const bitwiseMerge = (tree: number, index: number): number => {
   return (tree << TREE_DEPTH) + index;
 };
 

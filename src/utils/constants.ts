@@ -12,6 +12,9 @@ export const ADDRESS_VERSION = 1;
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
+export const ZERO_32_BYTE_VALUE =
+  '0x0000000000000000000000000000000000000000000000000000000000000000';
+
 /**
  * Block number per EVM chain designating when events changed for Engine V3 upgrade.
  */

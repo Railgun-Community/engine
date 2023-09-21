@@ -2,8 +2,12 @@
 /* eslint-disable no-await-in-loop */
 import EngineDebug from '../debugger/debugger';
 import { Chain } from '../models/engine-types';
-import { RailgunTxidMerkletreeData } from '../models/formatted-types';
-import { BlindedCommitmentData, POIsPerList, TXOPOIListStatus } from '../models/poi-types';
+import {
+  BlindedCommitmentData,
+  POIEngineProofInputs,
+  POIsPerList,
+  TXOPOIListStatus,
+} from '../models/poi-types';
 import { SentCommitment, TXO } from '../models/txo-types';
 import { isDefined } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
@@ -125,9 +129,9 @@ export class POI {
 
   static async generateAndSubmitPOIAllLists(
     chain: Chain,
-    blindedCommitments: string[],
     spentPOIs: Optional<POIsPerList>,
-    railgunTxidMerkletreeData: RailgunTxidMerkletreeData,
+    railgunTxid: string,
+    proofInputs: POIEngineProofInputs,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
@@ -135,7 +139,6 @@ export class POI {
     }
 
     const listKeys = POI.findListsForSpentPOIs(spentPOIs);
-    const railgunTxid = railgunTxidMerkletreeData.railgunTransaction.hash;
 
     for (let i = 0; i < listKeys.length; i += 1) {
       const listKey = listKeys[i];
@@ -146,12 +149,7 @@ export class POI {
         `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}% (List ${listKey})`,
       );
 
-      await this.nodeInterface.generateAndSubmitPOI(
-        chain,
-        listKey,
-        blindedCommitments,
-        railgunTxidMerkletreeData,
-      );
+      await this.nodeInterface.generateAndSubmitPOI(chain, listKey, proofInputs);
     }
   }
 }

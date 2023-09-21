@@ -392,10 +392,15 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     ]);
   }
 
+  async getLatestIndexForTree(tree: number): Promise<number> {
+    const treeLength = await this.getTreeLength(tree);
+    return treeLength - 1;
+  }
+
   async getLatestTreeAndIndex(): Promise<{ tree: number; index: number }> {
     const latestTree = await this.latestTree();
-    const treeLength = await this.getTreeLength(latestTree);
-    return { tree: latestTree, index: treeLength - 1 };
+    const index = await this.getLatestIndexForTree(latestTree);
+    return { tree: latestTree, index };
   }
 
   async clearLeavesFromDB(): Promise<void> {

@@ -79,7 +79,13 @@ import {
 import { POI } from '../poi/poi';
 import { getBlindedCommitment } from '../poi/blinded-commitment';
 import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
-import { BlindedCommitmentData, BlindedCommitmentType, POIsPerList } from '../models/poi-types';
+import {
+  BlindedCommitmentData,
+  BlindedCommitmentType,
+  POIEngineProofInputs,
+  POIsPerList,
+} from '../models/poi-types';
+import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -817,6 +823,7 @@ abstract class AbstractWallet extends EventEmitter {
           txid: receiveCommitment.txid,
           timestamp: receiveCommitment.timestamp,
           spendtxid: receiveCommitment.spendtxid,
+          nullifier: receiveCommitment.nullifier,
           note,
           creationRailgunTxid: receiveCommitment.creationRailgunTxid,
           creationPOIs: receiveCommitment.creationPOIs,
@@ -1023,58 +1030,132 @@ abstract class AbstractWallet extends EventEmitter {
       return;
     }
 
-    const railgunTxidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+    const railgunTxidsNeedPOIs = new Set<string>();
+
+    sentCommitmentsNeedSpendPOIs.forEach((sentCommitment) => {
+      if (isDefined(sentCommitment.spentRailgunTxid)) {
+        railgunTxidsNeedPOIs.add(sentCommitment.spentRailgunTxid);
+      }
+    });
+
+    const railgunTxids = Array.from(railgunTxidsNeedPOIs);
+
+    const TXOs = await this.TXOs(chain);
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const sentCommitment of sentCommitmentsNeedSpendPOIs) {
-      if (!isDefined(sentCommitment.spentRailgunTxid)) {
-        continue;
-      }
-      const railgunTxid = sentCommitment.spentRailgunTxid;
-
-      try {
-        const railgunTxidMerkletreeData = await railgunTxidMerkletree.getRailgunTxidMerkletreeData(
-          railgunTxid,
-        );
-        const { railgunTransaction } = railgunTxidMerkletreeData;
-
-        const blindedCommitments = AbstractWallet.getBlindedCommitmentsFromRailgunTxid(
-          railgunTxid,
-          sentCommitmentsNeedSpendPOIs,
-        );
-        if (blindedCommitments.length !== railgunTransaction.commitments.length) {
-          throw new Error(
-            `Not enough sent commitments matched: expected ${railgunTransaction.commitments.length}, got ${blindedCommitments.length}`,
-          );
-        }
-
-        await POI.generateAndSubmitPOIAllLists(
-          chain,
-          blindedCommitments,
-          sentCommitment.spentPOIs,
-          railgunTxidMerkletreeData,
-          (progress: number) => {
-            EngineDebug.log(
-              `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}%`,
-            );
-          },
-        );
-      } catch (err) {
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
-        EngineDebug.log(`Error generating POI - txid ${railgunTxid}: ${err.message}`);
-      }
+    for (const railgunTxid of railgunTxids) {
+      await this.generatePOIsForRailgunTxid(chain, railgunTxid, sentCommitmentsNeedSpendPOIs, TXOs);
     }
   }
 
-  private static getBlindedCommitmentsFromRailgunTxid(
+  private async generatePOIsForRailgunTxid(
+    chain: Chain,
     railgunTxid: string,
-    sentCommitments: SentCommitment[],
-  ): string[] {
-    const blindedCommitments = sentCommitments
-      .filter((sentCommitment) => sentCommitment.spentRailgunTxid === railgunTxid)
-      .map((sentCommitment) => sentCommitment.blindedCommitment);
+    sentCommitmentsNeedSpendPOIs: SentCommitment[],
+    TXOs: TXO[],
+  ): Promise<void> {
+    try {
+      const railgunTxidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
 
-    return removeUndefineds(blindedCommitments);
+      const railgunTxidMerkletreeData =
+        await railgunTxidMerkletree.getRailgunTxidCurrentMerkletreeData(railgunTxid);
+      const { railgunTransaction } = railgunTxidMerkletreeData;
+
+      const spentTXOs = TXOs.filter((txo) => railgunTransaction.nullifiers.includes(txo.nullifier));
+      if (!spentTXOs.length) {
+        throw new Error('No spent txos for railgun txid nullifier');
+      }
+      const blindedCommitmentsIn = removeUndefineds(spentTXOs.map((txo) => txo.blindedCommitment));
+      if (blindedCommitmentsIn.length !== railgunTransaction.nullifiers.length) {
+        throw new Error(
+          `Not enough TXO blinded commitments for railgun transaction nullifiers: expected ${railgunTransaction.nullifiers.length}, got ${blindedCommitmentsIn.length}`,
+        );
+      }
+      const creationTxidsIn = AbstractWallet.getCreationTxidsIn(spentTXOs);
+
+      const sentCommitmentsForRailgunTxid = sentCommitmentsNeedSpendPOIs.filter(
+        (sentCommitment) => sentCommitment.spentRailgunTxid === railgunTxid,
+      );
+      if (!sentCommitmentsForRailgunTxid.length) {
+        throw new Error('No sent commitments for railgun txid');
+      }
+      const blindedCommitmentsOut = removeUndefineds(
+        sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.blindedCommitment),
+      );
+      if (blindedCommitmentsOut.length !== railgunTransaction.commitments.length) {
+        throw new Error(
+          `Not enough sent commitments for railgun transaction commitments: expected ${railgunTransaction.commitments.length}, got ${blindedCommitmentsOut.length}`,
+        );
+      }
+
+      const poiProofInputs: POIEngineProofInputs = {
+        // --- Public inputs ---
+        anyRailgunTxidMerklerootAfterTransaction:
+          railgunTxidMerkletreeData.currentMerkleProofForTree.root,
+        blindedCommitmentsOut,
+
+        // --- Private inputs ---
+
+        // Railgun Transaction info
+        boundParamsHash: railgunTransaction.boundParamsHash,
+        nullifiers: railgunTransaction.nullifiers,
+        commitmentsOut: railgunTransaction.commitments,
+
+        // Spender wallet info
+        spendingPublicKey: this.spendingPublicKey,
+        nullifyingKey: this.nullifyingKey,
+
+        // Nullified notes data
+        token: spentTXOs[0].note.tokenHash,
+        randomsIn: spentTXOs.map((txo) => txo.note.random),
+        valuesIn: spentTXOs.map((txo) => txo.note.value),
+        utxoPositionsIn: spentTXOs.map((txo) => txo.position),
+        blindedCommitmentsIn,
+        creationTxidsIn,
+
+        // Commitment notes data
+        npksOut: sentCommitmentsForRailgunTxid.map(
+          (sentCommitment) => sentCommitment.note.notePublicKey,
+        ),
+        valuesOut: sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.value),
+
+        // Railgun txid tree
+        anyRailgunTxidAfterTransactionMerkleProofIndices:
+          railgunTxidMerkletreeData.currentMerkleProofForTree.indices,
+        anyRailgunTxidAfterTransactionMerkleProofPathElements:
+          railgunTxidMerkletreeData.currentMerkleProofForTree.elements,
+      };
+
+      await POI.generateAndSubmitPOIAllLists(
+        chain,
+        sentCommitmentsForRailgunTxid[0].spentPOIs,
+        railgunTxid,
+        poiProofInputs,
+        (progress: number) => {
+          EngineDebug.log(
+            `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}%`,
+          );
+        },
+      );
+    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
+      EngineDebug.log(`Error generating POI - txid ${railgunTxid}: ${err.message}`);
+    }
+  }
+
+  private static getCreationTxidsIn(txos: TXO[]): string[] {
+    const creationTxidsIn: string[] = txos.map((txo) => {
+      if (isSentCommitmentType(txo.commitmentType)) {
+        if (!isDefined(txo.creationRailgunTxid)) {
+          throw new Error(
+            `No creationRailgunTxid for TXO with tree/position ${txo.tree}:${txo.position}`,
+          );
+        }
+        return txo.creationRailgunTxid;
+      }
+      return getShieldRailgunTxid(txo.tree, txo.position);
+    });
+    return creationTxidsIn;
   }
 
   private async updateReceiveCommitmentCreatedPOIs(

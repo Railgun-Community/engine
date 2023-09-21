@@ -5,7 +5,7 @@ import { VALID_INPUT_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from './utxos';
 import { TransactNote } from '../note/transact-note';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, formatToByteLength } from '../utils';
+import { ByteLength, ZERO_32_BYTE_VALUE, formatToByteLength } from '../utils';
 import { isDefined } from '../utils/is-defined';
 import { CommitmentType } from '../models/formatted-types';
 
@@ -66,6 +66,7 @@ const createNullUTXO = (nullNote: TransactNote): TXO => {
     creationPOIs: undefined,
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,
+    nullifier: ZERO_32_BYTE_VALUE,
   };
 };
 

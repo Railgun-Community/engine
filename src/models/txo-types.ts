@@ -8,6 +8,7 @@ export type TXO = {
   txid: string;
   timestamp: Optional<number>;
   spendtxid: string | false;
+  nullifier: string;
   note: TransactNote;
   creationRailgunTxid: Optional<string>;
   creationPOIs: Optional<POIsPerList>;

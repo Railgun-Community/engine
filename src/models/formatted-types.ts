@@ -154,8 +154,8 @@ export type RailgunTransactionWithTxid = RailgunTransaction & {
 
 export type RailgunTxidMerkletreeData = {
   railgunTransaction: RailgunTransactionWithTxid;
-  merkleroot: string;
   txidIndex: number;
+  currentMerkleProofForTree: MerkleProof;
 };
 
 export type Commitment =
