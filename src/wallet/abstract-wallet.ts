@@ -1120,9 +1120,8 @@ abstract class AbstractWallet extends EventEmitter {
         valuesOut: sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.value),
 
         // Railgun txid tree
-        anyRailgunTxidAfterTransactionMerkleProofIndices:
-          railgunTxidMerkletreeData.currentMerkleProofForTree.indices,
-        anyRailgunTxidAfterTransactionMerkleProofPathElements:
+        railgunTxidMerkleProofIndices: railgunTxidMerkletreeData.currentMerkleProofForTree.indices,
+        railgunTxidMerkleProofPathElements:
           railgunTxidMerkletreeData.currentMerkleProofForTree.elements,
       };
 

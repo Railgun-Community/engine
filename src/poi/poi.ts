@@ -132,7 +132,7 @@ export class POI {
     spentPOIs: Optional<POIsPerList>,
     railgunTxid: string,
     proofInputs: POIEngineProofInputs,
-    railgunTxidMerkleProofIndex: number,
+    txidMerklerootIndex: number,
     railgunTransactionBlockNumber: number,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
@@ -155,7 +155,7 @@ export class POI {
         chain,
         listKey,
         proofInputs,
-        railgunTxidMerkleProofIndex,
+        txidMerklerootIndex,
         railgunTransactionBlockNumber,
       );
     }

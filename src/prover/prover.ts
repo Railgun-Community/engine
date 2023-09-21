@@ -500,11 +500,9 @@ export class Prover {
       ),
       npksOut: proofInputs.npksOut,
       valuesOut: proofInputs.valuesOut,
-      anyRailgunTxidAfterTransactionMerkleProofIndices: hexToBigInt(
-        proofInputs.anyRailgunTxidAfterTransactionMerkleProofIndices,
-      ),
-      anyRailgunTxidAfterTransactionMerkleProofPathElements:
-        proofInputs.anyRailgunTxidAfterTransactionMerkleProofPathElements.map(hexToBigInt),
+      railgunTxidMerkleProofIndices: hexToBigInt(proofInputs.railgunTxidMerkleProofIndices),
+      railgunTxidMerkleProofPathElements:
+        proofInputs.railgunTxidMerkleProofPathElements.map(hexToBigInt),
       poiMerkleroots: this.padWithZerosToMax(
         proofInputs.poiMerkleroots.map(hexToBigInt),
         maxInputs,

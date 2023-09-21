@@ -51,8 +51,8 @@ export type POIEngineProofInputs = {
   valuesOut: bigint[];
 
   // Railgun txid tree
-  anyRailgunTxidAfterTransactionMerkleProofIndices: string;
-  anyRailgunTxidAfterTransactionMerkleProofPathElements: string[];
+  railgunTxidMerkleProofIndices: string;
+  railgunTxidMerkleProofPathElements: string[];
 
   // POI tree - see POIEngineProofInputsWithListPOIData
   // poiInMerkleProofIndices: string[];

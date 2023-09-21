@@ -118,8 +118,8 @@ export type FormattedCircuitInputsPOI = {
   creationTxidsIn: bigint[];
   npksOut: bigint[];
   valuesOut: bigint[];
-  anyRailgunTxidAfterTransactionMerkleProofIndices: bigint;
-  anyRailgunTxidAfterTransactionMerkleProofPathElements: bigint[];
+  railgunTxidMerkleProofIndices: bigint;
+  railgunTxidMerkleProofPathElements: bigint[];
   poiInMerkleProofIndices: bigint[];
   poiInMerkleProofPathElements: bigint[][];
 };

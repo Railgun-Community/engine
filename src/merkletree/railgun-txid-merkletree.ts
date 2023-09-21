@@ -102,9 +102,9 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       throw new Error('railgun transaction not found');
     }
 
-    const currentIndex = await this.getLatestIndexForTree(tree);
-    const currentMerkleProofForTree = await this.getMerkleProof(tree, currentIndex);
+    const currentMerkleProofForTree = await this.getMerkleProof(tree, index);
 
+    const currentIndex = await this.getLatestIndexForTree(tree);
     const currentTxidIndexForTree = RailgunTxidMerkletree.getTxidIndex(tree, currentIndex);
 
     return {
