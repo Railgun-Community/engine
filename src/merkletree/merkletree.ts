@@ -195,6 +195,32 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
+  async updateData(tree: number, index: number, data: T): Promise<void> {
+    try {
+      const oldData = await this.getData(tree, index);
+      if (oldData.hash !== data.hash) {
+        throw new Error('Cannot update merkletree data with different hash.');
+      }
+      await this.db.put(this.getDataDBPath(tree, index), data, 'json');
+
+      // Update cache
+      if (isDefined(this.cacheAllData)) {
+        for (let i = 0; i < this.cacheAllData.length; i += 1) {
+          const item = this.cacheAllData[i];
+          if (item.hash === data.hash) {
+            this.cacheAllData[i] = data;
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      throw new Error(err.message);
+    }
+  }
+
   protected async getData(tree: number, index: number): Promise<T> {
     try {
       const data = (await this.db.get(this.getDataDBPath(tree, index), 'json')) as T;

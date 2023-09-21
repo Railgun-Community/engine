@@ -68,7 +68,7 @@ import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import { getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
-import { isDefined } from '../utils/is-defined';
+import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { PublicInputs } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import {
@@ -1016,8 +1016,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   async generateSpentPOIsAllSentCommitments(chain: Chain): Promise<void> {
     const sentCommitments = await this.getSentCommitments(chain, undefined);
-    const sentCommitmentsNeedSpendPOIs = sentCommitments.filter((sendCommitment) =>
-      POI.shouldGenerateSpentPOIs(sendCommitment),
+    const sentCommitmentsNeedSpendPOIs = sentCommitments.filter((sentCommitment) =>
+      POI.shouldGenerateSpentPOIs(sentCommitment),
     );
     if (sentCommitmentsNeedSpendPOIs.length === 0) {
       return;
@@ -1027,10 +1027,54 @@ abstract class AbstractWallet extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const sentCommitment of sentCommitmentsNeedSpendPOIs) {
-      await POI.generateAndSubmitPOIAllLists(chain, sentCommitment, railgunTxidMerkletree);
-    }
+      if (!isDefined(sentCommitment.spentRailgunTxid)) {
+        continue;
+      }
+      const railgunTxid = sentCommitment.spentRailgunTxid;
 
-    await this.refreshSpentPOIsAllSentCommitments(chain);
+      try {
+        const railgunTxidMerkletreeData = await railgunTxidMerkletree.getRailgunTxidMerkletreeData(
+          railgunTxid,
+        );
+        const { railgunTransaction } = railgunTxidMerkletreeData;
+
+        const blindedCommitments = AbstractWallet.getBlindedCommitmentsFromRailgunTxid(
+          railgunTxid,
+          sentCommitmentsNeedSpendPOIs,
+        );
+        if (blindedCommitments.length !== railgunTransaction.commitments.length) {
+          throw new Error(
+            `Not enough sent commitments matched: expected ${railgunTransaction.commitments.length}, got ${blindedCommitments.length}`,
+          );
+        }
+
+        await POI.generateAndSubmitPOIAllLists(
+          chain,
+          blindedCommitments,
+          sentCommitment.spentPOIs,
+          railgunTxidMerkletreeData,
+          (progress: number) => {
+            EngineDebug.log(
+              `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}%`,
+            );
+          },
+        );
+      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
+        EngineDebug.log(`Error generating POI - txid ${railgunTxid}: ${err.message}`);
+      }
+    }
+  }
+
+  private static getBlindedCommitmentsFromRailgunTxid(
+    railgunTxid: string,
+    sentCommitments: SentCommitment[],
+  ): string[] {
+    const blindedCommitments = sentCommitments
+      .filter((sentCommitment) => sentCommitment.spentRailgunTxid === railgunTxid)
+      .map((sentCommitment) => sentCommitment.blindedCommitment);
+
+    return removeUndefineds(blindedCommitments);
   }
 
   private async updateReceiveCommitmentCreatedPOIs(

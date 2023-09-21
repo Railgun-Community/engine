@@ -606,8 +606,15 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const commitmentHash of commitmentHashes) {
       const commitment = hashesToCommitment[commitmentHash];
-      if (commitment && isSentCommitment(commitment)) {
+      if (
+        commitment &&
+        isSentCommitment(commitment) &&
+        !isDefined(commitment.creationRailgunTxid)
+      ) {
         commitment.creationRailgunTxid = railgunTxid;
+
+        // eslint-disable-next-line no-await-in-loop
+        await utxoMerkletree.updateData(commitment.utxoTree, commitment.utxoIndex, commitment);
       }
     }
 

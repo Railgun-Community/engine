@@ -1,7 +1,8 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
-import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
+import EngineDebug from '../debugger/debugger';
 import { Chain } from '../models/engine-types';
+import { RailgunTxidMerkletreeData } from '../models/formatted-types';
 import { BlindedCommitmentData, POIsPerList, TXOPOIListStatus } from '../models/poi-types';
 import { SentCommitment, TXO } from '../models/txo-types';
 import { isDefined } from '../utils/is-defined';
@@ -124,30 +125,32 @@ export class POI {
 
   static async generateAndSubmitPOIAllLists(
     chain: Chain,
-    sentCommitment: SentCommitment,
-    railgunTxidMerkletree: RailgunTxidMerkletree,
+    blindedCommitments: string[],
+    spentPOIs: Optional<POIsPerList>,
+    railgunTxidMerkletreeData: RailgunTxidMerkletreeData,
+    progressCallback: (progress: number) => void,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
       throw new Error('POI node interface not initialized');
     }
 
-    const { spentPOIs, spentRailgunTxid } = sentCommitment;
-    if (!isDefined(spentRailgunTxid)) {
-      return;
-    }
-
     const listKeys = POI.findListsForSpentPOIs(spentPOIs);
-    const txidMerkletreeData = await railgunTxidMerkletree.getTxidMerkletreeData(spentRailgunTxid);
+    const railgunTxid = railgunTxidMerkletreeData.railgunTransaction.hash;
 
-    for (const listKey of listKeys) {
-      // TODO: Get blindedCommitments
-      const blindedCommitments: string[] = [];
+    for (let i = 0; i < listKeys.length; i += 1) {
+      const listKey = listKeys[i];
+
+      const progress = i / listKeys.length;
+      progressCallback(progress);
+      EngineDebug.log(
+        `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}% (List ${listKey})`,
+      );
 
       await this.nodeInterface.generateAndSubmitPOI(
         chain,
         listKey,
         blindedCommitments,
-        txidMerkletreeData,
+        railgunTxidMerkletreeData,
       );
     }
   }

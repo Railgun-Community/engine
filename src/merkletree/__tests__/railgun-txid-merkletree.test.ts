@@ -151,11 +151,11 @@ describe('Railgun Txid Merkletree', () => {
     });
 
     expect(
-      await merkletree.getTxidMerkletreeData(
+      await merkletree.getRailgunTxidMerkletreeData(
         '17950133044911973828130962356772411646037989291035973150567495873917534644512',
       ),
     ).to.deep.equal({
-      railgunTransactionWithTxid: {
+      railgunTransaction: {
         graphID: '0x00',
         commitments: ['0x01', '0x02'],
         nullifiers: ['0x03', '0x04'],
@@ -165,29 +165,18 @@ describe('Railgun Txid Merkletree', () => {
       },
       merkleroot: '18b67a3ae2c2abf315897a8a2f47e9df50ee757e1760b9eeec1ad9272c2dec48',
       txidIndex: 0,
-      merkleproof: {
-        elements: [
-          '11934703375483089280244820234609091536431576513800209926563596616012901678112',
-          '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
-          '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
-          '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
-          '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
-          '1437bb465994e0453357c17a676b9fdba554e215795ebc17ea5012770dfb77c7',
-          '12359ef9572912b49f44556b8bbbfa69318955352f54cfa35cb0f41309ed445a',
-          '2dc656dadc82cf7a4707786f4d682b0f130b6515f7927bde48214d37ec25a46c',
-          '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
-          '244ae3b19397e842778b254cd15c037ed49190141b288ff10eb1390b34dc2c31',
-          '0ca2b107491c8ca6e5f7e22403ea8529c1e349a1057b8713e09ca9f5b9294d46',
-          '18593c75a9e42af27b5e5b56b99c4c6a5d7e7d6e362f00c8e3f69aeebce52313',
-          '17aca915b237b04f873518947a1f440f0c1477a6ac79299b3be46858137d4bfb',
-          '2726c22ad3d9e23414887e8233ee83cc51603f58c48a9c9e33cb1f306d4365c0',
-          '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
-          '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
-        ],
-        indices: '00',
-        leaf: '17950133044911973828130962356772411646037989291035973150567495873917534644512',
-        root: '1081c0077932089cfac896f19df70bdfd6d4daed346afc8779af0f13476a4353',
-      },
+    });
+    expect(
+      await merkletree.getRailgunTransactionByTxid(
+        '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      ),
+    ).to.deep.equal({
+      graphID: '0x00',
+      commitments: ['0x01', '0x02'],
+      nullifiers: ['0x03', '0x04'],
+      boundParamsHash: '0x05',
+      blockNumber: 0,
+      hash: '17950133044911973828130962356772411646037989291035973150567495873917534644512',
     });
 
     // Make sure new constructed tree inherits db values

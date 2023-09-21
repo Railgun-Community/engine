@@ -153,7 +153,7 @@ export type RailgunTransactionWithTxid = RailgunTransaction & {
 };
 
 export type RailgunTxidMerkletreeData = {
-  railgunTransactionWithTxid: RailgunTransactionWithTxid;
+  railgunTransaction: RailgunTransactionWithTxid;
   merkleroot: string;
   txidIndex: number;
 };
