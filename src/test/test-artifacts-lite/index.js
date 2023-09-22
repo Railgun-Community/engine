@@ -11,7 +11,7 @@ const artifacts = require('./artifacts.json');
 
 const cache = [];
 
-function getArtifact(nullifiers, commitments) {
+function getArtifacts(nullifiers, commitments) {
   cache[nullifiers] ??= [];
 
   if (!cache[nullifiers][commitments]) {
@@ -38,22 +38,18 @@ function listArtifacts() {
 }
 
 function getArtifactsPOI() {
-  cache.poi ??= [];
-
   if (!cache.poi) {
     cache.poi = {
-      zkey: decompress(fs.readFileSync(`${__dirname}/poi/zkey.br`)),
-      wasm: decompress(fs.readFileSync(`${__dirname}/poi/wasm.br`)),
-      // vkey: require(`${__dirname}/poi/vkey`),
-      vkey: {}, // TODO
+      zkey: decompress(fs.readFileSync(`${__dirname}/poi/v2/zkey.br`)),
+      wasm: decompress(fs.readFileSync(`${__dirname}/poi/v2/wasm.br`)),
+      vkey: require(`${__dirname}/poi/v2/vkey`),
     };
   }
-
   return cache.poi;
 }
 
 module.exports = {
-  getArtifact,
+  getArtifacts,
   getArtifactsPOI,
   getVKey,
   listArtifacts,

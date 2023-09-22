@@ -3,18 +3,15 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import { poseidon } from 'circomlibjs';
 import msgpack from 'msgpack-lite';
-import { getRandomBytes } from 'ethereum-cryptography/random';
 import type { Database } from '../database/database';
 import {
   fromUTF8String,
-  numberify,
   hexlify,
   formatToByteLength,
   ByteLength,
   nToHex,
   hexToBigInt,
   arrayify,
-  randomHex,
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
 import { BytesData, MerkleProof } from '../models/formatted-types';
@@ -120,7 +117,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     // Convert index to bytes data, the binary representation is the indices of the merkle path
     // Pad to 32 bytes
-    const indices = hexlify(new BN(index));
+    const indices = nToHex(BigInt(index), ByteLength.UINT_256);
 
     // Fetch root
     const root = await this.getRoot(tree);

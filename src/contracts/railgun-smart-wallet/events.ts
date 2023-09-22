@@ -27,6 +27,7 @@ import {
 import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
 import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
 import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-legacy';
+import { getBlindedCommitmentForUnshield } from '../../poi/blinded-commitment';
 
 /**
  * Parse event data for database
@@ -204,6 +205,9 @@ export const formatUnshieldEvent = (
     fee: fee.toString(),
     blockNumber,
     eventLogIndex,
+    railgunTxid: undefined,
+    poisPerList: undefined,
+    blindedCommitment: undefined,
   };
 };
 

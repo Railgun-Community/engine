@@ -1,4 +1,10 @@
-import { ByteLength, formatToByteLength, fromUTF8String, numberify } from '../utils/bytes';
+import {
+  ByteLength,
+  formatToByteLength,
+  fromUTF8String,
+  hexToBigInt,
+  numberify,
+} from '../utils/bytes';
 import { SNARK_PRIME } from '../utils/constants';
 import { keccak256 } from '../utils/hash';
 import { Chain } from './engine-types';
@@ -50,3 +56,5 @@ export const MERKLE_ZERO_VALUE: string = formatToByteLength(
     .toString('hex'),
   ByteLength.UINT_256,
 );
+
+export const MERKLE_ZERO_VALUE_BIGINT: bigint = hexToBigInt(MERKLE_ZERO_VALUE);

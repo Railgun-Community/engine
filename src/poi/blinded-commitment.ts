@@ -1,40 +1,36 @@
 import { poseidon } from 'circomlibjs';
-import { Commitment, CommitmentType } from '../models/formatted-types';
-import { ByteLength, nToHex } from '../utils/bytes';
-import { TREE_DEPTH } from '../models/merkletree-types';
+import { LegacyEncryptedCommitment, TransactCommitment } from '../models/formatted-types';
+import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 
-export const bitwiseMerge = (tree: number, index: number): number => {
-  return (tree << TREE_DEPTH) + index;
-};
-
-export const getBlindedCommitment = (
-  commitment: Commitment,
-  npk: bigint,
-  railgunTxid: string,
-): string => {
-  const hash: bigint = getBlindedCommitmentHash(commitment, npk, railgunTxid);
+const formatHash = (hash: bigint): string => {
   return `0x${nToHex(hash, ByteLength.UINT_256)}`;
 };
 
-const getBlindedCommitmentHash = (
-  commitment: Commitment,
+export const getBlindedCommitmentForUnshield = (
+  commitmentHash: string,
+  toAddress: string,
+  railgunTxid: string,
+) => {
+  const hash: bigint = poseidon(
+    [commitmentHash, toAddress, railgunTxid].map((x) => hexToBigInt(x)),
+  );
+  return formatHash(hash);
+};
+
+export const getBlindedCommitmentForTransact = (
+  commitment: TransactCommitment | LegacyEncryptedCommitment,
   npk: bigint,
   railgunTxid: string,
-): bigint => {
-  switch (commitment.commitmentType) {
-    case CommitmentType.ShieldCommitment:
-    case CommitmentType.LegacyGeneratedCommitment:
-      return poseidon(
-        [
-          commitment.hash,
-          commitment.preImage.npk,
-          bitwiseMerge(commitment.utxoTree, commitment.utxoIndex),
-        ].map((x) => BigInt(x)),
-      );
+): string => {
+  const hash: bigint = poseidon([hexToBigInt(commitment.hash), npk, hexToBigInt(railgunTxid)]);
+  return formatHash(hash);
+};
 
-    case CommitmentType.TransactCommitment:
-    case CommitmentType.LegacyEncryptedCommitment:
-      return poseidon([commitment.hash, npk, railgunTxid].map((x) => BigInt(x)));
-  }
-  throw new Error('Unrecognized commitment type');
+export const getBlindedCommitmentForShield = (
+  commitmentHash: string,
+  npk: bigint,
+  shieldRailgunTxid: string, // not a real railgunTxid - this is tree position and index
+) => {
+  const hash: bigint = poseidon([hexToBigInt(commitmentHash), npk, hexToBigInt(shieldRailgunTxid)]);
+  return formatHash(hash);
 };

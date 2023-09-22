@@ -25,7 +25,7 @@ export type POIEngineProofInputs = {
   // --- Public inputs ---
   anyRailgunTxidMerklerootAfterTransaction: string;
   // poiMerkleroots: string[]; - see POIEngineProofInputsWithListPOIData
-  blindedCommitmentsOut: string[];
+  // blindedCommitmentsOut: string[] - output of circuit
 
   // --- Private inputs ---
 

@@ -195,7 +195,7 @@ export type StoredSendCommitment = {
   noteExtraData?: NoteAnnotationData;
   recipientAddress: string;
   spentRailgunTxid: Optional<string>;
-  spentPOIs: Optional<POIsPerList>;
+  poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
 };
 
@@ -232,4 +232,11 @@ export type RelayAdaptShieldERC20Recipient = { tokenAddress: string; recipientAd
 export type RelayAdaptShieldNFTRecipient = {
   nftTokenData: NFTTokenData;
   recipientAddress: string;
+};
+
+export type POICommitmentOutData = {
+  blindedCommitmentsOut: string[];
+  npksOut: bigint[];
+  valuesOut: bigint[];
+  poisPerList: Optional<POIsPerList>;
 };

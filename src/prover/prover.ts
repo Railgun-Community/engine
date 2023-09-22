@@ -15,8 +15,10 @@ import {
 import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
 import { POIEngineProofInputsWithListPOIData } from '../models/poi-types';
-import { getArtifactsForPOI } from './poi-artifacts';
 import { ProofCachePOI } from './proof-cache-poi';
+import { isDefined } from '../utils/is-defined';
+
+const ZERO_VALUE_POI = 0n;
 
 type NativeProveRailgun = (
   circuitId: number,
@@ -40,7 +42,7 @@ type Groth16FullProveRailgun = (
   logger: { debug: (log: string) => void },
   dat: Optional<ArrayLike<number>>,
   progressCallback: ProverProgressCallback,
-) => Promise<{ proof: Proof }>;
+) => Promise<{ proof: Proof; publicSignals?: string[] }>;
 
 type Groth16FullProvePOI = (
   formattedInputs: FormattedCircuitInputsPOI,
@@ -49,7 +51,7 @@ type Groth16FullProvePOI = (
   logger: { debug: (log: string) => void },
   dat: Optional<ArrayLike<number>>,
   progressCallback: ProverProgressCallback,
-) => Promise<{ proof: Proof }>;
+) => Promise<{ proof: Proof; publicSignals?: string[] }>;
 
 type Groth16Verify = Optional<
   (vkey: object, publicSignals: bigint[], proof: Proof) => Promise<boolean>
@@ -61,7 +63,7 @@ export type SnarkJSGroth16 = {
     wasm: Optional<ArrayLike<number>>,
     zkey: ArrayLike<number>,
     logger: { debug: (log: string) => void },
-  ) => Promise<{ proof: Proof }>;
+  ) => Promise<{ proof: Proof; publicSignals: string[] }>;
   verify: Groth16Verify;
 };
 
@@ -261,9 +263,9 @@ export class Prover {
     }
 
     const publicSignals: bigint[] = [
+      ...publicInputs.blindedCommitmentsOut,
       publicInputs.anyRailgunTxidMerklerootAfterTransaction,
       ...publicInputs.poiMerkleroots,
-      ...publicInputs.blindedCommitmentsOut,
     ];
 
     return this.groth16.verify(artifacts.vkey, publicSignals, proof);
@@ -351,6 +353,7 @@ export class Prover {
 
   async provePOI(
     inputs: POIEngineProofInputsWithListPOIData,
+    blindedCommitmentsOut: string[],
     progressCallback: ProverProgressCallback,
   ): Promise<{ proof: Proof; publicInputs: PublicInputsPOI }> {
     if (!this.groth16) {
@@ -359,24 +362,26 @@ export class Prover {
 
     const formattedInputs = Prover.formatPOIInputs(inputs);
 
+    const formattedBlindedCommitmentsOut = Prover.padWithZerosToMax(
+      blindedCommitmentsOut.map(hexToBigInt),
+      13,
+    );
+
     const publicInputs: PublicInputsPOI = {
       anyRailgunTxidMerklerootAfterTransaction:
         formattedInputs.anyRailgunTxidMerklerootAfterTransaction,
-      blindedCommitmentsOut: formattedInputs.blindedCommitmentsOut,
+      blindedCommitmentsOut: formattedBlindedCommitmentsOut,
       poiMerkleroots: formattedInputs.poiMerkleroots,
     };
 
-    const existingProof = ProofCachePOI.get(
-      inputs.blindedCommitmentsIn,
-      inputs.blindedCommitmentsOut,
-    );
+    const existingProof = ProofCachePOI.get(inputs.blindedCommitmentsIn, blindedCommitmentsOut);
     if (existingProof) {
       return { proof: existingProof, publicInputs };
     }
 
     progressCallback(5);
 
-    const artifacts = getArtifactsForPOI();
+    const artifacts = await this.artifactGetter.getArtifactsPOI();
     if (!artifacts.wasm && !artifacts.dat) {
       throw new Error('Requires WASM or DAT prover artifact');
     }
@@ -385,7 +390,7 @@ export class Prover {
     const initialProgressProof = 20;
     const finalProgressProof = 99;
     progressCallback(initialProgressProof);
-    const { proof } = await this.groth16.fullProvePOI(
+    const proofData = await this.groth16.fullProvePOI(
       formattedInputs,
       artifacts.wasm,
       artifacts.zkey,
@@ -397,6 +402,21 @@ export class Prover {
         );
       },
     );
+    const { proof, publicSignals } = proofData;
+
+    if (isDefined(publicSignals)) {
+      // snarkjs will provide publicSignals for validation
+
+      for (let i = 0; i < formattedBlindedCommitmentsOut.length; i += 1) {
+        const blindedCommitmentOutString = formattedBlindedCommitmentsOut[i].toString();
+        if (blindedCommitmentOutString !== publicSignals[i]) {
+          throw new Error(
+            `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
+          );
+        }
+      }
+    }
+
     progressCallback(finalProgressProof);
 
     // Throw if proof is invalid
@@ -404,7 +424,7 @@ export class Prover {
       throw new Error('Proof verification failed');
     }
 
-    ProofCachePOI.store(inputs.blindedCommitmentsIn, inputs.blindedCommitmentsOut, proof);
+    ProofCachePOI.store(inputs.blindedCommitmentsIn, blindedCommitmentsOut, proof);
 
     progressCallback(100);
 
@@ -458,7 +478,7 @@ export class Prover {
   private static padWithZerosToMax(array: bigint[], max: number): bigint[] {
     const padded = [...array];
     while (padded.length < max) {
-      padded.push(0n);
+      padded.push(ZERO_VALUE_POI);
     }
     return padded;
   }
@@ -470,7 +490,7 @@ export class Prover {
   ): bigint[][] {
     const padded = [...doubleArray];
     while (padded.length < max) {
-      padded.push(new Array<bigint>(length).fill(0n));
+      padded.push(new Array<bigint>(length).fill(ZERO_VALUE_POI));
     }
     return padded;
   }
@@ -485,10 +505,6 @@ export class Prover {
       anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
         proofInputs.anyRailgunTxidMerklerootAfterTransaction,
       ),
-      blindedCommitmentsOut: this.padWithZerosToMax(
-        proofInputs.blindedCommitmentsOut.map(hexToBigInt),
-        maxOutputs,
-      ),
       boundParamsHash: hexToBigInt(proofInputs.boundParamsHash),
       nullifiers: this.padWithZerosToMax(proofInputs.nullifiers.map(hexToBigInt), maxInputs),
       commitmentsOut: this.padWithZerosToMax(
@@ -499,7 +515,7 @@ export class Prover {
       nullifyingKey: proofInputs.nullifyingKey,
       token: hexToBigInt(proofInputs.token),
       randomsIn: this.padWithZerosToMax(proofInputs.randomsIn.map(hexToBigInt), maxInputs),
-      valuesIn: proofInputs.valuesIn,
+      valuesIn: this.padWithZerosToMax(proofInputs.valuesIn, maxOutputs),
       utxoPositionsIn: this.padWithZerosToMax(proofInputs.utxoPositionsIn.map(BigInt), maxInputs),
       blindedCommitmentsIn: this.padWithZerosToMax(
         proofInputs.blindedCommitmentsIn.map(hexToBigInt),
@@ -509,8 +525,9 @@ export class Prover {
         proofInputs.creationTxidsIn.map(hexToBigInt),
         maxInputs,
       ),
-      npksOut: proofInputs.npksOut,
-      valuesOut: proofInputs.valuesOut,
+
+      npksOut: this.padWithZerosToMax(proofInputs.npksOut, maxOutputs),
+      valuesOut: this.padWithZerosToMax(proofInputs.valuesOut, maxOutputs),
       railgunTxidMerkleProofIndices: hexToBigInt(proofInputs.railgunTxidMerkleProofIndices),
       railgunTxidMerkleProofPathElements:
         proofInputs.railgunTxidMerkleProofPathElements.map(hexToBigInt),

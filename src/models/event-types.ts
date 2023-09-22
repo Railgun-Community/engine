@@ -1,5 +1,6 @@
 import { Commitment, Nullifier, RailgunTransaction } from './formatted-types';
 import { Chain } from './engine-types';
+import { POIsPerList } from './poi-types';
 
 export enum EngineEvent {
   WalletScanComplete = 'scanned',
@@ -43,6 +44,9 @@ export type UnshieldStoredEvent = {
   fee: string;
   blockNumber: number;
   eventLogIndex: number;
+  railgunTxid: Optional<string>;
+  poisPerList: Optional<POIsPerList>;
+  blindedCommitment: Optional<string>;
 };
 
 export type AccumulatedEvents = {

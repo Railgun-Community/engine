@@ -1,13 +1,34 @@
 import { poseidon } from 'circomlibjs';
 import { RailgunTransaction, RailgunTransactionWithTxid } from '../models';
-import { hexToBigInt } from '../utils';
+import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+
+const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
+  const padded = [...array];
+  while (padded.length < max) {
+    padded.push(0n);
+  }
+  return padded;
+};
 
 export const getRailgunTransactionID = (railgunTransaction: RailgunTransaction): bigint => {
-  const commitmentsHash = poseidon(railgunTransaction.commitments.map((el) => hexToBigInt(el)));
-  const nullifiersHash = poseidon(railgunTransaction.nullifiers.map((el) => hexToBigInt(el)));
+  const maxInputs = 13;
+  const nullifiersPadded = padWithZerosToMax(
+    railgunTransaction.nullifiers.map((el) => hexToBigInt(el)),
+    maxInputs,
+  );
+  const nullifiersHash = poseidon(nullifiersPadded);
+
+  const maxOutputs = 13;
+  const commitmentsPadded = padWithZerosToMax(
+    railgunTransaction.commitments.map((el) => hexToBigInt(el)),
+    maxOutputs,
+  );
+  const commitmentsHash = poseidon(commitmentsPadded);
+
   const boundParamsHash = hexToBigInt(railgunTransaction.boundParamsHash);
 
-  return poseidon([commitmentsHash, nullifiersHash, boundParamsHash]);
+  const railgunTxid = poseidon([nullifiersHash, commitmentsHash, boundParamsHash]);
+  return railgunTxid;
 };
 
 export const createRailgunTransactionWithID = (
@@ -16,6 +37,6 @@ export const createRailgunTransactionWithID = (
   const txid = getRailgunTransactionID(railgunTransaction);
   return {
     ...railgunTransaction,
-    hash: txid.toString(),
+    hash: nToHex(txid, ByteLength.UINT_256),
   };
 };

@@ -11,6 +11,7 @@ describe('MerkleProof', () => {
 
   it('Should create valid dummy merkle proof', () => {
     const merkleProof = createDummyMerkleProof(randomHex(31));
+    expect(merkleProof.elements.length).to.equal(16);
     expect(verifyMerkleProof(merkleProof)).to.equal(true);
   });
 });

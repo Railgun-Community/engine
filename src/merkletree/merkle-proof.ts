@@ -7,7 +7,7 @@ import { Merkletree } from './merkletree';
 export const createDummyMerkleProof = (leaf: string): MerkleProof => {
   const indices = nToHex(0n, ByteLength.UINT_256);
 
-  const elements: bigint[] = new Array<bigint>(TREE_DEPTH - 1).fill(hexToBigInt(randomHex(31)));
+  const elements: bigint[] = new Array<bigint>(TREE_DEPTH).fill(hexToBigInt(randomHex(31)));
 
   let latestHash = hexToBigInt(leaf);
 

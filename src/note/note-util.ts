@@ -1,5 +1,6 @@
 import { poseidon } from 'circomlibjs';
 import { NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
+import { UnshieldStoredEvent } from '../models/event-types';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
 import { SNARK_PRIME_BIGINT } from '../utils/constants';
 import {
@@ -106,6 +107,19 @@ export const formatValue = (value: bigint, prefix: boolean = false): string => {
 export const getNoteHash = (address: string, tokenData: TokenData, value: bigint): bigint => {
   const tokenHash = getTokenDataHash(tokenData);
   return poseidon([hexToBigInt(address), hexToBigInt(tokenHash), value]);
+};
+
+export const getUnshieldEventNoteHash = (unshieldEvent: UnshieldStoredEvent): bigint => {
+  const tokenData = serializeTokenData(
+    unshieldEvent.tokenAddress,
+    unshieldEvent.tokenType,
+    unshieldEvent.tokenSubID,
+  );
+  return getNoteHash(
+    unshieldEvent.toAddress,
+    tokenData,
+    BigInt(unshieldEvent.amount) + BigInt(unshieldEvent.fee),
+  );
 };
 
 const getTokenDataHashERC20 = (tokenAddress: string): string => {

@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
 import EngineDebug from '../debugger/debugger';
+import { UnshieldStoredEvent } from '../models';
 import { Chain } from '../models/engine-types';
 import {
   BlindedCommitmentData,
@@ -66,15 +67,17 @@ export class POI {
     return this.validatePOIStatusForAllLists(pois, listKeys, [TXOPOIListStatus.Valid]);
   }
 
-  private static findListsForSpentPOIs(spentPOIs: Optional<POIsPerList>): string[] {
-    const listKeys = this.getActiveListKeys();
-    if (!isDefined(spentPOIs)) {
+  private static findListsForNewPOIs(poisPerList: Optional<POIsPerList>): string[] {
+    const listKeys = this.getAllListKeys();
+    if (!isDefined(poisPerList)) {
       return listKeys;
     }
     const submittedStatuses = [TXOPOIListStatus.TransactProofSubmitted, TXOPOIListStatus.Valid];
     const needsSpendPOI: string[] = [];
     for (const listKey of listKeys) {
-      if (!isDefined(spentPOIs[listKey]) || !submittedStatuses.includes(spentPOIs[listKey])) {
+      const isUnsubmitted =
+        !isDefined(poisPerList[listKey]) || !submittedStatuses.includes(poisPerList[listKey]);
+      if (isUnsubmitted) {
         needsSpendPOI.push(listKey);
       }
     }
@@ -99,20 +102,31 @@ export class POI {
     if (!isDefined(sentCommitment.blindedCommitment)) {
       return false;
     }
-    if (!isDefined(sentCommitment.spentPOIs)) {
+    if (!isDefined(sentCommitment.poisPerList)) {
       return true;
     }
-    return !POI.hasValidPOIsAllLists(sentCommitment.spentPOIs);
+    return !POI.hasValidPOIsAllLists(sentCommitment.poisPerList);
   }
 
-  static shouldGenerateSpentPOIs(sentCommitment: SentCommitment) {
+  static shouldGenerateSpentPOIsSentCommitment(sentCommitment: SentCommitment) {
     if (!isDefined(sentCommitment.blindedCommitment)) {
       return false;
     }
-    if (!isDefined(sentCommitment.spentPOIs)) {
+    if (!isDefined(sentCommitment.poisPerList)) {
       return true;
     }
-    const listKeys = POI.findListsForSpentPOIs(sentCommitment.spentPOIs);
+    const listKeys = POI.findListsForNewPOIs(sentCommitment.poisPerList);
+    return listKeys.length > 0;
+  }
+
+  static shouldGenerateSpentPOIsUnshieldEvent(unshieldEvent: UnshieldStoredEvent) {
+    if (!isDefined(unshieldEvent.blindedCommitment)) {
+      return false;
+    }
+    if (!isDefined(unshieldEvent.poisPerList)) {
+      return true;
+    }
+    const listKeys = POI.findListsForNewPOIs(unshieldEvent.poisPerList);
     return listKeys.length > 0;
   }
 
@@ -129,9 +143,10 @@ export class POI {
 
   static async generateAndSubmitPOIAllLists(
     chain: Chain,
-    spentPOIs: Optional<POIsPerList>,
+    poisPerList: Optional<POIsPerList>,
     railgunTxid: string,
     proofInputs: POIEngineProofInputs,
+    blindedCommitmentsOut: string[],
     txidMerklerootIndex: number,
     railgunTransactionBlockNumber: number,
     progressCallback: (progress: number) => void,
@@ -140,21 +155,20 @@ export class POI {
       throw new Error('POI node interface not initialized');
     }
 
-    const listKeys = POI.findListsForSpentPOIs(spentPOIs);
+    const listKeys = POI.findListsForNewPOIs(poisPerList);
 
     for (let i = 0; i < listKeys.length; i += 1) {
       const listKey = listKeys[i];
 
-      const progress = i / listKeys.length;
+      const progress = Math.round((i / listKeys.length) * 100);
+      EngineDebug.log(`Generating POIs for txid ${railgunTxid}: ${progress}% (List ${listKey})`);
       progressCallback(progress);
-      EngineDebug.log(
-        `Generating POIs for txid ${railgunTxid}: ${Math.round(progress * 100)}% (List ${listKey})`,
-      );
 
       await this.nodeInterface.generateAndSubmitPOI(
         chain,
         listKey,
         proofInputs,
+        blindedCommitmentsOut,
         txidMerklerootIndex,
         railgunTransactionBlockNumber,
       );

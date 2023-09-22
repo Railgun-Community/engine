@@ -119,7 +119,7 @@ export class TransactNote {
     );
     this.tokenHash = getTokenDataHash(tokenData);
     this.notePublicKey = this.getNotePublicKey();
-    this.hash = this.getHash();
+    this.hash = TransactNote.getHash(this.notePublicKey, this.tokenHash, this.value);
     this.annotationData = annotationData;
     this.outputType = outputType;
     this.memoText = memoText;
@@ -228,8 +228,8 @@ export class TransactNote {
    * Get note hash
    * @returns {bigint} hash
    */
-  private getHash(): bigint {
-    return poseidon([this.notePublicKey, hexToBigInt(this.tokenHash), this.value]);
+  static getHash(notePublicKey: bigint, tokenHash: string, value: bigint): bigint {
+    return poseidon([notePublicKey, hexToBigInt(tokenHash), value]);
   }
 
   /**

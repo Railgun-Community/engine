@@ -14,7 +14,7 @@ import {
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
-import { ArtifactGetter, ArtifactGetterPOI, PublicInputsRailgun } from '../models/prover-types';
+import { ArtifactGetter, PublicInputsRailgun } from '../models/prover-types';
 import { mnemonicToPrivateKey } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
@@ -31,7 +31,7 @@ const testNodeArtifactGetter = async (inputs: PublicInputsRailgun): Promise<Arti
 
   try {
     return {
-      ...artifacts.getArtifact(nullifiers, commitments),
+      ...artifacts.getArtifacts(nullifiers, commitments),
       dat: undefined,
     };
   } catch (err) {
@@ -58,7 +58,7 @@ const assertTestNodeArtifactExists = (nullifiers: number, commitments: number): 
 const testNodeArtifactGetterPOI = async (): Promise<Artifact> => {
   try {
     return {
-      ...artifacts.getArtifactPOI(),
+      ...artifacts.getArtifactsPOI(),
       dat: undefined,
     };
   } catch (err) {
@@ -69,10 +69,7 @@ const testNodeArtifactGetterPOI = async (): Promise<Artifact> => {
 export const testArtifactsGetter: ArtifactGetter = {
   getArtifacts: testNodeArtifactGetter,
   assertArtifactExists: assertTestNodeArtifactExists,
-};
-
-export const testArtifactsGetterPOI: ArtifactGetterPOI = {
-  getArtifacts: testNodeArtifactGetterPOI,
+  getArtifactsPOI: testNodeArtifactGetterPOI,
 };
 
 export const mockQuickSyncEvents: QuickSyncEvents = (

@@ -159,9 +159,9 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   }
 
   /**
-   * Gets Unshield event
-   * @param txid - txid of commitment
-   * @returns commitment
+   * Gets Unshield events
+   * @param txid - txid of unshields
+   * @returns unshields
    */
   async getUnshieldEvents(txid: string): Promise<UnshieldStoredEvent[]> {
     const namespace = this.getUnshieldEventsDBPath(txid);
@@ -175,6 +175,10 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
         return unshieldEvent;
       }),
     );
+  }
+
+  async updateUnshieldEvent(unshieldEvent: UnshieldStoredEvent): Promise<void> {
+    await this.addUnshieldEvents([unshieldEvent]);
   }
 
   // eslint-disable-next-line class-methods-use-this

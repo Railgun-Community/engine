@@ -25,7 +25,7 @@ export type SentCommitment = {
   noteAnnotationData?: NoteAnnotationData;
   isLegacyTransactNote: boolean;
   spentRailgunTxid: Optional<string>;
-  spentPOIs: Optional<POIsPerList>;
+  poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;
 };

@@ -24,10 +24,10 @@ export interface ArtifactConfig {
   commitments: number;
 }
 
-declare function getArtifact(nullifiers: number, commitments: number): Artifact;
+declare function getArtifacts(nullifiers: number, commitments: number): Artifact;
 declare function getVKey(nullifiers: number, commitments: number): VKey;
 declare function listArtifacts(): ArtifactConfig[];
 
-declare function getArtifactPOI(): Artifact;
+declare function getArtifactsPOI(): Artifact;
 
-export { getArtifact, getVKey, listArtifacts, getArtifactPOI };
+export { getArtifacts, getVKey, listArtifacts, getArtifactsPOI };

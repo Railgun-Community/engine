@@ -81,7 +81,7 @@ class RailgunEngine extends EventEmitter {
    * Create a RAILGUN Engine instance.
    * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
    * @param leveldown - abstract-leveldown compatible store
-   * @param artifactGetter - async function to retrieve artifacts, engine doesn't handle caching
+   * @param artifactGetter - async function to retrieve artifacts
    * @param quickSync - quick sync function to speed up sync
    * @param engineDebugger - log and error callbacks for verbose logging
    * @param skipMerkletreeScans - whether to skip UTXO merkletree scans - useful for shield-only interfaces without Railgun wallets.
@@ -544,7 +544,6 @@ class RailgunEngine extends EventEmitter {
   private async performSyncRailgunTransactions(chain: Chain) {
     try {
       EngineDebug.log(`sync railgun txids: chain ${chain.type}:${chain.id}`);
-      const txidMerkletree = this.getRailgunTxidMerkletreeForChain(chain);
 
       let maxTxidIndex: Optional<number>;
       if (!this.isPOINode) {
@@ -563,34 +562,43 @@ class RailgunEngine extends EventEmitter {
         maxTxidIndex = latestValidatedTxidIndex;
       }
 
+      const txidMerkletree = this.getRailgunTxidMerkletreeForChain(chain);
       const latestGraphID: Optional<string> = await txidMerkletree.getLatestGraphID();
       const railgunTransactions: RailgunTransaction[] = await this.quickSyncRailgunTransactions(
         chain,
         latestGraphID,
       );
-
-      const railgunTransactionsWithTxids: RailgunTransactionWithTxid[] = railgunTransactions.map(
-        createRailgunTransactionWithID,
-      );
-
-      await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);
-      await txidMerkletree.updateTreesFromWriteQueue();
-
-      // TODO: Remove after V3
-      await Promise.all(
-        railgunTransactionsWithTxids.map(async (railgunTransactionWithTxid) => {
-          await this.updateCommitmentsNullifiersForRailgunTransaction(
-            chain,
-            railgunTransactionWithTxid,
-          );
-        }),
-      );
+      await this.handleNewRailgunTransactions(chain, railgunTransactions, maxTxidIndex);
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
       }
       EngineDebug.error(err);
     }
+  }
+
+  async handleNewRailgunTransactions(
+    chain: Chain,
+    railgunTransactions: RailgunTransaction[],
+    maxTxidIndex?: number,
+  ) {
+    const railgunTransactionsWithTxids: RailgunTransactionWithTxid[] = railgunTransactions.map(
+      createRailgunTransactionWithID,
+    );
+
+    // TODO: Remove after V3
+    await Promise.all(
+      railgunTransactionsWithTxids.map(async (railgunTransactionWithTxid) => {
+        await this.updateCommitmentsNullifiersForRailgunTransaction(
+          chain,
+          railgunTransactionWithTxid,
+        );
+      }),
+    );
+
+    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(chain);
+    await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);
+    await txidMerkletree.updateTreesFromWriteQueue();
   }
 
   async updateCommitmentsNullifiersForRailgunTransaction(

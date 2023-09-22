@@ -20,8 +20,6 @@ export abstract class ShieldNote {
 
   readonly notePublicKey: bigint;
 
-  readonly hash: bigint;
-
   constructor(masterPublicKey: bigint, random: string, value: bigint, tokenData: TokenData) {
     assertValidNoteRandom(random);
     assertValidNoteToken(tokenData, value);
@@ -31,8 +29,7 @@ export abstract class ShieldNote {
     this.tokenData = tokenData;
     this.tokenHash = getTokenDataHash(tokenData);
     this.value = value;
-    this.notePublicKey = this.getNotePublicKey();
-    this.hash = this.getHash();
+    this.notePublicKey = ShieldNote.getNotePublicKey(masterPublicKey, random);
   }
 
   /**
@@ -44,15 +41,12 @@ export abstract class ShieldNote {
     return 'RAILGUN_SHIELD';
   }
 
-  private getNotePublicKey(): bigint {
-    return poseidon([this.masterPublicKey, hexToBigInt(this.random)]);
+  static getNotePublicKey(masterPublicKey: bigint, random: string): bigint {
+    return poseidon([masterPublicKey, hexToBigInt(random)]);
   }
 
-  /**
-   * Get note hash
-   */
-  private getHash(): bigint {
-    return poseidon([this.notePublicKey, hexToBigInt(this.tokenHash), this.value]);
+  static getShieldNoteHash(notePublicKey: bigint, tokenHash: string, valueLessFee: bigint): bigint {
+    return poseidon([notePublicKey, hexToBigInt(tokenHash), valueLessFee]);
   }
 
   static decryptRandom(encryptedBundle: [string, string, string], sharedKey: Uint8Array): string {

@@ -726,6 +726,9 @@ describe('UTXO Merkletree', () => {
       blockNumber: 0,
       eventLogIndex: 0,
       timestamp: undefined,
+      railgunTxid: undefined,
+      poisPerList: undefined,
+      blindedCommitment: undefined,
     };
     const unshieldB1: UnshieldStoredEvent = {
       txid: '1',
@@ -738,6 +741,9 @@ describe('UTXO Merkletree', () => {
       blockNumber: 0,
       eventLogIndex: 0,
       timestamp: undefined,
+      railgunTxid: undefined,
+      poisPerList: undefined,
+      blindedCommitment: undefined,
     };
     const unshieldB2: UnshieldStoredEvent = {
       txid: '1',
@@ -750,6 +756,9 @@ describe('UTXO Merkletree', () => {
       blockNumber: 0,
       eventLogIndex: 1,
       timestamp: undefined,
+      railgunTxid: undefined,
+      poisPerList: undefined,
+      blindedCommitment: undefined,
     };
     await merkletree.addUnshieldEvents([unshieldA1, unshieldB1, unshieldB2]);
     expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA1]);

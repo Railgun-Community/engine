@@ -1,8 +1,9 @@
 import chai, { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { Contract, Wallet } from 'ethers';
+import { Contract, TransactionReceipt, Wallet } from 'ethers';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
+import sinon from 'sinon';
 import { RailgunEngine } from '../railgun-engine';
 import { abi as erc20Abi } from '../test/test-erc20-abi.test';
 import { config } from '../test/config.test';
@@ -21,13 +22,21 @@ import {
   testArtifactsGetter,
 } from '../test/helper.test';
 import { ShieldNoteERC20 } from '../note/erc20/shield-note-erc20';
-import { ByteLength, formatToByteLength, hexToBigInt, hexToBytes, randomHex } from '../utils/bytes';
+import {
+  ByteLength,
+  formatToByteLength,
+  hexToBigInt,
+  hexToBytes,
+  nToHex,
+  randomHex,
+} from '../utils/bytes';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import {
   CommitmentType,
   LegacyGeneratedCommitment,
   NFTTokenData,
   OutputType,
+  RailgunTransaction,
   TokenType,
 } from '../models/formatted-types';
 import { SnarkJSGroth16 } from '../prover/prover';
@@ -46,6 +55,17 @@ import { createPollingJsonRpcProviderForListeners } from '../provider/polling-ut
 import { isDefined } from '../utils/is-defined';
 import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
+import { POI, POIListType } from '../poi/poi';
+import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-interface.test';
+import { hashBoundParams } from '../transaction/bound-params';
+import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
+import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
+import { POIEngineProofInputs, POIEngineProofInputsWithListPOIData } from '../models/poi-types';
+import { getBlindedCommitmentForShield } from '../poi/blinded-commitment';
+import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
+import { getDummyPOIProofInputs } from '../test/test-poi-proof.test';
+import { ShieldNote } from '../note';
+import { TransactionStruct } from '../models';
 
 chai.use(chaiAsPromised);
 
@@ -59,6 +79,7 @@ let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 let utxoMerkletree: UTXOMerkletree;
+let txidMerkletree: RailgunTxidMerkletree;
 let tokenAddress: string;
 let railgunSmartWalletContract: RailgunSmartWalletContract;
 
@@ -68,10 +89,13 @@ const nftAddress = config.contracts.testERC721;
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-const shieldTestTokens = async (railgunAddress: string, value: bigint) => {
+const shieldTestTokens = async (
+  railgunAddress: string,
+  value: bigint,
+): Promise<ShieldNoteERC20> => {
   const mpk = RailgunEngine.decodeAddress(railgunAddress).masterPublicKey;
   const receiverViewingPublicKey = wallet.getViewingKeyPair().pubkey;
-  const random = randomHex(16);
+  const random = '67c600e777b86d3a1e72a53092e9fe85';
   const shield = new ShieldNoteERC20(mpk, random, value, await token.getAddress());
 
   const shieldPrivateKey = hexToBytes(randomHex(32));
@@ -86,6 +110,97 @@ const shieldTestTokens = async (railgunAddress: string, value: bigint) => {
     tx.wait(),
     promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out scanning after test token shield'),
   ]);
+  return shield;
+};
+
+const generateAndVerifyPOI = async (
+  shield: ShieldNoteERC20,
+  transactReceipt: TransactionReceipt,
+  transactions: TransactionStruct[],
+  expectedProofInputs: POIEngineProofInputs,
+  expectedBlindedCommitmentsOut: string[],
+) => {
+  const submitPOISpy = sinon.spy(TestPOINodeInterface.prototype, 'generateAndSubmitPOI');
+
+  try {
+    // No railgunTxid yet - no POI submitted.
+    await wallet.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+    expect(submitPOISpy.getCalls()).to.deep.equal([]);
+
+    const { blockNumber } = transactReceipt;
+
+    const railgunTransaction: RailgunTransaction = {
+      graphID: '0x01',
+      commitments: transactions[0].commitments as string[],
+      nullifiers: transactions[0].nullifiers as string[],
+      boundParamsHash: nToHex(hashBoundParams(transactions[0].boundParams), ByteLength.UINT_256),
+      blockNumber,
+    };
+    const railgunTransactionWithTxid = createRailgunTransactionWithID(railgunTransaction);
+    await engine.handleNewRailgunTransactions(chain, [railgunTransactionWithTxid]);
+    const storedNullifier = await utxoMerkletree.getStoredNullifierData(
+      transactions[0].nullifiers[0] as string,
+    );
+    expect(storedNullifier).to.deep.equal({
+      blockNumber,
+      nullifier: transactions[0].nullifiers[0].slice(2),
+      treeNumber: 0,
+      txid: transactReceipt?.hash.slice(2) ?? 'N/A',
+      spentRailgunTxid: railgunTransactionWithTxid.hash,
+    });
+
+    await wallet.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+
+    const calls = submitPOISpy.getCalls();
+    expect(calls.length).to.equal(1);
+
+    const firstCallArgs = submitPOISpy.getCalls()[0].args;
+
+    const shieldCommitment = nToHex(
+      ShieldNote.getShieldNoteHash(
+        shield.notePublicKey,
+        shield.tokenHash,
+        BigInt('109725000000000000000000'),
+      ),
+      ByteLength.UINT_256,
+    );
+    const blindedCommitmentForShield = getBlindedCommitmentForShield(
+      shieldCommitment,
+      shield.notePublicKey,
+      getShieldRailgunTxid(0, 0),
+    );
+    expect(blindedCommitmentForShield).to.equal(
+      '0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2',
+    );
+
+    const expectedArgs: [
+      chain: Chain,
+      listKey: string,
+      proofInputs: POIEngineProofInputs,
+      blindedCommitmentsOut: string[],
+      txidMerklerootIndex: number,
+      railgunTransactionBlockNumber: number,
+    ] = [
+      chain,
+      MOCK_LIST_KEY,
+      expectedProofInputs,
+      expectedBlindedCommitmentsOut,
+      0, // txid merkleroot index
+      blockNumber,
+    ];
+
+    expect(firstCallArgs).to.deep.equal(expectedArgs);
+
+    // Generate and verify POI proof with snarkjs
+    const proofInputs: POIEngineProofInputs = expectedArgs[2];
+    const blindedCommitmentsOut: string[] = expectedArgs[3];
+    const fullProofInputs: POIEngineProofInputsWithListPOIData =
+      getDummyPOIProofInputs(proofInputs);
+    await engine.prover.provePOI(fullProofInputs, blindedCommitmentsOut, () => {});
+  } catch (err) {
+    submitPOISpy.restore();
+    throw err;
+  }
 };
 
 describe('RailgunEngine', function test() {
@@ -104,6 +219,8 @@ describe('RailgunEngine', function test() {
       undefined, // skipMerkletreeScans
     );
     engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
+
+    POI.init([{ key: MOCK_LIST_KEY, type: POIListType.Gather }], new TestPOINodeInterface());
 
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
@@ -140,6 +257,7 @@ describe('RailgunEngine', function test() {
     );
     await engine.scanHistory(chain);
     utxoMerkletree = engine.utxoMerkletrees[chain.type][chain.id];
+    txidMerkletree = engine.railgunTxidMerkletrees[chain.type][chain.id];
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
   });
 
@@ -285,145 +403,204 @@ describe('RailgunEngine', function test() {
     expect(walletDetailsCleared.treeScannedHeights.length).to.equal(0);
   });
 
-  it('[HH] Should shield, unshield and update balance, and pull formatted spend/receive transaction history', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
-      this.skip();
-      return;
-    }
+  it.only(
+    '[HH] Should shield, unshield w/ relayer and update balance, generate POIs, and pull formatted spend/receive transaction history',
+    async function run() {
+      if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+        this.skip();
+        return;
+      }
 
-    const initialBalance = await wallet.getBalance(chain, tokenAddress);
-    expect(initialBalance).to.equal(undefined);
+      const initialBalance = await wallet.getBalance(chain, tokenAddress);
+      expect(initialBalance).to.equal(undefined);
 
-    const address = wallet.getAddress(chain);
-    await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
+      const address = wallet.getAddress(chain);
+      const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalance(chain, tokenAddress);
-    expect(balance).to.equal(BigInt('109725000000000000000000'));
+      const balance = await wallet.getBalance(chain, tokenAddress);
+      expect(balance).to.equal(BigInt('109725000000000000000000'));
 
-    const tokenData = getTokenDataERC20(tokenAddress);
+      const tokenData = getTokenDataERC20(tokenAddress);
 
-    // Create transaction
-    const transactionBatch = new TransactionBatch(chain);
-    transactionBatch.addUnshieldData({
-      toAddress: ethersWallet.address,
-      value: BigInt(300) * DECIMALS_18,
-      tokenData,
-    });
-
-    // Add output for mock Relayer
-    transactionBatch.addOutput(
-      TransactNote.createTransfer(
-        wallet2.addressKeys,
-        wallet.addressKeys,
-        randomHex(16),
-        1n,
+      // Create transaction
+      const transactionBatch = new TransactionBatch(chain);
+      transactionBatch.addUnshieldData({
+        toAddress: ethersWallet.address,
+        value: BigInt(300) * DECIMALS_18,
         tokenData,
-        wallet.getViewingKeyPair(),
-        false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
-        undefined, // memoText
-      ),
-    );
+      });
 
-    const transactions = await transactionBatch.generateTransactions(
-      engine.prover,
-      wallet,
-      testEncryptionKey,
-      () => {},
-    );
-    const transact = await railgunSmartWalletContract.transact(transactions);
+      // Add output for mock Relayer
+      transactionBatch.addOutput(
+        TransactNote.createTransfer(
+          wallet2.addressKeys,
+          wallet.addressKeys,
+          randomHex(16),
+          1n,
+          tokenData,
+          wallet.getViewingKeyPair(),
+          false, // showSenderAddressToRecipient
+          OutputType.RelayerFee,
+          undefined, // memoText
+        ),
+      );
 
-    const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
-    await transactTx.wait();
-    await Promise.all([
-      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
-    ]);
+      const transactions = await transactionBatch.generateTransactions(
+        engine.prover,
+        wallet,
+        testEncryptionKey,
+        () => {},
+      );
+      const transact = await railgunSmartWalletContract.transact(transactions);
 
-    // BALANCE = shielded amount - 300(decimals) - 1
-    const newBalance = await wallet.getBalance(chain, tokenAddress);
-    expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
+      const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
+      const transactReceipt = await transactTx.wait();
+      if (!transactReceipt) {
+        throw new Error('Failed to get transact receipt');
+      }
+      await Promise.all([
+        promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+        promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
+      ]);
 
-    const newBalance2 = await wallet2.getBalance(chain, tokenAddress);
-    expect(newBalance2).to.equal(BigInt(1));
+      // BALANCE = shielded amount - 300(decimals) - 1
+      const newBalance = await wallet.getBalance(chain, tokenAddress);
+      expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
 
-    // check the transactions log
-    const history = await wallet.getTransactionHistory(chain, undefined);
-    expect(history.length).to.equal(2);
+      const newBalance2 = await wallet2.getBalance(chain, tokenAddress);
+      expect(newBalance2).to.equal(BigInt(1));
 
-    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+      // TODO: Generate POI
+      // await generateAndVerifyPOI(
+      //   shield,
+      //   transactReceipt,
+      //   transactions,
+      //   {
+      //     anyRailgunTxidMerklerootAfterTransaction:
+      //       '1b46a38136938935cd77b79ae27d5267ee358a30f087b7dc75038288ccfaa2f9',
+      //     blindedCommitmentsIn: [
+      //       '0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2',
+      //     ],
+      //     boundParamsHash: '0a4e7bed8287c629fd064665543dc71fdc09b0ab9df7d556f24a1f2f9f018dc7',
+      //     commitmentsOut: ['0x007aaf0cbee05066820873170e293e44df6766c29da69ac46fd05d4ff2c0a225'],
+      //     creationTxidsIn: ['0x0000000000000000000000000000000000000000000000000000000000000000'],
+      //     npksOut: [1390849295786071768276380950238675083608645509734n],
+      //     nullifiers: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee'],
+      //     nullifyingKey:
+      //       8368299126798249740586535953124199418524409103803955764525436743456763691384n,
+      //     railgunTxidMerkleProofIndices:
+      //       '0000000000000000000000000000000000000000000000000000000000000000',
+      //     railgunTxidMerkleProofPathElements: [
+      //       '0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc',
+      //       '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
+      //       '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
+      //       '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
+      //       '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
+      //       '1437bb465994e0453357c17a676b9fdba554e215795ebc17ea5012770dfb77c7',
+      //       '12359ef9572912b49f44556b8bbbfa69318955352f54cfa35cb0f41309ed445a',
+      //       '2dc656dadc82cf7a4707786f4d682b0f130b6515f7927bde48214d37ec25a46c',
+      //       '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
+      //       '244ae3b19397e842778b254cd15c037ed49190141b288ff10eb1390b34dc2c31',
+      //       '0ca2b107491c8ca6e5f7e22403ea8529c1e349a1057b8713e09ca9f5b9294d46',
+      //       '18593c75a9e42af27b5e5b56b99c4c6a5d7e7d6e362f00c8e3f69aeebce52313',
+      //       '17aca915b237b04f873518947a1f440f0c1477a6ac79299b3be46858137d4bfb',
+      //       '2726c22ad3d9e23414887e8233ee83cc51603f58c48a9c9e33cb1f306d4365c0',
+      //       '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
+      //       '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
+      //     ],
+      //     randomsIn: ['67c600e777b86d3a1e72a53092e9fe85'],
+      //     spendingPublicKey: [
+      //       15684838006997671713939066069845237677934334329285343229142447933587909549584n,
+      //       11878614856120328179849762231924033298788609151532558727282528569229552954628n,
+      //     ],
+      //     token: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+      //     utxoPositionsIn: [0],
+      //     valuesIn: [109725000000000000000000n],
+      //     valuesOut: [109725000000000000000000n],
+      //   },
+      //   ['0x2caf9c85547f79e49f36f4860ed404a790acabfb3f4665495d173016009c7810'],
+      // );
 
-    // Make sure nullifier events map to completed txid.
-    const nullifiers = transactions.map((transaction) => transaction.nullifiers).flat() as string[];
-    const completedTxid = await engine.getCompletedTxidFromNullifiers(chain, nullifiers);
-    expect(completedTxid).to.equal(transactTx.hash);
+      // check the transactions log
+      const history = await wallet.getTransactionHistory(chain, undefined);
+      expect(history.length).to.equal(2);
 
-    // Check first output: Shield (receive only).
-    expect(history[0].receiveTokenAmounts).deep.eq([
-      {
+      const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+
+      // Make sure nullifier events map to completed txid.
+      const nullifiers = transactions
+        .map((transaction) => transaction.nullifiers)
+        .flat() as string[];
+      const completedTxid = await engine.getCompletedTxidFromNullifiers(chain, nullifiers);
+      expect(completedTxid).to.equal(transactTx.hash);
+
+      // Check first output: Shield (receive only).
+      expect(history[0].receiveTokenAmounts).deep.eq([
+        {
+          tokenData: getTokenDataERC20(tokenAddress),
+          tokenHash: tokenFormatted,
+          amount: BigInt('109725000000000000000000'),
+          memoText: undefined,
+          senderAddress: undefined,
+          shieldFee: '275000000000000000000',
+        },
+      ]);
+      expect(history[0].transferTokenAmounts).deep.eq([]);
+      expect(history[0].relayerFeeTokenAmount).eq(undefined);
+      expect(history[0].changeTokenAmounts).deep.eq([]);
+      expect(history[0].unshieldTokenAmounts).deep.eq([]);
+
+      // Check second output: Unshield (relayer fee + change).
+      // NOTE: No receive token amounts should be logged by history.
+      expect(history[1].receiveTokenAmounts).deep.eq(
+        [],
+        "Receive amount should be filtered out - it's the same as change output.",
+      );
+      expect(history[1].transferTokenAmounts).deep.eq([]);
+      expect(history[1].relayerFeeTokenAmount).deep.eq({
         tokenData: getTokenDataERC20(tokenAddress),
         tokenHash: tokenFormatted,
-        amount: BigInt('109725000000000000000000'),
-        memoText: undefined,
-        senderAddress: undefined,
-        shieldFee: '275000000000000000000',
-      },
-    ]);
-    expect(history[0].transferTokenAmounts).deep.eq([]);
-    expect(history[0].relayerFeeTokenAmount).eq(undefined);
-    expect(history[0].changeTokenAmounts).deep.eq([]);
-    expect(history[0].unshieldTokenAmounts).deep.eq([]);
-
-    // Check second output: Unshield (relayer fee + change).
-    // NOTE: No receive token amounts should be logged by history.
-    expect(history[1].receiveTokenAmounts).deep.eq(
-      [],
-      "Receive amount should be filtered out - it's the same as change output.",
-    );
-    expect(history[1].transferTokenAmounts).deep.eq([]);
-    expect(history[1].relayerFeeTokenAmount).deep.eq({
-      tokenData: getTokenDataERC20(tokenAddress),
-      tokenHash: tokenFormatted,
-      amount: BigInt(1),
-      noteAnnotationData: {
-        outputType: OutputType.RelayerFee,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        senderRandom: history[1].relayerFeeTokenAmount!.noteAnnotationData!.senderRandom,
-        walletSource: 'test wallet',
-      },
-      memoText: undefined,
-    });
-    expect(history[1].changeTokenAmounts).deep.eq([
-      {
-        tokenData: getTokenDataERC20(tokenAddress),
-        tokenHash: tokenFormatted,
-        amount: BigInt('109424999999999999999999'),
+        amount: BigInt(1),
         noteAnnotationData: {
-          outputType: OutputType.Change,
-          senderRandom: MEMO_SENDER_RANDOM_NULL,
+          outputType: OutputType.RelayerFee,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          senderRandom: history[1].relayerFeeTokenAmount!.noteAnnotationData!.senderRandom,
           walletSource: 'test wallet',
         },
         memoText: undefined,
-      },
-    ]);
-    expect(history[1].unshieldTokenAmounts).deep.eq([
-      {
-        tokenData: getTokenDataERC20(tokenAddress),
-        tokenHash: tokenFormatted,
-        amount: BigInt('299250000000000000000'), // 300 minus fee
-        recipientAddress: ethersWallet.address,
-        memoText: undefined,
-        senderAddress: undefined,
-        unshieldFee: '750000000000000000',
-      },
-    ]);
+      });
+      expect(history[1].changeTokenAmounts).deep.eq([
+        {
+          tokenData: getTokenDataERC20(tokenAddress),
+          tokenHash: tokenFormatted,
+          amount: BigInt('109424999999999999999999'),
+          noteAnnotationData: {
+            outputType: OutputType.Change,
+            senderRandom: MEMO_SENDER_RANDOM_NULL,
+            walletSource: 'test wallet',
+          },
+          memoText: undefined,
+        },
+      ]);
+      expect(history[1].unshieldTokenAmounts).deep.eq([
+        {
+          tokenData: getTokenDataERC20(tokenAddress),
+          tokenHash: tokenFormatted,
+          amount: BigInt('299250000000000000000'), // 300 minus fee
+          recipientAddress: ethersWallet.address,
+          memoText: undefined,
+          senderAddress: undefined,
+          unshieldFee: '750000000000000000',
+        },
+      ]);
 
-    // Check that no history exists for a high starting block.
-    const historyHighStartingBlock = await wallet.getTransactionHistory(chain, 10000000);
-    expect(historyHighStartingBlock.length).to.equal(0);
-  }).timeout(90000);
+      // Check that no history exists for a high starting block.
+      const historyHighStartingBlock = await wallet.getTransactionHistory(chain, 10000000);
+      expect(historyHighStartingBlock.length).to.equal(0);
+    },
+  ).timeout(90000);
 
-  it('[HH] Should shield, max-unshield without relayer, and pull formatted spend/receive transaction history', async function run() {
+  it('[HH] Should shield, max-unshield without relayer, generate POIs, and pull formatted spend/receive transaction history', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
@@ -433,7 +610,7 @@ describe('RailgunEngine', function test() {
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
-    await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
+    const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
     const balance = await wallet.getBalance(chain, tokenAddress);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
@@ -460,13 +637,67 @@ describe('RailgunEngine', function test() {
     const transact = await railgunSmartWalletContract.transact(transactions);
 
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
-    await Promise.all([
+    const [transactReceipt] = await Promise.all([
       transactTx.wait(),
       promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
     ]);
+    if (!transactReceipt) {
+      throw new Error('No transaction receipt');
+    }
 
     const newBalance = await wallet.getBalance(chain, tokenAddress);
     expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
+
+    // Generate POI
+    await generateAndVerifyPOI(
+      shield,
+      transactReceipt,
+      transactions,
+      {
+        anyRailgunTxidMerklerootAfterTransaction:
+          '1b46a38136938935cd77b79ae27d5267ee358a30f087b7dc75038288ccfaa2f9',
+        blindedCommitmentsIn: [
+          '0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2',
+        ],
+        boundParamsHash: '0a4e7bed8287c629fd064665543dc71fdc09b0ab9df7d556f24a1f2f9f018dc7',
+        commitmentsOut: ['0x007aaf0cbee05066820873170e293e44df6766c29da69ac46fd05d4ff2c0a225'],
+        creationTxidsIn: ['0x0000000000000000000000000000000000000000000000000000000000000000'],
+        npksOut: [1390849295786071768276380950238675083608645509734n],
+        nullifiers: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee'],
+        nullifyingKey:
+          8368299126798249740586535953124199418524409103803955764525436743456763691384n,
+        railgunTxidMerkleProofIndices:
+          '0000000000000000000000000000000000000000000000000000000000000000',
+        railgunTxidMerkleProofPathElements: [
+          '0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc',
+          '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
+          '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
+          '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
+          '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
+          '1437bb465994e0453357c17a676b9fdba554e215795ebc17ea5012770dfb77c7',
+          '12359ef9572912b49f44556b8bbbfa69318955352f54cfa35cb0f41309ed445a',
+          '2dc656dadc82cf7a4707786f4d682b0f130b6515f7927bde48214d37ec25a46c',
+          '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
+          '244ae3b19397e842778b254cd15c037ed49190141b288ff10eb1390b34dc2c31',
+          '0ca2b107491c8ca6e5f7e22403ea8529c1e349a1057b8713e09ca9f5b9294d46',
+          '18593c75a9e42af27b5e5b56b99c4c6a5d7e7d6e362f00c8e3f69aeebce52313',
+          '17aca915b237b04f873518947a1f440f0c1477a6ac79299b3be46858137d4bfb',
+          '2726c22ad3d9e23414887e8233ee83cc51603f58c48a9c9e33cb1f306d4365c0',
+          '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
+          '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
+        ],
+        randomsIn: ['67c600e777b86d3a1e72a53092e9fe85'],
+        spendingPublicKey: [
+          15684838006997671713939066069845237677934334329285343229142447933587909549584n,
+          11878614856120328179849762231924033298788609151532558727282528569229552954628n,
+        ],
+        token: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+        utxoPositionsIn: [0],
+        valuesIn: [109725000000000000000000n],
+        valuesOut: [109725000000000000000000n],
+      },
+      ['0x2caf9c85547f79e49f36f4860ed404a790acabfb3f4665495d173016009c7810'],
+    );
 
     // check the transactions log
     const history = await wallet.getTransactionHistory(chain, undefined);
@@ -932,6 +1163,8 @@ describe('RailgunEngine', function test() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
     }
+    await txidMerkletree.clearLeavesFromDB();
+
     await engine.unload();
     await provider.send('evm_revert', [snapshot]);
   });

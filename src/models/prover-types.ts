@@ -94,14 +94,13 @@ export type NativeProverFormattedJsonInputsRailgun = {
 
 export type PublicInputsPOI = {
   anyRailgunTxidMerklerootAfterTransaction: bigint;
-  poiMerkleroots: bigint[];
   blindedCommitmentsOut: bigint[];
+  poiMerkleroots: bigint[];
 };
 
 export type FormattedCircuitInputsPOI = {
   // Public inputs
   anyRailgunTxidMerklerootAfterTransaction: bigint;
-  blindedCommitmentsOut: bigint[];
   poiMerkleroots: bigint[];
 
   // Private inputs
@@ -153,8 +152,5 @@ export type NativeProverFormattedJsonInputsPOI = {
 export type ArtifactGetter = {
   assertArtifactExists: (nullifiers: number, commitments: number) => void;
   getArtifacts: (publicInputs: PublicInputsRailgun) => Promise<Artifact>;
-};
-
-export type ArtifactGetterPOI = {
-  getArtifacts: () => Promise<Artifact>;
+  getArtifactsPOI: () => Promise<Artifact>;
 };
