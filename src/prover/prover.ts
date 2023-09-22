@@ -16,6 +16,7 @@ import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
 import { POIEngineProofInputsWithListPOIData } from '../models/poi-types';
 import { getArtifactsForPOI } from './poi-artifacts';
+import { ProofCachePOI } from './proof-cache-poi';
 
 type NativeProveRailgun = (
   circuitId: number,
@@ -332,12 +333,13 @@ export class Prover {
     );
     progressCallback(finalProgressProof);
 
-    ProofCache.store(unprovedTransactionInputs, proof);
-
     // Throw if proof is invalid
     if (!(await this.verifyRailgunProof(publicInputs, proof, artifacts))) {
       throw new Error('Proof verification failed');
     }
+
+    ProofCache.store(unprovedTransactionInputs, proof);
+
     progressCallback(100);
 
     // Return proof with inputs
@@ -355,7 +357,22 @@ export class Prover {
       throw new Error('Requires groth16 full prover implementation');
     }
 
-    // TODO: Add a proof cache?
+    const formattedInputs = Prover.formatPOIInputs(inputs);
+
+    const publicInputs: PublicInputsPOI = {
+      anyRailgunTxidMerklerootAfterTransaction:
+        formattedInputs.anyRailgunTxidMerklerootAfterTransaction,
+      blindedCommitmentsOut: formattedInputs.blindedCommitmentsOut,
+      poiMerkleroots: formattedInputs.poiMerkleroots,
+    };
+
+    const existingProof = ProofCachePOI.get(
+      inputs.blindedCommitmentsIn,
+      inputs.blindedCommitmentsOut,
+    );
+    if (existingProof) {
+      return { proof: existingProof, publicInputs };
+    }
 
     progressCallback(5);
 
@@ -363,8 +380,6 @@ export class Prover {
     if (!artifacts.wasm && !artifacts.dat) {
       throw new Error('Requires WASM or DAT prover artifact');
     }
-
-    const formattedInputs = Prover.formatPOIInputs(inputs);
 
     // Generate proof: Progress from 20 - 99%
     const initialProgressProof = 20;
@@ -384,17 +399,13 @@ export class Prover {
     );
     progressCallback(finalProgressProof);
 
-    const publicInputs: PublicInputsPOI = {
-      anyRailgunTxidMerklerootAfterTransaction:
-        formattedInputs.anyRailgunTxidMerklerootAfterTransaction,
-      blindedCommitmentsOut: formattedInputs.blindedCommitmentsOut,
-      poiMerkleroots: formattedInputs.poiMerkleroots,
-    };
-
     // Throw if proof is invalid
     if (!(await this.verifyPOIProof(publicInputs, proof, artifacts))) {
       throw new Error('Proof verification failed');
     }
+
+    ProofCachePOI.store(inputs.blindedCommitmentsIn, inputs.blindedCommitmentsOut, proof);
+
     progressCallback(100);
 
     // Return proof with inputs

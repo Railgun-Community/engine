@@ -37,8 +37,24 @@ function listArtifacts() {
   return artifacts;
 }
 
+function getArtifactsPOI() {
+  cache.poi ??= [];
+
+  if (!cache.poi) {
+    cache.poi = {
+      zkey: decompress(fs.readFileSync(`${__dirname}/poi/zkey.br`)),
+      wasm: decompress(fs.readFileSync(`${__dirname}/poi/wasm.br`)),
+      // vkey: require(`${__dirname}/poi/vkey`),
+      vkey: {}, // TODO
+    };
+  }
+
+  return cache.poi;
+}
+
 module.exports = {
   getArtifact,
+  getArtifactsPOI,
   getVKey,
   listArtifacts,
 };

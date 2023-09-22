@@ -14,7 +14,7 @@ import {
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
-import { ArtifactGetter, PublicInputsRailgun } from '../models/prover-types';
+import { ArtifactGetter, ArtifactGetterPOI, PublicInputsRailgun } from '../models/prover-types';
 import { mnemonicToPrivateKey } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
@@ -55,9 +55,24 @@ const assertTestNodeArtifactExists = (nullifiers: number, commitments: number): 
   }
 };
 
+const testNodeArtifactGetterPOI = async (): Promise<Artifact> => {
+  try {
+    return {
+      ...artifacts.getArtifactPOI(),
+      dat: undefined,
+    };
+  } catch (err) {
+    throw new Error(`Could not find lite artifact for tests: POI`);
+  }
+};
+
 export const testArtifactsGetter: ArtifactGetter = {
   getArtifacts: testNodeArtifactGetter,
   assertArtifactExists: assertTestNodeArtifactExists,
+};
+
+export const testArtifactsGetterPOI: ArtifactGetterPOI = {
+  getArtifacts: testNodeArtifactGetterPOI,
 };
 
 export const mockQuickSyncEvents: QuickSyncEvents = (

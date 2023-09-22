@@ -1,5 +1,5 @@
-export type Protocols = "groth16";
-export type Curves = "bn128";
+export type Protocols = 'groth16';
+export type Curves = 'bn128';
 
 export interface VKey {
   protocol: Protocols;
@@ -28,4 +28,6 @@ declare function getArtifact(nullifiers: number, commitments: number): Artifact;
 declare function getVKey(nullifiers: number, commitments: number): VKey;
 declare function listArtifacts(): ArtifactConfig[];
 
-export { getArtifact, getVKey, listArtifacts };
+declare function getArtifactPOI(): Artifact;
+
+export { getArtifact, getVKey, listArtifacts, getArtifactPOI };

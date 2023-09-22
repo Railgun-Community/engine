@@ -154,3 +154,7 @@ export type ArtifactGetter = {
   assertArtifactExists: (nullifiers: number, commitments: number) => void;
   getArtifacts: (publicInputs: PublicInputsRailgun) => Promise<Artifact>;
 };
+
+export type ArtifactGetterPOI = {
+  getArtifacts: () => Promise<Artifact>;
+};
