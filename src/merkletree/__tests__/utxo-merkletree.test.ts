@@ -165,7 +165,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -176,7 +176,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -187,7 +187,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -198,7 +198,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -209,7 +209,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -220,7 +220,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
       {
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
@@ -231,7 +231,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
       },
     ]);
     await merkletree.updateTreesFromWriteQueue();
@@ -250,7 +250,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -269,7 +269,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -280,7 +280,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -291,7 +291,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -313,7 +313,7 @@ describe('UTXO Merkletree', () => {
           blockNumber: 0,
           utxoTree: 0,
           utxoIndex: 0,
-          creationRailgunTxid: undefined,
+          railgunTxid: undefined,
           timestamp: undefined,
         },
       ]),
@@ -326,7 +326,7 @@ describe('UTXO Merkletree', () => {
           blockNumber: 0,
           utxoTree: 0,
           utxoIndex: 0,
-          creationRailgunTxid: undefined,
+          railgunTxid: undefined,
           timestamp: undefined,
         },
       ]),
@@ -342,7 +342,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -373,7 +373,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -427,8 +427,8 @@ describe('UTXO Merkletree', () => {
       utxoIndex: 0,
     });
 
-    expect(await merkletree.getCommitmentsForHashes(['04', '1111111'])).to.deep.equal({
-      '04': {
+    expect(await merkletree.getCommitmentsForHashes(['0x04', '0x1111111'])).to.deep.equal({
+      '0x04': {
         commitmentType: CommitmentType.LegacyGeneratedCommitment,
         hash: '04',
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
@@ -442,7 +442,7 @@ describe('UTXO Merkletree', () => {
         utxoTree: 0,
         utxoIndex: 0,
       },
-      '1111111': undefined,
+      '0x1111111': undefined,
     });
   }).timeout(1000);
 
@@ -462,7 +462,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -473,7 +473,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -484,7 +484,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -495,7 +495,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -506,7 +506,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -517,7 +517,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -547,7 +547,7 @@ describe('UTXO Merkletree', () => {
         '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
         '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
       ],
-      indices: '03',
+      indices: '0000000000000000000000000000000000000000000000000000000000000003',
       root: '215b6e027da417c086db7e55d19c6d2cc270a0c2d54a2b2cd9ae8d40d0c250b3',
     });
 
@@ -570,7 +570,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       })),
     );
@@ -636,7 +636,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -647,7 +647,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -658,7 +658,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -669,7 +669,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -680,7 +680,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
       {
@@ -691,7 +691,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ];
@@ -706,11 +706,9 @@ describe('UTXO Merkletree', () => {
   }).timeout(1000);
 
   it('Should store nullifiers', async () => {
-    expect(await merkletree.getStoredNullifierData('00')).to.equal(undefined);
-    await merkletree.nullify([
-      { nullifier: '00', treeNumber: 0, txid: '01', blockNumber: 0, spentRailgunTxid: undefined },
-    ]);
-    expect((await merkletree.getStoredNullifierData('00'))?.txid).to.equal('01');
+    expect(await merkletree.getNullifierTxid('00')).to.equal(undefined);
+    await merkletree.nullify([{ nullifier: '00', treeNumber: 0, txid: '01', blockNumber: 0 }]);
+    expect(await merkletree.getNullifierTxid('00')).to.equal('01');
   }).timeout(1000);
 
   it('Should store and retrieve unshield events', async () => {
@@ -761,6 +759,19 @@ describe('UTXO Merkletree', () => {
       blindedCommitment: undefined,
     };
     await merkletree.addUnshieldEvents([unshieldA1, unshieldB1, unshieldB2]);
+
+    delete unshieldA1.railgunTxid;
+    delete unshieldA1.poisPerList;
+    delete unshieldA1.blindedCommitment;
+
+    delete unshieldB1.railgunTxid;
+    delete unshieldB1.poisPerList;
+    delete unshieldB1.blindedCommitment;
+
+    delete unshieldB2.railgunTxid;
+    delete unshieldB2.poisPerList;
+    delete unshieldB2.blindedCommitment;
+
     expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA1]);
     expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldB1, unshieldB2]);
   });
@@ -781,7 +792,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ]);
@@ -808,7 +819,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        creationRailgunTxid: undefined,
+        railgunTxid: undefined,
         timestamp: undefined,
       },
     ]);

@@ -163,7 +163,7 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-restricted-syntax
       for (const leaf of leaves) {
         const railgunTxid = commitmentsToRailgunTxids[leaf.hash];
-        (leaf as TransactCommitment | LegacyEncryptedCommitment).creationRailgunTxid = railgunTxid;
+        (leaf as TransactCommitment | LegacyEncryptedCommitment).railgunTxid = railgunTxid;
       }
     }
 
@@ -197,18 +197,6 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
-
-    if (!this.isPOINode) {
-      // Get railgun txid per nullifier
-      const railgunTxidMerkletree = this.getRailgunTxidMerkletreeForChain(chain);
-      const nullifiersToRailgunTxids = await railgunTxidMerkletree.getRailgunTxidsForNullifiers(
-        nullifiers.map((nullifier) => nullifier.nullifier),
-      );
-      nullifiers.forEach((nullifier) => {
-        // eslint-disable-next-line no-param-reassign
-        nullifier.spentRailgunTxid = nullifiersToRailgunTxids[nullifier.nullifier];
-      });
-    }
 
     nullifiers.forEach((nullifier) => {
       // eslint-disable-next-line no-param-reassign
@@ -589,10 +577,7 @@ class RailgunEngine extends EventEmitter {
     // TODO: Remove after V3
     await Promise.all(
       railgunTransactionsWithTxids.map(async (railgunTransactionWithTxid) => {
-        await this.updateCommitmentsNullifiersForRailgunTransaction(
-          chain,
-          railgunTransactionWithTxid,
-        );
+        await this.updateCommitmentsForRailgunTransaction(chain, railgunTransactionWithTxid);
       }),
     );
 
@@ -601,11 +586,11 @@ class RailgunEngine extends EventEmitter {
     await txidMerkletree.updateTreesFromWriteQueue();
   }
 
-  async updateCommitmentsNullifiersForRailgunTransaction(
+  async updateCommitmentsForRailgunTransaction(
     chain: Chain,
     railgunTransaction: RailgunTransactionWithTxid,
   ): Promise<void> {
-    const { commitments: commitmentHashes, nullifiers, hash: railgunTxid } = railgunTransaction;
+    const { commitments: commitmentHashes, hash: railgunTxid } = railgunTransaction;
 
     const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
 
@@ -614,22 +599,12 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const commitmentHash of commitmentHashes) {
       const commitment = hashesToCommitment[commitmentHash];
-      if (
-        commitment &&
-        isSentCommitment(commitment) &&
-        !isDefined(commitment.creationRailgunTxid)
-      ) {
-        commitment.creationRailgunTxid = railgunTxid;
+      if (commitment && isSentCommitment(commitment) && !isDefined(commitment.railgunTxid)) {
+        commitment.railgunTxid = railgunTxid;
 
         // eslint-disable-next-line no-await-in-loop
         await utxoMerkletree.updateData(commitment.utxoTree, commitment.utxoIndex, commitment);
       }
-    }
-
-    // eslint-disable-next-line no-restricted-syntax
-    for (const nullifier of nullifiers) {
-      // eslint-disable-next-line no-await-in-loop
-      await utxoMerkletree.updatedStoredNullifierSpentRailgunTxid(nullifier, railgunTxid);
     }
   }
 
@@ -1015,7 +990,7 @@ class RailgunEngine extends EventEmitter {
     const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
 
     const firstNullifier = nullifiers[0];
-    const firstTxid = (await utxoMerkletree.getStoredNullifierData(firstNullifier))?.txid;
+    const firstTxid = await utxoMerkletree.getNullifierTxid(firstNullifier);
     if (!isDefined(firstTxid)) {
       return undefined;
     }
@@ -1023,7 +998,7 @@ class RailgunEngine extends EventEmitter {
     const otherTxids: Optional<string>[] = await Promise.all(
       nullifiers
         .slice(1)
-        .map(async (nullifier) => (await utxoMerkletree.getStoredNullifierData(nullifier))?.txid),
+        .map(async (nullifier) => await utxoMerkletree.getNullifierTxid(nullifier)),
     );
 
     const matchingTxids = otherTxids.filter((txid) => txid === firstTxid);

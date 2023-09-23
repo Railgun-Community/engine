@@ -51,7 +51,6 @@ const createMockNote = async (addressData: AddressData, value: bigint) => {
   return TransactNote.createTransfer(
     addressData,
     undefined,
-    randomHex(16),
     value,
     tokenData,
     viewingKeyPair,
@@ -70,7 +69,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     position: MOCK_POSITION,
     tree: 0,
     spendtxid: false,
-    creationRailgunTxid: undefined,
+    railgunTxid: undefined,
     creationPOIs: undefined,
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,

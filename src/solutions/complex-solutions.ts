@@ -62,7 +62,7 @@ const createNullUTXO = (nullNote: TransactNote): TXO => {
     spendtxid: false,
     note: nullNote,
     txid: nullTxid,
-    creationRailgunTxid: undefined,
+    railgunTxid: undefined,
     creationPOIs: undefined,
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,

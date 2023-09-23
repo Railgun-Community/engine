@@ -137,7 +137,7 @@ export type ShieldCommitment = CommitmentShared & {
 export type TransactCommitment = CommitmentShared & {
   commitmentType: CommitmentType.TransactCommitment;
   ciphertext: CommitmentCiphertext;
-  creationRailgunTxid: Optional<string>;
+  railgunTxid: Optional<string>;
 };
 
 export type RailgunTransaction = {
@@ -169,7 +169,6 @@ export type Nullifier = {
   treeNumber: number;
   txid: string;
   blockNumber: number;
-  spentRailgunTxid: Optional<string>;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
@@ -181,7 +180,7 @@ export type StoredReceiveCommitment = {
   decrypted: NoteSerialized | LegacyNoteSerialized;
   senderAddress: Optional<string>;
   commitmentType: CommitmentType;
-  creationRailgunTxid: Optional<string>;
+  railgunTxid: Optional<string>;
   creationPOIs: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
 };
@@ -194,7 +193,7 @@ export type StoredSendCommitment = {
   commitmentType: CommitmentType;
   noteExtraData?: NoteAnnotationData;
   recipientAddress: string;
-  spentRailgunTxid: Optional<string>;
+  railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
 };
@@ -219,7 +218,7 @@ export type LegacyCommitmentCiphertext = {
 export type LegacyEncryptedCommitment = CommitmentShared & {
   commitmentType: CommitmentType.LegacyEncryptedCommitment;
   ciphertext: LegacyCommitmentCiphertext;
-  creationRailgunTxid: Optional<string>;
+  railgunTxid: Optional<string>;
 };
 
 export type CommitmentSummary = {

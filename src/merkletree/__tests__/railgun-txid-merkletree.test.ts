@@ -9,6 +9,7 @@ import {
   createRailgunTransactionWithID,
   getRailgunTransactionID,
 } from '../../transaction/railgun-txid';
+import { ByteLength, nToHex } from '../../utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -112,47 +113,39 @@ describe('Railgun Txid Merkletree', () => {
 
     expect(await merkletree.getTreeLength(0)).to.equal(2);
     expect(await merkletree.getRoot(0)).to.equal(
-      '1081c0077932089cfac896f19df70bdfd6d4daed346afc8779af0f13476a4353',
+      '1868ec3b4c76636f47bb5f7223777d89aae8781a7054889d589c4fcd6c258680',
     );
 
     expect(await merkletree.getHistoricalMerkleroot(0, 0)).to.equal(
-      '18b67a3ae2c2abf315897a8a2f47e9df50ee757e1760b9eeec1ad9272c2dec48',
+      '2a729a5df0ec1d568afa7ad94bb75cb9357c1830bf7ca1df4c8874eee17d55ed',
     );
     expect(await merkletree.getHistoricalMerkleroot(0, 1)).to.equal(
-      '1081c0077932089cfac896f19df70bdfd6d4daed346afc8779af0f13476a4353',
+      '1868ec3b4c76636f47bb5f7223777d89aae8781a7054889d589c4fcd6c258680',
     );
 
     // Ensure stored hash is correct
     const railgunTransaction = await merkletree.getRailgunTransaction(0, 0);
-    const hash: string = getRailgunTransactionID(railgunTransactions[0]).toString();
+    const hash = getRailgunTransactionID(railgunTransactions[0]);
     expect(hash).to.equal(
-      '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      8305326267623773553398872521738978365288303589665440876335688320986102209642n,
     );
     expect(railgunTransaction).to.deep.equal({
       ...railgunTransactions[0],
-      hash,
+      hash: nToHex(hash, ByteLength.UINT_256),
     });
 
-    expect(
-      await merkletree.getRailgunTxidsForNullifiers(['0x03', '0x0103', '0x0213', '0x1111111']),
-    ).to.deep.equal({
-      '0x0103': undefined,
-      '0x0213': undefined,
-      '0x03': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
-      '0x1111111': undefined,
-    });
     expect(
       await merkletree.getRailgunTxidsForCommitments(['0x01', '0x0101', '0x0211', '0x1111111']),
     ).to.deep.equal({
       '0x0101': undefined,
       '0x0211': undefined,
-      '0x01': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      '0x01': '125ca5e8c0dc239d7ba5f6ee07419a845021d31fae0c0c76e47d2866b36d9c6a',
       '0x1111111': undefined,
     });
 
     expect(
       await merkletree.getRailgunTxidCurrentMerkletreeData(
-        '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+        '125ca5e8c0dc239d7ba5f6ee07419a845021d31fae0c0c76e47d2866b36d9c6a',
       ),
     ).to.deep.equal({
       railgunTransaction: {
@@ -161,12 +154,12 @@ describe('Railgun Txid Merkletree', () => {
         nullifiers: ['0x03', '0x04'],
         boundParamsHash: '0x05',
         blockNumber: 0,
-        hash: '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+        hash: '125ca5e8c0dc239d7ba5f6ee07419a845021d31fae0c0c76e47d2866b36d9c6a',
       },
       currentTxidIndexForTree: 1,
       currentMerkleProofForTree: {
         elements: [
-          '11934703375483089280244820234609091536431576513800209926563596616012901678112',
+          '08bc25406535ea4da652623be1a3e9fc6cdcdcdad8d2829623e2ef3fff5882d0',
           '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
           '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
           '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
@@ -183,15 +176,15 @@ describe('Railgun Txid Merkletree', () => {
           '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
           '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
         ],
-        indices: '00',
-        leaf: '17950133044911973828130962356772411646037989291035973150567495873917534644512',
-        root: '1081c0077932089cfac896f19df70bdfd6d4daed346afc8779af0f13476a4353',
+        indices: '0000000000000000000000000000000000000000000000000000000000000000',
+        leaf: '125ca5e8c0dc239d7ba5f6ee07419a845021d31fae0c0c76e47d2866b36d9c6a',
+        root: '1868ec3b4c76636f47bb5f7223777d89aae8781a7054889d589c4fcd6c258680',
       },
     });
 
     expect(
       await merkletree.getRailgunTransactionByTxid(
-        '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+        '125ca5e8c0dc239d7ba5f6ee07419a845021d31fae0c0c76e47d2866b36d9c6a',
       ),
     ).to.deep.equal({
       graphID: '0x00',
@@ -199,7 +192,7 @@ describe('Railgun Txid Merkletree', () => {
       nullifiers: ['0x03', '0x04'],
       boundParamsHash: '0x05',
       blockNumber: 0,
-      hash: '17950133044911973828130962356772411646037989291035973150567495873917534644512',
+      hash: '125ca5e8c0dc239d7ba5f6ee07419a845021d31fae0c0c76e47d2866b36d9c6a',
     });
 
     // Make sure new constructed tree inherits db values
@@ -230,44 +223,27 @@ describe('Railgun Txid Merkletree', () => {
     await merkletree.queueRailgunTransactions(moreRailgunTransactionsWithTxids, undefined);
     await merkletree.updateTreesFromWriteQueue();
 
-    expect(
-      await merkletree.getRailgunTxidsForNullifiers(['0x03', '0x0103', '0x0213', '0x1111111']),
-    ).to.deep.equal({
-      '0x0103': '16202346701867999176730450400871741378312930716998375241294817425983735234446',
-      '0x0213': '13108638026526642281447854845434934239544749734798020789855247093078646267284',
-      '0x03': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
-      '0x1111111': undefined,
-    });
-    expect(
-      await merkletree.getRailgunTxidsForCommitments(['0x01', '0x0101', '0x0211', '0x1111111']),
-    ).to.deep.equal({
-      '0x0101': '16202346701867999176730450400871741378312930716998375241294817425983735234446',
-      '0x0211': '13108638026526642281447854845434934239544749734798020789855247093078646267284',
-      '0x01': '17950133044911973828130962356772411646037989291035973150567495873917534644512',
-      '0x1111111': undefined,
-    });
-
     // Current root (4 elements)
     expect(await merkletree.getRoot(0)).to.equal(
-      '1c8badf499b6d43aa80c098c5b0351f7ae22683b4a862e774737b5fa1bffaa37',
+      '2da3391bf5d50e5aea6b12de679280437e8304d10f5d2aca14e90903b2b132d2',
     );
 
     // Rebuild entire tree and check that merkleroot is the same
     await merkletree.rebuildAndWriteTree(0);
     expect(await merkletree.getRoot(0)).to.equal(
-      '1c8badf499b6d43aa80c098c5b0351f7ae22683b4a862e774737b5fa1bffaa37',
+      '2da3391bf5d50e5aea6b12de679280437e8304d10f5d2aca14e90903b2b132d2',
     );
 
     await merkletree.clearLeavesAfterTxidIndex(0);
 
     // Current tree root (1 element)
     expect(await merkletree.getRoot(0)).to.equal(
-      '18b67a3ae2c2abf315897a8a2f47e9df50ee757e1760b9eeec1ad9272c2dec48',
+      '2a729a5df0ec1d568afa7ad94bb75cb9357c1830bf7ca1df4c8874eee17d55ed',
     );
 
     // DB historical roots
     expect(await merkletree.getHistoricalMerklerootForTxidIndex(0)).to.equal(
-      '18b67a3ae2c2abf315897a8a2f47e9df50ee757e1760b9eeec1ad9272c2dec48',
+      '2a729a5df0ec1d568afa7ad94bb75cb9357c1830bf7ca1df4c8874eee17d55ed',
     );
     expect(await merkletree.getHistoricalMerklerootForTxidIndex(1)).to.equal(undefined);
     expect(await merkletree.getHistoricalMerklerootForTxidIndex(2)).to.equal(undefined);

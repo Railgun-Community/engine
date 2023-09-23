@@ -10,7 +10,7 @@ export type TXO = {
   spendtxid: string | false;
   nullifier: string;
   note: TransactNote;
-  creationRailgunTxid: Optional<string>;
+  railgunTxid: Optional<string>;
   creationPOIs: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;
@@ -24,7 +24,7 @@ export type SentCommitment = {
   note: TransactNote;
   noteAnnotationData?: NoteAnnotationData;
   isLegacyTransactNote: boolean;
-  spentRailgunTxid: Optional<string>;
+  railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;

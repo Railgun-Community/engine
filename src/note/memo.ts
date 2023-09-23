@@ -6,7 +6,7 @@ import {
 } from '../models/formatted-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 import { arrayify, ByteLength, hexlify, nToHex } from '../utils/bytes';
-import { aes } from '../utils/encryption';
+import { AES } from '../utils/encryption';
 import { isDefined } from '../utils/is-defined';
 import { isReactNative } from '../utils/runtime';
 import WalletInfo from '../wallet/wallet-info';
@@ -41,7 +41,7 @@ export class Memo {
           ? [hexlified.substring(32, 64), hexlified.substring(64, 96), hexlified.substring(96, 128)]
           : [hexlified.substring(32, 64)],
       };
-      const decrypted = aes.ctr.decrypt(metadataCiphertext, viewingPrivateKey);
+      const decrypted = AES.decryptCTR(metadataCiphertext, viewingPrivateKey);
 
       const walletSource: Optional<string> = hasTwoBytes
         ? this.decodeWalletSource(decrypted[2])
@@ -93,7 +93,7 @@ export class Memo {
 
     const toEncrypt = [metadataField0, metadataField1, metadataField2];
 
-    const metadataCiphertext: CTRCiphertext = aes.ctr.encrypt(toEncrypt, viewingPrivateKey);
+    const metadataCiphertext: CTRCiphertext = AES.encryptCTR(toEncrypt, viewingPrivateKey);
 
     return (
       metadataCiphertext.iv + // ciphertext IV

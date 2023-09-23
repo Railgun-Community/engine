@@ -223,7 +223,6 @@ describe('Relay Adapt', function test() {
     const relayerFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      randomHex(16),
       1000n,
       wethTokenData,
       wallet.getViewingKeyPair(),
@@ -276,7 +275,6 @@ describe('Relay Adapt', function test() {
     const relayerFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      randomHex(16),
       100n,
       wethTokenData,
       wallet.getViewingKeyPair(),
@@ -407,7 +405,6 @@ describe('Relay Adapt', function test() {
     const relayerFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      randomHex(16),
       300n,
       wethTokenData,
       wallet.getViewingKeyPair(),
@@ -604,7 +601,6 @@ describe('Relay Adapt', function test() {
     const relayerFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      randomHex(16),
       300n,
       wethTokenData,
       wallet.getViewingKeyPair(),
@@ -777,7 +773,6 @@ describe('Relay Adapt', function test() {
     const relayerFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      randomHex(16),
       300n,
       wethTokenData,
       wallet.getViewingKeyPair(),
@@ -939,7 +934,6 @@ describe('Relay Adapt', function test() {
     const relayerFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      randomHex(16),
       300n,
       wethTokenData,
       wallet.getViewingKeyPair(),

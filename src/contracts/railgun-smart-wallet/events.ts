@@ -27,7 +27,6 @@ import {
 import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
 import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
 import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-legacy';
-import { getBlindedCommitmentForUnshield } from '../../poi/blinded-commitment';
 
 /**
  * Parse event data for database
@@ -150,7 +149,7 @@ export const formatTransactCommitments = (
       ciphertext: formatCommitmentCiphertext(commitment),
       utxoTree,
       utxoIndex: utxoStartingIndex + index,
-      creationRailgunTxid: undefined,
+      railgunTxid: undefined,
     };
   });
 };
@@ -308,7 +307,6 @@ export const formatNullifiedEvents = (
       nullifier: formatToByteLength(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
-      spentRailgunTxid: undefined,
     });
   });
 

@@ -114,21 +114,6 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     };
   }
 
-  async getRailgunTxidsForNullifiers(
-    nullifiers: string[],
-  ): Promise<{ [nullifier: string]: Optional<string> }> {
-    const nullifierToTxid: { [nullifier: string]: Optional<string> } = {};
-
-    const railgunTransactions: RailgunTransactionWithTxid[] = await this.queryAllData();
-
-    nullifiers.forEach((nullifier) => {
-      const txid = railgunTransactions.find((tx) => tx?.nullifiers.includes(nullifier))?.hash;
-      nullifierToTxid[nullifier] = txid;
-    });
-
-    return nullifierToTxid;
-  }
-
   async getRailgunTxidsForCommitments(
     commitments: string[],
   ): Promise<{ [commitment: string]: Optional<string> }> {

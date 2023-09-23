@@ -7,7 +7,7 @@ import {
   ciphertextToEncryptedRandomData,
   encryptedDataToCiphertext,
 } from '../ciphertext';
-import { aes } from '../encryption';
+import { AES } from '../encryption';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -16,7 +16,7 @@ describe('Ciphertext', () => {
   it('Should translate ciphertext to encrypted random and back', () => {
     const plaintext: BytesData[] = [randomHex(16)];
     const key = randomHex(32);
-    const ciphertext = aes.gcm.encrypt(plaintext, key);
+    const ciphertext = AES.encryptGCM(plaintext, key);
 
     const encryptedData = ciphertextToEncryptedRandomData(ciphertext);
     const newCiphertext = encryptedDataToCiphertext(encryptedData);
@@ -28,7 +28,7 @@ describe('Ciphertext', () => {
     const plaintext: BytesData[] = [];
     for (let i = 0; i < 40; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
-    const ciphertext = aes.gcm.encrypt(plaintext, key);
+    const ciphertext = AES.encryptGCM(plaintext, key);
 
     const encryptedData = ciphertextToEncryptedJSONData(ciphertext);
     const newCiphertext = encryptedDataToCiphertext(encryptedData);

@@ -1,9 +1,8 @@
 import { poseidon } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { ShieldCiphertext, TokenData } from '../models/formatted-types';
-import { getPublicViewingKey, getSharedSymmetricKey } from '../utils';
+import { AES, getPublicViewingKey, getSharedSymmetricKey } from '../utils';
 import { ByteLength, combine, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
-import { aes } from '../utils/encryption';
 import { assertValidNoteRandom, assertValidNoteToken, getTokenDataHash } from './note-util';
 import { ShieldRequestStruct } from '../abi/typechain/RailgunSmartWallet';
 
@@ -52,7 +51,7 @@ export abstract class ShieldNote {
   static decryptRandom(encryptedBundle: [string, string, string], sharedKey: Uint8Array): string {
     const hexlified0 = hexlify(encryptedBundle[0]);
     const hexlified1 = hexlify(encryptedBundle[1]);
-    const decrypted = aes.gcm.decrypt(
+    const decrypted = AES.decryptGCM(
       {
         iv: hexlified0.slice(0, 32),
         tag: hexlified0.slice(16, 64),
@@ -80,10 +79,10 @@ export abstract class ShieldNote {
     }
 
     // Encrypt random
-    const encryptedRandom = aes.gcm.encrypt([this.random], sharedKey);
+    const encryptedRandom = AES.encryptGCM([this.random], sharedKey);
 
     // Encrypt receiver public key
-    const encryptedReceiver = aes.ctr.encrypt(
+    const encryptedReceiver = AES.encryptCTR(
       [bytesToHex(receiverViewingPublicKey)],
       shieldPrivateKey,
     );

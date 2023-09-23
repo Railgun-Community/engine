@@ -4,7 +4,7 @@ import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
 import { BytesData, Ciphertext } from '../models/formatted-types';
 import { chunk, combine, hexlify } from '../utils/bytes';
-import { aes } from '../utils/encryption';
+import { AES } from '../utils/encryption';
 
 export type Encoding =
   | 'utf8'
@@ -104,7 +104,7 @@ class Database {
    */
   async putEncrypted(path: Path, encryptionKey: string, value: string | Buffer) {
     // Encrypt data
-    const encrypted = aes.gcm.encrypt(chunk(value), encryptionKey);
+    const encrypted = AES.encryptGCM(chunk(value), encryptionKey);
 
     // Write to database
     await this.put(path, encrypted, 'json');
@@ -121,7 +121,7 @@ class Database {
     const encrypted: Ciphertext = (await this.get(path, 'json')) as Ciphertext;
 
     // Decrypt and return
-    return combine(aes.gcm.decrypt(encrypted, encryptionKey));
+    return combine(AES.decryptGCM(encrypted, encryptionKey));
   }
 
   /**

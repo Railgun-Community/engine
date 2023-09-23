@@ -1,13 +1,6 @@
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover, ProverProgressCallback } from '../prover/prover';
-import {
-  ByteLength,
-  formatToByteLength,
-  hexlify,
-  hexToBigInt,
-  nToHex,
-  randomHex,
-} from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
 import { AdaptID, NFTTokenData, OutputType, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
@@ -194,7 +187,6 @@ class Transaction {
         TransactNote.createTransfer(
           wallet.addressKeys, // Receiver
           wallet.addressKeys, // Sender
-          randomHex(16),
           change,
           this.tokenData,
           senderViewingKeys,

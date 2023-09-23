@@ -48,8 +48,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     const commitments: Commitment[] = await this.queryAllData();
 
     hashes.forEach((hash) => {
-      const commitment = commitments.find((commitment) => commitment.hash === hash);
-      hashToCommitment[hash] = commitment;
+      hashToCommitment[hash] = commitments.find((commitment) => `0x${commitment.hash}` === hash);
     });
 
     return hashToCommitment;
@@ -93,35 +92,20 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * @param {string} nullifier - nullifier to check
    * @returns Nullifier data, including txid of spent transaction
    */
-  async getStoredNullifierData(nullifier: string): Promise<Optional<Nullifier>> {
+  async getNullifierTxid(nullifier: string): Promise<Optional<string>> {
     // Return if nullifier is set
-    let nullifierData: Optional<Nullifier>;
+    let nullifierTxid: Optional<string>;
     const latestTree = await this.latestTree();
     for (let tree = latestTree; tree >= 0; tree -= 1) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        nullifierData = (await this.db.get(
-          this.getNullifierDBPath(tree, nullifier),
-          'json',
-        )) as Nullifier;
+        nullifierTxid = (await this.db.get(this.getNullifierDBPath(tree, nullifier))) as string;
         break;
       } catch {
-        nullifierData = undefined;
+        nullifierTxid = undefined;
       }
     }
-    return nullifierData;
-  }
-
-  async updatedStoredNullifierSpentRailgunTxid(
-    nullifier: string,
-    railgunTxid: string,
-  ): Promise<void> {
-    const nullifierData = await this.getStoredNullifierData(nullifier);
-    if (nullifierData && !isDefined(nullifierData.spentRailgunTxid)) {
-      nullifierData.spentRailgunTxid = railgunTxid;
-      // eslint-disable-next-line no-await-in-loop
-      await this.nullify([nullifierData]);
-    }
+    return nullifierTxid;
   }
 
   /**
@@ -135,11 +119,11 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     const nullifierWriteBatch: PutBatch[] = nullifiers.map((nullifier) => ({
       type: 'put',
       key: this.getNullifierDBPath(nullifier.treeNumber, nullifier.nullifier).join(':'),
-      value: nullifier,
+      value: nullifier.txid,
     }));
 
     // Write to DB
-    return this.db.batch(nullifierWriteBatch, 'json');
+    return this.db.batch(nullifierWriteBatch);
   }
 
   /**

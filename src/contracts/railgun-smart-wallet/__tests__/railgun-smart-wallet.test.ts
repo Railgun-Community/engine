@@ -229,7 +229,6 @@ describe('Railgun Smart Wallet', function runTests() {
     const nullRelayerFeeOutput = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      RANDOM,
       0n,
       tokenData,
       wallet.getViewingKeyPair(),
@@ -240,7 +239,6 @@ describe('Railgun Smart Wallet', function runTests() {
     const actualRelayerFeeOutput = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      RANDOM,
       300n,
       tokenData,
       wallet.getViewingKeyPair(),
@@ -251,7 +249,6 @@ describe('Railgun Smart Wallet', function runTests() {
     const nftTransferOutput = TransactNote.createERC721Transfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      RANDOM,
       shield.tokenData as NFTTokenData,
       wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
@@ -505,7 +502,6 @@ describe('Railgun Smart Wallet', function runTests() {
       TransactNote.createTransfer(
         wallet2.addressKeys,
         wallet.addressKeys,
-        RANDOM,
         300n,
         tokenData,
         wallet.getViewingKeyPair(),
@@ -853,7 +849,6 @@ describe('Railgun Smart Wallet', function runTests() {
       TransactNote.createTransfer(
         wallet2.addressKeys,
         wallet.addressKeys,
-        RANDOM,
         300n,
         tokenData,
         wallet.getViewingKeyPair(),

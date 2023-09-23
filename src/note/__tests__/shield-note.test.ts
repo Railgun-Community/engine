@@ -61,7 +61,7 @@ describe('Note/ShieldNote', () => {
     shield = new ShieldNoteERC20(mpk, rand, 1000n, TOKEN_ADDRESS);
     const shieldPrivateKey = hexToBytes(randomHex(32));
     const { preimage, ciphertext } = await shield.serialize(shieldPrivateKey, viewingPublicKey);
-    expect(hexlify(await preimage.npk)).length(64);
+    expect(hexlify(preimage.npk)).length(64);
     expect(preimage.token.tokenAddress).to.equal(TOKEN_ADDRESS);
     expect(preimage.value).to.equal(1000n);
     expect(ciphertext.encryptedBundle).length(3);

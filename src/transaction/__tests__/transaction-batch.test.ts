@@ -5,7 +5,6 @@ import { groth16 } from 'snarkjs';
 import { Wallet } from 'ethers';
 import { Commitment, CommitmentType, OutputType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
-import { randomHex } from '../../utils/bytes';
 import { config } from '../../test/config.test';
 import {
   DECIMALS_18,
@@ -46,7 +45,6 @@ const testEncryptionKey = config.encryptionKey;
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
-const random = randomHex(16);
 
 let makeNote: (value?: bigint) => Promise<TransactNote>;
 
@@ -126,7 +124,6 @@ describe('Transaction/Transaction Batch', function run() {
       return TransactNote.createTransfer(
         address,
         undefined,
-        random,
         value,
         tokenData,
         wallet.getViewingKeyPair(),

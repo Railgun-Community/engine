@@ -138,7 +138,7 @@ export function formatLegacyCommitmentBatchCommitments(
       ciphertext: formatLegacyCommitmentCiphertext(commitment),
       utxoTree,
       utxoIndex: utxoStartingIndex + index,
-      creationRailgunTxid: undefined,
+      railgunTxid: undefined,
     };
   });
 }
@@ -216,7 +216,6 @@ export function formatLegacyNullifierEvents(
       nullifier: nToHex(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
-      spentRailgunTxid: undefined,
     });
   });
 

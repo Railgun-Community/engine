@@ -30,7 +30,6 @@ import { config } from '../../test/config.test';
 import { hashBoundParams } from '../bound-params';
 import { MEMO_SENDER_RANDOM_NULL } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
-import { aes } from '../../utils';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { TokenDataGetter } from '../../token/token-data-getter';
@@ -39,6 +38,7 @@ import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet
 import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
+import { AES } from '../../utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -58,7 +58,6 @@ const testEncryptionKey = config.encryptionKey;
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
-const random = randomHex(16);
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
 
@@ -123,7 +122,6 @@ describe('Transaction/ERC20', function test() {
       return TransactNote.createTransfer(
         address,
         undefined,
-        random,
         value,
         tokenData,
         wallet.getViewingKeyPair(),
@@ -253,7 +251,6 @@ describe('Transaction/ERC20', function test() {
     const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      random,
       100n,
       tokenData,
       wallet.getViewingKeyPair(),
@@ -305,9 +302,9 @@ describe('Transaction/ERC20', function test() {
       ...noteCiphertext,
       data: ciphertextDataWithMemoText,
     };
-    const decryptedValues = aes.gcm
-      .decrypt(fullCiphertext, senderShared)
-      .map((value) => hexlify(value));
+    const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
+      hexlify(value),
+    );
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
     expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
 
@@ -379,7 +376,6 @@ describe('Transaction/ERC20', function test() {
     const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      random,
       100n,
       tokenData,
       wallet.getViewingKeyPair(),
@@ -427,9 +423,9 @@ describe('Transaction/ERC20', function test() {
       ...noteCiphertext,
       data: ciphertextDataWithMemoText,
     };
-    const decryptedValues = aes.gcm
-      .decrypt(fullCiphertext, senderShared)
-      .map((value) => hexlify(value));
+    const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
+      hexlify(value),
+    );
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
     expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
 
@@ -499,7 +495,6 @@ describe('Transaction/ERC20', function test() {
     const note = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
-      random,
       100n,
       tokenData,
       wallet.getViewingKeyPair(),
@@ -540,9 +535,9 @@ describe('Transaction/ERC20', function test() {
       ...noteCiphertext,
       data: ciphertextDataWithMemoText,
     };
-    const decryptedValues = aes.gcm
-      .decrypt(fullCiphertext, senderShared)
-      .map((value) => hexlify(value));
+    const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
+      hexlify(value),
+    );
     const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
     expect(note.receiverAddressData.masterPublicKey).to.not.equal(encodedMasterPublicKey);
 
@@ -641,7 +636,6 @@ describe('Transaction/ERC20', function test() {
       TransactNote.createTransfer(
         address,
         undefined,
-        random,
         6500000000000n,
         getTokenDataERC20('000925cdf66ddf5b88016df1fe915e68eff8f192'),
         wallet.getViewingKeyPair(),

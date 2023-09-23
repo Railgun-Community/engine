@@ -1,7 +1,7 @@
 import { EncryptedData } from '../models/formatted-types';
 import { toUTF8String, combine, chunk, fromUTF8String } from './bytes';
 import { encryptedDataToCiphertext, ciphertextToEncryptedJSONData } from './ciphertext';
-import { aes } from './encryption';
+import { AES } from './encryption';
 
 export const tryDecryptJSONDataWithSharedKey = (
   encryptedData: EncryptedData,
@@ -9,7 +9,7 @@ export const tryDecryptJSONDataWithSharedKey = (
 ): object | null => {
   try {
     const ciphertext = encryptedDataToCiphertext(encryptedData);
-    const chunkedData = aes.gcm.decrypt(ciphertext, sharedKey);
+    const chunkedData = AES.decryptGCM(ciphertext, sharedKey);
     const dataString = toUTF8String(combine(chunkedData));
     return JSON.parse(dataString);
   } catch (err) {
@@ -24,6 +24,6 @@ export const encryptJSONDataWithSharedKey = (
 ): EncryptedData => {
   const dataString = JSON.stringify(data);
   const chunkedData = chunk(fromUTF8String(dataString));
-  const ciphertext = aes.gcm.encrypt(chunkedData, sharedKey);
+  const ciphertext = AES.encryptGCM(chunkedData, sharedKey);
   return ciphertextToEncryptedJSONData(ciphertext);
 };

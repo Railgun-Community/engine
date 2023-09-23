@@ -20,8 +20,6 @@ import {
   NoteAnnotationData,
   NoteSerialized,
   OutputType,
-  POICommitmentOutData,
-  RailgunTransactionWithTxid,
   ShieldCommitment,
   StoredReceiveCommitment,
   StoredSendCommitment,
@@ -71,7 +69,7 @@ import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import { getTokenDataHash, getUnshieldEventNoteHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
-import { isDefined, removeUndefineds } from '../utils/is-defined';
+import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
 import { PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import {
@@ -93,6 +91,7 @@ import {
   POIsPerList,
 } from '../models/poi-types';
 import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
+import { TREE_MAX_ITEMS } from '../models/merkletree-types';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -583,7 +582,7 @@ abstract class AbstractWallet extends EventEmitter {
           ? encodeAddress(noteReceive.senderAddressData)
           : undefined,
         commitmentType: leaf.commitmentType,
-        creationRailgunTxid: isSentCommitment(leaf) ? leaf.creationRailgunTxid : undefined,
+        railgunTxid: isSentCommitment(leaf) ? leaf.railgunTxid : undefined,
         creationPOIs: undefined,
         blindedCommitment: undefined,
       };
@@ -608,7 +607,7 @@ abstract class AbstractWallet extends EventEmitter {
         commitmentType: leaf.commitmentType,
         noteExtraData: Memo.decryptNoteAnnotationData(noteSend.annotationData, viewingPrivateKey),
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
-        spentRailgunTxid: undefined,
+        railgunTxid: undefined,
         poisPerList: undefined,
         blindedCommitment: undefined,
       };
@@ -783,24 +782,22 @@ abstract class AbstractWallet extends EventEmitter {
 
         // Check if TXO has been spent.
         if (receiveCommitment.spendtxid === false) {
-          const storedNullifier = await merkletree.getStoredNullifierData(
-            receiveCommitment.nullifier,
-          );
-          if (isDefined(storedNullifier)) {
-            receiveCommitment.spendtxid = storedNullifier.txid;
+          const nullifierTxid = await merkletree.getNullifierTxid(receiveCommitment.nullifier);
+          if (isDefined(nullifierTxid)) {
+            receiveCommitment.spendtxid = nullifierTxid;
             await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
           }
         }
 
         // Look up creation railgunTxid in commitments.
         if (
-          !isDefined(receiveCommitment.creationRailgunTxid) ||
+          !isDefined(receiveCommitment.railgunTxid) ||
           !isDefined(receiveCommitment.blindedCommitment)
         ) {
           const isShield = isReceiveShieldCommitment(receiveCommitment);
           if (isShield) {
             const railgunTxid = getShieldRailgunTxid(tree, position);
-            receiveCommitment.creationRailgunTxid = railgunTxid;
+            receiveCommitment.railgunTxid = railgunTxid;
             const commitment = await merkletree.getCommitment(tree, position);
             receiveCommitment.blindedCommitment = getBlindedCommitmentForShield(
               commitment.hash,
@@ -809,12 +806,12 @@ abstract class AbstractWallet extends EventEmitter {
             );
           } else {
             const commitment = await merkletree.getCommitment(tree, position);
-            if (isSentCommitment(commitment) && isDefined(commitment.creationRailgunTxid)) {
-              receiveCommitment.creationRailgunTxid = commitment.creationRailgunTxid;
+            if (isSentCommitment(commitment) && isDefined(commitment.railgunTxid)) {
+              receiveCommitment.railgunTxid = commitment.railgunTxid;
               receiveCommitment.blindedCommitment = getBlindedCommitmentForTransact(
                 commitment,
                 note.notePublicKey,
-                commitment.creationRailgunTxid,
+                commitment.railgunTxid,
               );
             }
           }
@@ -829,7 +826,7 @@ abstract class AbstractWallet extends EventEmitter {
           spendtxid: receiveCommitment.spendtxid,
           nullifier: receiveCommitment.nullifier,
           note,
-          creationRailgunTxid: receiveCommitment.creationRailgunTxid,
+          railgunTxid: receiveCommitment.railgunTxid,
           creationPOIs: receiveCommitment.creationPOIs,
           blindedCommitment: receiveCommitment.blindedCommitment,
           commitmentType: receiveCommitment.commitmentType,
@@ -869,29 +866,23 @@ abstract class AbstractWallet extends EventEmitter {
           return;
         }
 
-        // Look up spent railgunTxid in nullifiers.
+        // Look up railgunTxid.
         if (
-          !isDefined(sentCommitment.spentRailgunTxid) ||
+          !isDefined(sentCommitment.railgunTxid) ||
           !isDefined(sentCommitment.blindedCommitment)
         ) {
-          const nullifier = nToHex(
-            TransactNote.getNullifier(this.nullifyingKey, position),
-            ByteLength.UINT_256,
-          );
           const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
-          const storedNullifier = await utxoMerkletree.getStoredNullifierData(nullifier);
-          if (isDefined(storedNullifier) && isDefined(storedNullifier.spentRailgunTxid)) {
-            sentCommitment.spentRailgunTxid = storedNullifier.spentRailgunTxid;
-            const commitment = await utxoMerkletree.getCommitment(tree, position);
-            if (isSentCommitment(commitment)) {
-              sentCommitment.blindedCommitment = getBlindedCommitmentForTransact(
-                commitment,
-                note.notePublicKey,
-                storedNullifier.spentRailgunTxid,
-              );
-            }
-            await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
+          const commitment = await utxoMerkletree.getCommitment(tree, position);
+
+          if (isSentCommitment(commitment) && isDefined(commitment.railgunTxid)) {
+            sentCommitment.blindedCommitment = getBlindedCommitmentForTransact(
+              commitment,
+              note.notePublicKey,
+              commitment.railgunTxid,
+            );
+            sentCommitment.railgunTxid = commitment.railgunTxid;
           }
+          await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
         }
 
         sentCommitments.push({
@@ -902,7 +893,7 @@ abstract class AbstractWallet extends EventEmitter {
           note,
           noteAnnotationData: sentCommitment.noteExtraData,
           isLegacyTransactNote: TransactNote.isLegacyTransactNote(sentCommitment.decrypted),
-          spentRailgunTxid: sentCommitment.spentRailgunTxid,
+          railgunTxid: sentCommitment.railgunTxid,
           poisPerList: sentCommitment.poisPerList,
           blindedCommitment: sentCommitment.blindedCommitment,
           commitmentType: sentCommitment.commitmentType,
@@ -1043,8 +1034,8 @@ abstract class AbstractWallet extends EventEmitter {
     if (sentCommitmentsNeedPOIs.length || unshieldEventsNeedPOIs.length) {
       const railgunTxidsNeedPOIs = new Set<string>();
       sentCommitmentsNeedPOIs.forEach((sentCommitment) => {
-        if (isDefined(sentCommitment.spentRailgunTxid)) {
-          railgunTxidsNeedPOIs.add(sentCommitment.spentRailgunTxid);
+        if (isDefined(sentCommitment.railgunTxid)) {
+          railgunTxidsNeedPOIs.add(sentCommitment.railgunTxid);
         }
       });
       unshieldEventsNeedPOIs.forEach((unshieldEvent) => {
@@ -1098,27 +1089,30 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Sent Commitments
       const sentCommitmentsForRailgunTxid = sentCommitments.filter(
-        (sentCommitment) => sentCommitment.spentRailgunTxid === railgunTransaction.hash,
+        (sentCommitment) => sentCommitment.railgunTxid === railgunTransaction.hash,
       );
       const blindedCommitmentsOutSentCommitments = removeUndefineds(
         sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.blindedCommitment),
       );
       // Unshield Events
       const unshieldEventsForRailgunTxid = unshieldEvents.filter(
-        (sentCommitment) => sentCommitment.railgunTxid === railgunTransaction.hash,
+        (unshieldEvent) => unshieldEvent.railgunTxid === railgunTransaction.hash,
       );
       const blindedCommitmentsOutUnshieldEvents = removeUndefineds(
-        unshieldEventsForRailgunTxid.map((sentCommitment) => sentCommitment.blindedCommitment),
+        unshieldEventsForRailgunTxid.map((unshieldEvent) => unshieldEvent.blindedCommitment),
       );
+      if (unshieldEventsForRailgunTxid.length > 1) {
+        throw new Error('Cannot have more than 1 unshield event per railgun txid');
+      }
       if (!sentCommitmentsForRailgunTxid.length && !unshieldEventsForRailgunTxid.length) {
         throw new Error(`No sent commitments or unshield events for railgun txid: ${railgunTxid}`);
       }
 
       // Aggregate Sent + Unshields
-      const blindedCommitmentsOut: string[] = [
+      const blindedCommitmentsOut: string[] = removeDuplicates([
         ...blindedCommitmentsOutSentCommitments,
         ...blindedCommitmentsOutUnshieldEvents,
-      ];
+      ]);
       if (blindedCommitmentsOut.length !== railgunTransaction.commitments.length) {
         throw new Error(
           `Not enough blinded commitments for railgun txid commitments: expected ${railgunTransaction.commitments.length}, got ${blindedCommitmentsOut.length}`,
@@ -1131,12 +1125,23 @@ abstract class AbstractWallet extends EventEmitter {
           hexToBigInt(unshieldEvent.toAddress),
         ),
       ];
+      if (npksOut.length !== railgunTransaction.commitments.length) {
+        throw new Error(
+          `Invalid number of npksOut for railgun txid commitments: expected ${railgunTransaction.commitments.length}, got ${npksOut.length}`,
+        );
+      }
+
       const valuesOut: bigint[] = [
         ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.value),
         ...unshieldEventsForRailgunTxid.map(
           (unshieldEvent) => BigInt(unshieldEvent.amount) + BigInt(unshieldEvent.fee),
         ),
       ];
+      if (valuesOut.length !== railgunTransaction.commitments.length) {
+        throw new Error(
+          `Invalid number of valuesOut for railgun txid commitments: expected ${railgunTransaction.commitments.length}, got ${valuesOut.length}`,
+        );
+      }
 
       const poisPerList: Optional<POIsPerList> = sentCommitmentsForRailgunTxid.length
         ? sentCommitmentsForRailgunTxid[0].poisPerList
@@ -1162,7 +1167,7 @@ abstract class AbstractWallet extends EventEmitter {
         token: spentTXOs[0].note.tokenHash,
         randomsIn: spentTXOs.map((txo) => txo.note.random),
         valuesIn: spentTXOs.map((txo) => txo.note.value),
-        utxoPositionsIn: spentTXOs.map((txo) => txo.position),
+        utxoPositionsIn: spentTXOs.map((txo) => txo.tree * TREE_MAX_ITEMS + txo.position),
         blindedCommitmentsIn,
         creationTxidsIn,
 
@@ -1195,12 +1200,10 @@ abstract class AbstractWallet extends EventEmitter {
   private static getCreationTxidsIn(txos: TXO[]): string[] {
     const creationTxidsIn: string[] = txos.map((txo) => {
       if (isSentCommitmentType(txo.commitmentType)) {
-        if (!isDefined(txo.creationRailgunTxid)) {
-          throw new Error(
-            `No creationRailgunTxid for TXO with tree/position ${txo.tree}:${txo.position}`,
-          );
+        if (!isDefined(txo.railgunTxid)) {
+          throw new Error(`No railgunTxid for TXO with tree/position ${txo.tree}:${txo.position}`);
         }
-        return txo.creationRailgunTxid;
+        return txo.railgunTxid;
       }
       return getShieldRailgunTxid(txo.tree, txo.position);
     });
@@ -1404,7 +1407,7 @@ abstract class AbstractWallet extends EventEmitter {
         if (note.value === 0n) {
           return;
         }
-        if (spendtxid === false) {
+        if (spendtxid === false || !spendtxid) {
           return;
         }
         if (seenSpentTxids.includes(spendtxid)) {
