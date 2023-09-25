@@ -1865,6 +1865,9 @@ abstract class AbstractWallet extends EventEmitter {
    * Occurs after balances are scanned.
    */
   async refreshPOIs(chain: Chain) {
+    if (!POI.isActiveForChain(chain)) {
+      return;
+    }
     if (this.isRefreshingPOIs[chain.type]?.[chain.id]) {
       return;
     }

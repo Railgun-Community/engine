@@ -12,6 +12,11 @@ export const MOCK_LIST_KEY = 'test_list';
 
 export class TestPOINodeInterface extends POINodeInterface {
   // eslint-disable-next-line class-methods-use-this
+  isActive() {
+    return true;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
   async getPOIsPerList(
     _chain: Chain,
     listKeys: string[],

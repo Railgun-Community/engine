@@ -130,6 +130,14 @@ export class POI {
     return listKeys.length > 0;
   }
 
+  static isActiveForChain(chain: Chain): boolean {
+    try {
+      return this.nodeInterface.isActive(chain);
+    } catch (err) {
+      return false;
+    }
+  }
+
   static async retrievePOIsForBlindedCommitments(
     chain: Chain,
     blindedCommitmentDatas: BlindedCommitmentData[],

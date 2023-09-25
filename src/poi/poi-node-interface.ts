@@ -2,6 +2,8 @@ import { Chain } from '../models/engine-types';
 import { BlindedCommitmentData, POIEngineProofInputs, POIsPerList } from '../models/poi-types';
 
 export abstract class POINodeInterface {
+  abstract isActive(chain: Chain): boolean;
+
   abstract getPOIsPerList(
     chain: Chain,
     listKeys: string[],
