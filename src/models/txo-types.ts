@@ -10,8 +10,10 @@ export type TXO = {
   spendtxid: string | false;
   nullifier: string;
   note: TransactNote;
+  // Railgun TXID that created this TXO
   railgunTxid: Optional<string>;
-  creationPOIs: Optional<POIsPerList>;
+  // POIs that created this TXO
+  poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;
 };
@@ -43,4 +45,25 @@ export type UnshieldData = {
   value: bigint;
   tokenData: TokenData;
   allowOverride?: boolean;
+};
+
+export type TXOsReceivedPOIStatusInfo = {
+  tree: number;
+  startPosition: number;
+  txid: string;
+  txos: string;
+  railgunTxid: string;
+  blindedCommitments: string;
+  poiStatuses: string;
+};
+
+export type TXOsSpentPOIStatusInfo = {
+  blockNumber: number;
+  txid: string;
+  railgunTxid: string;
+  railgunTransactionInfo: string;
+  sentCommitmentsBlinded: string;
+  poiStatusesSentCommitments: string;
+  unshieldEventsBlinded: string;
+  poiStatusesUnshieldEvents: string;
 };

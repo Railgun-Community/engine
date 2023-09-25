@@ -92,10 +92,10 @@ export class POI {
     if (!isDefined(txo.blindedCommitment)) {
       return false;
     }
-    if (!isDefined(txo.creationPOIs)) {
+    if (!isDefined(txo.poisPerList)) {
       return true;
     }
-    return !POI.hasValidPOIsAllLists(txo.creationPOIs);
+    return !POI.hasValidPOIsAllLists(txo.poisPerList);
   }
 
   static shouldRetrieveSpentPOIs(sentCommitment: SentCommitment) {

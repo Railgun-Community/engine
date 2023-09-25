@@ -181,7 +181,7 @@ export type StoredReceiveCommitment = {
   senderAddress: Optional<string>;
   commitmentType: CommitmentType;
   railgunTxid: Optional<string>;
-  creationPOIs: Optional<POIsPerList>;
+  poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
 };
 
