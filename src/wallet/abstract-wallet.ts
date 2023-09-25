@@ -970,14 +970,6 @@ abstract class AbstractWallet extends EventEmitter {
             const { tree } = firstTxo;
             const startPosition = txosForTxidAndRailgunTxid.map((txo) => txo.position).sort()[0];
 
-            const poiStatuses = POI.isActiveForChain(chain)
-              ? txosForTxidAndRailgunTxid
-                  .map((txo) =>
-                    txo.poisPerList ? JSON.stringify(txo.poisPerList) : '[Unavailable]',
-                  )
-                  .join(', ')
-              : '[Inactive]';
-
             const statusInfo: TXOsReceivedPOIStatusInfo = {
               tree,
               startPosition,
@@ -992,7 +984,7 @@ abstract class AbstractWallet extends EventEmitter {
               blindedCommitments: `${txosForTxidAndRailgunTxid
                 .map((txo) => txo.blindedCommitment ?? 'Unavailable')
                 .join(', ')}`,
-              poiStatuses,
+              poiStatuses: txosForTxidAndRailgunTxid.map((txo) => txo.poisPerList),
             };
             return statusInfos.push(statusInfo);
           }),
@@ -1108,25 +1100,6 @@ abstract class AbstractWallet extends EventEmitter {
               railgunTransactionInfo = 'Missing';
             }
 
-            const poiStatusesSentCommitments = POI.isActiveForChain(chain)
-              ? sentCommitmentsForRailgunTxid
-                  .map((sentCommitment) =>
-                    sentCommitment.poisPerList
-                      ? JSON.stringify(sentCommitment.poisPerList)
-                      : '[Unavailable]',
-                  )
-                  .join(', ')
-              : '[Inactive]';
-            const poiStatusesUnshieldEvents = POI.isActiveForChain(chain)
-              ? unshieldEventsForRailgunTxid
-                  .map((unshieldEvent) =>
-                    unshieldEvent.poisPerList
-                      ? JSON.stringify(unshieldEvent.poisPerList)
-                      : '[Unavailable]',
-                  )
-                  .join(', ')
-              : '[Inactive]';
-
             const statusInfo: TXOsSpentPOIStatusInfo = {
               blockNumber: blockNumber ?? 0,
               txid,
@@ -1135,11 +1108,15 @@ abstract class AbstractWallet extends EventEmitter {
               sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
                 .map((sentCommitment) => sentCommitment.blindedCommitment ?? 'Unavailable')
                 .join(', ')}`,
-              poiStatusesSentCommitments,
+              poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
+                (sentCommitment) => sentCommitment.poisPerList,
+              ),
               unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
                 .map((unshieldEvent) => unshieldEvent.blindedCommitment ?? 'Unavailable')
                 .join(', ')}`,
-              poiStatusesUnshieldEvents,
+              poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
+                (unshieldEvent) => unshieldEvent.poisPerList,
+              ),
             };
             return statusInfos.push(statusInfo);
           }),

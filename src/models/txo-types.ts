@@ -54,7 +54,7 @@ export type TXOsReceivedPOIStatusInfo = {
   txos: string;
   railgunTxid: string;
   blindedCommitments: string;
-  poiStatuses: string;
+  poiStatuses: Optional<POIsPerList>[];
 };
 
 export type TXOsSpentPOIStatusInfo = {
@@ -63,7 +63,7 @@ export type TXOsSpentPOIStatusInfo = {
   railgunTxid: string;
   railgunTransactionInfo: string;
   sentCommitmentsBlinded: string;
-  poiStatusesSentCommitments: string;
+  poiStatusesSentCommitments: Optional<POIsPerList>[];
   unshieldEventsBlinded: string;
-  poiStatusesUnshieldEvents: string;
+  poiStatusesUnshieldEvents: Optional<POIsPerList>[];
 };
