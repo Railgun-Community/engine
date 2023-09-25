@@ -2093,7 +2093,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     try {
       // Refresh POIs - Receive commitments
-      await this.refreshCreationPOIsAllTXOs(chain);
+      await this.refreshReceivePOIsAllTXOs(chain);
 
       // Refresh POIs - Sent commitments / unshields
       await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(chain);
