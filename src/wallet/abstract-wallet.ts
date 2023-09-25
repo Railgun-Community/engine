@@ -1127,7 +1127,7 @@ abstract class AbstractWallet extends EventEmitter {
     return statusInfos.sort((a, b) => b.blockNumber - a.blockNumber);
   }
 
-  async refreshCreationPOIsAllTXOs(chain: Chain, filterRailgunTxid?: string): Promise<void> {
+  async refreshReceivePOIsAllTXOs(chain: Chain, filterRailgunTxid?: string): Promise<void> {
     const TXOs = await this.TXOs(chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveCreationPOIs(txo))
       .filter((txo) => AbstractWallet.filterByRailgunTxid(txo, filterRailgunTxid))
@@ -1135,6 +1135,7 @@ abstract class AbstractWallet extends EventEmitter {
     if (txosNeedCreationPOIs.length === 0) {
       return;
     }
+
     const blindedCommitmentDatas: BlindedCommitmentData[] = txosNeedCreationPOIs.map((txo) => ({
       type: isSentCommitmentType(txo.commitmentType)
         ? BlindedCommitmentType.Transact

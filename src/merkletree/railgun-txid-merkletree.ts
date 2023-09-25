@@ -23,15 +23,15 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     db: Database,
     chain: Chain,
     merklerootValidator: MerklerootValidator,
-    shouldStoreMerkleroots: boolean,
+    isPOINode: boolean,
   ) {
     // For Txid merkletree on POI Nodes, we will calculate for every Single tree update, in order to capture its merkleroot.
-    const commitmentProcessingGroupSize = shouldStoreMerkleroots
+    const commitmentProcessingGroupSize = isPOINode
       ? CommitmentProcessingGroupSize.Single
       : CommitmentProcessingGroupSize.XXXLarge;
 
     super(db, chain, merklerootValidator, commitmentProcessingGroupSize);
-    this.shouldStoreMerkleroots = shouldStoreMerkleroots;
+    this.shouldStoreMerkleroots = isPOINode;
   }
 
   /**
@@ -42,13 +42,8 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     chain: Chain,
     merklerootValidator: MerklerootValidator,
   ): Promise<RailgunTxidMerkletree> {
-    const shouldStoreMerkleroots = false;
-    const merkletree = new RailgunTxidMerkletree(
-      db,
-      chain,
-      merklerootValidator,
-      shouldStoreMerkleroots,
-    );
+    const isPOINode = false;
+    const merkletree = new RailgunTxidMerkletree(db, chain, merklerootValidator, isPOINode);
     await merkletree.init();
     return merkletree;
   }
@@ -62,14 +57,9 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     const merklerootValidator = async () => true;
 
     // For Txid merkletree on POI Nodes, store all merkleroots.
-    const shouldStoreMerkleroots = true;
+    const isPOINode = true;
 
-    const merkletree = new RailgunTxidMerkletree(
-      db,
-      chain,
-      merklerootValidator,
-      shouldStoreMerkleroots,
-    );
+    const merkletree = new RailgunTxidMerkletree(db, chain, merklerootValidator, isPOINode);
     await merkletree.init();
     return merkletree;
   }
