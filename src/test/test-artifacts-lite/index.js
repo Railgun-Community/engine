@@ -40,9 +40,9 @@ function listArtifacts() {
 function getArtifactsPOI() {
   if (!cache.poi) {
     cache.poi = {
-      zkey: decompress(fs.readFileSync(`${__dirname}/poi/v2/zkey.br`)),
-      wasm: decompress(fs.readFileSync(`${__dirname}/poi/v2/wasm.br`)),
-      vkey: require(`${__dirname}/poi/v2/vkey`),
+      zkey: decompress(fs.readFileSync(`${__dirname}/poi/zkey.br`)),
+      wasm: decompress(fs.readFileSync(`${__dirname}/poi/wasm.br`)),
+      vkey: require(`${__dirname}/poi/vkey`),
     };
   }
   return cache.poi;
