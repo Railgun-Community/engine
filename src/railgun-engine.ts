@@ -135,6 +135,7 @@ class RailgunEngine extends EventEmitter {
     startingIndex: number,
     leaves: Commitment[],
     shouldUpdateTrees: boolean,
+    shouldTriggerTxidSync: boolean,
   ): Promise<void> {
     if (this.db.isClosed()) {
       return;
@@ -174,8 +175,10 @@ class RailgunEngine extends EventEmitter {
       await utxoMerkletree.updateTreesFromWriteQueue();
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.triggerDelayedRailgunTxidMerkletreeSync(chain);
+    if (shouldTriggerTxidSync) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.triggerDelayedRailgunTxidMerkletreeSync(chain);
+    }
   }
 
   async triggerDelayedRailgunTxidMerkletreeSync(chain: Chain): Promise<void> {
@@ -318,6 +321,7 @@ class RailgunEngine extends EventEmitter {
             startPosition,
             commitments,
             false, // shouldUpdateTrees - wait until after all commitments added
+            false, // shouldTriggerTxidSync - not during quick sync
           );
         }),
       );
@@ -440,6 +444,7 @@ class RailgunEngine extends EventEmitter {
             startPosition,
             commitments,
             true, // shouldUpdateTrees
+            false, // shouldTriggerTxidSync - not during slow sync
           );
         },
         async (nullifiers: Nullifier[]) => {
@@ -842,6 +847,7 @@ class RailgunEngine extends EventEmitter {
         startPosition,
         commitments,
         true, // shouldUpdateTrees
+        true, // shouldTriggerTxidSync - only for live listener events
       );
       await this.scanAllWallets(chain, undefined);
     };
