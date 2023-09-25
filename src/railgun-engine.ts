@@ -158,6 +158,7 @@ class RailgunEngine extends EventEmitter {
       .filter((leaf) => isSentCommitment(leaf))
       .map((leaf) => leaf.hash);
     if (!this.isPOINode && sentCommitmentHashes.length) {
+      // TODO: Performance is really bad on this.
       const commitmentsToRailgunTxids = await railgunTxidMerkletree.getRailgunTxidsForCommitments(
         leaves.map((leaf) => leaf.hash),
       );
@@ -580,11 +581,11 @@ class RailgunEngine extends EventEmitter {
     );
 
     // TODO: Remove after V3
-    await Promise.all(
-      railgunTransactionsWithTxids.map(async (railgunTransactionWithTxid) => {
-        await this.updateCommitmentsForRailgunTransaction(chain, railgunTransactionWithTxid);
-      }),
-    );
+    // eslint-disable-next-line no-restricted-syntax
+    for (const railgunTransactionWithTxid of railgunTransactionsWithTxids) {
+      // eslint-disable-next-line no-await-in-loop
+      await this.updateCommitmentsForRailgunTransaction(chain, railgunTransactionWithTxid);
+    }
 
     const txidMerkletree = this.getRailgunTxidMerkletreeForChain(chain);
     await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);

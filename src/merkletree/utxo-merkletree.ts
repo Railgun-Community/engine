@@ -7,7 +7,7 @@ import {
   InvalidMerklerootDetails,
   MerklerootValidator,
 } from '../models/merkletree-types';
-import { ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify, strip0x } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
@@ -40,15 +40,18 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     return this.getData(tree, index);
   }
 
+  // TODO: Remove after V3
   async getCommitmentsForHashes(
     hashes: string[],
   ): Promise<{ [hash: string]: Optional<Commitment> }> {
     const hashToCommitment: { [hash: string]: Optional<Commitment> } = {};
 
-    const commitments: Commitment[] = await this.queryAllData();
+    // Creates sorted cache
+    await this.queryAllData();
 
     hashes.forEach((hash) => {
-      hashToCommitment[hash] = commitments.find((commitment) => `0x${commitment.hash}` === hash);
+      const data = this.findCachedDataForHash(strip0x(hash));
+      hashToCommitment[hash] = data;
     });
 
     return hashToCommitment;

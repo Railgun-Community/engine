@@ -29,7 +29,7 @@ const isPrefixed = (str: string): boolean => str.startsWith('0x');
 const prefix0x = (str: string): string => (isPrefixed(str) ? str : `0x${str}`);
 
 // remove 0x prefix if it exists
-const strip0x = (str: string): string => (isPrefixed(str) ? str.slice(2) : str);
+export const strip0x = (str: string): string => (isPrefixed(str) ? str.slice(2) : str);
 
 /**
  * convert hex string to BigInt, prefixing with 0x if necessary

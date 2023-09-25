@@ -123,6 +123,10 @@ describe('Railgun Txid Merkletree', () => {
       '1868ec3b4c76636f47bb5f7223777d89aae8781a7054889d589c4fcd6c258680',
     );
 
+    expect(await merkletree.getRailgunTxidsForCommitments(['0x11'])).to.deep.equal({
+      '0x11': '08bc25406535ea4da652623be1a3e9fc6cdcdcdad8d2829623e2ef3fff5882d0',
+    });
+
     // Ensure stored hash is correct
     const railgunTransaction = await merkletree.getRailgunTransaction(0, 0);
     const hash = getRailgunTransactionID(railgunTransactions[0]);

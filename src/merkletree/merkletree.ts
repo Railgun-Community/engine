@@ -27,6 +27,7 @@ import {
   TREE_DEPTH,
   CommitmentProcessingGroupSize,
 } from '../models/merkletree-types';
+import { binarySearchForUpperBoundIndex } from '../utils/search';
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
 
@@ -63,7 +64,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   private defaultCommitmentProcessingSize: CommitmentProcessingGroupSize;
 
   // TODO: Remove after V3, when we no longer need to pair all commitments and railgun transactions.
-  protected cacheAllData: Optional<T[]>;
+  protected sortedAllDataCache: Optional<T[]>;
 
   /**
    * Create Merkletree controller from database
@@ -194,8 +195,24 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
+  private findCacheIndexForHash(hash: string): number {
+    return binarySearchForUpperBoundIndex(
+      this.sortedAllDataCache ?? [],
+      (item) => item?.hash === hash,
+    );
+  }
+
+  findCachedDataForHash(hash: string): Optional<T> {
+    const index = this.findCacheIndexForHash(hash);
+    if (index === -1) {
+      return undefined;
+    }
+    return this.sortedAllDataCache?.[index];
+  }
+
   async updateData(tree: number, index: number, data: T): Promise<void> {
     try {
+      this.lockUpdates = true;
       const oldData = await this.getData(tree, index);
       if (oldData.hash !== data.hash) {
         throw new Error('Cannot update merkletree data with different hash.');
@@ -203,19 +220,19 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       await this.db.put(this.getDataDBPath(tree, index), data, 'json');
 
       // Update cache
-      if (isDefined(this.cacheAllData)) {
-        for (let i = 0; i < this.cacheAllData.length; i += 1) {
-          const item = this.cacheAllData[i];
-          if (item.hash === data.hash) {
-            this.cacheAllData[i] = data;
-            break;
-          }
+      if (this.sortedAllDataCache) {
+        const cacheIndex = this.findCacheIndexForHash(data.hash);
+        if (cacheIndex !== -1) {
+          this.sortedAllDataCache[cacheIndex] = data;
         }
       }
+
+      this.lockUpdates = false;
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
       }
+      this.lockUpdates = false;
       throw new Error(err.message);
     }
   }
@@ -232,9 +249,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  sortMerkletreeDataByHash(array: T[]): T[] {
+    return array.sort((a, b) => (a.hash > b.hash ? 1 : -1));
+  }
+
   async queryAllData(): Promise<T[]> {
-    if (this.cacheAllData) {
-      return this.cacheAllData;
+    if (this.sortedAllDataCache) {
+      return this.sortedAllDataCache;
     }
 
     const allData: T[] = [];
@@ -258,8 +280,13 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       });
     }
 
-    this.cacheAllData = allData;
+    this.createSortedAllDataCache(allData);
+
     return allData;
+  }
+
+  createSortedAllDataCache(allData: T[]) {
+    this.sortedAllDataCache = this.sortMerkletreeDataByHash(allData);
   }
 
   /**
@@ -403,7 +430,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearLeavesFromDB(): Promise<void> {
-    this.cacheAllData = undefined;
+    this.sortedAllDataCache = undefined;
     await this.db.clearNamespace(this.getChainDBPrefix());
     this.cachedNodeHashes = {};
     this.treeLengths = [];
@@ -471,7 +498,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     this.treeLengths[treeIndex] = newTreeLength;
     await this.updateStoredMerkletreesMetadata(treeIndex);
 
-    this.cacheAllData?.push(...dataWriteGroup);
+    const allDataCache = [...(this.sortedAllDataCache ?? []), ...dataWriteGroup];
+    this.createSortedAllDataCache(allDataCache);
   }
 
   /**

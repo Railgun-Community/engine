@@ -104,18 +104,17 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     };
   }
 
+  // TODO: Remove after V3
   async getRailgunTxidsForCommitments(
     commitments: string[],
   ): Promise<{ [commitment: string]: Optional<string> }> {
     const commitmentToTxid: { [commitment: string]: Optional<string> } = {};
-
-    const railgunTransactions: RailgunTransactionWithTxid[] = await this.queryAllData();
-
-    commitments.forEach((commitment) => {
-      const txid = railgunTransactions.find((tx) => tx?.commitments.includes(commitment))?.hash;
-      commitmentToTxid[commitment] = txid;
-    });
-
+    await Promise.all(
+      commitments.map(async (commitment) => {
+        const railgunTxid = await this.getRailgunTxidByCommitment(commitment);
+        commitmentToTxid[commitment] = railgunTxid;
+      }),
+    );
     return commitmentToTxid;
   }
 
@@ -145,6 +144,9 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
       // eslint-disable-next-line no-await-in-loop
       await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithTxid]);
+
+      // eslint-disable-next-line no-await-in-loop
+      await this.storeCommitmentsToRailgunTxid(railgunTransactionWithTxid);
     }
   }
 
@@ -170,7 +172,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     this.writeQueue = [];
 
     // Clear cache
-    this.cacheAllData = undefined;
+    this.sortedAllDataCache = undefined;
 
     const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
 
@@ -239,6 +241,35 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
   protected invalidRootCallback(): Promise<void> {
     // Unused for Txid merkletree
     return Promise.resolve();
+  }
+
+  private getCommitmentLookupDBPath(commitment: string): string[] {
+    const commitmentLookupPrefix = fromUTF8String('commitment-lookup');
+    return [...this.getChainDBPrefix(), commitmentLookupPrefix, commitment].map((el) =>
+      formatToByteLength(el, ByteLength.UINT_256),
+    );
+  }
+
+  private async storeCommitmentsToRailgunTxid(
+    railgunTransaction: RailgunTransactionWithTxid,
+  ): Promise<void> {
+    await Promise.all(
+      railgunTransaction.commitments.map(async (commitment) => {
+        await this.db.put(this.getCommitmentLookupDBPath(commitment), railgunTransaction.hash);
+      }),
+    );
+  }
+
+  private async getRailgunTxidByCommitment(commitment: string): Promise<Optional<string>> {
+    try {
+      const railgunTxid = (await this.db.get(this.getCommitmentLookupDBPath(commitment))) as string;
+      return railgunTxid;
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      return undefined;
+    }
   }
 
   private getRailgunTxidLookupDBPath(railgunTxid: string): string[] {
