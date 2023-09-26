@@ -158,7 +158,6 @@ class RailgunEngine extends EventEmitter {
       .filter((leaf) => isSentCommitment(leaf))
       .map((leaf) => leaf.hash);
     if (!this.isPOINode && sentCommitmentHashes.length) {
-      // TODO: Performance is really bad on this.
       const commitmentsToRailgunTxids = await railgunTxidMerkletree.getRailgunTxidsForCommitments(
         leaves.map((leaf) => leaf.hash),
       );

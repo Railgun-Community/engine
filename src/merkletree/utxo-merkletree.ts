@@ -19,6 +19,9 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
 
   protected merkletreeType = 'UTXO';
 
+  // TODO: Remove after V3
+  protected shouldCreateSortedAllDataCache = true;
+
   private constructor(db: Database, chain: Chain, merklerootValidator: MerklerootValidator) {
     super(db, chain, merklerootValidator, CommitmentProcessingGroupSize.XXXLarge);
   }

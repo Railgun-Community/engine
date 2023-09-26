@@ -49,6 +49,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   protected lockUpdates = false;
 
+  // TODO: Remove after V3
+  protected shouldCreateSortedAllDataCache = false;
+
   // Check function to test if merkle root is valid
   merklerootValidator: MerklerootValidator;
 
@@ -286,6 +289,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   createSortedAllDataCache(allData: T[]) {
+    if (!this.shouldCreateSortedAllDataCache) {
+      return;
+    }
     this.sortedAllDataCache = this.sortMerkletreeDataByHash(allData);
   }
 
