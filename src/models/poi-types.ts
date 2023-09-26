@@ -43,6 +43,7 @@ export type POIEngineProofInputs = {
   randomsIn: string[];
   valuesIn: bigint[];
   utxoPositionsIn: number[];
+  utxoTreesIn: number;
   blindedCommitmentsIn: string[];
   creationTxidsIn: string[]; // For shields, this is `bitwiseMerge(tree, position)`
 

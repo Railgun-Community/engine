@@ -17,8 +17,9 @@ import { ProofCache } from './proof-cache';
 import { POIEngineProofInputsWithListPOIData } from '../models/poi-types';
 import { ProofCachePOI } from './proof-cache-poi';
 import { isDefined } from '../utils/is-defined';
+import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 
-const ZERO_VALUE_POI = 0n;
+const ZERO_VALUE_POI = MERKLE_ZERO_VALUE_BIGINT;
 
 type NativeProveRailgun = (
   circuitId: number,
@@ -365,6 +366,7 @@ export class Prover {
     const formattedBlindedCommitmentsOut = Prover.padWithZerosToMax(
       blindedCommitmentsOut.map(hexToBigInt),
       13,
+      0n, // Use Zero = 0 here
     );
 
     const publicInputs: PublicInputsPOI = {
@@ -475,10 +477,14 @@ export class Prover {
     };
   }
 
-  private static padWithZerosToMax(array: bigint[], max: number): bigint[] {
+  private static padWithZerosToMax(
+    array: bigint[],
+    max: number,
+    zeroValue = ZERO_VALUE_POI,
+  ): bigint[] {
     const padded = [...array];
     while (padded.length < max) {
-      padded.push(ZERO_VALUE_POI);
+      padded.push(zeroValue);
     }
     return padded;
   }
@@ -487,10 +493,11 @@ export class Prover {
     doubleArray: bigint[][],
     max: number,
     length: number,
+    zeroValue = ZERO_VALUE_POI,
   ): bigint[][] {
     const padded = [...doubleArray];
     while (padded.length < max) {
-      padded.push(new Array<bigint>(length).fill(ZERO_VALUE_POI));
+      padded.push(new Array<bigint>(length).fill(zeroValue));
     }
     return padded;
   }
@@ -515,19 +522,28 @@ export class Prover {
       nullifyingKey: proofInputs.nullifyingKey,
       token: hexToBigInt(proofInputs.token),
       randomsIn: this.padWithZerosToMax(proofInputs.randomsIn.map(hexToBigInt), maxInputs),
-      valuesIn: this.padWithZerosToMax(proofInputs.valuesIn, maxOutputs),
+      valuesIn: this.padWithZerosToMax(
+        proofInputs.valuesIn,
+        maxOutputs,
+        0n, // Use Zero = 0 here
+      ),
       utxoPositionsIn: this.padWithZerosToMax(proofInputs.utxoPositionsIn.map(BigInt), maxInputs),
+      utxoTreesIn: BigInt(proofInputs.utxoTreesIn),
       blindedCommitmentsIn: this.padWithZerosToMax(
         proofInputs.blindedCommitmentsIn.map(hexToBigInt),
         maxInputs,
+        0n, // Use Zero = 0 here
       ),
       creationTxidsIn: this.padWithZerosToMax(
         proofInputs.creationTxidsIn.map(hexToBigInt),
         maxInputs,
       ),
-
       npksOut: this.padWithZerosToMax(proofInputs.npksOut, maxOutputs),
-      valuesOut: this.padWithZerosToMax(proofInputs.valuesOut, maxOutputs),
+      valuesOut: this.padWithZerosToMax(
+        proofInputs.valuesOut,
+        maxOutputs,
+        0n, // Use Zero = 0 here
+      ),
       railgunTxidMerkleProofIndices: hexToBigInt(proofInputs.railgunTxidMerkleProofIndices),
       railgunTxidMerkleProofPathElements:
         proofInputs.railgunTxidMerkleProofPathElements.map(hexToBigInt),
@@ -538,6 +554,7 @@ export class Prover {
       poiInMerkleProofIndices: this.padWithZerosToMax(
         proofInputs.poiInMerkleProofIndices.map(hexToBigInt),
         maxInputs,
+        0n, // Use Zero = 0 here
       ),
       poiInMerkleProofPathElements: this.padWithArraysOfZerosToMaxAndLength(
         proofInputs.poiInMerkleProofPathElements.map((pathElements) =>

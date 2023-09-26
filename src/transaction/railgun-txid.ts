@@ -1,11 +1,12 @@
 import { poseidon } from 'circomlibjs';
 import { RailgunTransaction, RailgunTransactionWithTxid } from '../models';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 
 const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
   const padded = [...array];
   while (padded.length < max) {
-    padded.push(0n);
+    padded.push(MERKLE_ZERO_VALUE_BIGINT);
   }
   return padded;
 };

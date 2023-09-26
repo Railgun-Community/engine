@@ -113,6 +113,7 @@ export type FormattedCircuitInputsPOI = {
   randomsIn: bigint[];
   valuesIn: bigint[];
   utxoPositionsIn: bigint[];
+  utxoTreesIn: bigint;
   blindedCommitmentsIn: bigint[];
   creationTxidsIn: bigint[];
   npksOut: bigint[];
@@ -139,6 +140,7 @@ export type NativeProverFormattedJsonInputsPOI = {
   randomsIn: string[];
   valuesIn: string[];
   utxoPositionsIn: string[];
+  utxoTreesIn: string;
   blindedCommitmentsIn: string[];
   creationTxidsIn: string[];
   npksOut: string[];

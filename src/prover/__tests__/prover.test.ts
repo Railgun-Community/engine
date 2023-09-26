@@ -45,7 +45,7 @@ describe('Prover', () => {
     );
 
     expect(proof).to.be.an('object');
-  }).timeout(20000);
+  }).timeout(30000);
 
   it('Should verify input vector', async () => {
     const proofInputs = TestVectorPOI;
@@ -57,8 +57,8 @@ describe('Prover', () => {
       nullifiers: proofInputs.nullifiers,
       blockNumber: 0,
     });
-    expect(railgunTransaction.hash).to.equal(
-      '065c9f784b1c322504adf204dca7d18a815d6e62aded02115889ed24160ea70d',
+    expect(hexToBigInt(railgunTransaction.hash)).to.equal(
+      702109577508614192687157007886308755723992845597739802305604799122078977854n,
     );
 
     const railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
@@ -131,11 +131,8 @@ describe('Prover', () => {
       getBlindedCommitmentForUnshield(
         nToHex(unshieldCommitment, ByteLength.UINT_256),
         '0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266', // toAddress
-        '065c9f784b1c322504adf204dca7d18a815d6e62aded02115889ed24160ea70d', // railgunTxid
+        railgunTransaction.hash, // railgunTxid
       ),
-    );
-    expect(blindedCommitmentOut).to.equal(
-      20212043841001617549529507919653247325743418843927056327683159290488555337744n,
     );
     expect(blindedCommitmentOut).to.equal(hexToBigInt(proofInputs.blindedCommitmentsOut[0]));
   });

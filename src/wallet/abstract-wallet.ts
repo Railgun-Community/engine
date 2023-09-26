@@ -1409,7 +1409,8 @@ abstract class AbstractWallet extends EventEmitter {
         token: spentTXOs[0].note.tokenHash,
         randomsIn: spentTXOs.map((txo) => txo.note.random),
         valuesIn: spentTXOs.map((txo) => txo.note.value),
-        utxoPositionsIn: spentTXOs.map((txo) => txo.tree * TREE_MAX_ITEMS + txo.position),
+        utxoPositionsIn: spentTXOs.map((txo) => txo.position),
+        utxoTreesIn: spentTXOs[0].tree,
         blindedCommitmentsIn,
         creationTxidsIn,
 
