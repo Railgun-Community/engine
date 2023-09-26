@@ -992,9 +992,10 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
+    // Sort descending by UTXO tree/position.
     return statusInfos.sort(
       (a, b) =>
-        a.tree * TREE_MAX_ITEMS + a.startPosition - b.tree * TREE_MAX_ITEMS + b.startPosition,
+        b.tree * TREE_MAX_ITEMS + b.startPosition - a.tree * TREE_MAX_ITEMS + a.startPosition,
     );
   }
 
@@ -1064,15 +1065,15 @@ abstract class AbstractWallet extends EventEmitter {
             const sentCommitmentsForRailgunTxid = railgunTxidGroups[railgunTxid].sentCommitments;
             const unshieldEventsForRailgunTxid = railgunTxidGroups[railgunTxid].unshieldEvents;
 
-            const blockNumber = sentCommitments.length
-              ? sentCommitments[0].note.blockNumber
+            const blockNumber = sentCommitmentsForRailgunTxid.length
+              ? sentCommitmentsForRailgunTxid[0].note.blockNumber
               : unshieldEventsForRailgunTxid[0].blockNumber;
 
-            const commitmentHashes = [
-              ...sentCommitments.map((sentCommitment) =>
+            const commitmentHashes: string[] = [
+              ...sentCommitmentsForRailgunTxid.map((sentCommitment) =>
                 nToHex(sentCommitment.note.hash, ByteLength.UINT_256, true),
               ),
-              ...unshieldEvents.map((unshieldEvent) =>
+              ...unshieldEventsForRailgunTxid.map((unshieldEvent) =>
                 nToHex(getUnshieldEventNoteHash(unshieldEvent), ByteLength.UINT_256, true),
               ),
             ];
@@ -1124,6 +1125,7 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
+    // Sort descending by blockNumber.
     return statusInfos.sort((a, b) => b.blockNumber - a.blockNumber);
   }
 
