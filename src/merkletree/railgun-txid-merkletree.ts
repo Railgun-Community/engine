@@ -17,7 +17,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   protected merkletreeType = 'Railgun Txid';
 
-  private shouldStoreMerkleroots: boolean;
+  shouldStoreMerkleroots: boolean;
 
   private constructor(
     db: Database,
@@ -147,6 +147,9 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
       // eslint-disable-next-line no-await-in-loop
       await this.storeCommitmentsToRailgunTxid(railgunTransactionWithTxid);
+
+      // eslint-disable-next-line no-await-in-loop
+      await this.storeRailgunTxidIndexLookup(railgunTransactionWithTxid.hash, tree, index);
     }
   }
 
@@ -279,7 +282,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     );
   }
 
-  private async getTxidIndexByRailgunTxid(railgunTxid: string): Promise<Optional<number>> {
+  async getTxidIndexByRailgunTxid(railgunTxid: string): Promise<Optional<number>> {
     try {
       const txidIndex = Number(
         (await this.db.get(this.getRailgunTxidLookupDBPath(railgunTxid))) as string,
@@ -336,8 +339,6 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     leaf: string,
     merkleroot: string,
   ): Promise<void> {
-    await this.storeRailgunTxidIndexLookup(leaf, tree, index);
-
     if (this.shouldStoreMerkleroots) {
       await this.db.put(this.getHistoricalMerklerootDBPath(tree, index), merkleroot);
     }
