@@ -153,5 +153,5 @@ export type NativeProverFormattedJsonInputsPOI = {
 export type ArtifactGetter = {
   assertArtifactExists: (nullifiers: number, commitments: number) => void;
   getArtifacts: (publicInputs: PublicInputsRailgun) => Promise<Artifact>;
-  getArtifactsPOI: () => Promise<Artifact>;
+  getArtifactsPOI: (maxInputs: number, maxOutputs: number) => Promise<Artifact>;
 };

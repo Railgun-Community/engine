@@ -38,10 +38,7 @@ describe('Prover', () => {
     const { proof } = await prover.provePOI(
       fullProofInputs,
       TestVectorPOI.blindedCommitmentsOut,
-      () => {},
-      // (progress) => {
-      // console.log(`Generating POI proof ... ${progress}%`);
-      // },
+      () => {}, // progress
     );
 
     expect(proof).to.be.an('object');

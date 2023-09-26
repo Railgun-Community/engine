@@ -995,7 +995,7 @@ abstract class AbstractWallet extends EventEmitter {
     // Sort descending by UTXO tree/position.
     return statusInfos.sort(
       (a, b) =>
-        b.tree * TREE_MAX_ITEMS + b.startPosition - a.tree * TREE_MAX_ITEMS + a.startPosition,
+        b.tree * TREE_MAX_ITEMS + b.startPosition - (a.tree * TREE_MAX_ITEMS + a.startPosition),
     );
   }
 

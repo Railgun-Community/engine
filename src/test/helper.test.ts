@@ -55,10 +55,13 @@ const assertTestNodeArtifactExists = (nullifiers: number, commitments: number): 
   }
 };
 
-const testNodeArtifactGetterPOI = async (): Promise<Artifact> => {
+const testNodeArtifactGetterPOI = async (
+  maxInputs: number,
+  maxOutputs: number,
+): Promise<Artifact> => {
   try {
     return {
-      ...artifacts.getArtifactsPOI(),
+      ...artifacts.getArtifactsPOI(maxInputs, maxOutputs),
       dat: undefined,
     };
   } catch (err) {

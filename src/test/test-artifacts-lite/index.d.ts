@@ -28,6 +28,6 @@ declare function getArtifacts(nullifiers: number, commitments: number): Artifact
 declare function getVKey(nullifiers: number, commitments: number): VKey;
 declare function listArtifacts(): ArtifactConfig[];
 
-declare function getArtifactsPOI(): Artifact;
+declare function getArtifactsPOI(maxInputs: number, maxOutputs: number): Artifact;
 
 export { getArtifacts, getVKey, listArtifacts, getArtifactsPOI };

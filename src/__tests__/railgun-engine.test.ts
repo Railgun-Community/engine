@@ -202,7 +202,9 @@ const generateAndVerifyPOI = async (
     const blindedCommitmentsOut: string[] = expectedArgs[3];
     const fullProofInputs: POIEngineProofInputsWithListPOIData =
       getDummyPOIProofInputs(proofInputs);
+
     await engine.prover.provePOI(fullProofInputs, blindedCommitmentsOut, () => {});
+
     submitPOISpy.restore();
   } catch (err) {
     submitPOISpy.restore();
@@ -214,7 +216,7 @@ describe('RailgunEngine', function test() {
   this.timeout(20000);
 
   beforeEach(async () => {
-    engine = new RailgunEngine(
+    engine = RailgunEngine.initForWallet(
       'Test Wallet',
       memdown(),
       testArtifactsGetter,

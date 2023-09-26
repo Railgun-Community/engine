@@ -249,10 +249,22 @@ export class Prover {
     return this.groth16.verify(artifacts.vkey, publicSignals, proof);
   }
 
-  async verifyPOIProof(
+  async verifyPOIProof(publicInputs: PublicInputsPOI, proof: Proof): Promise<boolean> {
+    // TODO: Add mini verification
+    // const verified = await this.performVerifyPOIProof(publicInputs, proof, 3, 3);
+    // if (verified) {
+    //   return true;
+    // }
+
+    // "Full" POI verification
+    return this.performVerifyPOIProof(publicInputs, proof, 13, 13);
+  }
+
+  async performVerifyPOIProof(
     publicInputs: PublicInputsPOI,
     proof: Proof,
-    artifacts: Artifact,
+    maxInputs: number,
+    maxOutputs: number,
   ): Promise<boolean> {
     if (!this.groth16) {
       throw new Error('Requires groth16 implementation');
@@ -262,6 +274,8 @@ export class Prover {
       // Snark verification will occur during gas estimate (and on-chain) regardless.
       return true;
     }
+
+    const artifacts = await this.artifactGetter.getArtifactsPOI(maxInputs, maxOutputs);
 
     const publicSignals: bigint[] = [
       ...publicInputs.blindedCommitmentsOut,
@@ -352,6 +366,40 @@ export class Prover {
     };
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  getPublicInputsPOI(
+    anyRailgunTxidMerklerootAfterTransaction: string,
+    blindedCommitmentsOut: string[],
+    poiMerkleroots: string[],
+    maxInputs: number,
+    maxOutputs: number,
+  ): PublicInputsPOI {
+    const publicInputs: PublicInputsPOI = {
+      anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
+        anyRailgunTxidMerklerootAfterTransaction,
+      ),
+      blindedCommitmentsOut: Prover.padWithZerosToMax(
+        blindedCommitmentsOut.map(hexToBigInt),
+        maxOutputs,
+        0n, // Use Zero = 0 here
+      ),
+      poiMerkleroots: Prover.padWithZerosToMax(poiMerkleroots.map(hexToBigInt), maxInputs),
+    };
+    return publicInputs;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private static getMaxInputsOutputsForPOI(inputs: POIEngineProofInputsWithListPOIData) {
+    if (inputs.nullifiers.length <= 3 && inputs.commitmentsOut.length <= 3) {
+      // "Mini" POI circuit
+      // TODO: Add Mini circuit
+      // return { maxInputs: 3, maxOutputs: 3 };
+    }
+
+    // "Full" POI circuit
+    return { maxInputs: 13, maxOutputs: 13 };
+  }
+
   async provePOI(
     inputs: POIEngineProofInputsWithListPOIData,
     blindedCommitmentsOut: string[],
@@ -361,20 +409,17 @@ export class Prover {
       throw new Error('Requires groth16 full prover implementation');
     }
 
-    const formattedInputs = Prover.formatPOIInputs(inputs);
+    const { maxInputs, maxOutputs } = Prover.getMaxInputsOutputsForPOI(inputs);
 
-    const formattedBlindedCommitmentsOut = Prover.padWithZerosToMax(
-      blindedCommitmentsOut.map(hexToBigInt),
-      13,
-      0n, // Use Zero = 0 here
+    const formattedInputs = Prover.formatPOIInputs(inputs, maxInputs, maxOutputs);
+
+    const publicInputs = this.getPublicInputsPOI(
+      inputs.anyRailgunTxidMerklerootAfterTransaction,
+      blindedCommitmentsOut,
+      inputs.poiMerkleroots,
+      maxInputs,
+      maxOutputs,
     );
-
-    const publicInputs: PublicInputsPOI = {
-      anyRailgunTxidMerklerootAfterTransaction:
-        formattedInputs.anyRailgunTxidMerklerootAfterTransaction,
-      blindedCommitmentsOut: formattedBlindedCommitmentsOut,
-      poiMerkleroots: formattedInputs.poiMerkleroots,
-    };
 
     const existingProof = ProofCachePOI.get(inputs.blindedCommitmentsIn, blindedCommitmentsOut);
     if (existingProof) {
@@ -383,7 +428,7 @@ export class Prover {
 
     progressCallback(5);
 
-    const artifacts = await this.artifactGetter.getArtifactsPOI();
+    const artifacts = await this.artifactGetter.getArtifactsPOI(maxInputs, maxOutputs);
     if (!artifacts.wasm && !artifacts.dat) {
       throw new Error('Requires WASM or DAT prover artifact');
     }
@@ -408,9 +453,8 @@ export class Prover {
 
     if (isDefined(publicSignals)) {
       // snarkjs will provide publicSignals for validation
-
-      for (let i = 0; i < formattedBlindedCommitmentsOut.length; i += 1) {
-        const blindedCommitmentOutString = formattedBlindedCommitmentsOut[i].toString();
+      for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
+        const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
         if (blindedCommitmentOutString !== publicSignals[i]) {
           throw new Error(
             `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
@@ -422,7 +466,7 @@ export class Prover {
     progressCallback(finalProgressProof);
 
     // Throw if proof is invalid
-    if (!(await this.verifyPOIProof(publicInputs, proof, artifacts))) {
+    if (!(await this.verifyPOIProof(publicInputs, proof))) {
       throw new Error('Proof verification failed');
     }
 
@@ -504,10 +548,9 @@ export class Prover {
 
   private static formatPOIInputs(
     proofInputs: POIEngineProofInputsWithListPOIData,
+    maxInputs: number,
+    maxOutputs: number,
   ): FormattedCircuitInputsPOI {
-    const maxInputs = 13;
-    const maxOutputs = 13;
-
     return {
       anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
         proofInputs.anyRailgunTxidMerklerootAfterTransaction,

@@ -87,14 +87,14 @@ class RailgunEngine extends EventEmitter {
    * @param skipMerkletreeScans - whether to skip UTXO merkletree scans - useful for shield-only interfaces without Railgun wallets.
    * @param isPOINode - run as POI node with full Railgun Txid merkletrees. set to false for all wallet implementations.
    */
-  constructor(
+  private constructor(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
     quickSyncEvents: QuickSyncEvents,
     quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
-    validateRailgunTxidMerkleroot: MerklerootValidator,
-    getLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid,
+    validateRailgunTxidMerkleroot: Optional<MerklerootValidator>,
+    getLatestValidatedRailgunTxid: Optional<GetLatestValidatedRailgunTxid>,
     engineDebugger: Optional<EngineDebugger>,
     skipMerkletreeScans: boolean = false,
     isPOINode: boolean = false,
@@ -107,8 +107,10 @@ class RailgunEngine extends EventEmitter {
 
     this.quickSyncEvents = quickSyncEvents;
     this.quickSyncRailgunTransactions = quickSyncRailgunTransactions;
-    this.validateRailgunTxidMerkleroot = validateRailgunTxidMerkleroot;
-    this.getLatestValidatedRailgunTxid = getLatestValidatedRailgunTxid;
+    this.validateRailgunTxidMerkleroot = validateRailgunTxidMerkleroot ?? (async () => true);
+    this.getLatestValidatedRailgunTxid =
+      getLatestValidatedRailgunTxid ??
+      (async () => ({ txidIndex: undefined, merkleroot: undefined }));
 
     if (engineDebugger) {
       EngineDebug.init(engineDebugger);
@@ -116,6 +118,52 @@ class RailgunEngine extends EventEmitter {
 
     this.skipMerkletreeScans = skipMerkletreeScans;
     this.isPOINode = isPOINode;
+  }
+
+  static initForWallet(
+    walletSource: string,
+    leveldown: AbstractLevelDOWN,
+    artifactGetter: ArtifactGetter,
+    quickSyncEvents: QuickSyncEvents,
+    quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
+    validateRailgunTxidMerkleroot: MerklerootValidator,
+    getLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid,
+    engineDebugger: Optional<EngineDebugger>,
+    skipMerkletreeScans: boolean = false,
+  ) {
+    return new RailgunEngine(
+      walletSource,
+      leveldown,
+      artifactGetter,
+      quickSyncEvents,
+      quickSyncRailgunTransactions,
+      validateRailgunTxidMerkleroot,
+      getLatestValidatedRailgunTxid,
+      engineDebugger,
+      skipMerkletreeScans,
+      false, // isPOINode
+    );
+  }
+
+  static initForPOINode(
+    leveldown: AbstractLevelDOWN,
+    artifactGetter: ArtifactGetter,
+    quickSyncEvents: QuickSyncEvents,
+    quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
+    engineDebugger: Optional<EngineDebugger>,
+  ) {
+    return new RailgunEngine(
+      'poinode',
+      leveldown,
+      artifactGetter,
+      quickSyncEvents,
+      quickSyncRailgunTransactions,
+      undefined, // validateRailgunTxidMerkleroot
+      undefined, // getLatestValidatedRailgunTxid
+      engineDebugger,
+      false, // skipMerkletreeScans
+      false, // isPOINode
+    );
   }
 
   static setEngineDebugger = (engineDebugger: EngineDebugger): void => {
