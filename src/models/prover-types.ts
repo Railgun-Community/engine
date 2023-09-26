@@ -127,7 +127,6 @@ export type FormattedCircuitInputsPOI = {
 export type NativeProverFormattedJsonInputsPOI = {
   // Public inputs
   anyRailgunTxidMerklerootAfterTransaction: string;
-  blindedCommitmentsOut: string[];
   poiMerkleroots: string[];
 
   // Private inputs
@@ -145,8 +144,8 @@ export type NativeProverFormattedJsonInputsPOI = {
   creationTxidsIn: string[];
   npksOut: string[];
   valuesOut: string[];
-  anyRailgunTxidAfterTransactionMerkleProofIndices: string;
-  anyRailgunTxidAfterTransactionMerkleProofPathElements: string[];
+  railgunTxidMerkleProofIndices: string;
+  railgunTxidMerkleProofPathElements: string[];
   poiInMerkleProofIndices: string[];
   poiInMerkleProofPathElements: string[][];
 };
