@@ -1186,12 +1186,12 @@ describe('RailgunEngine', function test() {
 
     await provider.send('evm_revert', [snapshot]);
 
-    await txidMerkletree.clearLeavesFromDB();
+    await txidMerkletree?.clearLeavesFromDB();
 
-    transactNoteRandomStub.restore();
-    transactSenderRandomStub.restore();
-    aesGetRandomIVStub.restore();
+    transactNoteRandomStub?.restore();
+    transactSenderRandomStub?.restore();
+    aesGetRandomIVStub?.restore();
 
-    await engine.unload();
+    await engine?.unload();
   });
 });

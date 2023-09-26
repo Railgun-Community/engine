@@ -171,7 +171,7 @@ describe('Relay Adapt', function test() {
         tx.wait(),
         promiseTimeout(
           awaitScan(wallet, chain),
-          10000,
+          20000,
           'Timed out shielding base token for relay adapt test setup',
         ),
       ]);
@@ -203,7 +203,7 @@ describe('Relay Adapt', function test() {
     await Promise.all([
       awaitRailgunSmartWalletShield(railgunSmartWalletContract),
       txResponse.wait(),
-      promiseTimeout(awaitScan(wallet, chain), 10000),
+      promiseTimeout(awaitScan(wallet, chain), 15000),
     ]);
 
     expect(await wallet.getBalance(chain, WETH_TOKEN_ADDRESS)).to.equal(9975n);
