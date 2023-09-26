@@ -77,16 +77,6 @@ class RailgunEngine extends EventEmitter {
 
   readonly isPOINode: boolean;
 
-  /**
-   * Create a RAILGUN Engine instance.
-   * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
-   * @param leveldown - abstract-leveldown compatible store
-   * @param artifactGetter - async function to retrieve artifacts
-   * @param quickSync - quick sync function to speed up sync
-   * @param engineDebugger - log and error callbacks for verbose logging
-   * @param skipMerkletreeScans - whether to skip UTXO merkletree scans - useful for shield-only interfaces without Railgun wallets.
-   * @param isPOINode - run as POI node with full Railgun Txid merkletrees. set to false for all wallet implementations.
-   */
   private constructor(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
@@ -96,8 +86,8 @@ class RailgunEngine extends EventEmitter {
     validateRailgunTxidMerkleroot: Optional<MerklerootValidator>,
     getLatestValidatedRailgunTxid: Optional<GetLatestValidatedRailgunTxid>,
     engineDebugger: Optional<EngineDebugger>,
-    skipMerkletreeScans: boolean = false,
-    isPOINode: boolean = false,
+    skipMerkletreeScans: boolean,
+    isPOINode: boolean,
   ) {
     super();
 
@@ -120,6 +110,16 @@ class RailgunEngine extends EventEmitter {
     this.isPOINode = isPOINode;
   }
 
+  /**
+   * Create a RAILGUN Engine instance for a RAILGUN-compatible Wallet.
+   * @param walletSource - string representing your wallet's name (16 char max, lowercase and numerals only)
+   * @param leveldown - abstract-leveldown compatible store
+   * @param artifactGetter - async function to retrieve artifacts
+   * @param quickSync - quick sync function to speed up sync
+   * @param engineDebugger - log and error callbacks for verbose logging
+   * @param skipMerkletreeScans - whether to skip UTXO merkletree scans - useful for shield-only interfaces without Railgun wallets.
+   * @param isPOINode - run as POI node with full Railgun Txid merkletrees. set to false for all wallet implementations.
+   */
   static initForWallet(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
@@ -162,7 +162,7 @@ class RailgunEngine extends EventEmitter {
       undefined, // getLatestValidatedRailgunTxid
       engineDebugger,
       false, // skipMerkletreeScans
-      false, // isPOINode
+      true, // isPOINode
     );
   }
 
