@@ -249,18 +249,7 @@ export class Prover {
     return this.groth16.verify(artifacts.vkey, publicSignals, proof);
   }
 
-  async verifyPOIProof(publicInputs: PublicInputsPOI, proof: Proof): Promise<boolean> {
-    // TODO: Add mini verification
-    // const verified = await this.performVerifyPOIProof(publicInputs, proof, 3, 3);
-    // if (verified) {
-    //   return true;
-    // }
-
-    // "Full" POI verification
-    return this.performVerifyPOIProof(publicInputs, proof, 13, 13);
-  }
-
-  async performVerifyPOIProof(
+  async verifyPOIProof(
     publicInputs: PublicInputsPOI,
     proof: Proof,
     maxInputs: number,
@@ -466,7 +455,7 @@ export class Prover {
     progressCallback(finalProgressProof);
 
     // Throw if proof is invalid
-    if (!(await this.verifyPOIProof(publicInputs, proof))) {
+    if (!(await this.verifyPOIProof(publicInputs, proof, maxInputs, maxOutputs))) {
       throw new Error('Proof verification failed');
     }
 
