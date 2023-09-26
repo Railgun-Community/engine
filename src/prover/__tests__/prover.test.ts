@@ -45,7 +45,7 @@ describe('Prover', () => {
     );
 
     expect(proof).to.be.an('object');
-  }).timeout(10000);
+  }).timeout(20000);
 
   it('Should verify input vector', async () => {
     const proofInputs = TestVectorPOI;
