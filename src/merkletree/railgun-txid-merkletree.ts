@@ -149,7 +149,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       await this.storeCommitmentsToRailgunTxid(railgunTransactionWithTxid);
 
       // eslint-disable-next-line no-await-in-loop
-      await this.storeRailgunTxidIndexLookup(railgunTransactionWithTxid.hash, tree, index);
+      await this.storeRailgunTxidIndexLookup(railgunTransactionWithTxid.hash, nextTree, nextIndex);
     }
   }
 
@@ -284,10 +284,11 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   async getTxidIndexByRailgunTxid(railgunTxid: string): Promise<Optional<number>> {
     try {
-      const txidIndex = Number(
-        (await this.db.get(this.getRailgunTxidLookupDBPath(railgunTxid))) as string,
-      );
-      return txidIndex;
+      const txidIndexString = (await this.db.get(
+        this.getRailgunTxidLookupDBPath(railgunTxid),
+        'utf8',
+      )) as string;
+      return Number(txidIndexString);
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
@@ -320,7 +321,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     index: number,
   ): Promise<void> {
     const txidIndex = RailgunTxidMerkletree.getTxidIndex(tree, index);
-    await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), String(txidIndex));
+    await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), txidIndex, 'utf8');
   }
 
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {
