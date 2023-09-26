@@ -75,7 +75,7 @@ class RailgunEngine extends EventEmitter {
 
   private readonly skipMerkletreeScans: boolean;
 
-  private readonly isPOINode: boolean;
+  readonly isPOINode: boolean;
 
   /**
    * Create a RAILGUN Engine instance.
