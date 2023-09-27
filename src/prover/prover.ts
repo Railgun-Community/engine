@@ -30,6 +30,7 @@ type NativeProveRailgun = (
 ) => Proof;
 
 type NativeProvePOI = (
+  circuitId: number,
   datBuffer: Buffer,
   zkeyBuffer: Buffer,
   inputJson: NativeProverFormattedJsonInputsPOI,
@@ -176,6 +177,16 @@ export class Prover {
       }
     };
 
+    const circuitIdForInputsOutputsPOI = (inputs: number, outputs: number): number => {
+      const circuitString = `${inputs}X${outputs}`;
+      const circuitName = `POI_${inputs}X${outputs}`;
+      const circuitId = circuits[circuitName];
+      if (circuitId == null) {
+        throw new Error(`No circuit found for ${circuitString.toLowerCase()}`);
+      }
+      return circuitId;
+    };
+
     const fullProvePOI = (
       formattedInputs: FormattedCircuitInputsPOI,
       _wasm: ArrayLike<number> | undefined,
@@ -201,7 +212,17 @@ export class Prover {
 
         const start = Date.now();
 
-        const proof: Proof = nativeProvePOI(datBuffer, zkeyBuffer, jsonInputs, progressCallback);
+        const inputs = formattedInputs.nullifiers.length;
+        const outputs = formattedInputs.commitmentsOut.length;
+        const circuitId = circuitIdForInputsOutputsPOI(inputs, outputs);
+
+        const proof: Proof = nativeProvePOI(
+          circuitId,
+          datBuffer,
+          zkeyBuffer,
+          jsonInputs,
+          progressCallback,
+        );
 
         logger.debug(`Proof lapsed ${Date.now() - start} ms`);
 
