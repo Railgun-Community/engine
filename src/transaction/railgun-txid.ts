@@ -11,15 +11,19 @@ const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
   return padded;
 };
 
-export const getRailgunTransactionID = (railgunTransaction: RailgunTransaction): bigint => {
-  const maxInputs = 13;
+export const getRailgunTransactionID = (railgunTransaction: {
+  nullifiers: string[];
+  commitments: string[];
+  boundParamsHash: string;
+}): bigint => {
+  const maxInputs = 13; // Always 13 - no matter the POI circuit
   const nullifiersPadded = padWithZerosToMax(
     railgunTransaction.nullifiers.map((el) => hexToBigInt(el)),
     maxInputs,
   );
   const nullifiersHash = poseidon(nullifiersPadded);
 
-  const maxOutputs = 13;
+  const maxOutputs = 13; // Always 13 - no matter the POI circuit
   const commitmentsPadded = padWithZerosToMax(
     railgunTransaction.commitments.map((el) => hexToBigInt(el)),
     maxOutputs,
@@ -28,16 +32,24 @@ export const getRailgunTransactionID = (railgunTransaction: RailgunTransaction):
 
   const boundParamsHash = hexToBigInt(railgunTransaction.boundParamsHash);
 
-  const railgunTxid = poseidon([nullifiersHash, commitmentsHash, boundParamsHash]);
-  return railgunTxid;
+  return poseidon([nullifiersHash, commitmentsHash, boundParamsHash]);
+};
+
+export const getRailgunTransactionIDHex = (railgunTransaction: {
+  nullifiers: string[];
+  commitments: string[];
+  boundParamsHash: string;
+}): string => {
+  const railgunTxid = getRailgunTransactionID(railgunTransaction);
+  return nToHex(railgunTxid, ByteLength.UINT_256);
 };
 
 export const createRailgunTransactionWithID = (
   railgunTransaction: RailgunTransaction,
 ): RailgunTransactionWithTxid => {
-  const txid = getRailgunTransactionID(railgunTransaction);
+  const txidHex = getRailgunTransactionIDHex(railgunTransaction);
   return {
     ...railgunTransaction,
-    hash: nToHex(txid, ByteLength.UINT_256),
+    hash: txidHex,
   };
 };
