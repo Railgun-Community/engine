@@ -133,6 +133,7 @@ describe('Relay Adapt', function test() {
       fallbackProvider,
       pollingProvider,
       DEPLOYMENT_BLOCK,
+      undefined,
     );
     await engine.scanHistory(chain);
     railgunSmartWalletContract = engine.railgunSmartWalletContracts[chain.type][chain.id];

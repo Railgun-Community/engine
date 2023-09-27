@@ -112,6 +112,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       provider,
       pollingProvider,
       0,
+      0,
     );
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
   });

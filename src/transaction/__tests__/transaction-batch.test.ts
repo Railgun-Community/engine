@@ -113,6 +113,7 @@ describe('Transaction/Transaction Batch', function run() {
       provider,
       pollingProvider,
       0,
+      1,
     );
 
     prover = engine.prover;

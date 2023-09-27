@@ -130,6 +130,7 @@ describe('Railgun Smart Wallet', function runTests() {
       provider,
       pollingProvider,
       0,
+      0,
     );
     await engine.scanHistory(chain);
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];

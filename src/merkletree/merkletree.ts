@@ -26,6 +26,7 @@ import {
   MerklerootValidator,
   TREE_DEPTH,
   CommitmentProcessingGroupSize,
+  TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
 import { binarySearchForUpperBoundIndex } from '../utils/search';
 
@@ -106,17 +107,17 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const leaf = await this.getNodeHash(tree, 0, index);
 
     // Get indexes of path elements to fetch
-    const elementsIndexes: number[] = [index ^ 1];
+    const elementsIndices: number[] = [index ^ 1];
 
     // Loop through each level and calculate index
-    while (elementsIndexes.length < TREE_DEPTH) {
+    while (elementsIndices.length < TREE_DEPTH) {
       // Shift right and flip last bit
-      elementsIndexes.push((elementsIndexes[elementsIndexes.length - 1] >> 1) ^ 1);
+      elementsIndices.push((elementsIndices[elementsIndices.length - 1] >> 1) ^ 1);
     }
 
     // Fetch path elements
     const elements = await Promise.all(
-      elementsIndexes.map((elementIndex, level) => this.getNodeHash(tree, level, elementIndex)),
+      elementsIndices.map((elementIndex, level) => this.getNodeHash(tree, level, elementIndex)),
     );
 
     // Convert index to bytes data, the binary representation is the indices of the merkle path
@@ -175,9 +176,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Construct node hash DB path from tree number, level, and index
    */
   getNodeHashDBPath(tree: number, level: number, index: number): string[] {
-    return [...this.getNodeHashLevelPath(tree, level), hexlify(new BN(index))].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
-    );
+    const dbPath = [...this.getNodeHashLevelPath(tree, level), hexlify(new BN(index))];
+    return dbPath.map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
   async clearAllNodeHashes(tree: number): Promise<void> {
@@ -817,6 +817,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     });
 
     return true;
+  }
+
+  static numNodesPerLevel(level: number): number {
+    return TREE_MAX_ITEMS >> level;
   }
 
   private treeIndicesFromWriteQueue(): number[] {

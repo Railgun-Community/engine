@@ -271,6 +271,7 @@ describe('RailgunEngine', function test() {
       provider,
       pollingProvider,
       24,
+      0,
     );
     await engine.scanHistory(chain);
     utxoMerkletree = engine.utxoMerkletrees[chain.type][chain.id];

@@ -797,6 +797,7 @@ class RailgunEngine extends EventEmitter {
     defaultProvider: PollingJsonRpcProvider | FallbackProvider,
     pollingProvider: PollingJsonRpcProvider,
     deploymentBlock: number,
+    poiLaunchBlock: Optional<number>,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
@@ -862,13 +863,18 @@ class RailgunEngine extends EventEmitter {
     let railgunTxidMerkletree: RailgunTxidMerkletree;
     if (this.isPOINode) {
       // POI Node Txid merkletree
-      railgunTxidMerkletree = await RailgunTxidMerkletree.createForPOINode(this.db, chain);
+      railgunTxidMerkletree = await RailgunTxidMerkletree.createForPOINode(
+        this.db,
+        chain,
+        poiLaunchBlock,
+      );
       this.railgunTxidMerkletrees[chain.type][chain.id] = railgunTxidMerkletree;
     } else {
       // Wallet Txid merkletree
       railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
         this.db,
         chain,
+        poiLaunchBlock,
         this.validateRailgunTxidMerkleroot,
       );
       this.railgunTxidMerkletrees[chain.type][chain.id] = railgunTxidMerkletree;

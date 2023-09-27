@@ -61,6 +61,7 @@ describe('Prover', () => {
     const railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
       new Database(memdown()),
       chain,
+      undefined,
       async () => true,
     );
     await railgunTxidMerkletree.queueRailgunTransactions([railgunTransaction], undefined);
