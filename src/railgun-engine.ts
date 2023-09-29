@@ -45,7 +45,7 @@ import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
 import { assertIsPollingProvider } from './provider/polling-util';
 import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
-import { TXIDMerkletree } from './merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
 import { delay, isSentCommitment } from './utils';
 import { createRailgunTransactionWithID } from './transaction/railgun-txid';

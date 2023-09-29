@@ -95,7 +95,7 @@ import {
   getBlindedCommitmentForTransact,
   getBlindedCommitmentForUnshield,
 } from '../poi/blinded-commitment';
-import { TXIDMerkletree } from '../merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import {
   ACTIVE_TXID_VERSIONS,
   BlindedCommitmentData,
@@ -104,7 +104,7 @@ import {
   POIsPerList,
   TXIDVersion,
 } from '../models/poi-types';
-import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
+import { getGlobalTreePosition } from '../poi/shield-railgun-txid';
 import { TREE_MAX_ITEMS } from '../models/merkletree-types';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
@@ -825,13 +825,13 @@ abstract class AbstractWallet extends EventEmitter {
         ) {
           const isShield = isReceiveShieldCommitment(receiveCommitment);
           if (isShield) {
-            const railgunTxid = getShieldRailgunTxid(tree, position);
-            receiveCommitment.railgunTxid = railgunTxid;
+            const globalTreePosition = getGlobalTreePosition(tree, position);
+            receiveCommitment.railgunTxid = globalTreePosition;
             const commitment = await merkletree.getCommitment(tree, position);
             receiveCommitment.blindedCommitment = getBlindedCommitmentForShield(
               commitment.hash,
               note.notePublicKey,
-              railgunTxid,
+              globalTreePosition,
             );
           } else {
             const commitment = await merkletree.getCommitment(tree, position);
@@ -1516,7 +1516,7 @@ abstract class AbstractWallet extends EventEmitter {
         }
         return txo.railgunTxid;
       }
-      return getShieldRailgunTxid(txo.tree, txo.position);
+      return getGlobalTreePosition(txo.tree, txo.position);
     });
     return creationTxidsIn;
   }

@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { TXIDMerkletree } from '../railgun-txid-merkletree';
+import { TXIDMerkletree } from '../txid-merkletree';
 import { RailgunTransaction, TXIDVersion } from '../../models';
 import {
   createRailgunTransactionWithID,

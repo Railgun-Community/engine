@@ -59,14 +59,14 @@ import { POI, POIListType } from '../poi/poi';
 import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-interface.test';
 import { hashBoundParams } from '../transaction/bound-params';
 import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
-import { TXIDMerkletree } from '../merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import {
   POIEngineProofInputs,
   POIEngineProofInputsWithListPOIData,
   TXIDVersion,
 } from '../models/poi-types';
 import { getBlindedCommitmentForShield } from '../poi/blinded-commitment';
-import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
+import { getGlobalTreePosition } from '../poi/shield-railgun-txid';
 import { getDummyPOIProofInputs } from '../test/test-poi-proof.test';
 import { ShieldNote } from '../note';
 import { TransactionStruct } from '../models';
@@ -184,7 +184,7 @@ const generateAndVerifyPOI = async (
     const blindedCommitmentForShield = getBlindedCommitmentForShield(
       shieldCommitment,
       shield.notePublicKey,
-      getShieldRailgunTxid(0, 0),
+      getGlobalTreePosition(0, 0),
     );
     expect(blindedCommitmentForShield).to.equal(
       '0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2',

@@ -10,12 +10,12 @@ import { verifyMerkleProof } from '../../merkletree/merkle-proof';
 import { Chain } from '../../models/engine-types';
 import { MerkleProof } from '../../models/formatted-types';
 import { TXIDVersion } from '../../models/poi-types';
-import { TXIDMerkletree } from '../../merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from '../../merkletree/txid-merkletree';
 import { Database } from '../../database/database';
 import { ShieldNote, TransactNote } from '../../note';
 import { ByteLength, hexToBigInt, nToHex } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
-import { getShieldRailgunTxid } from '../../poi/shield-railgun-txid';
+import { getGlobalTreePosition } from '../../poi/shield-railgun-txid';
 import {
   getBlindedCommitmentForShield,
   getBlindedCommitmentForUnshield,
@@ -114,7 +114,7 @@ describe('Prover', () => {
       getBlindedCommitmentForShield(
         nToHex(shieldCommitment, ByteLength.UINT_256),
         notePublicKey,
-        getShieldRailgunTxid(0, 0),
+        getGlobalTreePosition(0, 0),
       ),
     );
     expect(blindedCommitmentForShield).to.equal(

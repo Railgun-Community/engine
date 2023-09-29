@@ -29,8 +29,12 @@ export const getBlindedCommitmentForTransact = (
 export const getBlindedCommitmentForShield = (
   commitmentHash: string,
   npk: bigint,
-  shieldRailgunTxid: string, // not a real railgunTxid - this is tree position and index
+  globalTreePosition: string,
 ) => {
-  const hash: bigint = poseidon([hexToBigInt(commitmentHash), npk, hexToBigInt(shieldRailgunTxid)]);
+  const hash: bigint = poseidon([
+    hexToBigInt(commitmentHash),
+    npk,
+    hexToBigInt(globalTreePosition),
+  ]);
   return formatHash(hash);
 };
