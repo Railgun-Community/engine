@@ -189,7 +189,6 @@ describe('Railgun Txid Merkletree', () => {
         boundParamsHash: railgunTransactions[0].boundParamsHash,
         blockNumber: railgunTransactions[0].blockNumber,
         hash: nToHex(hash, ByteLength.UINT_256),
-        txidVersion: TXIDVersion.V2_PoseidonMerkle,
       });
 
       expect(
@@ -212,7 +211,6 @@ describe('Railgun Txid Merkletree', () => {
         boundParamsHash: '0x05',
         blockNumber: 0,
         hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-        txidVersion: TXIDVersion.V2_PoseidonMerkle,
       });
 
       // Make sure new constructed tree inherits db values
@@ -265,7 +263,6 @@ describe('Railgun Txid Merkletree', () => {
             boundParamsHash: '0x05',
             blockNumber: 0,
             hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-            txidVersion: TXIDVersion.V2_PoseidonMerkle,
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {
@@ -315,7 +312,6 @@ describe('Railgun Txid Merkletree', () => {
             boundParamsHash: '0x05',
             blockNumber: 0,
             hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-            txidVersion: TXIDVersion.V2_PoseidonMerkle,
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {

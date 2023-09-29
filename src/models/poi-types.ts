@@ -19,7 +19,6 @@ export enum BlindedCommitmentType {
 export type BlindedCommitmentData = {
   blindedCommitment: string;
   type: BlindedCommitmentType;
-  txidVersion: TXIDVersion;
 };
 
 export type POIEngineProofInputs = {

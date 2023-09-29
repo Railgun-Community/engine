@@ -208,7 +208,6 @@ export const formatUnshieldEvent = (
     railgunTxid: undefined,
     poisPerList: undefined,
     blindedCommitment: undefined,
-    txidVersion: TXIDVersion.V2_PoseidonMerkle,
   };
 };
 

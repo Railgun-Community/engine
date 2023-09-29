@@ -75,6 +75,5 @@ export const createRailgunTransactionWithID = (
   return {
     ...railgunTransaction,
     hash: getRailgunTxidLeafHash(railgunTransaction, txidVersion),
-    txidVersion,
   };
 };
