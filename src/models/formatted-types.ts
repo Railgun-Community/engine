@@ -146,6 +146,8 @@ export type RailgunTransaction = {
   nullifiers: string[];
   boundParamsHash: string;
   blockNumber: number;
+  utxoTreeIn: Optional<number>;
+  globalStartPositionOut: Optional<number>;
 };
 
 export type RailgunTransactionWithTxid = RailgunTransaction & {

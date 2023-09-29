@@ -148,6 +148,8 @@ const generateAndVerifyPOI = async (
         nullifiers: transaction.nullifiers as string[],
         boundParamsHash: nToHex(hashBoundParams(transactions[0].boundParams), ByteLength.UINT_256),
         blockNumber,
+        utxoTreeIn: undefined,
+        globalStartPositionOut: undefined,
       };
       const railgunTransactionWithTxid = createRailgunTransactionWithID(
         railgunTransaction,
@@ -194,6 +196,7 @@ const generateAndVerifyPOI = async (
       blindedCommitmentsOut: string[],
       txidMerklerootIndex: number,
       railgunTransactionBlockNumber: number,
+      txidVersion: TXIDVersion,
     ] = [
       chain,
       MOCK_LIST_KEY,
@@ -201,6 +204,7 @@ const generateAndVerifyPOI = async (
       expectedBlindedCommitmentsOut,
       0, // txid merkleroot index
       blockNumber,
+      TXIDVersion.V2_PoseidonMerkle,
     ];
 
     expect(firstCallArgs).to.deep.equal(expectedArgs);

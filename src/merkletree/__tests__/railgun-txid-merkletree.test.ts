@@ -118,6 +118,8 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x03', '0x04'],
           boundParamsHash: '0x05',
           blockNumber: 0,
+          utxoTreeIn: undefined,
+          globalStartPositionOut: undefined,
         },
         {
           graphID: '0x10',
@@ -125,6 +127,8 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x13', '0x14'],
           boundParamsHash: '0x15',
           blockNumber: 0,
+          utxoTreeIn: undefined,
+          globalStartPositionOut: undefined,
         },
       ];
       const railgunTransactionsWithTxids = railgunTransactions.map((railgunTransaction) =>
@@ -209,6 +213,8 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x0103', '0x0104'],
           boundParamsHash: '0x0105',
           blockNumber: 2,
+          utxoTreeIn: undefined,
+          globalStartPositionOut: undefined,
         },
         {
           graphID: '0x13',
@@ -216,6 +222,8 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x0213', '0x0214'],
           boundParamsHash: '0x0215',
           blockNumber: 3, // Will be after POI Launch block
+          utxoTreeIn: undefined,
+          globalStartPositionOut: undefined,
         },
       ];
       const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map((railgunTransaction2) =>

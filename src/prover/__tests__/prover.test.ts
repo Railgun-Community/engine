@@ -56,6 +56,8 @@ describe('Prover', () => {
         commitments: proofInputs.commitmentsOut,
         nullifiers: proofInputs.nullifiers,
         blockNumber: 0,
+        utxoTreeIn: undefined,
+        globalStartPositionOut: undefined,
       },
       TXIDVersion.V2_PoseidonMerkle,
     );
