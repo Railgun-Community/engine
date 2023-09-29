@@ -4,7 +4,7 @@ import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
-import { RailgunTxidMerkletree } from '../railgun-txid-merkletree';
+import { TXIDMerkletree } from '../railgun-txid-merkletree';
 import { RailgunTransaction, TXIDVersion } from '../../models';
 import {
   createRailgunTransactionWithID,
@@ -18,8 +18,8 @@ const { expect } = chai;
 
 // Database object
 let db: Database;
-let merkletreePOINode: RailgunTxidMerkletree;
-let merkletreeWallet: RailgunTxidMerkletree;
+let merkletreePOINode: TXIDMerkletree;
+let merkletreeWallet: TXIDMerkletree;
 
 const chain: Chain = {
   type: 0,
@@ -33,7 +33,7 @@ describe('Railgun Txid Merkletree', () => {
     // Create database
     db = new Database(memdown());
 
-    merkletreePOINode = await RailgunTxidMerkletree.createForPOINode(
+    merkletreePOINode = await TXIDMerkletree.createForPOINode(
       db,
       chain,
       TXIDVersion.V2_PoseidonMerkle,
@@ -41,7 +41,7 @@ describe('Railgun Txid Merkletree', () => {
     );
     expect(merkletreePOINode.shouldStoreMerkleroots).to.equal(true);
 
-    merkletreeWallet = await RailgunTxidMerkletree.createForWallet(
+    merkletreeWallet = await TXIDMerkletree.createForWallet(
       db,
       chain,
       TXIDVersion.V2_PoseidonMerkle,
@@ -93,7 +93,7 @@ describe('Railgun Txid Merkletree', () => {
 
     await Promise.all(
       vectors.map(async (vector) => {
-        const merkletreeVectorTest = await RailgunTxidMerkletree.createForPOINode(
+        const merkletreeVectorTest = await TXIDMerkletree.createForPOINode(
           db,
           vector.chain,
           TXIDVersion.V2_PoseidonMerkle,
@@ -216,7 +216,7 @@ describe('Railgun Txid Merkletree', () => {
       });
 
       // Make sure new constructed tree inherits db values
-      const merkletree2 = await RailgunTxidMerkletree.createForPOINode(
+      const merkletree2 = await TXIDMerkletree.createForPOINode(
         db,
         chain,
         TXIDVersion.V2_PoseidonMerkle,
@@ -396,20 +396,20 @@ describe('Railgun Txid Merkletree', () => {
   }).timeout(20000);
 
   it('Should get next tree and index', async () => {
-    expect(RailgunTxidMerkletree.nextTreeAndIndex(0, 0)).to.deep.equal({ tree: 0, index: 1 });
-    expect(RailgunTxidMerkletree.nextTreeAndIndex(1, 65535)).to.deep.equal({ tree: 2, index: 0 });
+    expect(TXIDMerkletree.nextTreeAndIndex(0, 0)).to.deep.equal({ tree: 0, index: 1 });
+    expect(TXIDMerkletree.nextTreeAndIndex(1, 65535)).to.deep.equal({ tree: 2, index: 0 });
   });
 
   it('Should get tree and index from txidIndex', async () => {
-    expect(RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(9)).to.deep.equal({
+    expect(TXIDMerkletree.getTreeAndIndexFromTxidIndex(9)).to.deep.equal({
       tree: 0,
       index: 9,
     });
-    expect(RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(65535)).to.deep.equal({
+    expect(TXIDMerkletree.getTreeAndIndexFromTxidIndex(65535)).to.deep.equal({
       tree: 0,
       index: 65535,
     });
-    expect(RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(65536)).to.deep.equal({
+    expect(TXIDMerkletree.getTreeAndIndexFromTxidIndex(65536)).to.deep.equal({
       tree: 1,
       index: 0,
     });

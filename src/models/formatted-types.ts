@@ -155,7 +155,7 @@ export type RailgunTransactionWithTxid = RailgunTransaction & {
   txidVersion: TXIDVersion;
 };
 
-export type RailgunTxidMerkletreeData = {
+export type TXIDMerkletreeData = {
   railgunTransaction: RailgunTransactionWithTxid;
   currentMerkleProofForTree: MerkleProof;
   currentTxidIndexForTree: number;

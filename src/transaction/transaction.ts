@@ -136,7 +136,7 @@ class Transaction {
     encryptionKey: string,
     overallBatchMinGasPrice = 0n,
   ): Promise<RailgunTransactionRequest> {
-    const merkletree = wallet.getUTXOMerkletreeForChain(txidVersion, this.chain);
+    const merkletree = wallet.getUTXOMerkletree(txidVersion, this.chain);
     const merkleRoot = await merkletree.getRoot(this.spendingTree);
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();

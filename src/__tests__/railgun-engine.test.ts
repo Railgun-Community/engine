@@ -59,7 +59,7 @@ import { POI, POIListType } from '../poi/poi';
 import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-interface.test';
 import { hashBoundParams } from '../transaction/bound-params';
 import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
-import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from '../merkletree/railgun-txid-merkletree';
 import {
   POIEngineProofInputs,
   POIEngineProofInputsWithListPOIData,
@@ -86,7 +86,7 @@ let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 let utxoMerkletree: UTXOMerkletree;
-let txidMerkletree: RailgunTxidMerkletree;
+let txidMerkletree: TXIDMerkletree;
 let tokenAddress: string;
 let railgunSmartWalletContract: RailgunSmartWalletContract;
 
@@ -287,8 +287,8 @@ describe('RailgunEngine', function test() {
       0,
     );
     await engine.scanHistory(chain);
-    utxoMerkletree = engine.getUTXOMerkletreeForChain(txidVersion, chain);
-    txidMerkletree = engine.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    utxoMerkletree = engine.getUTXOMerkletree(txidVersion, chain);
+    txidMerkletree = engine.getTXIDMerkletree(txidVersion, chain);
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];
   });
 

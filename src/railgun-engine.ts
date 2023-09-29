@@ -45,7 +45,7 @@ import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
 import { assertIsPollingProvider } from './provider/polling-util';
 import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
-import { RailgunTxidMerkletree } from './merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from './merkletree/railgun-txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
 import { delay, isSentCommitment } from './utils';
 import { createRailgunTransactionWithID } from './transaction/railgun-txid';
@@ -60,8 +60,7 @@ class RailgunEngine extends EventEmitter {
 
   private readonly utxoMerkletrees: { [txidVersion: string]: UTXOMerkletree[][] } = {};
 
-  private readonly railgunTxidMerkletrees: { [txidVersion: string]: RailgunTxidMerkletree[][] } =
-    {};
+  private readonly railgunTxidMerkletrees: { [txidVersion: string]: TXIDMerkletree[][] } = {};
 
   readonly prover: Prover;
 
@@ -208,7 +207,7 @@ class RailgunEngine extends EventEmitter {
 
     // Get railgun txid per sent commitment
     // TODO: Remove after V3
-    const railgunTxidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const railgunTxidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     const sentCommitmentHashes = leaves
       .filter((leaf) => isSentCommitment(leaf))
       .map((leaf) => leaf.hash);
@@ -224,7 +223,7 @@ class RailgunEngine extends EventEmitter {
     }
 
     // Queue leaves to merkle tree
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.queueLeaves(treeNumber, startingIndex, leaves);
     if (shouldUpdateTrees) {
       await utxoMerkletree.updateTreesFromWriteQueue();
@@ -232,14 +231,11 @@ class RailgunEngine extends EventEmitter {
 
     if (shouldTriggerTxidSync) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.triggerDelayedRailgunTxidMerkletreeSync(txidVersion, chain);
+      this.triggerDelayedTXIDMerkletreeSync(txidVersion, chain);
     }
   }
 
-  async triggerDelayedRailgunTxidMerkletreeSync(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-  ): Promise<void> {
+  async triggerDelayedTXIDMerkletreeSync(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     // Delay 15 seconds, and then trigger a Railgun Txid Merkletree sync.
     await delay(15000);
     await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
@@ -269,7 +265,7 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-param-reassign
       nullifier.nullifier = formatToByteLength(nullifier.nullifier, ByteLength.UINT_256, false);
     });
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.nullify(nullifiers);
   }
 
@@ -294,7 +290,7 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-param-reassign
       unshield.txid = formatToByteLength(unshield.txid, ByteLength.UINT_256, false);
     });
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.addUnshieldEvents(unshields);
   }
 
@@ -302,7 +298,7 @@ class RailgunEngine extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
   ): Promise<Optional<number>> {
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     const railgunSmartWalletContract =
       ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
     const provider = railgunSmartWalletContract.contract.runner?.provider;
@@ -376,7 +372,7 @@ class RailgunEngine extends EventEmitter {
       }
 
       EngineDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
-      const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+      const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
       const startScanningBlockQuickSync = await this.getStartScanningBlock(txidVersion, chain);
       EngineDebug.log(`Start scanning block for QuickSync: ${startScanningBlockQuickSync}`);
@@ -473,9 +469,9 @@ class RailgunEngine extends EventEmitter {
       EngineDebug.log(`Skipping merkletree scan: skipMerkletreeScans set on RAILGUN Engine.`);
       return;
     }
-    if (!isDefined(this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id])) {
+    if (!this.hasTXIDMerkletree(txidVersion, chain)) {
       EngineDebug.log(
-        `Cannot scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+        `Cannot scan history. TXID merkletree not yet loaded for ${txidVersion}, chain ${chain.type}:${chain.id}.`,
       );
       return;
     }
@@ -495,7 +491,7 @@ class RailgunEngine extends EventEmitter {
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     const railgunSmartWalletContract =
       ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
     if (utxoMerkletree.isScanning) {
@@ -628,7 +624,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to scan
    */
   async syncRailgunTransactionsForTXIDVersion(txidVersion: TXIDVersion, chain: Chain) {
-    if (!isDefined(this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id])) {
+    if (!this.hasTXIDMerkletree(txidVersion, chain)) {
       EngineDebug.log(
         `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
@@ -644,7 +640,7 @@ class RailgunEngine extends EventEmitter {
       await this.setTxidMerkletreeHistoryVersion(chain, CURRENT_TXID_MERKLETREE_HISTORY_VERSION);
     }
 
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     if (txidMerkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
       EngineDebug.log('[Txid] Already syncing. Stopping additional re-sync.');
@@ -691,7 +687,7 @@ class RailgunEngine extends EventEmitter {
         maxTxidIndex = latestValidatedTxidIndex;
       }
 
-      const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+      const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
       const latestGraphID: Optional<string> = await txidMerkletree.getLatestGraphID();
       const railgunTransactions: RailgunTransaction[] = await this.quickSyncRailgunTransactions(
         chain,
@@ -732,7 +728,7 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);
     await txidMerkletree.updateTreesFromWriteQueue();
   }
@@ -744,7 +740,7 @@ class RailgunEngine extends EventEmitter {
   ): Promise<void> {
     const { commitments: commitmentHashes, hash: railgunTxid } = railgunTransaction;
 
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
     const hashesToCommitment = await utxoMerkletree.getCommitmentsForHashes(commitmentHashes);
 
@@ -783,7 +779,7 @@ class RailgunEngine extends EventEmitter {
     index: number,
     blockNumber: number,
   ): Promise<boolean> {
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     const railgunTransaction = await txidMerkletree.getRailgunTransaction(tree, index);
     if (!railgunTransaction) {
       throw new Error(`Railgun transaction at Txid tree ${tree} and index ${index} not found.`);
@@ -800,7 +796,7 @@ class RailgunEngine extends EventEmitter {
     if (!this.isPOINode) {
       throw new Error('Only POI nodes process historical merkleroots');
     }
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     const historicalMerkleroot = await txidMerkletree.getHistoricalMerkleroot(tree, index);
     return historicalMerkleroot;
   }
@@ -809,10 +805,10 @@ class RailgunEngine extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
   ): Promise<{ txidIndex: number; merkleroot: string }> {
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     const { tree, index } = await txidMerkletree.getLatestTreeAndIndex();
     const merkleroot = await txidMerkletree.getRoot(tree);
-    const txidIndex = RailgunTxidMerkletree.getTxidIndex(tree, index);
+    const txidIndex = TXIDMerkletree.getTxidIndex(tree, index);
     return { txidIndex, merkleroot };
   }
 
@@ -821,7 +817,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to clear
    */
   async clearSyncedUTXOMerkletreeLeaves(txidVersion: TXIDVersion, chain: Chain) {
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.clearDataForMerkletree();
     await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
@@ -834,12 +830,12 @@ class RailgunEngine extends EventEmitter {
   }
 
   private async clearSyncedUnshieldEvents(txidVersion: TXIDVersion, chain: Chain) {
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await this.db.clearNamespace(utxoMerkletree.getUnshieldEventsDBPath());
   }
 
   private async clearAllTXIDMerkletrees(txidVersion: TXIDVersion, chain: Chain) {
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     await txidMerkletree.clearDataForMerkletree();
   }
 
@@ -851,15 +847,14 @@ class RailgunEngine extends EventEmitter {
   async fullRescanUTXOMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      const hasMerkletree = isDefined(this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id]);
-      if (!hasMerkletree) {
+      if (!this.hasUTXOMerkletree(txidVersion, chain)) {
         const err = new Error(
-          `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+          `Cannot re-scan history. Merkletree not yet loaded for ${txidVersion}, chain ${chain.type}:${chain.id}.`,
         );
         EngineDebug.error(err);
         throw err;
       }
-      const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+      const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
       if (utxoMerkletree.isScanning && !forceRescanDevOnly) {
         const err = new Error(`Full rescan already in progress.`);
         EngineDebug.error(err);
@@ -869,7 +864,7 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+      const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
       this.emitScanUpdateEvent(txidVersion, chain, 0.01); // 1%
       utxoMerkletree.isScanning = true; // Don't allow scans while removing leaves.
@@ -883,12 +878,10 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async fullResetRailgunTxidMerkletrees(chain: Chain): Promise<void> {
+  async fullResetTXIDMerkletrees(chain: Chain): Promise<void> {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      const hasMerkletree = isDefined(
-        this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id],
-      );
+      const hasMerkletree = this.hasTXIDMerkletree(txidVersion, chain);
       if (!hasMerkletree) {
         const err = new Error(
           `Cannot re-scan railgun txids. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
@@ -896,7 +889,7 @@ class RailgunEngine extends EventEmitter {
         EngineDebug.error(err);
         throw err;
       }
-      const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+      const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
       if (txidMerkletree.isScanning) {
         const err = new Error(`Full reset of txids already in progress.`);
         EngineDebug.error(err);
@@ -906,7 +899,7 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+      const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
       txidMerkletree.isScanning = true; // Don't allow scans while removing leaves.
       // eslint-disable-next-line no-await-in-loop
       await txidMerkletree.clearDataForMerkletree();
@@ -921,7 +914,7 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     txidIndex: number,
   ): Promise<void> {
-    const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     txidMerkletree.isScanning = true; // Don't allow scans while removing leaves.
     await txidMerkletree.clearLeavesAfterTxidIndex(txidIndex);
     txidMerkletree.isScanning = false; // Clear before calling syncRailgunTransactions.
@@ -962,7 +955,8 @@ class RailgunEngine extends EventEmitter {
     }
 
     const hasAnyMerkletree = ACTIVE_TXID_VERSIONS.every(
-      (txidVersion) => !isDefined(this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id]),
+      (txidVersion) =>
+        !this.hasUTXOMerkletree(txidVersion, chain) && !this.hasTXIDMerkletree(txidVersion, chain),
     );
     const hasSmartWalletContract = isDefined(
       ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id],
@@ -1020,12 +1014,12 @@ class RailgunEngine extends EventEmitter {
       this.railgunTxidMerkletrees[txidVersion] ??= [];
       this.railgunTxidMerkletrees[txidVersion][chain.type] ??= [];
 
-      let railgunTxidMerkletree: RailgunTxidMerkletree;
+      let railgunTxidMerkletree: TXIDMerkletree;
 
       if (this.isPOINode) {
         // POI Node Txid merkletree
         // eslint-disable-next-line no-await-in-loop
-        railgunTxidMerkletree = await RailgunTxidMerkletree.createForPOINode(
+        railgunTxidMerkletree = await TXIDMerkletree.createForPOINode(
           this.db,
           chain,
           txidVersion,
@@ -1035,7 +1029,7 @@ class RailgunEngine extends EventEmitter {
       } else {
         // Wallet Txid merkletree
         // eslint-disable-next-line no-await-in-loop
-        railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
+        railgunTxidMerkletree = await TXIDMerkletree.createForWallet(
           this.db,
           chain,
           txidVersion,
@@ -1197,7 +1191,7 @@ class RailgunEngine extends EventEmitter {
       .catch(() => Promise.resolve(undefined));
   }
 
-  getUTXOMerkletreeForChain(txidVersion: TXIDVersion, chain: Chain): UTXOMerkletree {
+  getUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain): UTXOMerkletree {
     const merkletree = this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(
@@ -1207,7 +1201,16 @@ class RailgunEngine extends EventEmitter {
     return merkletree;
   }
 
-  getRailgunTxidMerkletreeForChain(txidVersion: TXIDVersion, chain: Chain): RailgunTxidMerkletree {
+  private hasUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain): boolean {
+    try {
+      this.getUTXOMerkletree(txidVersion, chain);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  getTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain): TXIDMerkletree {
     const merkletree = this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(
@@ -1215,6 +1218,15 @@ class RailgunEngine extends EventEmitter {
       );
     }
     return merkletree;
+  }
+
+  private hasTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain): boolean {
+    try {
+      this.getTXIDMerkletree(txidVersion, chain);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async getCompletedTxidFromNullifiers(
@@ -1226,7 +1238,7 @@ class RailgunEngine extends EventEmitter {
       return undefined;
     }
 
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
     const firstNullifier = nullifiers[0];
     const firstTxid = await utxoMerkletree.getNullifierTxid(firstNullifier);
@@ -1405,7 +1417,7 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     startingBlock: number,
   ): Promise<(ShieldCommitment | LegacyGeneratedCommitment)[]> {
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     const latestTree = await utxoMerkletree.latestTree();
 
     // TODO: use blockNumber to find exact starting position... But the logic is currently broken.

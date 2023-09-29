@@ -708,7 +708,7 @@ describe('Railgun Smart Wallet', function runTests() {
 
     const tree = 0;
 
-    const utxoMerkletree = engine.getUTXOMerkletreeForChain(TXIDVersion.V2_PoseidonMerkle, chain);
+    const utxoMerkletree = engine.getUTXOMerkletree(TXIDVersion.V2_PoseidonMerkle, chain);
 
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChain!: Chain;

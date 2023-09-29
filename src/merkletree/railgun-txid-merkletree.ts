@@ -10,7 +10,7 @@ import {
 } from '../models/merkletree-types';
 import { Merkletree } from './merkletree';
 import {
-  RailgunTxidMerkletreeData,
+  TXIDMerkletreeData,
   RailgunTransactionWithTxid,
   MerkleProof,
 } from '../models/formatted-types';
@@ -23,7 +23,7 @@ type POILaunchSnapshotNode = {
   index: number;
 };
 
-export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid> {
+export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   // DO NOT MODIFY
   protected merkletreePrefix = 'railgun-transaction-ids';
 
@@ -66,9 +66,9 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     txidVersion: TXIDVersion,
     poiLaunchBlock: Optional<number>,
     merklerootValidator: MerklerootValidator,
-  ): Promise<RailgunTxidMerkletree> {
+  ): Promise<TXIDMerkletree> {
     const isPOINode = false;
-    const merkletree = new RailgunTxidMerkletree(
+    const merkletree = new TXIDMerkletree(
       db,
       chain,
       txidVersion,
@@ -89,14 +89,14 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     chain: Chain,
     txidVersion: TXIDVersion,
     poiLaunchBlock: Optional<number>,
-  ): Promise<RailgunTxidMerkletree> {
+  ): Promise<TXIDMerkletree> {
     // Assume all merkleroots are valid.
     const merklerootValidator = async () => true;
 
     // For Txid merkletree on POI Nodes, store all merkleroots.
     const isPOINode = true;
 
-    const merkletree = new RailgunTxidMerkletree(
+    const merkletree = new TXIDMerkletree(
       db,
       chain,
       txidVersion,
@@ -122,15 +122,13 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     }
   }
 
-  async getRailgunTxidCurrentMerkletreeData(
-    railgunTxid: string,
-  ): Promise<RailgunTxidMerkletreeData> {
+  async getRailgunTxidCurrentMerkletreeData(railgunTxid: string): Promise<TXIDMerkletreeData> {
     const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
     if (!isDefined(txidIndex)) {
       throw new Error('txid index not found');
     }
 
-    const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+    const { tree, index } = TXIDMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
     const railgunTransaction = await this.getRailgunTransaction(tree, index);
     if (!isDefined(railgunTransaction)) {
       throw new Error('railgun transaction not found');
@@ -149,7 +147,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       : await this.getMerkleProof(tree, index);
 
     const currentIndex = await this.getLatestIndexForTree(tree);
-    const currentTxidIndexForTree = RailgunTxidMerkletree.getTxidIndex(tree, currentIndex);
+    const currentTxidIndexForTree = TXIDMerkletree.getTxidIndex(tree, currentIndex);
 
     return {
       railgunTransaction,
@@ -166,7 +164,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     if (!isDefined(snapshotLeaf)) {
       throw new Error('POI Launch snapshot not found');
     }
-    const rightmostIndices = RailgunTxidMerkletree.getRightmostNonzeroIndices(snapshotLeaf.index);
+    const rightmostIndices = TXIDMerkletree.getRightmostNonzeroIndices(snapshotLeaf.index);
 
     // Get indexes of path elements to fetch
     const elementsIndices: number[] = [index ^ 1];
@@ -238,10 +236,10 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     let nextIndex = latestIndex;
 
     for (let i = 0; i < railgunTransactionsWithTxids.length; i += 1) {
-      const { tree, index } = RailgunTxidMerkletree.nextTreeAndIndex(nextTree, nextIndex);
+      const { tree, index } = TXIDMerkletree.nextTreeAndIndex(nextTree, nextIndex);
       nextTree = tree;
       nextIndex = index;
-      if (RailgunTxidMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
+      if (TXIDMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
         return;
       }
 
@@ -266,7 +264,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     if (!isDefined(maxTxidIndex)) {
       return false;
     }
-    return RailgunTxidMerkletree.getTxidIndex(tree, index) > maxTxidIndex;
+    return TXIDMerkletree.getTxidIndex(tree, index) > maxTxidIndex;
   }
 
   static nextTreeAndIndex(tree: number, index: number): { tree: number; index: number } {
@@ -342,7 +340,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
     const snapshotNodeWriteBatch: PutBatch[] = [];
 
-    const indicesPerLevel = RailgunTxidMerkletree.getRightmostNonzeroIndices(latestLeafIndex);
+    const indicesPerLevel = TXIDMerkletree.getRightmostNonzeroIndices(latestLeafIndex);
 
     for (let level = 0; level < TREE_DEPTH + 1; level += 1) {
       const index = indicesPerLevel[level];
@@ -370,7 +368,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     // Clear cache
     this.sortedAllDataCache = undefined;
 
-    const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+    const { tree, index } = TXIDMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
 
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
 
@@ -412,7 +410,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   async getCurrentTxidIndex(): Promise<number> {
     const { tree, index } = await this.getLatestTreeAndIndex();
-    return RailgunTxidMerkletree.getTxidIndex(tree, index);
+    return TXIDMerkletree.getTxidIndex(tree, index);
   }
 
   static getTxidIndex(tree: number, index: number): number {
@@ -507,7 +505,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       if (!isDefined(txidIndex)) {
         throw new Error('Txid index not found');
       }
-      const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+      const { tree, index } = TXIDMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
       return await this.getRailgunTransaction(tree, index);
     } catch (err) {
       if (!(err instanceof Error)) {
@@ -522,7 +520,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     tree: number,
     index: number,
   ): Promise<void> {
-    const txidIndex = RailgunTxidMerkletree.getTxidIndex(tree, index);
+    const txidIndex = TXIDMerkletree.getTxidIndex(tree, index);
     await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), txidIndex, 'utf8');
   }
 
@@ -562,7 +560,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
   }
 
   async getHistoricalMerklerootForTxidIndex(txidIndex: number): Promise<Optional<string>> {
-    const { tree, index } = RailgunTxidMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
+    const { tree, index } = TXIDMerkletree.getTreeAndIndexFromTxidIndex(txidIndex);
     return this.getHistoricalMerkleroot(tree, index);
   }
 }

@@ -10,7 +10,7 @@ import { verifyMerkleProof } from '../../merkletree/merkle-proof';
 import { Chain } from '../../models/engine-types';
 import { MerkleProof } from '../../models/formatted-types';
 import { TXIDVersion } from '../../models/poi-types';
-import { RailgunTxidMerkletree } from '../../merkletree/railgun-txid-merkletree';
+import { TXIDMerkletree } from '../../merkletree/railgun-txid-merkletree';
 import { Database } from '../../database/database';
 import { ShieldNote, TransactNote } from '../../note';
 import { ByteLength, hexToBigInt, nToHex } from '../../utils';
@@ -65,7 +65,7 @@ describe('Prover', () => {
       702109577508614192687157007886308755723992845597739802305604799122078977854n,
     );
 
-    const railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
+    const railgunTxidMerkletree = await TXIDMerkletree.createForWallet(
       new Database(memdown()),
       chain,
       TXIDVersion.V2_PoseidonMerkle,
