@@ -60,7 +60,11 @@ import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-inter
 import { hashBoundParams } from '../transaction/bound-params';
 import { createRailgunTransactionWithID } from '../transaction/railgun-txid';
 import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
-import { POIEngineProofInputs, POIEngineProofInputsWithListPOIData } from '../models/poi-types';
+import {
+  POIEngineProofInputs,
+  POIEngineProofInputsWithListPOIData,
+  TXIDVersion,
+} from '../models/poi-types';
 import { getBlindedCommitmentForShield } from '../poi/blinded-commitment';
 import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
 import { getDummyPOIProofInputs } from '../test/test-poi-proof.test';
@@ -122,6 +126,7 @@ const shieldTestTokens = async (
 const generateAndVerifyPOI = async (
   shield: ShieldNoteERC20,
   transactReceipt: TransactionReceipt,
+  txidVersion: TXIDVersion,
   transactions: TransactionStruct[],
   expectedProofInputs: POIEngineProofInputs,
   expectedBlindedCommitmentsOut: string[],
@@ -130,7 +135,7 @@ const generateAndVerifyPOI = async (
 
   try {
     // No railgunTxid yet - no POI submitted.
-    await wallet.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+    await wallet.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain, txidVersion);
     expect(submitPOISpy.getCalls()).to.deep.equal([]);
 
     const { blockNumber } = transactReceipt;
@@ -144,10 +149,13 @@ const generateAndVerifyPOI = async (
         boundParamsHash: nToHex(hashBoundParams(transactions[0].boundParams), ByteLength.UINT_256),
         blockNumber,
       };
-      const railgunTransactionWithTxid = createRailgunTransactionWithID(railgunTransaction);
+      const railgunTransactionWithTxid = createRailgunTransactionWithID(
+        railgunTransaction,
+        txidVersion,
+      );
 
       // eslint-disable-next-line no-await-in-loop
-      await engine.handleNewRailgunTransactions(chain, [railgunTransactionWithTxid]);
+      await engine.handleNewRailgunTransactions(chain, [railgunTransactionWithTxid], txidVersion);
     }
 
     // To debug POI Status Info:
@@ -155,7 +163,7 @@ const generateAndVerifyPOI = async (
     // console.log(await wallet.getTXOsReceivedPOIStatusInfo(chain));
     // console.log(await wallet.getTXOsSpentPOIStatusInfo(chain));
 
-    await wallet.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+    await wallet.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain, txidVersion);
 
     const calls = submitPOISpy.getCalls();
     expect(calls.length).to.equal(1);
@@ -489,6 +497,7 @@ describe('RailgunEngine', function test() {
     await generateAndVerifyPOI(
       shield,
       transactReceipt,
+      TXIDVersion.V2_PoseidonMerkle,
       transactions,
       {
         anyRailgunTxidMerklerootAfterTransaction:
@@ -680,6 +689,7 @@ describe('RailgunEngine', function test() {
     await generateAndVerifyPOI(
       shield,
       transactReceipt,
+      TXIDVersion.V2_PoseidonMerkle,
       transactions,
       {
         anyRailgunTxidMerklerootAfterTransaction:

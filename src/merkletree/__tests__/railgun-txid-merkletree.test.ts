@@ -5,7 +5,7 @@ import memdown from 'memdown';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { RailgunTxidMerkletree } from '../railgun-txid-merkletree';
-import { RailgunTransaction } from '../../models';
+import { RailgunTransaction, TXIDVersion } from '../../models';
 import {
   createRailgunTransactionWithID,
   getRailgunTransactionID,
@@ -127,7 +127,9 @@ describe('Railgun Txid Merkletree', () => {
           blockNumber: 0,
         },
       ];
-      const railgunTransactionsWithTxids = railgunTransactions.map(createRailgunTransactionWithID);
+      const railgunTransactionsWithTxids = railgunTransactions.map((railgunTransaction) =>
+        createRailgunTransactionWithID(railgunTransaction, TXIDVersion.V2_PoseidonMerkle),
+      );
 
       await merkletree.queueRailgunTransactions(railgunTransactionsWithTxids, 1);
       expect(await merkletree.getTreeLength(0)).to.equal(0);
@@ -170,6 +172,7 @@ describe('Railgun Txid Merkletree', () => {
       expect(railgunTransaction).to.deep.equal({
         ...railgunTransactions[0],
         hash: nToHex(hash, ByteLength.UINT_256),
+        txidVersion: TXIDVersion.V2_PoseidonMerkle,
       });
 
       expect(
@@ -215,8 +218,8 @@ describe('Railgun Txid Merkletree', () => {
           blockNumber: 3, // Will be after POI Launch block
         },
       ];
-      const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map(
-        createRailgunTransactionWithID,
+      const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map((railgunTransaction2) =>
+        createRailgunTransactionWithID(railgunTransaction2, TXIDVersion.V2_PoseidonMerkle),
       );
 
       await merkletree.queueRailgunTransactions(moreRailgunTransactionsWithTxids, undefined);

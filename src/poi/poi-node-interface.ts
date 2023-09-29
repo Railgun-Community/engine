@@ -1,5 +1,10 @@
 import { Chain } from '../models/engine-types';
-import { BlindedCommitmentData, POIEngineProofInputs, POIsPerList } from '../models/poi-types';
+import {
+  BlindedCommitmentData,
+  POIEngineProofInputs,
+  POIsPerList,
+  TXIDVersion,
+} from '../models/poi-types';
 
 export abstract class POINodeInterface {
   abstract isActive(chain: Chain): boolean;
@@ -17,5 +22,6 @@ export abstract class POINodeInterface {
     blindedCommitmentsOut: string[],
     txidMerklerootIndex: number,
     railgunTransactionBlockNumber: number,
+    txidVersion: TXIDVersion,
   ): Promise<void>;
 }

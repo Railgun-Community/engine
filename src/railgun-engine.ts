@@ -49,6 +49,7 @@ import { RailgunTxidMerkletree } from './merkletree/railgun-txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
 import { delay, isSentCommitment } from './utils';
 import { createRailgunTransactionWithID } from './transaction/railgun-txid';
+import { TXIDVersion } from './models';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -577,12 +578,12 @@ class RailgunEngine extends EventEmitter {
     }
     txidMerkletree.isScanning = true;
 
-    await this.performSyncRailgunTransactions(chain);
+    await this.performSyncRailgunTransactionsV2(chain);
 
     txidMerkletree.isScanning = false;
   }
 
-  private async performSyncRailgunTransactions(chain: Chain) {
+  private async performSyncRailgunTransactionsV2(chain: Chain) {
     try {
       EngineDebug.log(`sync railgun txids: chain ${chain.type}:${chain.id}`);
 
@@ -609,7 +610,12 @@ class RailgunEngine extends EventEmitter {
         chain,
         latestGraphID,
       );
-      await this.handleNewRailgunTransactions(chain, railgunTransactions, maxTxidIndex);
+      await this.handleNewRailgunTransactions(
+        chain,
+        railgunTransactions,
+        TXIDVersion.V2_PoseidonMerkle, // ONLY FUNCTIONAL FOR V2
+        maxTxidIndex,
+      );
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
@@ -621,10 +627,11 @@ class RailgunEngine extends EventEmitter {
   async handleNewRailgunTransactions(
     chain: Chain,
     railgunTransactions: RailgunTransaction[],
+    txidVersion: TXIDVersion,
     maxTxidIndex?: number,
   ) {
     const railgunTransactionsWithTxids: RailgunTransactionWithTxid[] = railgunTransactions.map(
-      createRailgunTransactionWithID,
+      (railgunTransaction) => createRailgunTransactionWithID(railgunTransaction, txidVersion),
     );
 
     // TODO: Remove after V3

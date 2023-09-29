@@ -19,6 +19,7 @@ export enum BlindedCommitmentType {
 export type BlindedCommitmentData = {
   blindedCommitment: string;
   type: BlindedCommitmentType;
+  txidVersion: TXIDVersion;
 };
 
 export type POIEngineProofInputs = {
@@ -70,3 +71,11 @@ export type POIEngineProofInputsWithListPOIData = POIEngineProofInputs & {
   poiInMerkleProofIndices: string[];
   poiInMerkleProofPathElements: string[][];
 };
+
+export enum TXIDVersion {
+  V2_PoseidonMerkle = 'V2_PoseidonMerkle',
+  V3_PoseidonMerkle = 'V3_PoseidonMerkle',
+  V3_KZG = 'V3_KZG',
+}
+
+export const ACTIVE_TXID_VERSIONS: TXIDVersion[] = [TXIDVersion.V2_PoseidonMerkle];

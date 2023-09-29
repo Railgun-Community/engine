@@ -7,7 +7,9 @@ import TestVectorPOI from '../../test/test-vector-poi.json';
 import { getDummyPOIProofInputs } from '../../test/test-poi-proof.test';
 import { createRailgunTransactionWithID } from '../../transaction/railgun-txid';
 import { verifyMerkleProof } from '../../merkletree/merkle-proof';
-import { Chain, MerkleProof } from '../../models';
+import { Chain } from '../../models/engine-types';
+import { MerkleProof } from '../../models/formatted-types';
+import { TXIDVersion } from '../../models/poi-types';
 import { RailgunTxidMerkletree } from '../../merkletree/railgun-txid-merkletree';
 import { Database } from '../../database/database';
 import { ShieldNote, TransactNote } from '../../note';
@@ -47,13 +49,16 @@ describe('Prover', () => {
   it('Should verify input vector', async () => {
     const proofInputs = TestVectorPOI;
 
-    const railgunTransaction = createRailgunTransactionWithID({
-      graphID: '',
-      boundParamsHash: proofInputs.boundParamsHash,
-      commitments: proofInputs.commitmentsOut,
-      nullifiers: proofInputs.nullifiers,
-      blockNumber: 0,
-    });
+    const railgunTransaction = createRailgunTransactionWithID(
+      {
+        graphID: '',
+        boundParamsHash: proofInputs.boundParamsHash,
+        commitments: proofInputs.commitmentsOut,
+        nullifiers: proofInputs.nullifiers,
+        blockNumber: 0,
+      },
+      TXIDVersion.V2_PoseidonMerkle,
+    );
     expect(hexToBigInt(railgunTransaction.hash)).to.equal(
       702109577508614192687157007886308755723992845597739802305604799122078977854n,
     );

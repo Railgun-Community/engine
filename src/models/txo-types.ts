@@ -1,6 +1,6 @@
 import { TransactNote } from '../note/transact-note';
 import { CommitmentType, NoteAnnotationData, TokenData } from './formatted-types';
-import { POIsPerList } from './poi-types';
+import { POIsPerList, TXIDVersion } from './poi-types';
 
 export type TXO = {
   tree: number;
@@ -16,6 +16,7 @@ export type TXO = {
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;
+  txidVersion: TXIDVersion;
 };
 
 export type SentCommitment = {
@@ -30,6 +31,7 @@ export type SentCommitment = {
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;
+  txidVersion: TXIDVersion;
 };
 
 export type SpendingSolutionGroup = {

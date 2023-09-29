@@ -7,6 +7,7 @@ import {
   BlindedCommitmentData,
   POIEngineProofInputs,
   POIsPerList,
+  TXIDVersion,
   TXOPOIListStatus,
 } from '../models/poi-types';
 import { SentCommitment, TXO } from '../models/txo-types';
@@ -157,6 +158,7 @@ export class POI {
     blindedCommitmentsOut: string[],
     txidMerklerootIndex: number,
     railgunTransactionBlockNumber: number,
+    txidVersion: TXIDVersion,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
@@ -179,6 +181,7 @@ export class POI {
         blindedCommitmentsOut,
         txidMerklerootIndex,
         railgunTransactionBlockNumber,
+        txidVersion,
       );
     }
   }

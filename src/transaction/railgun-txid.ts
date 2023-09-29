@@ -1,5 +1,5 @@
 import { poseidon } from 'circomlibjs';
-import { RailgunTransaction, RailgunTransactionWithTxid } from '../models';
+import { RailgunTransaction, RailgunTransactionWithTxid, TXIDVersion } from '../models';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 
@@ -46,10 +46,12 @@ export const getRailgunTransactionIDHex = (railgunTransaction: {
 
 export const createRailgunTransactionWithID = (
   railgunTransaction: RailgunTransaction,
+  txidVersion: TXIDVersion,
 ): RailgunTransactionWithTxid => {
   const txidHex = getRailgunTransactionIDHex(railgunTransaction);
   return {
     ...railgunTransaction,
     hash: txidHex,
+    txidVersion,
   };
 };

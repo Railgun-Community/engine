@@ -91,10 +91,12 @@ import {
 } from '../poi/blinded-commitment';
 import { RailgunTxidMerkletree } from '../merkletree/railgun-txid-merkletree';
 import {
+  ACTIVE_TXID_VERSIONS,
   BlindedCommitmentData,
   BlindedCommitmentType,
   POIEngineProofInputs,
   POIsPerList,
+  TXIDVersion,
 } from '../models/poi-types';
 import { getShieldRailgunTxid } from '../poi/shield-railgun-txid';
 import { TREE_MAX_ITEMS } from '../models/merkletree-types';
@@ -593,6 +595,7 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid: isSentCommitment(leaf) ? leaf.railgunTxid : undefined,
         poisPerList: undefined,
         blindedCommitment: undefined,
+        txidVersion: TXIDVersion.V2_PoseidonMerkle,
       };
       EngineDebug.log(`Adding RECEIVE commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
@@ -618,6 +621,7 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid: undefined,
         poisPerList: undefined,
         blindedCommitment: undefined,
+        txidVersion: TXIDVersion.V2_PoseidonMerkle,
       };
       EngineDebug.log(`Adding SPEND commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
@@ -838,6 +842,7 @@ abstract class AbstractWallet extends EventEmitter {
           poisPerList: receiveCommitment.poisPerList,
           blindedCommitment: receiveCommitment.blindedCommitment,
           commitmentType: receiveCommitment.commitmentType,
+          txidVersion: receiveCommitment.txidVersion,
         };
         return txo;
       }),
@@ -905,6 +910,7 @@ abstract class AbstractWallet extends EventEmitter {
           poisPerList: sentCommitment.poisPerList,
           blindedCommitment: sentCommitment.blindedCommitment,
           commitmentType: sentCommitment.commitmentType,
+          txidVersion: sentCommitment.txidVersion,
         });
       }),
     );
@@ -1129,10 +1135,16 @@ abstract class AbstractWallet extends EventEmitter {
     return statusInfos.sort((a, b) => b.blockNumber - a.blockNumber);
   }
 
-  async refreshReceivePOIsAllTXOs(chain: Chain, filterRailgunTxid?: string): Promise<void> {
+  async refreshReceivePOIsAllTXOs(
+    chain: Chain,
+    txidVersion: TXIDVersion,
+    filterRailgunTxid?: string,
+  ): Promise<void> {
     const TXOs = await this.TXOs(chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveCreationPOIs(txo))
-      .filter((txo) => AbstractWallet.filterByRailgunTxid(txo, filterRailgunTxid))
+      .filter((txo) =>
+        AbstractWallet.filterByRailgunTxidAndTxidVersion(txo, txidVersion, filterRailgunTxid),
+      )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
     if (txosNeedCreationPOIs.length === 0) {
       return;
@@ -1143,6 +1155,7 @@ abstract class AbstractWallet extends EventEmitter {
         ? BlindedCommitmentType.Transact
         : BlindedCommitmentType.Shield,
       blindedCommitment: txo.blindedCommitment as string,
+      txidVersion: txo.txidVersion,
     }));
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
       chain,
@@ -1170,22 +1183,36 @@ abstract class AbstractWallet extends EventEmitter {
     return isDefined(a.poisPerList) && !isDefined(b.poisPerList) ? -1 : 1;
   }
 
-  private static filterByRailgunTxid(
-    item: { railgunTxid: Optional<string> },
+  private static filterByRailgunTxidAndTxidVersion(
+    item: { railgunTxid: Optional<string>; txidVersion: TXIDVersion },
+    txidVersion: TXIDVersion,
     railgunTxid: Optional<string>,
   ) {
+    if (item.txidVersion !== txidVersion) {
+      return false;
+    }
     return isDefined(railgunTxid) ? item.railgunTxid === railgunTxid : true;
   }
 
-  async getSentCommitmentsAndUnshieldEventsNeedPOIs(chain: Chain, filterRailgunTxid?: string) {
+  async getSentCommitmentsAndUnshieldEventsNeedPOIs(
+    chain: Chain,
+    txidVersion: TXIDVersion,
+    filterRailgunTxid?: string,
+  ) {
     const [sentCommitments, TXOs] = await Promise.all([
       this.getSentCommitments(chain, undefined),
       this.TXOs(chain),
     ]);
+    const filteredTXOs = TXOs.filter((txo) => txo.txidVersion === txidVersion);
+
     const sentCommitmentsNeedPOIs = sentCommitments
       .filter((sendCommitment) => POI.shouldRetrieveSpentPOIs(sendCommitment))
       .filter((sentCommitment) =>
-        AbstractWallet.filterByRailgunTxid(sentCommitment, filterRailgunTxid),
+        AbstractWallet.filterByRailgunTxidAndTxidVersion(
+          sentCommitment,
+          txidVersion,
+          filterRailgunTxid,
+        ),
       )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
 
@@ -1193,19 +1220,24 @@ abstract class AbstractWallet extends EventEmitter {
     const unshieldEventsNeedPOIs = unshieldEvents
       .filter((unshieldEvent) => POI.shouldGenerateSpentPOIsUnshieldEvent(unshieldEvent))
       .filter((unshieldEvent) =>
-        AbstractWallet.filterByRailgunTxid(unshieldEvent, filterRailgunTxid),
+        AbstractWallet.filterByRailgunTxidAndTxidVersion(
+          unshieldEvent,
+          txidVersion,
+          filterRailgunTxid,
+        ),
       )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
 
-    return { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs };
+    return { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs: filteredTXOs };
   }
 
   async refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(
     chain: Chain,
+    txidVersion: TXIDVersion,
     filterRailgunTxid?: string,
   ): Promise<void> {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs } =
-      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(chain, filterRailgunTxid);
+      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(chain, txidVersion, filterRailgunTxid);
     if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
       return;
     }
@@ -1216,10 +1248,12 @@ abstract class AbstractWallet extends EventEmitter {
           ? BlindedCommitmentType.Transact
           : BlindedCommitmentType.Shield,
         blindedCommitment: sentCommitment.blindedCommitment as string,
+        txidVersion: sentCommitment.txidVersion,
       })),
       ...unshieldEventsNeedPOIs.map((unshieldEvent) => ({
         type: BlindedCommitmentType.Transact,
         blindedCommitment: unshieldEvent.blindedCommitment as string,
+        txidVersion: unshieldEvent.txidVersion,
       })),
     ];
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
@@ -1263,10 +1297,11 @@ abstract class AbstractWallet extends EventEmitter {
 
   async generatePOIsAllSentCommitmentsAndUnshieldEvents(
     chain: Chain,
+    txidVersion: TXIDVersion,
     railgunTxidFilter?: string,
   ): Promise<void> {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
-      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(chain, railgunTxidFilter);
+      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(chain, txidVersion, railgunTxidFilter);
     if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
       return;
     }
@@ -1296,6 +1331,7 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid,
         sentCommitmentsNeedPOIs,
         unshieldEventsNeedPOIs,
+        txidVersion,
       );
     }
   }
@@ -1306,6 +1342,7 @@ abstract class AbstractWallet extends EventEmitter {
     railgunTxid: string,
     sentCommitments: SentCommitment[],
     unshieldEvents: UnshieldStoredEvent[],
+    txidVersion: TXIDVersion,
   ): Promise<void> {
     try {
       const railgunTxidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
@@ -1313,6 +1350,9 @@ abstract class AbstractWallet extends EventEmitter {
       const railgunTxidMerkletreeData =
         await railgunTxidMerkletree.getRailgunTxidCurrentMerkletreeData(railgunTxid);
       const { railgunTransaction } = railgunTxidMerkletreeData;
+      if (railgunTransaction.txidVersion !== txidVersion) {
+        throw new Error('Railgun transaction has invalid txid version');
+      }
 
       // Spent TXOs
       const spentTXOs = TXOs.filter((txo) =>
@@ -1320,6 +1360,9 @@ abstract class AbstractWallet extends EventEmitter {
       );
       if (!spentTXOs.length) {
         throw new Error('No spent txos for railgun txid nullifier');
+      }
+      if (!spentTXOs.every((txo) => txo.txidVersion === txidVersion)) {
+        throw new Error('Not all spent txos have the same txid version');
       }
       const blindedCommitmentsIn = removeUndefineds(spentTXOs.map((txo) => txo.blindedCommitment));
       if (blindedCommitmentsIn.length !== railgunTransaction.nullifiers.length) {
@@ -1343,6 +1386,12 @@ abstract class AbstractWallet extends EventEmitter {
       const blindedCommitmentsOutUnshieldEvents = removeUndefineds(
         unshieldEventsForRailgunTxid.map((unshieldEvent) => unshieldEvent.blindedCommitment),
       );
+      if (!sentCommitmentsForRailgunTxid.every((txo) => txo.txidVersion === txidVersion)) {
+        throw new Error('Not all spent txos have the same txid version');
+      }
+      if (!unshieldEventsForRailgunTxid.every((txo) => txo.txidVersion === txidVersion)) {
+        throw new Error('Not all spent txos have the same txid version');
+      }
       if (unshieldEventsForRailgunTxid.length > 1) {
         throw new Error('Cannot have more than 1 unshield event per railgun txid');
       }
@@ -1432,6 +1481,7 @@ abstract class AbstractWallet extends EventEmitter {
         blindedCommitmentsOut,
         railgunTxidMerkletreeData.currentTxidIndexForTree,
         railgunTransaction.blockNumber,
+        txidVersion,
         () => {}, // no op - progressCallback
       );
     } catch (err) {
@@ -2072,7 +2122,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.emit(EngineEvent.WalletScanComplete, { chain } as WalletScannedEventData);
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.refreshPOIs(chain); // Synchronous
+      this.refreshPOIsForAllTXIDVersions(chain); // Synchronous
     } catch (err) {
       if (err instanceof Error) {
         EngineDebug.log(`wallet.scan error: ${err.message}`);
@@ -2084,7 +2134,7 @@ abstract class AbstractWallet extends EventEmitter {
   /**
    * Occurs after balances are scanned.
    */
-  async refreshPOIs(chain: Chain) {
+  async refreshPOIsForAllTXIDVersions(chain: Chain) {
     if (!POI.isActiveForChain(chain)) {
       return;
     }
@@ -2095,15 +2145,18 @@ abstract class AbstractWallet extends EventEmitter {
     this.isRefreshingPOIs[chain.type][chain.id] = true;
 
     try {
-      // Refresh POIs - Receive commitments
-      await this.refreshReceivePOIsAllTXOs(chain);
+      // eslint-disable-next-line no-restricted-syntax
+      for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+        // Refresh POIs - Receive commitments
+        await this.refreshReceivePOIsAllTXOs(chain, txidVersion);
 
-      // Refresh POIs - Sent commitments / unshields
-      await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(chain);
+        // Refresh POIs - Sent commitments / unshields
+        await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(chain, txidVersion);
 
-      // Generate POIs - Sent commitments / unshields
-      // TODO - add this after manual testing
-      // await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+        // Generate POIs - Sent commitments / unshields
+        // TODO - add this after manual testing
+        // await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+      }
 
       this.isRefreshingPOIs[chain.type][chain.id] = false;
     } catch (err) {

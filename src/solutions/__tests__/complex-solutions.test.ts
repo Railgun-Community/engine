@@ -17,8 +17,10 @@ import { AddressData } from '../../key-derivation/bech32';
 import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { TransactNote } from '../../note/transact-note';
 import { RailgunEngine } from '../../railgun-engine';
-import { TXO, TreeBalance } from '../../models';
+import { TXIDVersion } from '../../models/poi-types';
 import { getTokenDataERC20 } from '../../note/note-util';
+import { TXO } from '../../models/txo-types';
+import { TreeBalance } from '../../models/wallet-types';
 
 const addressData1 = RailgunEngine.decodeAddress(
   '0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca',
@@ -74,6 +76,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,
     nullifier: randomHex(32),
+    txidVersion: TXIDVersion.V2_PoseidonMerkle,
   };
 };
 

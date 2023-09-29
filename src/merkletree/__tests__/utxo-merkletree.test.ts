@@ -8,7 +8,7 @@ import { Database } from '../../database/database';
 import { Merkletree } from '../merkletree';
 import { UTXOMerkletree } from '../utxo-merkletree';
 import { TOKEN_SUB_ID_NULL } from '../../models/transaction-constants';
-import { UnshieldStoredEvent } from '../../models';
+import { TXIDVersion, UnshieldStoredEvent } from '../../models';
 import { MERKLE_ZERO_VALUE, MerkletreesMetadata } from '../../models/merkletree-types';
 import { verifyMerkleProof } from '../merkle-proof';
 
@@ -728,6 +728,7 @@ describe('UTXO Merkletree', () => {
       railgunTxid: undefined,
       poisPerList: undefined,
       blindedCommitment: undefined,
+      txidVersion: TXIDVersion.V2_PoseidonMerkle,
     };
     const unshieldB1: UnshieldStoredEvent = {
       txid: '1',
@@ -743,6 +744,7 @@ describe('UTXO Merkletree', () => {
       railgunTxid: undefined,
       poisPerList: undefined,
       blindedCommitment: undefined,
+      txidVersion: TXIDVersion.V2_PoseidonMerkle,
     };
     const unshieldB2: UnshieldStoredEvent = {
       txid: '1',
@@ -758,6 +760,7 @@ describe('UTXO Merkletree', () => {
       railgunTxid: undefined,
       poisPerList: undefined,
       blindedCommitment: undefined,
+      txidVersion: TXIDVersion.V2_PoseidonMerkle,
     };
     await merkletree.addUnshieldEvents([unshieldA1, unshieldB1, unshieldB2]);
 

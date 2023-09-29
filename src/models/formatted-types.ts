@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { POIsPerList } from './poi-types';
+import { POIsPerList, TXIDVersion } from './poi-types';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
@@ -150,6 +150,7 @@ export type RailgunTransaction = {
 
 export type RailgunTransactionWithTxid = RailgunTransaction & {
   hash: string;
+  txidVersion: TXIDVersion;
 };
 
 export type RailgunTxidMerkletreeData = {
@@ -183,6 +184,7 @@ export type StoredReceiveCommitment = {
   railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
+  txidVersion: TXIDVersion;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
@@ -196,6 +198,7 @@ export type StoredSendCommitment = {
   railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
+  txidVersion: TXIDVersion;
 };
 
 /**

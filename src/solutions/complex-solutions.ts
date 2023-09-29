@@ -8,6 +8,7 @@ import EngineDebug from '../debugger/debugger';
 import { ByteLength, ZERO_32_BYTE_VALUE, formatToByteLength } from '../utils';
 import { isDefined } from '../utils/is-defined';
 import { CommitmentType } from '../models/formatted-types';
+import { TXIDVersion } from '../models/poi-types';
 
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
@@ -67,6 +68,7 @@ const createNullUTXO = (nullNote: TransactNote): TXO => {
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,
     nullifier: ZERO_32_BYTE_VALUE,
+    txidVersion: TXIDVersion.V2_PoseidonMerkle,
   };
 };
 
