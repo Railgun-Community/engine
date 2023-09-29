@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { Chain } from '../models/engine-types';
 import {
-  Chain,
   BlindedCommitmentData,
-  POIsPerList,
   POIEngineProofInputs,
+  POIsPerList,
+  TXIDVersion,
   TXOPOIListStatus,
-} from '../models';
+} from '../models/poi-types';
 import { POINodeInterface } from '../poi/poi-node-interface';
 
 export const MOCK_LIST_KEY = 'test_list';
@@ -18,7 +19,8 @@ export class TestPOINodeInterface extends POINodeInterface {
 
   // eslint-disable-next-line class-methods-use-this
   async getPOIsPerList(
-    _chain: Chain,
+    txidVersion: TXIDVersion,
+    chain: Chain,
     listKeys: string[],
     blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }> {
@@ -35,6 +37,7 @@ export class TestPOINodeInterface extends POINodeInterface {
 
   // eslint-disable-next-line class-methods-use-this
   async generateAndSubmitPOI(
+    txidVersion: TXIDVersion,
     chain: Chain,
     listKey: string,
     proofInputs: POIEngineProofInputs,

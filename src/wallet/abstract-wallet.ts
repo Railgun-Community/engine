@@ -1179,6 +1179,7 @@ abstract class AbstractWallet extends EventEmitter {
       blindedCommitment: txo.blindedCommitment as string,
     }));
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
+      txidVersion,
       chain,
       blindedCommitmentDatas,
     );
@@ -1266,6 +1267,7 @@ abstract class AbstractWallet extends EventEmitter {
       })),
     ];
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
+      txidVersion,
       chain,
       blindedCommitmentDatas,
     );
@@ -1471,6 +1473,7 @@ abstract class AbstractWallet extends EventEmitter {
       };
 
       await POI.generateAndSubmitPOIAllLists(
+        txidVersion,
         chain,
         poisPerList,
         railgunTxid,
@@ -1478,7 +1481,6 @@ abstract class AbstractWallet extends EventEmitter {
         blindedCommitmentsOut,
         railgunTxidMerkletreeData.currentTxidIndexForTree,
         railgunTransaction.blockNumber,
-        txidVersion,
         () => {}, // no op - progressCallback
       );
     } catch (err) {

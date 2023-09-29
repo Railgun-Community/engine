@@ -140,6 +140,7 @@ export class POI {
   }
 
   static async retrievePOIsForBlindedCommitments(
+    txidVersion: TXIDVersion,
     chain: Chain,
     blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }> {
@@ -147,10 +148,11 @@ export class POI {
       throw new Error('POI node interface not initialized');
     }
     const listKeys = this.getAllListKeys();
-    return this.nodeInterface.getPOIsPerList(chain, listKeys, blindedCommitmentDatas);
+    return this.nodeInterface.getPOIsPerList(txidVersion, chain, listKeys, blindedCommitmentDatas);
   }
 
   static async generateAndSubmitPOIAllLists(
+    txidVersion: TXIDVersion,
     chain: Chain,
     poisPerList: Optional<POIsPerList>,
     railgunTxid: string,
@@ -158,7 +160,6 @@ export class POI {
     blindedCommitmentsOut: string[],
     txidMerklerootIndex: number,
     railgunTransactionBlockNumber: number,
-    txidVersion: TXIDVersion,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
@@ -175,13 +176,13 @@ export class POI {
       progressCallback(progress);
 
       await this.nodeInterface.generateAndSubmitPOI(
+        txidVersion,
         chain,
         listKey,
         proofInputs,
         blindedCommitmentsOut,
         txidMerklerootIndex,
         railgunTransactionBlockNumber,
-        txidVersion,
       );
     }
   }
