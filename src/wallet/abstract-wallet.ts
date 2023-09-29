@@ -50,9 +50,10 @@ import {
 import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   AddressKeys,
-  Balances,
-  BalancesByTree,
+  AllBalances,
+  TotalBalancesByTreeNumber,
   ShareableViewingKeyData,
+  TokenBalances,
   TransactionHistoryEntry,
   TransactionHistoryEntryPreprocessSpent,
   TransactionHistoryEntryReceived,
@@ -73,7 +74,12 @@ import { TransactNote } from '../note/transact-note';
 import { binarySearchForUpperBoundIndex } from '../utils/search';
 import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
-import { getTokenDataHash, getUnshieldEventNoteHash, serializeTokenData } from '../note/note-util';
+import {
+  getTokenDataERC20,
+  getTokenDataHash,
+  getUnshieldEventNoteHash,
+  serializeTokenData,
+} from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
 import { PublicInputsRailgun } from '../models/prover-types';
@@ -128,9 +134,10 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly nullifyingKey: bigint;
 
-  readonly utxoMerkletrees: UTXOMerkletree[][] = [];
+  private readonly utxoMerkletrees: { [txidVersion: string]: UTXOMerkletree[][] } = {};
 
-  readonly railgunTxidMerkletrees: RailgunTxidMerkletree[][] = [];
+  private readonly railgunTxidMerkletrees: { [txidVersion: string]: RailgunTxidMerkletree[][] } =
+    {};
 
   readonly isRefreshingPOIs: boolean[][] = [];
 
@@ -168,32 +175,39 @@ abstract class AbstractWallet extends EventEmitter {
   /**
    * Loads utxo merkle tree into wallet
    */
-  loadUTXOMerkletree(utxoMerkletree: UTXOMerkletree) {
-    this.utxoMerkletrees[utxoMerkletree.chain.type] ??= [];
-    this.utxoMerkletrees[utxoMerkletree.chain.type][utxoMerkletree.chain.id] = utxoMerkletree;
+  loadUTXOMerkletree(txidVersion: TXIDVersion, utxoMerkletree: UTXOMerkletree) {
+    this.utxoMerkletrees[txidVersion] ??= [];
+    this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type] ??= [];
+    this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
+      utxoMerkletree;
   }
 
   /**
    * Loads txid merkle tree into wallet
    */
-  loadRailgunTXIDMerkletree(railgunTxidMerkletree: RailgunTxidMerkletree) {
-    this.railgunTxidMerkletrees[railgunTxidMerkletree.chain.type] ??= [];
-    this.railgunTxidMerkletrees[railgunTxidMerkletree.chain.type][railgunTxidMerkletree.chain.id] =
-      railgunTxidMerkletree;
+  loadRailgunTXIDMerkletree(
+    txidVersion: TXIDVersion,
+    railgunTxidMerkletree: RailgunTxidMerkletree,
+  ) {
+    this.railgunTxidMerkletrees[txidVersion] ??= [];
+    this.railgunTxidMerkletrees[txidVersion][railgunTxidMerkletree.chain.type] ??= [];
+    this.railgunTxidMerkletrees[txidVersion][railgunTxidMerkletree.chain.type][
+      railgunTxidMerkletree.chain.id
+    ] = railgunTxidMerkletree;
   }
 
   /**
    * Unload utxo merkle tree by chain
    */
-  unloadUTXOMerkletree(chain: Chain) {
-    delete this.utxoMerkletrees[chain.type]?.[chain.id];
+  unloadUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain) {
+    delete this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
   }
 
   /**
    * Unload txid merkle tree by chain
    */
-  unloadRailgunTXIDMerkletree(chain: Chain) {
-    delete this.railgunTxidMerkletrees[chain.type]?.[chain.id];
+  unloadRailgunTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain) {
+    delete this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
   }
 
   private createTokenDataGetter(chain: Chain): TokenDataGetter {
@@ -321,7 +335,11 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id
    * @returns walletDetails - including treeScannedHeight
    */
-  async getWalletDetails(chain: Chain): Promise<WalletDetails> {
+  async getWalletDetails(txidVersion: TXIDVersion, chain: Chain): Promise<WalletDetails> {
+    if (txidVersion !== TXIDVersion.V2_PoseidonMerkle) {
+      throw new Error('Wallet details will be incorrect for this TXID version - needs migration');
+    }
+
     let walletDetails: WalletDetails;
 
     try {
@@ -392,6 +410,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private async createScannedDBCommitments(
+    txidVersion: TXIDVersion,
     leaf: Commitment,
     viewingPrivateKey: Uint8Array,
     tree: number,
@@ -595,7 +614,7 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid: isSentCommitment(leaf) ? leaf.railgunTxid : undefined,
         poisPerList: undefined,
         blindedCommitment: undefined,
-        txidVersion: TXIDVersion.V2_PoseidonMerkle,
+        txidVersion,
       };
       EngineDebug.log(`Adding RECEIVE commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
@@ -621,7 +640,7 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid: undefined,
         poisPerList: undefined,
         blindedCommitment: undefined,
-        txidVersion: TXIDVersion.V2_PoseidonMerkle,
+        txidVersion,
       };
       EngineDebug.log(`Adding SPEND commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
@@ -648,6 +667,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param {number} startScanHeight - starting position
    */
   async scanLeaves(
+    txidVersion: TXIDVersion,
     leaves: Optional<Commitment>[],
     tree: number,
     chain: Chain,
@@ -670,6 +690,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
       const scanPromiseWithTicker = async () => {
         const scanned = await this.createScannedDBCommitments(
+          txidVersion,
           leaf,
           vpk,
           tree,
@@ -771,10 +792,10 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get UTXOs for
    * @returns UTXOs list
    */
-  async TXOs(chain: Chain): Promise<TXO[]> {
+  async TXOs(txidVersion: TXIDVersion, chain: Chain): Promise<TXO[]> {
     const recipientAddress = encodeAddress(this.addressKeys);
     const vpk = this.getViewingKeyPair().privateKey;
-    const merkletree = this.getUTXOMerkletreeForChain(chain);
+    const merkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
     const tokenDataGetter = this.createTokenDataGetter(chain);
 
     const storedReceiveCommitments = await this.queryAllStoredReceiveCommitments(chain);
@@ -855,6 +876,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @returns SentCommitment list
    */
   private async getSentCommitments(
+    txidVersion: TXIDVersion,
     chain: Chain,
     startingBlock: Optional<number>,
   ): Promise<SentCommitment[]> {
@@ -884,7 +906,7 @@ abstract class AbstractWallet extends EventEmitter {
           !isDefined(sentCommitment.railgunTxid) ||
           !isDefined(sentCommitment.blindedCommitment)
         ) {
-          const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
+          const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
           const commitment = await utxoMerkletree.getCommitment(tree, position);
 
           if (isSentCommitment(commitment) && isDefined(commitment.railgunTxid)) {
@@ -956,8 +978,11 @@ abstract class AbstractWallet extends EventEmitter {
     // });
   }
 
-  async getTXOsReceivedPOIStatusInfo(chain: Chain): Promise<TXOsReceivedPOIStatusInfo[]> {
-    const TXOs = await this.TXOs(chain);
+  async getTXOsReceivedPOIStatusInfo(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<TXOsReceivedPOIStatusInfo[]> {
+    const TXOs = await this.TXOs(txidVersion, chain);
 
     const txidGroups = _.groupBy(TXOs, (txo) => txo.txid);
 
@@ -1005,13 +1030,20 @@ abstract class AbstractWallet extends EventEmitter {
     );
   }
 
-  async getTXOsSpentPOIStatusInfo(chain: Chain): Promise<TXOsSpentPOIStatusInfo[]> {
+  async getTXOsSpentPOIStatusInfo(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<TXOsSpentPOIStatusInfo[]> {
     const [sentCommitments, TXOs] = await Promise.all([
-      this.getSentCommitments(chain, undefined),
-      this.TXOs(chain),
+      this.getSentCommitments(txidVersion, chain, undefined),
+      this.TXOs(txidVersion, chain),
     ]);
 
-    const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(chain, TXOs);
+    const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(
+      txidVersion,
+      chain,
+      TXOs,
+    );
 
     const txidGroups: {
       [txid: string]: { sentCommitments: SentCommitment[]; unshieldEvents: UnshieldStoredEvent[] };
@@ -1031,7 +1063,7 @@ abstract class AbstractWallet extends EventEmitter {
       txidGroups[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
     });
 
-    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
 
     const statusInfos: TXOsSpentPOIStatusInfo[] = [];
 
@@ -1136,15 +1168,13 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async refreshReceivePOIsAllTXOs(
-    chain: Chain,
     txidVersion: TXIDVersion,
+    chain: Chain,
     filterRailgunTxid?: string,
   ): Promise<void> {
-    const TXOs = await this.TXOs(chain);
+    const TXOs = await this.TXOs(txidVersion, chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveCreationPOIs(txo))
-      .filter((txo) =>
-        AbstractWallet.filterByRailgunTxidAndTxidVersion(txo, txidVersion, filterRailgunTxid),
-      )
+      .filter((txo) => AbstractWallet.filterByRailgunTxid(txo, filterRailgunTxid))
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
     if (txosNeedCreationPOIs.length === 0) {
       return;
@@ -1183,48 +1213,40 @@ abstract class AbstractWallet extends EventEmitter {
     return isDefined(a.poisPerList) && !isDefined(b.poisPerList) ? -1 : 1;
   }
 
-  private static filterByRailgunTxidAndTxidVersion(
+  private static filterByRailgunTxid(
     item: { railgunTxid: Optional<string>; txidVersion: TXIDVersion },
-    txidVersion: TXIDVersion,
     railgunTxid: Optional<string>,
   ) {
-    if (item.txidVersion !== txidVersion) {
-      return false;
-    }
     return isDefined(railgunTxid) ? item.railgunTxid === railgunTxid : true;
   }
 
   async getSentCommitmentsAndUnshieldEventsNeedPOIs(
-    chain: Chain,
     txidVersion: TXIDVersion,
+    chain: Chain,
     filterRailgunTxid?: string,
   ) {
     const [sentCommitments, TXOs] = await Promise.all([
-      this.getSentCommitments(chain, undefined),
-      this.TXOs(chain),
+      this.getSentCommitments(txidVersion, chain, undefined),
+      this.TXOs(txidVersion, chain),
     ]);
     const filteredTXOs = TXOs.filter((txo) => txo.txidVersion === txidVersion);
 
     const sentCommitmentsNeedPOIs = sentCommitments
       .filter((sendCommitment) => POI.shouldRetrieveSpentPOIs(sendCommitment))
       .filter((sentCommitment) =>
-        AbstractWallet.filterByRailgunTxidAndTxidVersion(
-          sentCommitment,
-          txidVersion,
-          filterRailgunTxid,
-        ),
+        AbstractWallet.filterByRailgunTxid(sentCommitment, filterRailgunTxid),
       )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
 
-    const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(chain, TXOs);
+    const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(
+      txidVersion,
+      chain,
+      TXOs,
+    );
     const unshieldEventsNeedPOIs = unshieldEvents
       .filter((unshieldEvent) => POI.shouldGenerateSpentPOIsUnshieldEvent(unshieldEvent))
       .filter((unshieldEvent) =>
-        AbstractWallet.filterByRailgunTxidAndTxidVersion(
-          unshieldEvent,
-          txidVersion,
-          filterRailgunTxid,
-        ),
+        AbstractWallet.filterByRailgunTxid(unshieldEvent, filterRailgunTxid),
       )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
 
@@ -1232,12 +1254,12 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(
-    chain: Chain,
     txidVersion: TXIDVersion,
+    chain: Chain,
     filterRailgunTxid?: string,
   ): Promise<void> {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs } =
-      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(chain, txidVersion, filterRailgunTxid);
+      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain, filterRailgunTxid);
     if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
       return;
     }
@@ -1279,7 +1301,7 @@ abstract class AbstractWallet extends EventEmitter {
       );
     }
 
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
+    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
 
     // eslint-disable-next-line no-restricted-syntax
     for (const unshieldEvent of unshieldEventsNeedPOIs) {
@@ -1301,7 +1323,7 @@ abstract class AbstractWallet extends EventEmitter {
     railgunTxidFilter?: string,
   ): Promise<void> {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
-      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(chain, txidVersion, railgunTxidFilter);
+      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain, railgunTxidFilter);
     if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
       return;
     }
@@ -1345,7 +1367,7 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
   ): Promise<void> {
     try {
-      const railgunTxidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+      const railgunTxidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
 
       const railgunTxidMerkletreeData =
         await railgunTxidMerkletree.getRailgunTxidCurrentMerkletreeData(railgunTxid);
@@ -1553,12 +1575,27 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntry[]> {
-    const TXOs = await this.TXOs(chain);
+    const transactionHistory: TransactionHistoryEntry[] = [];
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      transactionHistory.push(
+        ...(await this.getTransactionHistoryByTXIDVersion(txidVersion, chain, startingBlock)),
+      );
+    }
+    return transactionHistory;
+  }
+
+  private async getTransactionHistoryByTXIDVersion(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    startingBlock: Optional<number>,
+  ): Promise<TransactionHistoryEntry[]> {
+    const TXOs = await this.TXOs(txidVersion, chain);
     const filteredTXOs = AbstractWallet.filterTXOsByBlockNumber(TXOs, startingBlock);
 
     const [receiveHistory, spendHistory] = await Promise.all([
       AbstractWallet.getTransactionReceiveHistory(filteredTXOs),
-      this.getTransactionSpendHistory(chain, filteredTXOs, startingBlock),
+      this.getTransactionSpendHistory(txidVersion, chain, filteredTXOs, startingBlock),
     ]);
 
     const history: TransactionHistoryEntry[] = spendHistory.map((sendItem) => ({
@@ -1689,10 +1726,11 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async getAllUnshieldEventsFromSpentNullifiers(
+    txidVersion: TXIDVersion,
     chain: Chain,
     filteredTXOs: TXO[],
   ): Promise<UnshieldStoredEvent[]> {
-    const merkletree = this.getUTXOMerkletreeForChain(chain);
+    const merkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
     const unshieldEvents: UnshieldStoredEvent[] = [];
 
     const seenSpentTxids: string[] = [];
@@ -1738,7 +1776,7 @@ abstract class AbstractWallet extends EventEmitter {
                 true,
               );
 
-              const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(chain);
+              const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
               const commitmentMap = await txidMerkletree.getRailgunTxidsForCommitments([
                 commitmentHash,
               ]);
@@ -1769,13 +1807,14 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async getTransactionSpendHistory(
+    txidVersion: TXIDVersion,
     chain: Chain,
     filteredTXOs: TXO[],
     startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntrySpent[]> {
     const [allUnshieldEvents, sentCommitments] = await Promise.all([
-      this.getAllUnshieldEventsFromSpentNullifiers(chain, filteredTXOs),
-      this.getSentCommitments(chain, startingBlock),
+      this.getAllUnshieldEventsFromSpentNullifiers(txidVersion, chain, filteredTXOs),
+      this.getSentCommitments(txidVersion, chain, startingBlock),
     ]);
 
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
@@ -1917,16 +1956,16 @@ abstract class AbstractWallet extends EventEmitter {
     return history;
   }
 
-  private getUTXOMerkletreeForChain(chain: Chain): UTXOMerkletree {
-    const merkletree = this.utxoMerkletrees[chain.type][chain.id];
+  getUTXOMerkletreeForChain(txidVersion: TXIDVersion, chain: Chain): UTXOMerkletree {
+    const merkletree = this.utxoMerkletrees[txidVersion][chain.type][chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(`No utxo merkletree for chain ${chain.type}:${chain.id}`);
     }
     return merkletree;
   }
 
-  private getRailgunTXIDMerkletreeForChain(chain: Chain): RailgunTxidMerkletree {
-    const merkletree = this.railgunTxidMerkletrees[chain.type][chain.id];
+  getRailgunTXIDMerkletreeForChain(txidVersion: TXIDVersion, chain: Chain): RailgunTxidMerkletree {
+    const merkletree = this.railgunTxidMerkletrees[txidVersion][chain.type][chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(`No txid merkletree for chain ${chain.type}:${chain.id}`);
     }
@@ -1938,16 +1977,40 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get balances for
    * @returns balances
    */
-  async balances(chain: Chain): Promise<Balances> {
-    const TXOs = await this.TXOs(chain);
-    const balances: Balances = {};
+  async getAllBalances(chain: Chain): Promise<AllBalances> {
+    const balances: AllBalances = {};
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      const balancesByTxidVersion = await this.getTokenBalancesByTxidVersion(txidVersion, chain);
+
+      Object.keys(balancesByTxidVersion).forEach((tokenHash) => {
+        balances[txidVersion] ??= {};
+        balances[txidVersion][tokenHash] = balancesByTxidVersion[tokenHash];
+      });
+    }
+
+    return balances;
+  }
+
+  /**
+   * Gets wallet balances
+   * @param chain - chain type/id to get balances for
+   * @returns balances
+   */
+  async getTokenBalancesByTxidVersion(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<TokenBalances> {
+    const TXOs = await this.TXOs(txidVersion, chain);
+    const tokenBalances: TokenBalances = {};
 
     // Loop through each TXO and add to balances if unspent
     TXOs.forEach((txo) => {
       const tokenHash = formatToByteLength(txo.note.tokenHash, ByteLength.UINT_256, false);
       // If we don't have an entry for this token yet, create one
-      if (!isDefined(balances[tokenHash])) {
-        balances[tokenHash] = {
+      if (!isDefined(tokenBalances[tokenHash])) {
+        tokenBalances[tokenHash] = {
           balance: BigInt(0),
           utxos: [],
           tokenData: txo.note.tokenData,
@@ -1957,18 +2020,23 @@ abstract class AbstractWallet extends EventEmitter {
       // If utxo is unspent process it
       if (txo.spendtxid === false) {
         // Store utxo
-        balances[tokenHash].utxos.push(txo);
+        tokenBalances[tokenHash].utxos.push(txo);
         // Increment balance
-        balances[tokenHash].balance += txo.note.value;
+        tokenBalances[tokenHash].balance += txo.note.value;
       }
     });
 
-    return balances;
+    return tokenBalances;
   }
 
-  async getBalance(chain: Chain, tokenAddress: string): Promise<Optional<bigint>> {
-    const balances = await this.balances(chain);
-    const balanceForToken = balances[formatToByteLength(tokenAddress, 32, false)];
+  async getBalanceERC20(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    tokenAddress: string,
+  ): Promise<Optional<bigint>> {
+    const balances = await this.getTokenBalancesByTxidVersion(txidVersion, chain);
+    const tokenHash = getTokenDataHash(getTokenDataERC20(tokenAddress));
+    const balanceForToken = balances[tokenHash];
     return isDefined(balanceForToken) ? balanceForToken.balance : undefined;
   }
 
@@ -1977,39 +2045,47 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id of token
    * @returns balances by tree
    */
-  async balancesByTree(chain: Chain): Promise<BalancesByTree> {
+  async getTotalBalancesByTreeNumber(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<TotalBalancesByTreeNumber> {
     // Fetch balances
-    const balances = await this.balances(chain);
+    const tokenBalances = await this.getTokenBalancesByTxidVersion(txidVersion, chain);
 
     // Sort token balances by tree
-    const balancesByTree: BalancesByTree = {};
+    const totalBalancesByTreeNumber: TotalBalancesByTreeNumber = {};
 
     // Loop through each token
-    Object.keys(balances).forEach((token) => {
+
+    Object.keys(tokenBalances).forEach((tokenHash) => {
       // Create balances tree array
-      balancesByTree[token] = [];
+      totalBalancesByTreeNumber[tokenHash] = [];
 
       // Loop through each TXO and sort by tree
-      balances[token].utxos.forEach((utxo) => {
-        if (!isDefined(balancesByTree[token][utxo.tree])) {
-          balancesByTree[token][utxo.tree] = {
+      tokenBalances[tokenHash].utxos.forEach((utxo) => {
+        if (!isDefined(totalBalancesByTreeNumber[tokenHash][utxo.tree])) {
+          totalBalancesByTreeNumber[tokenHash][utxo.tree] = {
             balance: utxo.note.value,
             utxos: [utxo],
             tokenData: utxo.note.tokenData,
           };
         } else {
-          balancesByTree[token][utxo.tree].balance += utxo.note.value;
-          balancesByTree[token][utxo.tree].utxos.push(utxo);
+          totalBalancesByTreeNumber[tokenHash][utxo.tree].balance += utxo.note.value;
+          totalBalancesByTreeNumber[tokenHash][utxo.tree].utxos.push(utxo);
         }
       });
     });
 
-    return balancesByTree;
+    return totalBalancesByTreeNumber;
   }
 
-  async balancesByTreeForToken(chain: Chain, tokenHash: string): Promise<TreeBalance[]> {
-    const balances = await this.balancesByTree(chain);
-    const treeSortedBalances = balances[tokenHash] ?? [];
+  async balancesByTreeForToken(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    tokenHash: string,
+  ): Promise<TreeBalance[]> {
+    const totalBalancesByTreeNumber = await this.getTotalBalancesByTreeNumber(txidVersion, chain);
+    const treeSortedBalances = totalBalancesByTreeNumber[tokenHash] ?? [];
     return treeSortedBalances;
   }
 
@@ -2021,19 +2097,24 @@ abstract class AbstractWallet extends EventEmitter {
     return tokenBalance;
   }
 
-  /**
-   * Scans for new balances
-   * @param chain - chain data to scan
-   */
-  async scanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
+  async scanBalances(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    progressCallback: Optional<(progress: number) => void>,
+  ) {
     EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
-    const utxoMerkletree = this.getUTXOMerkletreeForChain(chain);
+    const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
 
+    // eslint-disable-next-line no-useless-catch
     try {
+      if (txidVersion !== TXIDVersion.V2_PoseidonMerkle) {
+        throw new Error('Wallet details will be incorrect for this TXID version - needs migration');
+      }
+
       // Fetch wallet details and latest tree.
       const [walletDetails, latestTree] = await Promise.all([
-        this.getWalletDetails(chain),
+        this.getWalletDetails(txidVersion, chain),
         utxoMerkletree.latestTree(),
       ]);
 
@@ -2094,21 +2175,29 @@ abstract class AbstractWallet extends EventEmitter {
         let timeSinceLastProgressCallback = Date.now() - 500;
 
         // Start scanning primary and change
-        await this.scanLeaves(leaves, treeIndex, chain, startScanHeight, treeHeight, () => {
-          // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
-          if (progressCallback) {
-            // Throttle progressCallback, at most every 500ms.
-            if (Date.now() - timeSinceLastProgressCallback >= 500) {
-              // 100ms since last progressCallback call.
-              timeSinceLastProgressCallback = Date.now();
-              const finishedTreeCount = treeIndex - startScanTree;
-              const finishedTreesProgress = finishedTreeCount / treesToScan;
-              finishedLeafCount += 1;
-              const newTreeProgress = finishedLeafCount / leavesToScan / treesToScan;
-              progressCallback(finishedTreesProgress + newTreeProgress);
+        await this.scanLeaves(
+          txidVersion,
+          leaves,
+          treeIndex,
+          chain,
+          startScanHeight,
+          treeHeight,
+          () => {
+            // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
+            if (progressCallback) {
+              // Throttle progressCallback, at most every 500ms.
+              if (Date.now() - timeSinceLastProgressCallback >= 500) {
+                // 100ms since last progressCallback call.
+                timeSinceLastProgressCallback = Date.now();
+                const finishedTreeCount = treeIndex - startScanTree;
+                const finishedTreesProgress = finishedTreeCount / treesToScan;
+                finishedLeafCount += 1;
+                const newTreeProgress = finishedLeafCount / leavesToScan / treesToScan;
+                progressCallback(finishedTreesProgress + newTreeProgress);
+              }
             }
-          }
-        });
+          },
+        );
 
         // Commit new scanned height
         walletDetails.treeScannedHeights[treeIndex] = leaves.length;
@@ -2126,7 +2215,7 @@ abstract class AbstractWallet extends EventEmitter {
     } catch (err) {
       if (err instanceof Error) {
         EngineDebug.log(`wallet.scan error: ${err.message}`);
-        EngineDebug.error(err);
+        EngineDebug.error(err, true /* ignoreInTests */);
       }
     }
   }
@@ -2148,20 +2237,21 @@ abstract class AbstractWallet extends EventEmitter {
       // eslint-disable-next-line no-restricted-syntax
       for (const txidVersion of ACTIVE_TXID_VERSIONS) {
         // Refresh POIs - Receive commitments
-        await this.refreshReceivePOIsAllTXOs(chain, txidVersion);
+        await this.refreshReceivePOIsAllTXOs(txidVersion, chain);
 
         // Refresh POIs - Sent commitments / unshields
-        await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(chain, txidVersion);
+        await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);
 
         // Generate POIs - Sent commitments / unshields
         // TODO - add this after manual testing
-        // await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain);
+        // await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);
       }
 
       this.isRefreshingPOIs[chain.type][chain.id] = false;
     } catch (err) {
-      EngineDebug.error(err);
       this.isRefreshingPOIs[chain.type][chain.id] = false;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      EngineDebug.error(err, true /* ignoreInTests */);
       throw err;
     }
   }
@@ -2220,8 +2310,8 @@ abstract class AbstractWallet extends EventEmitter {
    * Clears balances scanned from merkletrees and stored to database.
    * @param chain - chain type/id to clear
    */
-  async clearScannedBalances(chain: Chain) {
-    const walletDetails = await this.getWalletDetails(chain);
+  async clearScannedBalances(txidVersion: TXIDVersion, chain: Chain) {
+    const walletDetails = await this.getWalletDetails(txidVersion, chain);
     this.cachedReceiveCommitments = [];
 
     // Clear namespace and then resave the walletDetails
@@ -2236,9 +2326,13 @@ abstract class AbstractWallet extends EventEmitter {
    * Clears stored balances and re-scans fully.
    * @param chain - chain type/id to rescan
    */
-  async fullRescanBalances(chain: Chain, progressCallback: Optional<(progress: number) => void>) {
-    await this.clearScannedBalances(chain);
-    return this.scanBalances(chain, progressCallback);
+  async fullRescanBalances(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    progressCallback: Optional<(progress: number) => void>,
+  ) {
+    await this.clearScannedBalances(txidVersion, chain);
+    return this.scanBalances(txidVersion, chain, progressCallback);
   }
 
   abstract sign(publicInputs: PublicInputsRailgun, encryptionKey: string): Promise<Signature>;

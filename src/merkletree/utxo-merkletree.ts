@@ -12,6 +12,7 @@ import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { isDefined } from '../utils/is-defined';
+import { TXIDVersion } from '../models';
 
 export class UTXOMerkletree extends Merkletree<Commitment> {
   // DO NOT MODIFY
@@ -22,16 +23,22 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   // TODO: Remove after V3
   protected shouldCreateSortedAllDataCache = true;
 
-  private constructor(db: Database, chain: Chain, merklerootValidator: MerklerootValidator) {
-    super(db, chain, merklerootValidator, CommitmentProcessingGroupSize.XXXLarge);
+  private constructor(
+    db: Database,
+    chain: Chain,
+    txidVersion: TXIDVersion,
+    merklerootValidator: MerklerootValidator,
+  ) {
+    super(db, chain, txidVersion, merklerootValidator, CommitmentProcessingGroupSize.XXXLarge);
   }
 
   static async create(
     db: Database,
     chain: Chain,
+    txidVersion: TXIDVersion,
     merklerootValidator: MerklerootValidator,
   ): Promise<UTXOMerkletree> {
-    const merkletree = new UTXOMerkletree(db, chain, merklerootValidator);
+    const merkletree = new UTXOMerkletree(db, chain, txidVersion, merklerootValidator);
     await merkletree.init();
     return merkletree;
   }
@@ -81,7 +88,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    */
   getUnshieldEventsDBPath(txid?: string, eventLogIndex?: number): string[] {
     const path = [
-      ...this.getChainDBPrefix(),
+      ...this.getMerkletreeDBPrefix(),
       hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
     ];
     if (txid != null) {
@@ -156,7 +163,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   async getUnshieldEvents(txid: string): Promise<UnshieldStoredEvent[]> {
     const namespace = this.getUnshieldEventsDBPath(txid);
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
-    const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 5);
+    const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 6);
 
     return Promise.all(
       keySplits.map(async (keySplit) => {

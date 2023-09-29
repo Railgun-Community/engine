@@ -29,6 +29,7 @@ import {
   TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
 import { binarySearchForUpperBoundIndex } from '../utils/search';
+import { TXIDVersion } from '../models';
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
 
@@ -49,6 +50,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   protected writeQueue: T[][][] = [];
 
   protected lockUpdates = false;
+
+  txidVersion: TXIDVersion;
 
   // TODO: Remove after V3
   protected shouldCreateSortedAllDataCache = false;
@@ -79,12 +82,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   constructor(
     db: Database,
     chain: Chain,
+    txidVersion: TXIDVersion,
     merklerootValidator: MerklerootValidator,
     defaultCommitmentProcessingSize: CommitmentProcessingGroupSize,
   ) {
     // Set passed values
     this.db = db;
     this.chain = chain;
+    this.txidVersion = txidVersion;
     this.merklerootValidator = merklerootValidator;
     this.defaultCommitmentProcessingSize = defaultCommitmentProcessingSize;
 
@@ -143,13 +148,23 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     return nToHex(poseidon([hexToBigInt(left), hexToBigInt(right)]), ByteLength.UINT_256);
   }
 
-  /**
-   * Construct DB prefix for all trees
-   */
-  getChainDBPrefix(): string[] {
-    const merkletreePrefix = fromUTF8String(this.merkletreePrefix);
+  private getTXIDVersionPrefix(): string {
+    switch (this.txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle:
+        return 'V2';
+      // case TXIDVersion.V3_PoseidonMerkle:
+      // return 'V3';
+      // case TXIDVersion.V3_KZG:
+      // throw new Error('KZG txid version not supported for merkletrees.');
+    }
+    throw new Error('Unrecognized txid version for merkletree');
+  }
 
-    return [merkletreePrefix, getChainFullNetworkID(this.chain)].map((el) =>
+  getMerkletreeDBPrefix(): string[] {
+    const merkletreePrefix = fromUTF8String(this.merkletreePrefix);
+    const txidVersionPrefix = fromUTF8String(this.getTXIDVersionPrefix());
+
+    return [merkletreePrefix, getChainFullNetworkID(this.chain), txidVersionPrefix].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
@@ -158,7 +173,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Construct DB prefix from tree number
    */
   getTreeDBPrefix(tree: number): string[] {
-    return [...this.getChainDBPrefix(), hexlify(new BN(tree))].map((el) =>
+    return [...this.getMerkletreeDBPrefix(), hexlify(new BN(tree))].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
@@ -352,7 +367,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   async getMerkletreesMetadata(): Promise<Optional<MerkletreesMetadata>> {
     try {
       const metadata = msgpack.decode(
-        arrayify((await this.db.get(this.getChainDBPrefix())) as BytesData),
+        arrayify((await this.db.get(this.getMerkletreeDBPrefix())) as BytesData),
       ) as MerkletreesMetadata;
       return metadata;
     } catch {
@@ -364,7 +379,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Stores merkletrees metadata
    */
   async storeMerkletreesMetadata(metadata: MerkletreesMetadata): Promise<void> {
-    await this.db.put(this.getChainDBPrefix(), msgpack.encode(metadata));
+    await this.db.put(this.getMerkletreeDBPrefix(), msgpack.encode(metadata));
   }
 
   /**
@@ -435,9 +450,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     return { tree: latestTree, index };
   }
 
-  async clearLeavesFromDB(): Promise<void> {
+  async clearDataForMerkletree(): Promise<void> {
     this.sortedAllDataCache = undefined;
-    await this.db.clearNamespace(this.getChainDBPrefix());
+    await this.db.clearNamespace(this.getMerkletreeDBPrefix());
     this.cachedNodeHashes = {};
     this.treeLengths = [];
   }

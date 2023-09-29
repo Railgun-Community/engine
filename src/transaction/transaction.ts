@@ -29,6 +29,7 @@ import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { getTokenDataHash } from '../note';
 import { calculateTotalSpend } from '../solutions/utxos';
 import { isDefined } from '../utils/is-defined';
+import { TXIDVersion } from '../models';
 
 class Transaction {
   private readonly adaptID: AdaptID;
@@ -131,10 +132,11 @@ class Transaction {
    */
   async generateTransactionRequest(
     wallet: RailgunWallet,
+    txidVersion: TXIDVersion,
     encryptionKey: string,
     overallBatchMinGasPrice = 0n,
   ): Promise<RailgunTransactionRequest> {
-    const merkletree = wallet.utxoMerkletrees[this.chain.type][this.chain.id];
+    const merkletree = wallet.getUTXOMerkletreeForChain(txidVersion, this.chain);
     const merkleRoot = await merkletree.getRoot(this.spendingTree);
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();

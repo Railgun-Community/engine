@@ -213,6 +213,7 @@ export const formatUnshieldEvent = (
 };
 
 export const processShieldEvents = async (
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: ShieldEvent.Log[],
 ): Promise<void> => {
@@ -224,12 +225,16 @@ export const processShieldEvents = async (
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
       const { fees } = args;
-      return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
+      return eventsListener(
+        txidVersion,
+        formatShieldEvent(args, transactionHash, blockNumber, fees),
+      );
     }),
   );
 };
 
 export const processShieldEvents_LegacyShield_PreMar23 = async (
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: ShieldEvent_LegacyShield_PreMar23.Log[],
 ): Promise<void> => {
@@ -257,12 +262,16 @@ export const processShieldEvents_LegacyShield_PreMar23 = async (
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
       const fees: Optional<bigint[]> = undefined;
-      return eventsListener(formatShieldEvent(args, transactionHash, blockNumber, fees));
+      return eventsListener(
+        txidVersion,
+        formatShieldEvent(args, transactionHash, blockNumber, fees),
+      );
     }),
   );
 };
 
 export const processTransactEvents = async (
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: TransactEvent.Log[],
 ): Promise<void> => {
@@ -273,12 +282,13 @@ export const processTransactEvents = async (
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
-      return eventsListener(formatTransactEvent(args, transactionHash, blockNumber));
+      return eventsListener(txidVersion, formatTransactEvent(args, transactionHash, blockNumber));
     }),
   );
 };
 
 export const processUnshieldEvents = async (
+  txidVersion: TXIDVersion,
   eventsUnshieldListener: EventsUnshieldListener,
   logs: UnshieldEvent.Log[],
 ): Promise<void> => {
@@ -293,7 +303,7 @@ export const processUnshieldEvents = async (
     unshields.push(formatUnshieldEvent(args, transactionHash, blockNumber, log.index));
   });
 
-  await eventsUnshieldListener(unshields);
+  await eventsUnshieldListener(txidVersion, unshields);
 };
 
 export const formatNullifiedEvents = (
@@ -316,6 +326,7 @@ export const formatNullifiedEvents = (
 };
 
 export const processNullifiedEvents = async (
+  txidVersion: TXIDVersion,
   eventsNullifierListener: EventsNullifierListener,
   logs: NullifiedEvent.Log[],
 ): Promise<void> => {
@@ -331,5 +342,5 @@ export const processNullifiedEvents = async (
     nullifiers.push(...formatNullifiedEvents(args, transactionHash, blockNumber));
   });
 
-  await eventsNullifierListener(nullifiers);
+  await eventsNullifierListener(txidVersion, nullifiers);
 };

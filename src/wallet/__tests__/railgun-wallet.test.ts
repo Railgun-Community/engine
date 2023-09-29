@@ -13,9 +13,12 @@ import { combine } from '../../utils/bytes';
 import { RailgunEngine } from '../../railgun-engine';
 import { mnemonicToSeed } from '../../key-derivation/bip39';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
+import { TXIDVersion } from '../../models';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
+
+const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
 let db: Database;
 let utxoMerkletree: UTXOMerkletree;
@@ -32,7 +35,7 @@ const testEncryptionKey = config.encryptionKey;
 describe('Wallet', () => {
   beforeEach(async () => {
     db = new Database(memdown());
-    utxoMerkletree = await UTXOMerkletree.create(db, chain, async () => true);
+    utxoMerkletree = await UTXOMerkletree.create(db, chain, txidVersion, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -40,7 +43,7 @@ describe('Wallet', () => {
       0,
       undefined, // creationBlockNumbers
     );
-    wallet.loadUTXOMerkletree(utxoMerkletree);
+    wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
@@ -179,12 +182,12 @@ describe('Wallet', () => {
   });
 
   it('Should get empty wallet details', async () => {
-    expect(await wallet.getWalletDetails(chain)).to.deep.equal({
+    expect(await wallet.getWalletDetails(txidVersion, chain)).to.deep.equal({
       treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,
     });
-    expect(await viewOnlyWallet.getWalletDetails(chain)).to.deep.equal({
+    expect(await viewOnlyWallet.getWalletDetails(txidVersion, chain)).to.deep.equal({
       treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,
@@ -271,7 +274,7 @@ describe('Wallet', () => {
 
   afterEach(async () => {
     // Clean up database
-    wallet.unloadUTXOMerkletree(utxoMerkletree.chain);
+    wallet.unloadUTXOMerkletree(txidVersion, utxoMerkletree.chain);
     await db.close();
   });
 });

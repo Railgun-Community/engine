@@ -27,9 +27,12 @@ import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider
 import { createPollingJsonRpcProviderForListeners } from '../../provider/polling-util';
 import { isDefined } from '../../utils/is-defined';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
+import { TXIDVersion } from '../../models/poi-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
+
+const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
 let db: Database;
 let utxoMerkletree: UTXOMerkletree;
@@ -77,7 +80,7 @@ describe('Transaction/Transaction Batch', function run() {
       type: ChainType.EVM,
       id: 1,
     };
-    utxoMerkletree = await UTXOMerkletree.create(db, chain, async () => true);
+    utxoMerkletree = await UTXOMerkletree.create(db, chain, txidVersion, async () => true);
     wallet = await RailgunWallet.fromMnemonic(
       db,
       testEncryptionKey,
@@ -112,7 +115,7 @@ describe('Transaction/Transaction Batch', function run() {
       config.contracts.relayAdapt,
       provider,
       pollingProvider,
-      0,
+      { [TXIDVersion.V2_PoseidonMerkle]: 0 },
       1,
     );
 
@@ -120,7 +123,7 @@ describe('Transaction/Transaction Batch', function run() {
     prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
 
-    wallet.loadUTXOMerkletree(utxoMerkletree);
+    wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
       return TransactNote.createTransfer(
         address,
@@ -143,8 +146,10 @@ describe('Transaction/Transaction Batch', function run() {
       shieldLeaf('f'),
     ]);
     await utxoMerkletree.updateTreesFromWriteQueue();
-    await wallet.scanBalances(chain, undefined);
-    expect((await wallet.getWalletDetails(chain)).treeScannedHeights).to.deep.equal([1, 5]);
+    await wallet.scanBalances(txidVersion, chain, undefined);
+    expect((await wallet.getWalletDetails(txidVersion, chain)).treeScannedHeights).to.deep.equal([
+      1, 5,
+    ]);
   });
 
   beforeEach(async () => {
@@ -158,7 +163,12 @@ describe('Transaction/Transaction Batch', function run() {
     }
 
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
-    const txs = await transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey);
+    const txs = await transactionBatch.generateDummyTransactions(
+      prover,
+      wallet,
+      txidVersion,
+      testEncryptionKey,
+    );
     expect(txs.length).to.equal(2);
     expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
     expect(txs.map((tx) => tx.commitments.length)).to.deep.equal([1, 1]);
@@ -167,7 +177,7 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
-      transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateDummyTransactions(prover, wallet, txidVersion, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
       `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}`,
     );
@@ -182,6 +192,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs2 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs2.length).to.equal(6);
@@ -196,6 +207,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs3 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs3.length).to.equal(1);
@@ -212,6 +224,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs4 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
@@ -229,7 +242,13 @@ describe('Transaction/Transaction Batch', function run() {
     transactionBatch.resetUnshieldData();
     transactionBatch.addOutput(await makeNote(0n));
     await expect(
-      transactionBatch.generateTransactions(prover, wallet, testEncryptionKey, () => {}),
+      transactionBatch.generateTransactions(
+        prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+      ),
     ).to.eventually.be.rejectedWith(
       'Cannot prove transaction with null (zero value) inputs and outputs.',
       'Null input, null output notes should fail.',
@@ -256,6 +275,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs1 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs1.length).to.equal(2);
@@ -275,7 +295,7 @@ describe('Transaction/Transaction Batch', function run() {
       tokenData,
     });
     await expect(
-      transactionBatch.generateDummyTransactions(prover, wallet, testEncryptionKey),
+      transactionBatch.generateDummyTransactions(prover, wallet, txidVersion, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
       `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}`,
     );
@@ -295,6 +315,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs2 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs2.length).to.equal(6);
@@ -322,6 +343,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs3 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs3.length).to.equal(1);
@@ -342,6 +364,7 @@ describe('Transaction/Transaction Batch', function run() {
     const txs4 = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
+      txidVersion,
       testEncryptionKey,
     );
     expect(txs4.length).to.equal(1);
@@ -356,7 +379,7 @@ describe('Transaction/Transaction Batch', function run() {
     }
 
     // Clean up database
-    wallet.unloadUTXOMerkletree(utxoMerkletree.chain);
+    wallet.unloadUTXOMerkletree(txidVersion, utxoMerkletree.chain);
     await db.close();
   });
 });

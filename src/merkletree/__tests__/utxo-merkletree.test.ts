@@ -15,6 +15,8 @@ import { verifyMerkleProof } from '../merkle-proof';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
+const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+
 // Database object
 let db: Database;
 let merkletree: UTXOMerkletree;
@@ -28,7 +30,7 @@ describe('UTXO Merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
-    merkletree = await UTXOMerkletree.create(db, chain, async () => true);
+    merkletree = await UTXOMerkletree.create(db, chain, txidVersion, async () => true);
   });
 
   it('Should hash left/right', () => {
@@ -97,6 +99,7 @@ describe('UTXO Merkletree', () => {
         result: [
           '000000000000000000000000000000006d65726b6c65747265652d6572633230',
           '0000000000000000000000000000000000000000000000000000000000000000',
+          '0000000000000000000000000000000000000000000000000000000000005632',
           '0000000000000000000000000000000000000000000000000000000000000000',
           '0000000000000000000000000000000000000000000000000000000000000001',
           '0000000000000000000000000000000000000000000000000000000000000005',
@@ -110,6 +113,7 @@ describe('UTXO Merkletree', () => {
         result: [
           '000000000000000000000000000000006d65726b6c65747265652d6572633230',
           '0000000000000000000000000000000000000000000000000000000000000004',
+          '0000000000000000000000000000000000000000000000000000000000005632',
           '0000000000000000000000000000000000000000000000000000000000000002',
           '0000000000000000000000000000000000000000000000000000000000000007',
           '000000000000000000000000000000000000000000000000000000000000000a',
@@ -122,11 +126,12 @@ describe('UTXO Merkletree', () => {
         const merkletreeVectorTest = await UTXOMerkletree.create(
           db,
           vector.chain,
+          txidVersion,
           async () => true,
         );
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
-          vector.result.slice(0, 3),
+          vector.result.slice(0, 4),
         );
 
         expect(
@@ -616,7 +621,7 @@ describe('UTXO Merkletree', () => {
 
   it("Shouldn't write invalid batches", async () => {
     // Validate function always returns false
-    const merkletreeTest = await UTXOMerkletree.create(db, chain, async () => false);
+    const merkletreeTest = await UTXOMerkletree.create(db, chain, txidVersion, async () => false);
 
     // Check root is empty tree root
     expect(await merkletreeTest.getRoot(0)).to.equal(

@@ -2,7 +2,6 @@ import { poseidon } from 'circomlibjs';
 import { RailgunTransaction, RailgunTransactionWithTxid, TXIDVersion } from '../models';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
-import { isDefined } from '../utils/is-defined';
 
 const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
   const padded = [...array];
@@ -53,18 +52,18 @@ export const getRailgunTxidLeafHash = (
   switch (txidVersion) {
     case TXIDVersion.V2_PoseidonMerkle:
       return nToHex(railgunTxidBigInt, ByteLength.UINT_256);
-    case TXIDVersion.V3_PoseidonMerkle: {
-      const { utxoTreeIn, globalStartPositionOut } = railgunTransaction;
-      if (!isDefined(utxoTreeIn) || !isDefined(globalStartPositionOut)) {
-        throw new Error('V3 merkle railgun txids require utxoTreeIn and globalStartPositionOut');
-      }
-      return nToHex(
-        poseidon([railgunTxidBigInt, BigInt(utxoTreeIn), BigInt(globalStartPositionOut)]),
-        ByteLength.UINT_256,
-      );
-    }
-    case TXIDVersion.V3_KZG:
-      throw new Error('Unimplemented railgun txid hash for KZG');
+    // case TXIDVersion.V3_PoseidonMerkle: {
+    //   const { utxoTreeIn, globalStartPositionOut } = railgunTransaction;
+    //   if (!isDefined(utxoTreeIn) || !isDefined(globalStartPositionOut)) {
+    //     throw new Error('V3 merkle railgun txids require utxoTreeIn and globalStartPositionOut');
+    //   }
+    //   return nToHex(
+    //     poseidon([railgunTxidBigInt, BigInt(utxoTreeIn), BigInt(globalStartPositionOut)]),
+    //     ByteLength.UINT_256,
+    //   );
+    // }
+    // case TXIDVersion.V3_KZG:
+    //   throw new Error('Unimplemented railgun txid hash for KZG');
   }
   throw new Error('TXID Version not recognized');
 };

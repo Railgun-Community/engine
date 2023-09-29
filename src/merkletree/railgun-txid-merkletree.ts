@@ -16,6 +16,7 @@ import {
 } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify, nToHex } from '../utils/bytes';
 import { isDefined } from '../utils';
+import { TXIDVersion } from '../models';
 
 type POILaunchSnapshotNode = {
   hash: string;
@@ -39,6 +40,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
   private constructor(
     db: Database,
     chain: Chain,
+    txidVersion: TXIDVersion,
     poiLaunchBlock: Optional<number>,
     merklerootValidator: MerklerootValidator,
     isPOINode: boolean,
@@ -48,7 +50,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
       ? CommitmentProcessingGroupSize.Single
       : CommitmentProcessingGroupSize.XXXLarge;
 
-    super(db, chain, merklerootValidator, commitmentProcessingGroupSize);
+    super(db, chain, txidVersion, merklerootValidator, commitmentProcessingGroupSize);
 
     this.poiLaunchBlock = poiLaunchBlock;
     this.shouldStoreMerkleroots = isPOINode;
@@ -61,6 +63,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
   static async createForWallet(
     db: Database,
     chain: Chain,
+    txidVersion: TXIDVersion,
     poiLaunchBlock: Optional<number>,
     merklerootValidator: MerklerootValidator,
   ): Promise<RailgunTxidMerkletree> {
@@ -68,6 +71,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     const merkletree = new RailgunTxidMerkletree(
       db,
       chain,
+      txidVersion,
       poiLaunchBlock,
       merklerootValidator,
       isPOINode,
@@ -83,6 +87,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
   static async createForPOINode(
     db: Database,
     chain: Chain,
+    txidVersion: TXIDVersion,
     poiLaunchBlock: Optional<number>,
   ): Promise<RailgunTxidMerkletree> {
     // Assume all merkleroots are valid.
@@ -94,6 +99,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
     const merkletree = new RailgunTxidMerkletree(
       db,
       chain,
+      txidVersion,
       poiLaunchBlock,
       merklerootValidator,
       isPOINode,
@@ -437,14 +443,14 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   private getPOILaunchSnapshotNodeDBPath(level: number): string[] {
     const snapshotPrefix = fromUTF8String('poi-launch-snapshot');
-    return [...this.getChainDBPrefix(), snapshotPrefix, new BN(level)].map((el) =>
+    return [...this.getMerkletreeDBPrefix(), snapshotPrefix, new BN(level)].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
   private getCommitmentLookupDBPath(commitment: string): string[] {
     const commitmentLookupPrefix = fromUTF8String('commitment-lookup');
-    return [...this.getChainDBPrefix(), commitmentLookupPrefix, commitment].map((el) =>
+    return [...this.getMerkletreeDBPrefix(), commitmentLookupPrefix, commitment].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
@@ -473,7 +479,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
 
   private getRailgunTxidLookupDBPath(railgunTxid: string): string[] {
     const railgunTxidPrefix = fromUTF8String('railgun-txid-lookup');
-    return [...this.getChainDBPrefix(), railgunTxidPrefix, railgunTxid].map((el) =>
+    return [...this.getMerkletreeDBPrefix(), railgunTxidPrefix, railgunTxid].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
@@ -523,7 +529,7 @@ export class RailgunTxidMerkletree extends Merkletree<RailgunTransactionWithTxid
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {
     const merklerootPrefix = fromUTF8String('merkleroots');
     return [
-      ...this.getChainDBPrefix(),
+      ...this.getMerkletreeDBPrefix(),
       merklerootPrefix,
       hexlify(new BN(tree)),
       hexlify(new BN(index)),

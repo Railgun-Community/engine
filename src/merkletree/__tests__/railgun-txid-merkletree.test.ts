@@ -33,12 +33,18 @@ describe('Railgun Txid Merkletree', () => {
     // Create database
     db = new Database(memdown());
 
-    merkletreePOINode = await RailgunTxidMerkletree.createForPOINode(db, chain, poiLaunchBlock);
+    merkletreePOINode = await RailgunTxidMerkletree.createForPOINode(
+      db,
+      chain,
+      TXIDVersion.V2_PoseidonMerkle,
+      poiLaunchBlock,
+    );
     expect(merkletreePOINode.shouldStoreMerkleroots).to.equal(true);
 
     merkletreeWallet = await RailgunTxidMerkletree.createForWallet(
       db,
       chain,
+      TXIDVersion.V2_PoseidonMerkle,
       poiLaunchBlock,
       async () => true,
     );
@@ -63,6 +69,7 @@ describe('Railgun Txid Merkletree', () => {
         result: [
           '0000000000000000007261696c67756e2d7472616e73616374696f6e2d696473',
           '0000000000000000000000000000000000000000000000000000000000000000',
+          '0000000000000000000000000000000000000000000000000000000000005632',
           '0000000000000000000000000000000000000000000000000000000000000000',
           '0000000000000000000000000000000000000000000000000000000000000001',
           '0000000000000000000000000000000000000000000000000000000000000005',
@@ -76,6 +83,7 @@ describe('Railgun Txid Merkletree', () => {
         result: [
           '0000000000000000007261696c67756e2d7472616e73616374696f6e2d696473',
           '0000000000000000000000000000000000000000000000000000000000000004',
+          '0000000000000000000000000000000000000000000000000000000000005632',
           '0000000000000000000000000000000000000000000000000000000000000002',
           '0000000000000000000000000000000000000000000000000000000000000007',
           '000000000000000000000000000000000000000000000000000000000000000a',
@@ -88,11 +96,12 @@ describe('Railgun Txid Merkletree', () => {
         const merkletreeVectorTest = await RailgunTxidMerkletree.createForPOINode(
           db,
           vector.chain,
+          TXIDVersion.V2_PoseidonMerkle,
           undefined,
         );
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
-          vector.result.slice(0, 3),
+          vector.result.slice(0, 4),
         );
 
         expect(
@@ -105,7 +114,7 @@ describe('Railgun Txid Merkletree', () => {
   it('Should update railgun txid merkle tree correctly', async () => {
     // eslint-disable-next-line no-restricted-syntax
     for (const merkletree of [merkletreePOINode, merkletreeWallet]) {
-      await merkletree.clearLeavesFromDB();
+      await merkletree.clearDataForMerkletree();
 
       expect(await merkletree.getRoot(0)).to.equal(
         '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
@@ -174,7 +183,11 @@ describe('Railgun Txid Merkletree', () => {
         14287123277508529327750979990773096097618894834009087566098724348137357265894n,
       );
       expect(railgunTransaction).to.deep.equal({
-        ...railgunTransactions[0],
+        graphID: railgunTransactions[0].graphID,
+        nullifiers: railgunTransactions[0].nullifiers,
+        commitments: railgunTransactions[0].commitments,
+        boundParamsHash: railgunTransactions[0].boundParamsHash,
+        blockNumber: railgunTransactions[0].blockNumber,
         hash: nToHex(hash, ByteLength.UINT_256),
         txidVersion: TXIDVersion.V2_PoseidonMerkle,
       });
@@ -199,10 +212,16 @@ describe('Railgun Txid Merkletree', () => {
         boundParamsHash: '0x05',
         blockNumber: 0,
         hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+        txidVersion: TXIDVersion.V2_PoseidonMerkle,
       });
 
       // Make sure new constructed tree inherits db values
-      const merkletree2 = await RailgunTxidMerkletree.createForPOINode(db, chain, undefined);
+      const merkletree2 = await RailgunTxidMerkletree.createForPOINode(
+        db,
+        chain,
+        TXIDVersion.V2_PoseidonMerkle,
+        undefined,
+      );
       const treeLength2 = await merkletree2.getTreeLength(0);
       expect(treeLength2).to.equal(2);
 
@@ -246,6 +265,7 @@ describe('Railgun Txid Merkletree', () => {
             boundParamsHash: '0x05',
             blockNumber: 0,
             hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+            txidVersion: TXIDVersion.V2_PoseidonMerkle,
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {
@@ -295,6 +315,7 @@ describe('Railgun Txid Merkletree', () => {
             boundParamsHash: '0x05',
             blockNumber: 0,
             hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+            txidVersion: TXIDVersion.V2_PoseidonMerkle,
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {

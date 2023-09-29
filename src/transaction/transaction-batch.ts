@@ -16,7 +16,7 @@ import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
-import { TreeBalance, UnprovedTransactionInputs } from '../models';
+import { TXIDVersion, TreeBalance, UnprovedTransactionInputs } from '../models';
 import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
 import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
@@ -101,10 +101,13 @@ export class TransactionBatch {
 
   async generateValidSpendingSolutionGroupsAllOutputs(
     wallet: RailgunWallet,
+    txidVersion: TXIDVersion,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenDatas: TokenData[] = this.getOutputTokenDatas();
     const spendingSolutionGroupsPerToken = await Promise.all(
-      tokenDatas.map((tokenData) => this.generateValidSpendingSolutionGroups(wallet, tokenData)),
+      tokenDatas.map((tokenData) =>
+        this.generateValidSpendingSolutionGroups(wallet, txidVersion, tokenData),
+      ),
     );
     return spendingSolutionGroupsPerToken.flat();
   }
@@ -115,6 +118,7 @@ export class TransactionBatch {
    */
   private async generateValidSpendingSolutionGroups(
     wallet: RailgunWallet,
+    txidVersion: TXIDVersion,
     tokenData: TokenData,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenHash = getTokenDataHash(tokenData);
@@ -124,7 +128,11 @@ export class TransactionBatch {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
 
-    const treeSortedBalances = await wallet.balancesByTreeForToken(this.chain, tokenHash);
+    const treeSortedBalances = await wallet.balancesByTreeForToken(
+      txidVersion,
+      this.chain,
+      tokenHash,
+    );
     const tokenBalance = AbstractWallet.tokenBalanceAcrossAllTrees(treeSortedBalances);
 
     // Check if wallet balance is enough to cover this transaction
@@ -298,10 +306,14 @@ export class TransactionBatch {
   async generateTransactions(
     prover: Prover,
     wallet: RailgunWallet,
+    txidVersion: TXIDVersion,
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
   ): Promise<TransactionStruct[]> {
-    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(wallet);
+    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
+      wallet,
+      txidVersion,
+    );
     EngineDebug.log('Actual spending solution groups:');
     EngineDebug.log(
       stringifySafe(
@@ -332,6 +344,7 @@ export class TransactionBatch {
         // eslint-disable-next-line no-await-in-loop
         await transaction.generateTransactionRequest(
           wallet,
+          txidVersion,
           encryptionKey,
           this.overallBatchMinGasPrice,
         );
@@ -389,9 +402,13 @@ export class TransactionBatch {
   async generateDummyTransactions(
     prover: Prover,
     wallet: RailgunWallet,
+    txidVersion: TXIDVersion,
     encryptionKey: string,
   ): Promise<TransactionStruct[]> {
-    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(wallet);
+    const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
+      wallet,
+      txidVersion,
+    );
     TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 
     const dummyProvedTransactionPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
@@ -399,6 +416,7 @@ export class TransactionBatch {
         const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
         const transactionRequest = await transaction.generateTransactionRequest(
           wallet,
+          txidVersion,
           encryptionKey,
           this.overallBatchMinGasPrice,
         );

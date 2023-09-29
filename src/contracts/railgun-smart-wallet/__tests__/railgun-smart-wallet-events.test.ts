@@ -19,6 +19,7 @@ import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provi
 import { CommitmentEvent } from '../../../models/event-types';
 import { CommitmentType, Nullifier } from '../../../models/formatted-types';
 import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
+import { TXIDVersion } from '../../../models/poi-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -37,10 +38,11 @@ const testHistoricalEventsForRange = async (startBlock: number, endBlock: number
     startBlock,
     endBlock,
     async () => startBlock,
-    async (event: CommitmentEvent) => {
+    async (txidVersion: TXIDVersion, event: CommitmentEvent) => {
       if (event.commitments.length < 1) {
         throw new Error('No parsed commitments found in event');
       }
+      expect(txidVersion).to.equal(TXIDVersion.V2_PoseidonMerkle);
       expect(event.txid).to.be.a('string');
       expect(event.blockNumber).to.be.a('number');
       expect(event.startPosition).to.be.a('number');
@@ -62,7 +64,8 @@ const testHistoricalEventsForRange = async (startBlock: number, endBlock: number
           break;
       }
     },
-    async (nullifier: Nullifier[]) => {
+    async (txidVersion: TXIDVersion, nullifier: Nullifier[]) => {
+      expect(txidVersion).to.equal(TXIDVersion.V2_PoseidonMerkle);
       if (nullifier.length) {
         expect(nullifier[0].blockNumber).to.be.a('number');
         expect(nullifier[0].nullifier).to.be.a('string');
@@ -111,7 +114,7 @@ describe('Railgun Smart Wallet - Live events', function runTests() {
       fakeRelayAdaptContract,
       provider,
       pollingProvider,
-      0,
+      { [TXIDVersion.V2_PoseidonMerkle]: 0 },
       0,
     );
     railgunSmartWalletContract = ContractStore.railgunSmartWalletContracts[chain.type][chain.id];

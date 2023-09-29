@@ -12,9 +12,18 @@ export enum EngineEvent {
 }
 
 export type QuickSyncEvents = (chain: Chain, startingBlock: number) => Promise<AccumulatedEvents>;
-export type EventsCommitmentListener = (event: CommitmentEvent) => Promise<void>;
-export type EventsNullifierListener = (nullifiers: Nullifier[]) => Promise<void>;
-export type EventsUnshieldListener = (unshields: UnshieldStoredEvent[]) => Promise<void>;
+export type EventsCommitmentListener = (
+  txidVersion: TXIDVersion,
+  event: CommitmentEvent,
+) => Promise<void>;
+export type EventsNullifierListener = (
+  txidVersion: TXIDVersion,
+  nullifiers: Nullifier[],
+) => Promise<void>;
+export type EventsUnshieldListener = (
+  txidVersion: TXIDVersion,
+  unshields: UnshieldStoredEvent[],
+) => Promise<void>;
 
 export type QuickSyncRailgunTransactions = (
   chain: Chain,

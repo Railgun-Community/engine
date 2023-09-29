@@ -74,8 +74,9 @@ export type POIEngineProofInputsWithListPOIData = POIEngineProofInputs & {
 
 export enum TXIDVersion {
   V2_PoseidonMerkle = 'V2_PoseidonMerkle',
-  V3_PoseidonMerkle = 'V3_PoseidonMerkle',
-  V3_KZG = 'V3_KZG',
+  // V3_PoseidonMerkle = 'V3_PoseidonMerkle',
+  // V3_KZG = 'V3_KZG',
 }
 
-export const ACTIVE_TXID_VERSIONS: TXIDVersion[] = [TXIDVersion.V2_PoseidonMerkle];
+export const ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS: TXIDVersion[] = [TXIDVersion.V2_PoseidonMerkle];
+export const ACTIVE_TXID_VERSIONS: TXIDVersion[] = Object.values(TXIDVersion);

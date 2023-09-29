@@ -68,6 +68,7 @@ describe('Prover', () => {
     const railgunTxidMerkletree = await RailgunTxidMerkletree.createForWallet(
       new Database(memdown()),
       chain,
+      TXIDVersion.V2_PoseidonMerkle,
       undefined,
       async () => true,
     );

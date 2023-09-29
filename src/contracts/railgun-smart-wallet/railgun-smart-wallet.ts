@@ -62,6 +62,7 @@ import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-lega
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { assertIsPollingProvider } from '../../provider/polling-util';
 import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
+import { TXIDVersion } from '../../models/poi-types';
 
 const SCAN_CHUNKS = 499;
 const MAX_SCAN_RETRIES = 30;
@@ -208,7 +209,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       event.log.transactionHash,
       event.log.blockNumber,
     );
-    await eventsNullifierListener(nullifiers);
+    await eventsNullifierListener(TXIDVersion.V2_PoseidonMerkle, nullifiers);
     this.emit(EngineEvent.ContractNullifierReceived, nullifiers);
   }
 
@@ -240,7 +241,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       event.log.blockNumber,
       args.fees,
     );
-    await eventsCommitmentListener(shieldEvent);
+    await eventsCommitmentListener(TXIDVersion.V2_PoseidonMerkle, shieldEvent);
   }
 
   private static async handleTransactEvent(
@@ -267,7 +268,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       event.log.transactionHash,
       event.log.blockNumber,
     );
-    await eventsCommitmentListener(transactEvent);
+    await eventsCommitmentListener(TXIDVersion.V2_PoseidonMerkle, transactEvent);
   }
 
   private static async handleUnshieldEvent(
@@ -292,7 +293,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       event.log.blockNumber,
       event.log.index,
     );
-    await eventsUnshieldListener([unshieldEvent]);
+    await eventsUnshieldListener(TXIDVersion.V2_PoseidonMerkle, [unshieldEvent]);
   }
 
   /**
@@ -457,6 +458,8 @@ class RailgunSmartWalletContract extends EventEmitter {
     // For missed nullifiers, this will incorrectly show a balance for a spent note.
     let currentStartBlock = initialStartBlock;
 
+    const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+
     // Current live events - post v3 update
     const eventFilterNullified = this.contract.filters.Nullified();
     const eventFilterTransact = this.contract.filters.Transact();
@@ -518,7 +521,11 @@ class RailgunSmartWalletContract extends EventEmitter {
             legacyPreMar23EventFilterShield,
           );
           // eslint-disable-next-line no-await-in-loop
-          await processShieldEvents_LegacyShield_PreMar23(eventsListener, eventsShieldLegacyV3);
+          await processShieldEvents_LegacyShield_PreMar23(
+            txidVersion,
+            eventsListener,
+            eventsShieldLegacyV3,
+          );
         }
         if (withinNewV3ShieldEventRange) {
           // New V3 Shield Event - After March 2023.
@@ -527,7 +534,7 @@ class RailgunSmartWalletContract extends EventEmitter {
             eventFilterShield,
           );
           // eslint-disable-next-line no-await-in-loop
-          await processShieldEvents(eventsListener, eventsShield);
+          await processShieldEvents(txidVersion, eventsListener, eventsShield);
         }
 
         const eventsNullifiers = RailgunSmartWalletContract.filterEventsByTopic(
@@ -545,9 +552,9 @@ class RailgunSmartWalletContract extends EventEmitter {
 
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
-          processNullifiedEvents(eventsNullifierListener, eventsNullifiers),
-          processUnshieldEvents(eventsUnshieldListener, eventsUnshield),
-          processTransactEvents(eventsListener, eventsTransact),
+          processNullifiedEvents(txidVersion, eventsNullifierListener, eventsNullifiers),
+          processUnshieldEvents(txidVersion, eventsUnshieldListener, eventsUnshield),
+          processTransactEvents(txidVersion, eventsListener, eventsTransact),
         ]);
       }
 
@@ -567,12 +574,21 @@ class RailgunSmartWalletContract extends EventEmitter {
 
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
-          processLegacyNullifierEvents(eventsNullifierListener, legacyEventsNullifiers),
+          processLegacyNullifierEvents(
+            txidVersion,
+            eventsNullifierListener,
+            legacyEventsNullifiers,
+          ),
           processLegacyGeneratedCommitmentEvents(
+            txidVersion,
             eventsListener,
             legacyEventsGeneratedCommitmentBatch,
           ),
-          processLegacyCommitmentBatchEvents(eventsListener, legacyEventsEncryptedCommitmentBatch),
+          processLegacyCommitmentBatchEvents(
+            txidVersion,
+            eventsListener,
+            legacyEventsEncryptedCommitmentBatch,
+          ),
         ]);
       }
 

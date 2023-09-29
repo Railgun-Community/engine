@@ -20,6 +20,7 @@ import {
 import { getNoteHash, serializePreImage, serializeTokenData } from '../../../note/note-util';
 import { ByteLength, formatToByteLength, nToHex } from '../../../utils';
 import EngineDebug from '../../../debugger/debugger';
+import { TXIDVersion } from '../../../models/poi-types';
 
 export function formatLegacyGeneratedCommitmentBatchCommitments(
   transactionHash: string,
@@ -176,6 +177,7 @@ export function formatLegacyCommitmentBatchEvent(
 }
 
 export async function processGeneratedCommitmentEvents(
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
@@ -184,6 +186,7 @@ export async function processGeneratedCommitmentEvents(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
       return eventsListener(
+        txidVersion,
         formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
       );
     }),
@@ -191,6 +194,7 @@ export async function processGeneratedCommitmentEvents(
 }
 
 export async function processCommitmentBatchEvents(
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
@@ -198,7 +202,10 @@ export async function processCommitmentBatchEvents(
   await Promise.all(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
-      return eventsListener(formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber));
+      return eventsListener(
+        txidVersion,
+        formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
+      );
     }),
   );
 }
@@ -223,6 +230,7 @@ export function formatLegacyNullifierEvents(
 }
 
 export async function processLegacyGeneratedCommitmentEvents(
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
@@ -231,6 +239,7 @@ export async function processLegacyGeneratedCommitmentEvents(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
       return eventsListener(
+        txidVersion,
         formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
       );
     }),
@@ -238,6 +247,7 @@ export async function processLegacyGeneratedCommitmentEvents(
 }
 
 export async function processLegacyCommitmentBatchEvents(
+  txidVersion: TXIDVersion,
   eventsListener: EventsCommitmentListener,
   logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
@@ -245,12 +255,16 @@ export async function processLegacyCommitmentBatchEvents(
   await Promise.all(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
-      return eventsListener(formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber));
+      return eventsListener(
+        txidVersion,
+        formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
+      );
     }),
   );
 }
 
 export async function processLegacyNullifierEvents(
+  txidVersion: TXIDVersion,
   eventsNullifierListener: EventsNullifierListener,
   logs: LegacyNullifiersEvent.Log[],
 ): Promise<void> {
@@ -262,5 +276,5 @@ export async function processLegacyNullifierEvents(
     nullifiers.push(...formatLegacyNullifierEvents(args, transactionHash, blockNumber));
   });
 
-  await eventsNullifierListener(nullifiers);
+  await eventsNullifierListener(txidVersion, nullifiers);
 }
