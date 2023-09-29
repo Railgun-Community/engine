@@ -8,11 +8,13 @@ import {
 import { SNARK_PRIME } from '../utils/constants';
 import { keccak256 } from '../utils/hash';
 import { Chain } from './engine-types';
+import { TXIDVersion } from './poi-types';
 
 export const TREE_DEPTH = 16;
 export const TREE_MAX_ITEMS = 65_536; // 2^16
 
 export type MerklerootValidator = (
+  txidVersion: TXIDVersion,
   chain: Chain,
   tree: number,
   index: number,

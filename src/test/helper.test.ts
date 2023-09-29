@@ -20,6 +20,7 @@ import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/c
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { promiseTimeout } from '../utils';
 import { MerklerootValidator } from '../models/merkletree-types';
+import { TXIDVersion } from '../models';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -76,6 +77,8 @@ export const testArtifactsGetter: ArtifactGetter = {
 };
 
 export const mockQuickSyncEvents: QuickSyncEvents = (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _txidVersion: TXIDVersion,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _chain: Chain,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -381,6 +381,7 @@ class RailgunEngine extends EventEmitter {
 
       // Fetch events
       const { commitmentEvents, unshieldEvents, nullifierEvents } = await this.quickSyncEvents(
+        txidVersion,
         chain,
         startScanningBlockQuickSync,
       );
@@ -569,7 +570,7 @@ class RailgunEngine extends EventEmitter {
 
       this.emitScanUpdateEvent(txidVersion, chain, 1.0); // 100%
 
-      const scanCompleteData: MerkletreeHistoryScanEventData = { chain };
+      const scanCompleteData: MerkletreeHistoryScanEventData = { txidVersion, chain };
       this.emit(EngineEvent.MerkletreeHistoryScanComplete, scanCompleteData);
       utxoMerkletree.isScanning = false;
     } catch (err) {
@@ -579,7 +580,7 @@ class RailgunEngine extends EventEmitter {
       EngineDebug.log(`Scan incomplete for chain ${chain.type}:${chain.id}`);
       EngineDebug.error(err);
       await this.scanAllWallets(txidVersion, chain, undefined);
-      const scanIncompleteData: MerkletreeHistoryScanEventData = { chain };
+      const scanIncompleteData: MerkletreeHistoryScanEventData = { txidVersion, chain };
       this.emit(EngineEvent.MerkletreeHistoryScanIncomplete, scanIncompleteData);
       utxoMerkletree.isScanning = false;
     }
@@ -676,7 +677,7 @@ class RailgunEngine extends EventEmitter {
 
         // TODO: Optimization - use this merkleroot from validated railgun txid to auto-validate merkletree.
         const { txidIndex: latestValidatedTxidIndex /* merkleroot */ } =
-          await this.getLatestValidatedRailgunTxid(chain);
+          await this.getLatestValidatedRailgunTxid(txidVersion, chain);
 
         const isAheadOfValidatedTxids =
           !isDefined(latestValidatedTxidIndex) || latestTxidIndex >= latestValidatedTxidIndex;
@@ -997,7 +998,7 @@ class RailgunEngine extends EventEmitter {
         this.db,
         chain,
         txidVersion,
-        (_chain, tree, _index, merkleroot) =>
+        (_txidVersion, _chain, tree, _index, merkleroot) =>
           ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].validateMerkleroot(
             tree,
             merkleroot,

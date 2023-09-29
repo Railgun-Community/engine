@@ -11,7 +11,11 @@ export enum EngineEvent {
   MerkletreeHistoryScanIncomplete = 'merkletree-history-scan-incomplete',
 }
 
-export type QuickSyncEvents = (chain: Chain, startingBlock: number) => Promise<AccumulatedEvents>;
+export type QuickSyncEvents = (
+  txidVersion: TXIDVersion,
+  chain: Chain,
+  startingBlock: number,
+) => Promise<AccumulatedEvents>;
 export type EventsCommitmentListener = (
   txidVersion: TXIDVersion,
   event: CommitmentEvent,
@@ -31,6 +35,7 @@ export type QuickSyncRailgunTransactions = (
 ) => Promise<RailgunTransaction[]>;
 
 export type GetLatestValidatedRailgunTxid = (
+  txidVersion: TXIDVersion,
   chain: Chain,
 ) => Promise<{ txidIndex: Optional<number>; merkleroot: Optional<string> }>;
 
@@ -65,10 +70,12 @@ export type AccumulatedEvents = {
 };
 
 export type WalletScannedEventData = {
+  txidVersion: TXIDVersion;
   chain: Chain;
 };
 
 export type MerkletreeHistoryScanEventData = {
+  txidVersion: TXIDVersion;
   chain: Chain;
 };
 

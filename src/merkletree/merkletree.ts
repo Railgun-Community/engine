@@ -566,7 +566,13 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const lastLeafIndex = startIndex + leafIndex;
 
     const rootNode = hashWriteGroup[TREE_DEPTH][0];
-    const validRoot = await this.merklerootValidator(this.chain, tree, lastLeafIndex, rootNode);
+    const validRoot = await this.merklerootValidator(
+      this.txidVersion,
+      this.chain,
+      tree,
+      lastLeafIndex,
+      rootNode,
+    );
 
     if (validRoot) {
       await this.validRootCallback(tree, lastLeafIndex);
