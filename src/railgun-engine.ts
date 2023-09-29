@@ -381,7 +381,7 @@ class RailgunEngine extends EventEmitter {
       const startScanningBlockQuickSync = await this.getStartScanningBlock(txidVersion, chain);
       EngineDebug.log(`Start scanning block for QuickSync: ${startScanningBlockQuickSync}`);
 
-      this.emitScanUpdateEvent(chain, endProgress * 0.1); // 5% / 50%
+      this.emitScanUpdateEvent(txidVersion, chain, endProgress * 0.1); // 5% / 50%
 
       // Fetch events
       const { commitmentEvents, unshieldEvents, nullifierEvents } = await this.quickSyncEvents(
@@ -389,12 +389,12 @@ class RailgunEngine extends EventEmitter {
         startScanningBlockQuickSync,
       );
 
-      this.emitScanUpdateEvent(chain, endProgress * 0.2); // 10% / 50%
+      this.emitScanUpdateEvent(txidVersion, chain, endProgress * 0.2); // 10% / 50%
 
       await this.unshieldListener(txidVersion, chain, unshieldEvents);
       await this.nullifierListener(txidVersion, chain, nullifierEvents);
 
-      this.emitScanUpdateEvent(chain, endProgress * 0.24); // 12% / 50%
+      this.emitScanUpdateEvent(txidVersion, chain, endProgress * 0.24); // 12% / 50%
 
       // Make sure commitments are scanned after Unshields and Nullifiers.
       await Promise.all(
@@ -414,14 +414,14 @@ class RailgunEngine extends EventEmitter {
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
-        this.emitScanUpdateEvent(chain, endProgress * 0.3); // 15% / 50%
+        this.emitScanUpdateEvent(txidVersion, chain, endProgress * 0.3); // 15% / 50%
         await utxoMerkletree.updateTreesFromWriteQueue();
         const preScanProgressMultiplier = 0.4;
-        this.emitScanUpdateEvent(chain, endProgress * preScanProgressMultiplier); // 20% / 50%
+        this.emitScanUpdateEvent(txidVersion, chain, endProgress * preScanProgressMultiplier); // 20% / 50%
         await this.scanAllWallets(txidVersion, chain, (progress: number) => {
           const overallProgress =
             progress * (endProgress - preScanProgressMultiplier) + preScanProgressMultiplier;
-          this.emitScanUpdateEvent(chain, overallProgress); // 20 - 50% / 50%
+          this.emitScanUpdateEvent(txidVersion, chain, overallProgress); // 20 - 50% / 50%
         });
       }
     } catch (err) {
@@ -436,8 +436,9 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  private emitScanUpdateEvent(chain: Chain, progress: number) {
+  private emitScanUpdateEvent(txidVersion: TXIDVersion, chain: Chain, progress: number) {
     const updateData: MerkletreeHistoryScanUpdateData = {
+      txidVersion,
       chain,
       progress,
     };
@@ -504,12 +505,12 @@ class RailgunEngine extends EventEmitter {
     }
     utxoMerkletree.isScanning = true;
 
-    this.emitScanUpdateEvent(chain, 0.03); // 3%
+    this.emitScanUpdateEvent(txidVersion, chain, 0.03); // 3%
 
     const postQuickSyncProgress = 0.5;
     await this.performQuickSync(txidVersion, chain, postQuickSyncProgress);
 
-    this.emitScanUpdateEvent(chain, postQuickSyncProgress); // 50%
+    this.emitScanUpdateEvent(txidVersion, chain, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid utxoMerkletree.
     const startScanningBlockSlowScan = await this.getNextStartingBlockSlowScan(txidVersion, chain);
@@ -556,7 +557,7 @@ class RailgunEngine extends EventEmitter {
           const progress =
             postQuickSyncProgress +
             ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan;
-          this.emitScanUpdateEvent(chain, progress);
+          this.emitScanUpdateEvent(txidVersion, chain, progress);
 
           if (utxoMerkletree.getFirstInvalidMerklerootTree() != null) {
             // Do not save lastSyncedBlock in case of merkleroot error.
@@ -570,7 +571,7 @@ class RailgunEngine extends EventEmitter {
       // Final scan after all leaves added.
       await this.scanAllWallets(txidVersion, chain, undefined);
 
-      this.emitScanUpdateEvent(chain, 1.0); // 100%
+      this.emitScanUpdateEvent(txidVersion, chain, 1.0); // 100%
 
       const scanCompleteData: MerkletreeHistoryScanEventData = { chain };
       this.emit(EngineEvent.MerkletreeHistoryScanComplete, scanCompleteData);
@@ -627,7 +628,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to scan
    */
   async syncRailgunTransactionsForTXIDVersion(txidVersion: TXIDVersion, chain: Chain) {
-    if (!isDefined(this.railgunTxidMerkletrees[chain.type]?.[chain.id])) {
+    if (!isDefined(this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id])) {
       EngineDebug.log(
         `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
@@ -848,25 +849,29 @@ class RailgunEngine extends EventEmitter {
    * @param forceRescanDevOnly - can corrupt an existing scan, so only recommended in extreme cases (DEV only)
    */
   async fullRescanUTXOMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
-    const hasMerkletree = isDefined(this.utxoMerkletrees[chain.type]?.[chain.id]);
-    if (!hasMerkletree) {
-      const err = new Error(
-        `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
-      );
-      EngineDebug.error(err);
-      throw err;
-    }
-
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      const hasMerkletree = isDefined(this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id]);
+      if (!hasMerkletree) {
+        const err = new Error(
+          `Cannot re-scan history. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+        );
+        EngineDebug.error(err);
+        throw err;
+      }
       const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
       if (utxoMerkletree.isScanning && !forceRescanDevOnly) {
         const err = new Error(`Full rescan already in progress.`);
         EngineDebug.error(err);
         throw err;
       }
+    }
 
-      this.emitScanUpdateEvent(chain, 0.01); // 1%
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      const utxoMerkletree = this.getUTXOMerkletreeForChain(txidVersion, chain);
+
+      this.emitScanUpdateEvent(txidVersion, chain, 0.01); // 1%
       utxoMerkletree.isScanning = true; // Don't allow scans while removing leaves.
       // eslint-disable-next-line no-await-in-loop
       await this.clearUTXOMerkletreeAndWallets(txidVersion, chain);
@@ -879,13 +884,24 @@ class RailgunEngine extends EventEmitter {
   }
 
   async fullResetRailgunTxidMerkletrees(chain: Chain): Promise<void> {
-    const hasMerkletree = isDefined(this.railgunTxidMerkletrees[chain.type]?.[chain.id]);
-    if (!hasMerkletree) {
-      const err = new Error(
-        `Cannot re-scan railgun txids. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      const hasMerkletree = isDefined(
+        this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id],
       );
-      EngineDebug.error(err);
-      throw err;
+      if (!hasMerkletree) {
+        const err = new Error(
+          `Cannot re-scan railgun txids. Merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+        );
+        EngineDebug.error(err);
+        throw err;
+      }
+      const txidMerkletree = this.getRailgunTxidMerkletreeForChain(txidVersion, chain);
+      if (txidMerkletree.isScanning) {
+        const err = new Error(`Full reset of txids already in progress.`);
+        EngineDebug.error(err);
+        throw err;
+      }
     }
 
     // eslint-disable-next-line no-restricted-syntax
@@ -945,14 +961,16 @@ class RailgunEngine extends EventEmitter {
       throw new Error(`Cannot connect to polling RPC provider.`);
     }
 
-    const hasMerkletree = isDefined(this.utxoMerkletrees[chain.type]?.[chain.id]);
+    const hasAnyMerkletree = ACTIVE_TXID_VERSIONS.every(
+      (txidVersion) => !isDefined(this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id]),
+    );
     const hasSmartWalletContract = isDefined(
       ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id],
     );
     const hasRelayAdaptContract = isDefined(
       ContractStore.relayAdaptContracts[chain.type]?.[chain.id],
     );
-    if (hasMerkletree || hasSmartWalletContract || hasRelayAdaptContract) {
+    if (hasAnyMerkletree || hasSmartWalletContract || hasRelayAdaptContract) {
       // If a network with this chainID exists, unload it and load the provider as a new network
       await this.unloadNetwork(chain);
     }
@@ -1083,7 +1101,7 @@ class RailgunEngine extends EventEmitter {
 
     // Unload merkletrees from wallets
     Object.values(this.wallets).forEach((wallet) => {
-      Object.values(TXIDVersion).forEach((txidVersion) => {
+      ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
         wallet.unloadUTXOMerkletree(txidVersion, chain);
         wallet.unloadRailgunTXIDMerkletree(txidVersion, chain);
       });
@@ -1096,7 +1114,7 @@ class RailgunEngine extends EventEmitter {
     delete ContractStore.railgunSmartWalletContracts[chain.id]?.[chain.type];
     delete ContractStore.relayAdaptContracts[chain.id]?.[chain.type];
 
-    Object.values(TXIDVersion).forEach((txidVersion) => {
+    ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
       // Delete UTXO merkletree
       delete this.utxoMerkletrees[txidVersion]?.[chain.id]?.[chain.type];
       // Delete Txid merkletree

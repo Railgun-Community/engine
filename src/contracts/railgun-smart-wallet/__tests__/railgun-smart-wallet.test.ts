@@ -98,7 +98,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testShield: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe.only('Railgun Smart Wallet', function runTests() {
+describe('Railgun Smart Wallet', function runTests() {
   this.timeout(20000);
 
   beforeEach(async () => {

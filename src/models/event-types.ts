@@ -74,6 +74,7 @@ export type MerkletreeHistoryScanEventData = {
 };
 
 export type MerkletreeHistoryScanUpdateData = {
+  txidVersion: TXIDVersion;
   chain: Chain;
   progress: number;
 };
