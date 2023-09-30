@@ -28,7 +28,7 @@ import {
   CommitmentProcessingGroupSize,
   TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
-import { binarySearchForUpperBoundIndex } from '../utils/search';
+import { binarySearchForString } from '../utils/search';
 import { TXIDVersion } from '../models';
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
@@ -214,10 +214,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   private findCacheIndexForHash(hash: string): number {
-    return binarySearchForUpperBoundIndex(
-      this.sortedAllDataCache ?? [],
-      (item) => item?.hash === hash,
-    );
+    return binarySearchForString(this.sortedAllDataCache ?? [], hash, (item) => item.hash);
   }
 
   findCachedDataForHash(hash: string): Optional<T> {

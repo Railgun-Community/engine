@@ -1,6 +1,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { binarySearchForUpperBoundIndex } from '../search';
+import { binarySearchForString, binarySearchForUpperBoundIndex } from '../search';
+import BinarySearchData from './binary-search-data.json';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -21,5 +22,13 @@ describe('Search', () => {
     expect(binarySearchForUpperBoundIndex([1, 2, 5, 7, 10000], (n) => n > 2)).to.equal(4);
     expect(binarySearchForUpperBoundIndex([1, 2, 5, 7, 10000], (n) => n < 8)).to.equal(3);
     expect(binarySearchForUpperBoundIndex([], (n) => n < 8)).to.equal(-1);
+  });
+
+  it('Should binary search large data set', () => {
+    const str = '1bb5956c6183d8c42294c6f00ab02b0543268d48c241d7eea59179a887af24de';
+    expect(binarySearchForString(BinarySearchData, str, (n) => n.hash ?? '')).to.equal(1522);
+    expect(BinarySearchData[1522].hash).to.equal(str);
+
+    expect(binarySearchForString(BinarySearchData, 'ccc', (n) => n.hash ?? '')).to.equal(-1);
   });
 });
