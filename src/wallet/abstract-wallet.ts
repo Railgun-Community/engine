@@ -1934,7 +1934,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   getUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain): UTXOMerkletree {
-    const merkletree = this.utxoMerkletrees[txidVersion][chain.type][chain.id];
+    const merkletree = this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(`No utxo merkletree for chain ${chain.type}:${chain.id}`);
     }
@@ -1942,7 +1942,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   getRailgunTXIDMerkletreeForChain(txidVersion: TXIDVersion, chain: Chain): TXIDMerkletree {
-    const merkletree = this.railgunTxidMerkletrees[txidVersion][chain.type][chain.id];
+    const merkletree = this.railgunTxidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(`No txid merkletree for chain ${chain.type}:${chain.id}`);
     }
@@ -2185,7 +2185,8 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
-      this.emit(EngineEvent.WalletScanComplete, { chain } as WalletScannedEventData);
+      const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
+      this.emit(EngineEvent.WalletScanComplete, walletScannedEventData);
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.refreshPOIsForAllTXIDVersions(chain); // Synchronous
