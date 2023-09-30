@@ -151,6 +151,7 @@ export type RailgunTransaction = {
 };
 
 export type RailgunTransactionWithTxid = RailgunTransaction & {
+  // railgunTxid: string; // Add this when they differ.
   hash: string;
 };
 

@@ -1113,7 +1113,6 @@ abstract class AbstractWallet extends EventEmitter {
               const railgunTransaction = await txidMerkletree.getRailgunTransactionByTxid(
                 railgunTxid,
               );
-
               if (railgunTransaction) {
                 const nul = railgunTransaction.nullifiers;
                 const hasAllNul = nul.every((n) => TXOs.some((txo) => `0x${txo.nullifier}` === n));

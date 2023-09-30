@@ -28,7 +28,6 @@ import {
   CommitmentProcessingGroupSize,
   TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
-import { binarySearchForString } from '../utils/search';
 import { TXIDVersion } from '../models';
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
@@ -53,9 +52,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   txidVersion: TXIDVersion;
 
-  // TODO: Remove after V3
-  protected shouldCreateSortedAllDataCache = false;
-
   // Check function to test if merkle root is valid
   merklerootValidator: MerklerootValidator;
 
@@ -69,9 +65,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     {};
 
   private defaultCommitmentProcessingSize: CommitmentProcessingGroupSize;
-
-  // TODO: Remove after V3, when we no longer need to pair all commitments and railgun transactions.
-  protected sortedAllDataCache: Optional<T[]>;
 
   /**
    * Create Merkletree controller from database
@@ -202,6 +195,20 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+  static getGlobalPosition(tree: number, index: number): number {
+    return tree * TREE_MAX_ITEMS + index;
+  }
+
+  static getTreeAndIndexFromGlobalPosition(globalPosition: number): {
+    tree: number;
+    index: number;
+  } {
+    return {
+      tree: Math.floor(globalPosition / TREE_MAX_ITEMS),
+      index: globalPosition % TREE_MAX_ITEMS,
+    };
+  }
+
   /**
    * Construct data DB path from tree number and index
    */
@@ -213,16 +220,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
-  private findCacheIndexForHash(hash: string): number {
-    return binarySearchForString(this.sortedAllDataCache ?? [], hash, (item) => item.hash);
-  }
-
-  findCachedDataForHash(hash: string): Optional<T> {
-    const index = this.findCacheIndexForHash(hash);
-    if (index === -1) {
-      return undefined;
-    }
-    return this.sortedAllDataCache?.[index];
+  protected getGlobalHashLookupDBPath(hash: string): string[] {
+    const globalHashLookupPrefix = fromUTF8String('global-hash-lookup');
+    const dbPath = [...this.getMerkletreeDBPrefix(), globalHashLookupPrefix, hash];
+    return dbPath.map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
   async updateData(tree: number, index: number, data: T): Promise<void> {
@@ -233,14 +234,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
         throw new Error('Cannot update merkletree data with different hash.');
       }
       await this.db.put(this.getDataDBPath(tree, index), data, 'json');
-
-      // Update cache
-      if (this.sortedAllDataCache) {
-        const cacheIndex = this.findCacheIndexForHash(data.hash);
-        if (cacheIndex !== -1) {
-          this.sortedAllDataCache[cacheIndex] = data;
-        }
-      }
 
       this.lockUpdates = false;
     } catch (err) {
@@ -264,47 +257,41 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+  protected async getTreeAndIndexByHash(
+    hash: string,
+  ): Promise<Optional<{ tree: number; index: number }>> {
+    try {
+      const globalPosition = (await this.db.get(
+        this.getGlobalHashLookupDBPath(hash),
+        'utf8',
+      )) as string;
+      return Merkletree.getTreeAndIndexFromGlobalPosition(Number(globalPosition));
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  protected async getDataByHash(hash: string): Promise<Optional<T>> {
+    try {
+      const globalPosition = await this.getGlobalPositionByHash(hash);
+      const { tree, index } = Merkletree.getTreeAndIndexFromGlobalPosition(Number(globalPosition));
+      return await this.getData(tree, index);
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  protected async getGlobalPositionByHash(hash: string): Promise<number> {
+    const globalPosition = (await this.db.get(
+      this.getGlobalHashLookupDBPath(hash),
+      'utf8',
+    )) as string;
+    return Number(globalPosition);
+  }
+
   // eslint-disable-next-line class-methods-use-this
   sortMerkletreeDataByHash(array: T[]): T[] {
     return array.sort((a, b) => (a.hash > b.hash ? 1 : -1));
-  }
-
-  async queryAllData(): Promise<T[]> {
-    if (this.sortedAllDataCache) {
-      return this.sortedAllDataCache;
-    }
-
-    const allData: T[] = [];
-
-    const latestTree = await this.latestTree();
-    for (let treeIndex = 0; treeIndex <= latestTree; treeIndex += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      const treeHeight = await this.getTreeLength(treeIndex);
-
-      const fetcher = new Array<Promise<Optional<T>>>(treeHeight);
-      for (let index = 0; index < treeHeight; index += 1) {
-        fetcher[index] = this.getData(treeIndex, index);
-      }
-
-      // eslint-disable-next-line no-await-in-loop
-      const leaves: Optional<T>[] = await Promise.all(fetcher);
-      leaves.forEach((leaf) => {
-        if (leaf) {
-          allData.push(leaf);
-        }
-      });
-    }
-
-    this.createSortedAllDataCache(allData);
-
-    return allData;
-  }
-
-  createSortedAllDataCache(allData: T[]) {
-    if (!this.shouldCreateSortedAllDataCache) {
-      return;
-    }
-    this.sortedAllDataCache = this.sortMerkletreeDataByHash(allData);
   }
 
   /**
@@ -448,7 +435,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearDataForMerkletree(): Promise<void> {
-    this.sortedAllDataCache = undefined;
     await this.db.clearNamespace(this.getMerkletreeDBPrefix());
     this.cachedNodeHashes = {};
     this.treeLengths = [];
@@ -472,18 +458,11 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     hashWriteGroup: string[][],
     dataWriteGroup: T[],
   ): Promise<void> {
-    // Build write batch operation
-    const nodeWriteBatch: PutBatch[] = [];
-    const dataWriteBatch: PutBatch[] = [];
-
-    // Get new leaves
     const newTreeLength = hashWriteGroup[0].length;
 
-    // Loop through each level
+    const nodeWriteBatch: PutBatch[] = [];
     hashWriteGroup.forEach((levelNodes, level) => {
-      // Loop through each index
       levelNodes.forEach((node, index) => {
-        // Push to node writeBatch array
         nodeWriteBatch.push({
           type: 'put',
           key: this.getNodeHashDBPath(treeIndex, level, index).join(':'),
@@ -493,18 +472,26 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       });
     });
 
-    // Loop through each index
+    const dataWriteBatch: PutBatch[] = [];
+    const globalHashLookupBatch: PutBatch[] = [];
     dataWriteGroup.forEach((data, index) => {
-      // Push to commitment writeBatch array
       dataWriteBatch.push({
         type: 'put',
         key: this.getDataDBPath(treeIndex, index).join(':'),
         value: data,
       });
+      globalHashLookupBatch.push({
+        type: 'put',
+        key: this.getGlobalHashLookupDBPath(data.hash).join(':'),
+        value: String(Merkletree.getGlobalPosition(treeIndex, index)),
+      });
     });
 
-    // Batch write to DB
-    await Promise.all([this.db.batch(nodeWriteBatch), this.db.batch(dataWriteBatch, 'json')]);
+    await Promise.all([
+      this.db.batch(nodeWriteBatch),
+      this.db.batch(dataWriteBatch, 'json'),
+      this.db.batch(globalHashLookupBatch, 'utf8'),
+    ]);
 
     // Call leaf/merkleroot storage (implemented in txid tree only)
     const lastIndex = newTreeLength - 1;
@@ -515,9 +502,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Update tree length
     this.treeLengths[treeIndex] = newTreeLength;
     await this.updateStoredMerkletreesMetadata(treeIndex);
-
-    const allDataCache = [...(this.sortedAllDataCache ?? []), ...dataWriteGroup];
-    this.createSortedAllDataCache(allDataCache);
   }
 
   /**

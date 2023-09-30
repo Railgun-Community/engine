@@ -815,7 +815,7 @@ class RailgunEngine extends EventEmitter {
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     const { tree, index } = await txidMerkletree.getLatestTreeAndIndex();
     const merkleroot = await txidMerkletree.getRoot(tree);
-    const txidIndex = TXIDMerkletree.getTxidIndex(tree, index);
+    const txidIndex = TXIDMerkletree.getGlobalPosition(tree, index);
     return { txidIndex, merkleroot };
   }
 

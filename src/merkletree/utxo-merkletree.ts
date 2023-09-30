@@ -20,9 +20,6 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
 
   protected merkletreeType = 'UTXO';
 
-  // TODO: Remove after V3
-  protected shouldCreateSortedAllDataCache = true;
-
   private constructor(
     db: Database,
     chain: Chain,
@@ -50,20 +47,18 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     return this.getData(tree, index);
   }
 
-  // TODO: Remove after V3
   async getCommitmentsForHashes(
     hashes: string[],
   ): Promise<{ [hash: string]: Optional<Commitment> }> {
     const hashToCommitment: { [hash: string]: Optional<Commitment> } = {};
-
-    // Creates sorted cache
-    await this.queryAllData();
-
-    hashes.forEach((hash) => {
-      const data = this.findCachedDataForHash(strip0x(hash));
-      hashToCommitment[hash] = data;
-    });
-
+    await Promise.all(
+      hashes.map(async (hash) => {
+        const data = await this.getDataByHash(strip0x(hash));
+        if (data) {
+          hashToCommitment[hash] = data;
+        }
+      }),
+    );
     return hashToCommitment;
   }
 

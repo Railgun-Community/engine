@@ -446,9 +446,7 @@ describe('UTXO Merkletree', () => {
         blockNumber: 0,
         utxoTree: 0,
         utxoIndex: 0,
-        timestamp: undefined,
       },
-      '0x1111111': undefined,
     });
   }).timeout(1000);
 
