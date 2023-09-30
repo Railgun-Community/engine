@@ -679,6 +679,12 @@ class RailgunEngine extends EventEmitter {
         const { txidIndex: latestValidatedTxidIndex /* merkleroot */ } =
           await this.getLatestValidatedRailgunTxid(txidVersion, chain);
 
+        EngineDebug.log(
+          `syncing railgun transactions to validated index: ${
+            latestValidatedTxidIndex ?? 'NOT FOUND'
+          }`,
+        );
+
         const isAheadOfValidatedTxids =
           !isDefined(latestValidatedTxidIndex) || latestTxidIndex >= latestValidatedTxidIndex;
         if (isAheadOfValidatedTxids) {
