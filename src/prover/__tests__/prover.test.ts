@@ -43,6 +43,12 @@ describe('Prover', () => {
       () => {}, // progress
     );
 
+    expect(proof.pi_a.length).to.equal(2);
+    expect(proof.pi_b.length).to.equal(2);
+    expect(proof.pi_b[0].length).to.equal(2);
+    expect(proof.pi_b[1].length).to.equal(2);
+    expect(proof.pi_c.length).to.equal(2);
+
     expect(proof).to.be.an('object');
   }).timeout(30000);
 

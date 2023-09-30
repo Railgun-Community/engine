@@ -1312,7 +1312,13 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<void> {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
       await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain, railgunTxidFilter);
+
     if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
+      if (isDefined(railgunTxidFilter)) {
+        throw new Error(
+          `Railgun TXID ${railgunTxidFilter} not found in sent commitments / unshield events.`,
+        );
+      }
       return;
     }
 
@@ -1368,6 +1374,7 @@ abstract class AbstractWallet extends EventEmitter {
       if (!spentTXOs.length) {
         throw new Error('No spent txos for railgun txid nullifier');
       }
+      // TODO: We need to check if there are POIs for each list for spentTXOs - if not, we can't prove. (Non-legacy)
       const blindedCommitmentsIn = removeUndefineds(spentTXOs.map((txo) => txo.blindedCommitment));
       if (blindedCommitmentsIn.length !== railgunTransaction.nullifiers.length) {
         throw new Error(

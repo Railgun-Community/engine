@@ -475,18 +475,26 @@ export class Prover {
 
     progressCallback(finalProgressProof);
 
+    // For some reason, the proof returned by snarkjs contains extra fields.
+    // Trim them off.
+    const snarkProof: Proof = {
+      pi_a: [proof.pi_a[0], proof.pi_a[1]],
+      pi_b: [proof.pi_b[0], proof.pi_b[1]],
+      pi_c: [proof.pi_c[0], proof.pi_c[1]],
+    };
+
     // Throw if proof is invalid
-    if (!(await this.verifyPOIProof(publicInputs, proof, maxInputs, maxOutputs))) {
+    if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
       throw new Error('Proof verification failed');
     }
 
-    ProofCachePOI.store(inputs.blindedCommitmentsIn, blindedCommitmentsOut, proof);
+    ProofCachePOI.store(inputs.blindedCommitmentsIn, blindedCommitmentsOut, snarkProof);
 
     progressCallback(100);
 
     // Return proof with inputs
     return {
-      proof,
+      proof: snarkProof,
       publicInputs,
     };
   }
