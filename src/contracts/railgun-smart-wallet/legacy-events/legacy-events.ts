@@ -115,7 +115,7 @@ function formatLegacyCommitmentCiphertext(
     ephemeralKeys: ephemeralKeys.map(
       (key) => nToHex(key, ByteLength.UINT_256), // 32 bytes each.
     ),
-    memo: memo.map(
+    memo: (memo ?? []).map(
       (el) => nToHex(el, ByteLength.UINT_256), // 32 bytes each.
     ),
   };
