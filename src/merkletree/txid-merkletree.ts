@@ -233,6 +233,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     let nextTree = latestTree;
     let nextIndex = latestIndex;
 
+    const commitmentsToRailgunTxidBatch: PutBatch[] = [];
+    const railgunTxidIndexLookupBatch: PutBatch[] = [];
+
     for (let i = 0; i < railgunTransactionsWithTxids.length; i += 1) {
       const { tree, index } = TXIDMerkletree.nextTreeAndIndex(nextTree, nextIndex);
       nextTree = tree;
@@ -243,6 +246,8 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
       const railgunTransactionWithTxid = railgunTransactionsWithTxids[i];
 
+      const { railgunTxid, commitments } = railgunTransactionWithTxid;
+
       const latestLeafIndex = nextIndex - 1;
       // eslint-disable-next-line no-await-in-loop
       await this.savePOILaunchSnapshotIfNecessary(railgunTransactionWithTxid, latestLeafIndex);
@@ -250,16 +255,25 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       // eslint-disable-next-line no-await-in-loop
       await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithTxid]);
 
-      // eslint-disable-next-line no-await-in-loop
-      await this.storeCommitmentsToRailgunTxid(railgunTransactionWithTxid);
-
-      // eslint-disable-next-line no-await-in-loop
-      await this.storeRailgunTxidIndexLookup(
-        railgunTransactionWithTxid.railgunTxid,
-        nextTree,
-        nextIndex,
-      );
+      commitments.map(async (commitment) => {
+        commitmentsToRailgunTxidBatch.push({
+          type: 'put',
+          key: this.getCommitmentLookupDBPath(commitment).join(':'),
+          value: railgunTransactionWithTxid.railgunTxid,
+        });
+      });
+      const txidIndex = TXIDMerkletree.getGlobalPosition(nextTree, nextIndex);
+      railgunTxidIndexLookupBatch.push({
+        type: 'put',
+        key: this.getRailgunTxidLookupDBPath(railgunTxid).join(':'),
+        value: String(txidIndex),
+      });
     }
+
+    await Promise.all([
+      this.db.batch(commitmentsToRailgunTxidBatch),
+      this.db.batch(railgunTxidIndexLookupBatch, 'utf8'),
+    ]);
   }
 
   static isOutOfBounds(tree: number, index: number, maxTxidIndex?: number) {
@@ -438,19 +452,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     );
   }
 
-  private async storeCommitmentsToRailgunTxid(
-    railgunTransaction: RailgunTransactionWithHash,
-  ): Promise<void> {
-    await Promise.all(
-      railgunTransaction.commitments.map(async (commitment) => {
-        await this.db.put(
-          this.getCommitmentLookupDBPath(commitment),
-          railgunTransaction.railgunTxid,
-        );
-      }),
-    );
-  }
-
   private async getRailgunTxidByCommitment(commitment: string): Promise<Optional<string>> {
     try {
       const railgunTxid = (await this.db.get(this.getCommitmentLookupDBPath(commitment))) as string;
@@ -491,15 +492,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     } catch (err) {
       return undefined;
     }
-  }
-
-  private async storeRailgunTxidIndexLookup(
-    railgunTxid: string,
-    tree: number,
-    index: number,
-  ): Promise<void> {
-    const txidIndex = TXIDMerkletree.getGlobalPosition(tree, index);
-    await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), String(txidIndex), 'utf8');
   }
 
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {
