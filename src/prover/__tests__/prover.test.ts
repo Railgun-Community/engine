@@ -67,8 +67,7 @@ describe('Prover', () => {
     expect(publicInputs.poiMerkleroots.length).to.equal(3);
     expect(publicInputs.blindedCommitmentsOut.length).to.equal(3);
 
-    // TODO-POI: Add verification
-    // expect(await prover.verifyPOIProof(publicInputs, proof, 3, 3)).to.equal(true);
+    expect(await prover.verifyPOIProof(publicInputs, proof, 3, 3)).to.equal(true);
   }).timeout(30000);
 
   it('Should generate and validate POI proof - 13x13', async () => {
@@ -107,8 +106,7 @@ describe('Prover', () => {
     expect(publicInputs.poiMerkleroots.length).to.equal(13);
     expect(publicInputs.blindedCommitmentsOut.length).to.equal(13);
 
-    // TODO-POI: Add verification
-    // expect(await prover.verifyPOIProof(publicInputs, proof, 13, 13)).to.equal(true);
+    expect(await prover.verifyPOIProof(publicInputs, proof, 13, 13)).to.equal(true);
   }).timeout(30000);
 
   it('Should verify input vector', async () => {

@@ -17,6 +17,7 @@ import { ProofCache } from './proof-cache';
 import { ProofCachePOI } from './proof-cache-poi';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { POIEngineProofInputs } from '../models';
+import { isDefined } from '../utils/is-defined';
 
 const ZERO_VALUE_POI = MERKLE_ZERO_VALUE_BIGINT;
 
@@ -481,18 +482,17 @@ export class Prover {
     );
     const { proof, publicSignals } = proofData;
 
-    // TODO-POI: Add blindedCommitmentOut check.
-    // if (isDefined(publicSignals)) {
-    //   // snarkjs will provide publicSignals for validation
-    //   for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
-    //     const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
-    //     if (blindedCommitmentOutString !== publicSignals[i]) {
-    //       throw new Error(
-    //         `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
-    //       );
-    //     }
-    //   }
-    // }
+    if (isDefined(publicSignals)) {
+      // snarkjs will provide publicSignals for validation
+      for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
+        const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
+        if (blindedCommitmentOutString !== publicSignals[i]) {
+          throw new Error(
+            `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
+          );
+        }
+      }
+    }
 
     progressCallback(finalProgressProof);
 
@@ -505,10 +505,9 @@ export class Prover {
     };
 
     // Throw if proof is invalid
-    // TODO-POI: Add verification
-    // if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
-    //   throw new Error('POI proof verification failed');
-    // }
+    if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
+      throw new Error('POI proof verification failed');
+    }
 
     ProofCachePOI.store(listKey, blindedCommitmentsOut, snarkProof);
 
