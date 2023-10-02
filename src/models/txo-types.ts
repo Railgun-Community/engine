@@ -47,7 +47,7 @@ export type UnshieldData = {
   allowOverride?: boolean;
 };
 
-export type TXOsReceivedPOIStatusInfo = {
+type TXOsReceivedPOIStatusInfoShared = {
   tree: number;
   startPosition: number;
   txid: string;
@@ -57,7 +57,12 @@ export type TXOsReceivedPOIStatusInfo = {
   poiStatuses: Optional<POIsPerList>[];
 };
 
-export type TXOsSpentPOIStatusInfo = {
+export type TXOsReceivedPOIStatusInfo = {
+  strings: TXOsReceivedPOIStatusInfoShared;
+  emojis: TXOsReceivedPOIStatusInfoShared;
+};
+
+export type TXOsSpentPOIStatusInfoShared = {
   blockNumber: number;
   txid: string;
   railgunTxid: string;
@@ -66,4 +71,9 @@ export type TXOsSpentPOIStatusInfo = {
   poiStatusesSentCommitments: Optional<POIsPerList>[];
   unshieldEventsBlinded: string;
   poiStatusesUnshieldEvents: Optional<POIsPerList>[];
+};
+
+export type TXOsSpentPOIStatusInfo = {
+  strings: TXOsSpentPOIStatusInfoShared;
+  emojis: TXOsSpentPOIStatusInfoShared;
 };

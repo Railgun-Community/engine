@@ -46,6 +46,7 @@ import {
   nToHex,
   numberify,
   padToLength,
+  strip0x,
 } from '../utils/bytes';
 import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
@@ -106,6 +107,7 @@ import {
 } from '../models/poi-types';
 import { getGlobalTreePosition } from '../poi/shield-railgun-txid';
 import { TREE_MAX_ITEMS } from '../models/merkletree-types';
+import { emojiHashForPOIStatusInfo } from '../utils';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -994,21 +996,45 @@ abstract class AbstractWallet extends EventEmitter {
             const startPosition = txosForTxidAndRailgunTxid.map((txo) => txo.position).sort()[0];
 
             const statusInfo: TXOsReceivedPOIStatusInfo = {
-              tree,
-              startPosition,
-              txid,
-              txos: `${txosForTxidAndRailgunTxid.length}: com ${txosForTxidAndRailgunTxid
-                .map(
-                  (txo) =>
-                    `${nToHex(txo.note.hash, ByteLength.UINT_256, true)} (${txo.commitmentType})`,
-                )
-                .join(', ')}`,
-              railgunTxid,
-              blindedCommitments: `${txosForTxidAndRailgunTxid
-                .map((txo) => txo.blindedCommitment ?? 'Unavailable')
-                .join(', ')}`,
-              poiStatuses: txosForTxidAndRailgunTxid.map((txo) => txo.poisPerList),
+              strings: {
+                tree,
+                startPosition,
+                txid,
+                txos: `${txosForTxidAndRailgunTxid.length}: com ${txosForTxidAndRailgunTxid
+                  .map(
+                    (txo) =>
+                      `${nToHex(txo.note.hash, ByteLength.UINT_256, true)} (${txo.commitmentType})`,
+                  )
+                  .join(', ')}`,
+                railgunTxid,
+                blindedCommitments: `${txosForTxidAndRailgunTxid
+                  .map((txo) => txo.blindedCommitment ?? 'Unavailable')
+                  .join(', ')}`,
+                poiStatuses: txosForTxidAndRailgunTxid.map((txo) => txo.poisPerList),
+              },
+              emojis: {
+                tree,
+                startPosition,
+                txid: emojiHashForPOIStatusInfo(txid),
+                txos: `${txosForTxidAndRailgunTxid.length}: com ${txosForTxidAndRailgunTxid
+                  .map((txo) => {
+                    const hex = strip0x(nToHex(txo.note.hash, ByteLength.UINT_256, true));
+                    const hemojiedHex = emojiHashForPOIStatusInfo(hex);
+                    return `${hemojiedHex} (${txo.commitmentType})`;
+                  })
+                  .join(', ')}`,
+                railgunTxid: emojiHashForPOIStatusInfo(railgunTxid),
+                blindedCommitments: `${txosForTxidAndRailgunTxid
+                  .map((txo) => {
+                    return isDefined(txo.blindedCommitment)
+                      ? emojiHashForPOIStatusInfo(strip0x(txo.blindedCommitment))
+                      : 'Unavailable';
+                  })
+                  .join(', ')}`,
+                poiStatuses: txosForTxidAndRailgunTxid.map((txo) => txo.poisPerList),
+              },
             };
+
             return statusInfos.push(statusInfo);
           }),
         );
@@ -1017,8 +1043,10 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Sort descending by UTXO tree/position.
     return statusInfos.sort(
-      (a, b) =>
-        b.tree * TREE_MAX_ITEMS + b.startPosition - (a.tree * TREE_MAX_ITEMS + a.startPosition),
+      ({ strings: stringsA }, { strings: stringsB }) =>
+        stringsB.tree * TREE_MAX_ITEMS +
+        stringsB.startPosition -
+        (stringsA.tree * TREE_MAX_ITEMS + stringsA.startPosition),
     );
   }
 
@@ -1109,6 +1137,7 @@ abstract class AbstractWallet extends EventEmitter {
             ];
 
             let railgunTransactionInfo: string;
+            let railgunTransactionInfoEmoji: string;
             if (railgunTxid && railgunTxid !== 'Missing') {
               const railgunTransaction = await txidMerkletree.getRailgunTransactionByTxid(
                 railgunTxid,
@@ -1122,31 +1151,66 @@ abstract class AbstractWallet extends EventEmitter {
 
                 railgunTransactionInfo = `${nul.length} nul: ${nul.join(', ')} (${
                   hasAllNul ? '✓' : 'x'
-                }), ${com.length} com: ${com.join(', ')} (${hasAllCom ? '✓' : 'x'})`;
+                }), ${com.length} com/unsh: ${com.join(', ')} (${hasAllCom ? '✓' : 'x'})`;
+
+                railgunTransactionInfoEmoji = `${nul.length} nul: ${nul
+                  .map((address) => emojiHashForPOIStatusInfo(strip0x(address)))
+                  .join(', ')} (${hasAllNul ? '✓' : 'x'}), ${com.length} com/unsh: ${com
+                  .map((address) => emojiHashForPOIStatusInfo(strip0x(address)))
+                  .join(', ')} (${hasAllCom ? '✓' : 'x'})`;
               } else {
                 railgunTransactionInfo = 'Not found';
+                railgunTransactionInfoEmoji = 'Not found';
               }
             } else {
               railgunTransactionInfo = 'Missing';
+              railgunTransactionInfoEmoji = 'Missing';
             }
-
             const statusInfo: TXOsSpentPOIStatusInfo = {
-              blockNumber: blockNumber ?? 0,
-              txid,
-              railgunTxid,
-              railgunTransactionInfo,
-              sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
-                .map((sentCommitment) => sentCommitment.blindedCommitment ?? 'Unavailable')
-                .join(', ')}`,
-              poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
-                (sentCommitment) => sentCommitment.poisPerList,
-              ),
-              unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
-                .map((unshieldEvent) => unshieldEvent.blindedCommitment ?? 'Unavailable')
-                .join(', ')}`,
-              poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
-                (unshieldEvent) => unshieldEvent.poisPerList,
-              ),
+              strings: {
+                blockNumber: blockNumber ?? 0,
+                txid,
+                railgunTxid,
+                railgunTransactionInfo,
+                sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
+                  .map((sentCommitment) => sentCommitment.blindedCommitment ?? 'Unavailable')
+                  .join(', ')}`,
+                poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
+                  (sentCommitment) => sentCommitment.poisPerList,
+                ),
+                unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
+                  .map((unshieldEvent) => unshieldEvent.blindedCommitment ?? 'Unavailable')
+                  .join(', ')}`,
+                poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
+                  (unshieldEvent) => unshieldEvent.poisPerList,
+                ),
+              },
+              emojis: {
+                blockNumber: blockNumber ?? 0,
+                txid: emojiHashForPOIStatusInfo(txid),
+                railgunTxid: emojiHashForPOIStatusInfo(railgunTxid),
+                railgunTransactionInfo: railgunTransactionInfoEmoji,
+                sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
+                  .map((sentCommitment) => {
+                    return isDefined(sentCommitment.blindedCommitment)
+                      ? emojiHashForPOIStatusInfo(strip0x(sentCommitment.blindedCommitment))
+                      : 'Unavailable';
+                  })
+                  .join(', ')}`,
+                poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
+                  (sentCommitment) => sentCommitment.poisPerList,
+                ),
+                unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
+                  .map((unshieldEvent) => {
+                    return isDefined(unshieldEvent.blindedCommitment)
+                      ? emojiHashForPOIStatusInfo(strip0x(unshieldEvent.blindedCommitment))
+                      : 'Unavailable';
+                  })
+                  .join(', ')}`,
+                poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
+                  (unshieldEvent) => unshieldEvent.poisPerList,
+                ),
+              },
             };
             return statusInfos.push(statusInfo);
           }),
@@ -1155,7 +1219,9 @@ abstract class AbstractWallet extends EventEmitter {
     );
 
     // Sort descending by blockNumber.
-    return statusInfos.sort((a, b) => b.blockNumber - a.blockNumber);
+    return statusInfos.sort(
+      ({ strings: stringsA }, { strings: stringsB }) => stringsB.blockNumber - stringsA.blockNumber,
+    );
   }
 
   async refreshReceivePOIsAllTXOs(
