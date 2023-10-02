@@ -15,7 +15,6 @@ import {
 import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
 import { ProofCachePOI } from './proof-cache-poi';
-import { isDefined } from '../utils/is-defined';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { POIEngineProofInputs } from '../models';
 

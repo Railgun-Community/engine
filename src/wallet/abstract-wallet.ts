@@ -27,7 +27,12 @@ import {
   TXIDMerkletreeData,
   TransactCommitment,
 } from '../models/formatted-types';
-import { SentCommitment, TXO, TXOsSpentPOIStatusInfo } from '../models/txo-types';
+import {
+  SentCommitment,
+  TXO,
+  TXOsReceivedPOIStatusInfo,
+  TXOsSpentPOIStatusInfo,
+} from '../models/txo-types';
 import { Memo, LEGACY_MEMO_METADATA_BYTE_CHUNKS } from '../note/memo';
 import {
   arrayify,
@@ -42,7 +47,6 @@ import {
   nToHex,
   numberify,
   padToLength,
-  strip0x,
 } from '../utils/bytes';
 import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
@@ -99,6 +103,10 @@ import {
 import { getGlobalTreePosition } from '../poi/global-tree-position';
 import { createDummyMerkleProof } from '../merkletree/merkle-proof';
 import { Prover } from '../prover/prover';
+import {
+  formatTXOsReceivedPOIStatusInfo,
+  formatTXOsSpentPOIStatusInfo,
+} from '../poi/poi-status-formatter';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -952,77 +960,7 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
   ): Promise<TXOsReceivedPOIStatusInfo[]> {
     const TXOs = await this.TXOs(txidVersion, chain);
-
-    const txidGroups = _.groupBy(TXOs, (txo) => txo.txid);
-
-    const statusInfos: TXOsReceivedPOIStatusInfo[] = [];
-
-    await Promise.all(
-      Object.keys(txidGroups).map(async (txid) => {
-        const txosForTxid = txidGroups[txid];
-        const railgunTxidGroups = _.groupBy(txosForTxid, (txo) => txo.railgunTxid ?? 'Missing');
-
-        await Promise.all(
-          Object.keys(railgunTxidGroups).map(async (railgunTxid) => {
-            const txosForTxidAndRailgunTxid = railgunTxidGroups[railgunTxid];
-
-            const firstTxo = txosForTxidAndRailgunTxid[0];
-            const { tree } = firstTxo;
-            const startPosition = txosForTxidAndRailgunTxid.map((txo) => txo.position).sort()[0];
-
-            const statusInfo: TXOsReceivedPOIStatusInfo = {
-              strings: {
-                tree,
-                startPosition,
-                txid,
-                txos: `${txosForTxidAndRailgunTxid.length}: com ${txosForTxidAndRailgunTxid
-                  .map(
-                    (txo) =>
-                      `${nToHex(txo.note.hash, ByteLength.UINT_256, true)} (${txo.commitmentType})`,
-                  )
-                  .join(', ')}`,
-                railgunTxid,
-                blindedCommitments: `${txosForTxidAndRailgunTxid
-                  .map((txo) => txo.blindedCommitment ?? 'Unavailable')
-                  .join(', ')}`,
-                poiStatuses: txosForTxidAndRailgunTxid.map((txo) => txo.poisPerList),
-              },
-              emojis: {
-                tree,
-                startPosition,
-                txid: emojiHashForPOIStatusInfo(txid),
-                txos: `${txosForTxidAndRailgunTxid.length}: com ${txosForTxidAndRailgunTxid
-                  .map((txo) => {
-                    const hex = strip0x(nToHex(txo.note.hash, ByteLength.UINT_256, true));
-                    const hemojiedHex = emojiHashForPOIStatusInfo(hex);
-                    return `${hemojiedHex} (${txo.commitmentType})`;
-                  })
-                  .join(', ')}`,
-                railgunTxid: emojiHashForPOIStatusInfo(railgunTxid),
-                blindedCommitments: `${txosForTxidAndRailgunTxid
-                  .map((txo) => {
-                    return isDefined(txo.blindedCommitment)
-                      ? emojiHashForPOIStatusInfo(strip0x(txo.blindedCommitment))
-                      : 'Unavailable';
-                  })
-                  .join(', ')}`,
-                poiStatuses: txosForTxidAndRailgunTxid.map((txo) => txo.poisPerList),
-              },
-            };
-
-            return statusInfos.push(statusInfo);
-          }),
-        );
-      }),
-    );
-
-    // Sort descending by UTXO tree/position.
-    return statusInfos.sort(
-      ({ strings: stringsA }, { strings: stringsB }) =>
-        stringsB.tree * TREE_MAX_ITEMS +
-        stringsB.startPosition -
-        (stringsA.tree * TREE_MAX_ITEMS + stringsA.startPosition),
-    );
+    return formatTXOsReceivedPOIStatusInfo(TXOs);
   }
 
   async getTXOsSpentPOIStatusInfo(
@@ -1033,170 +971,13 @@ abstract class AbstractWallet extends EventEmitter {
       this.getSentCommitments(txidVersion, chain, undefined),
       this.TXOs(txidVersion, chain),
     ]);
-
     const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(
       txidVersion,
       chain,
       TXOs,
     );
-
-    const txidGroups: {
-      [txid: string]: { sentCommitments: SentCommitment[]; unshieldEvents: UnshieldStoredEvent[] };
-    } = {};
-    sentCommitments.forEach((sentCommitment) => {
-      txidGroups[sentCommitment.txid] ??= {
-        sentCommitments: [],
-        unshieldEvents: [],
-      };
-      txidGroups[sentCommitment.txid].sentCommitments.push(sentCommitment);
-    });
-    unshieldEvents.forEach((unshieldEvent) => {
-      txidGroups[unshieldEvent.txid] ??= {
-        sentCommitments: [],
-        unshieldEvents: [],
-      };
-      txidGroups[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
-    });
-
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
-
-    const statusInfos: TXOsSpentPOIStatusInfo[] = [];
-
-    await Promise.all(
-      Object.keys(txidGroups).map(async (txid) => {
-        const txidGroup = txidGroups[txid];
-
-        const railgunTxidGroups: {
-          [txid: string]: {
-            sentCommitments: SentCommitment[];
-            unshieldEvents: UnshieldStoredEvent[];
-          };
-        } = {};
-        txidGroup.sentCommitments.forEach((sentCommitment) => {
-          if (!isDefined(sentCommitment.railgunTxid)) {
-            return;
-          }
-          railgunTxidGroups[sentCommitment.railgunTxid] ??= {
-            sentCommitments: [],
-            unshieldEvents: [],
-          };
-          railgunTxidGroups[sentCommitment.railgunTxid].sentCommitments.push(sentCommitment);
-        });
-        txidGroup.unshieldEvents.forEach((unshieldEvent) => {
-          if (!isDefined(unshieldEvent.railgunTxid)) {
-            return;
-          }
-          railgunTxidGroups[unshieldEvent.railgunTxid] ??= {
-            sentCommitments: [],
-            unshieldEvents: [],
-          };
-          railgunTxidGroups[unshieldEvent.railgunTxid].unshieldEvents.push(unshieldEvent);
-        });
-
-        await Promise.all(
-          Object.keys(railgunTxidGroups).map(async (railgunTxid) => {
-            const sentCommitmentsForRailgunTxid = railgunTxidGroups[railgunTxid].sentCommitments;
-            const unshieldEventsForRailgunTxid = railgunTxidGroups[railgunTxid].unshieldEvents;
-
-            const blockNumber = sentCommitmentsForRailgunTxid.length
-              ? sentCommitmentsForRailgunTxid[0].note.blockNumber
-              : unshieldEventsForRailgunTxid[0].blockNumber;
-
-            const commitmentHashes: string[] = [
-              ...sentCommitmentsForRailgunTxid.map((sentCommitment) =>
-                nToHex(sentCommitment.note.hash, ByteLength.UINT_256, true),
-              ),
-              ...unshieldEventsForRailgunTxid.map((unshieldEvent) =>
-                nToHex(getUnshieldEventNoteHash(unshieldEvent), ByteLength.UINT_256, true),
-              ),
-            ];
-
-            let railgunTransactionInfo: string;
-            let railgunTransactionInfoEmoji: string;
-            if (railgunTxid && railgunTxid !== 'Missing') {
-              const railgunTransaction = await txidMerkletree.getRailgunTransactionByTxid(
-                railgunTxid,
-              );
-              if (railgunTransaction) {
-                const nul = railgunTransaction.nullifiers;
-                const hasAllNul = nul.every((n) => TXOs.some((txo) => `0x${txo.nullifier}` === n));
-
-                const com = railgunTransaction.commitments;
-                const hasAllCom = com.every((c) => commitmentHashes.includes(c));
-
-                railgunTransactionInfo = `${nul.length} nul: ${nul.join(', ')} (${
-                  hasAllNul ? '✓' : 'x'
-                }), ${com.length} com/unsh: ${com.join(', ')} (${hasAllCom ? '✓' : 'x'})`;
-
-                railgunTransactionInfoEmoji = `${nul.length} nul: ${nul
-                  .map((address) => emojiHashForPOIStatusInfo(strip0x(address)))
-                  .join(', ')} (${hasAllNul ? '✓' : 'x'}), ${com.length} com/unsh: ${com
-                  .map((address) => emojiHashForPOIStatusInfo(strip0x(address)))
-                  .join(', ')} (${hasAllCom ? '✓' : 'x'})`;
-              } else {
-                railgunTransactionInfo = 'Not found';
-                railgunTransactionInfoEmoji = 'Not found';
-              }
-            } else {
-              railgunTransactionInfo = 'Missing';
-              railgunTransactionInfoEmoji = 'Missing';
-            }
-            const statusInfo: TXOsSpentPOIStatusInfo = {
-              strings: {
-                blockNumber: blockNumber ?? 0,
-                txid,
-                railgunTxid,
-                railgunTransactionInfo,
-                sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
-                  .map((sentCommitment) => sentCommitment.blindedCommitment ?? 'Unavailable')
-                  .join(', ')}`,
-                poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
-                  (sentCommitment) => sentCommitment.poisPerList,
-                ),
-                unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
-                  .map((unshieldEvent) => unshieldEvent.blindedCommitment ?? 'Unavailable')
-                  .join(', ')}`,
-                poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
-                  (unshieldEvent) => unshieldEvent.poisPerList,
-                ),
-              },
-              emojis: {
-                blockNumber: blockNumber ?? 0,
-                txid: emojiHashForPOIStatusInfo(txid),
-                railgunTxid: emojiHashForPOIStatusInfo(railgunTxid),
-                railgunTransactionInfo: railgunTransactionInfoEmoji,
-                sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
-                  .map((sentCommitment) => {
-                    return isDefined(sentCommitment.blindedCommitment)
-                      ? emojiHashForPOIStatusInfo(strip0x(sentCommitment.blindedCommitment))
-                      : 'Unavailable';
-                  })
-                  .join(', ')}`,
-                poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
-                  (sentCommitment) => sentCommitment.poisPerList,
-                ),
-                unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
-                  .map((unshieldEvent) => {
-                    return isDefined(unshieldEvent.blindedCommitment)
-                      ? emojiHashForPOIStatusInfo(strip0x(unshieldEvent.blindedCommitment))
-                      : 'Unavailable';
-                  })
-                  .join(', ')}`,
-                poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
-                  (unshieldEvent) => unshieldEvent.poisPerList,
-                ),
-              },
-            };
-            return statusInfos.push(statusInfo);
-          }),
-        );
-      }),
-    );
-
-    // Sort descending by blockNumber.
-    return statusInfos.sort(
-      ({ strings: stringsA }, { strings: stringsB }) => stringsB.blockNumber - stringsA.blockNumber,
-    );
+    return formatTXOsSpentPOIStatusInfo(txidMerkletree, sentCommitments, TXOs, unshieldEvents);
   }
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
@@ -1389,7 +1170,7 @@ abstract class AbstractWallet extends EventEmitter {
       const spentTXOs = TXOs.filter((txo) =>
         railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
       );
-      const listKeys = AbstractWallet.getListKeysForSpentPOIProof(spentTXOs, isLegacyPOIProof);
+      const listKeys = POI.getListKeysCanGenerateSpentPOIs(spentTXOs, isLegacyPOIProof);
       if (!listKeys.length) {
         continue;
       }
@@ -1409,18 +1190,6 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
     }
-  }
-
-  private static getListKeysForSpentPOIProof(
-    spentTXOs: TXO[],
-    isLegacyPOIProof: boolean,
-  ): string[] {
-    if (isLegacyPOIProof) {
-      // Use all list keys for legacy proofs.
-      return POI.getAllListKeys();
-    }
-    const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
-    return POI.getListKeysCanGenerateSpentPOIs(inputPOIsPerList);
   }
 
   private async generatePOIsForRailgunTxidAndListKey(

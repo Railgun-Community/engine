@@ -47,12 +47,11 @@ export type UnshieldData = {
 
 type TXOsReceivedPOIStatusInfoShared = {
   tree: number;
-  startPosition: number;
+  position: number;
   txid: string;
-  txos: string;
-  railgunTxid: string;
-  blindedCommitments: string;
-  poiStatuses: Optional<POIsPerList>[];
+  commitment: string;
+  blindedCommitment: string;
+  poisPerList: Optional<POIsPerList>;
 };
 
 export type TXOsReceivedPOIStatusInfo = {
@@ -69,6 +68,7 @@ export type TXOsSpentPOIStatusInfoShared = {
   poiStatusesSentCommitments: Optional<POIsPerList>[];
   unshieldEventsBlinded: string;
   poiStatusesUnshieldEvents: Optional<POIsPerList>[];
+  listKeysCanGenerateSpentPOIs: string[];
 };
 
 export type TXOsSpentPOIStatusInfo = {

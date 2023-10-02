@@ -9,7 +9,7 @@ import {
   TXOPOIListStatus,
 } from '../models/poi-types';
 import { SentCommitment, TXO } from '../models/txo-types';
-import { isDefined } from '../utils/is-defined';
+import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
 import { UnshieldStoredEvent } from '../models/event-types';
 
@@ -67,7 +67,7 @@ export class POI {
     return this.validatePOIStatusForAllLists(pois, listKeys, [TXOPOIListStatus.Valid]);
   }
 
-  static getListKeysCanGenerateSpentPOIs(inputPOIsPerList: POIsPerList[]): string[] {
+  private static getAllListKeysWithValidPOIs(inputPOIsPerList: POIsPerList[]): string[] {
     const listKeys = this.getAllListKeys();
     const listKeysShouldGenerateSpentPOIs: string[] = [];
     listKeys.forEach((listKey) => {
@@ -100,6 +100,15 @@ export class POI {
 
   private static hasAllKeys(obj: object, keys: string[]) {
     return keys.every((key) => Object.prototype.hasOwnProperty.call(obj, key));
+  }
+
+  static getListKeysCanGenerateSpentPOIs(spentTXOs: TXO[], isLegacyPOIProof: boolean): string[] {
+    if (isLegacyPOIProof) {
+      // Use all list keys for legacy proofs.
+      return POI.getAllListKeys();
+    }
+    const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
+    return POI.getAllListKeysWithValidPOIs(inputPOIsPerList);
   }
 
   static shouldRetrieveCreationPOIs(txo: TXO) {

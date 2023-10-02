@@ -1,6 +1,6 @@
 import { BytesLike, ethers } from 'ethers';
 import hemoji from 'hemoji';
-import { arrayify } from './bytes';
+import { arrayify, strip0x } from './bytes';
 
 /**
  * The function `emojiHash` takes a string and optional parameters for length and spacer, and returns a
@@ -14,12 +14,12 @@ import { arrayify } from './bytes';
  * string.
  * @returns a string that represents the emoji hash of the input string.
  */
-export const emojiHash = (str: string, length?: number, spacer?: string) => {
+export const emojiHash = (str: string, length?: number, spacer?: string): string => {
   return hemoji(str, { length, spacer });
 };
 
-export const emojiHashForPOIStatusInfo = (str: string) => {
-  return emojiHash(str, 2, '');
+export const emojiHashForPOIStatusInfo = (str: string): string => {
+  return emojiHash(strip0x(str), 2, '');
 };
 
 const bytesLikeify = (data: BytesLike): Uint8Array => {
