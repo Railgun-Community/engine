@@ -1,10 +1,7 @@
 import { Chain } from '../models/engine-types';
-import {
-  BlindedCommitmentData,
-  POIEngineProofInputs,
-  POIsPerList,
-  TXIDVersion,
-} from '../models/poi-types';
+import { MerkleProof } from '../models/formatted-types';
+import { BlindedCommitmentData, POIsPerList, TXIDVersion } from '../models/poi-types';
+import { Proof } from '../models/prover-types';
 
 export abstract class POINodeInterface {
   abstract isActive(chain: Chain): boolean;
@@ -16,13 +13,21 @@ export abstract class POINodeInterface {
     blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }>;
 
-  abstract generateAndSubmitPOI(
+  abstract getPOIMerkleProofs(
     txidVersion: TXIDVersion,
     chain: Chain,
     listKey: string,
-    proofInputs: POIEngineProofInputs,
-    blindedCommitmentsOut: string[],
+    blindedCommitments: string[],
+  ): Promise<MerkleProof[]>;
+
+  abstract submitPOI(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    snarkProof: Proof,
+    poiMerkleroots: string[],
+    txidMerkleroot: string,
     txidMerklerootIndex: number,
-    railgunTransactionBlockNumber: number,
+    blindedCommitmentsOut: string[],
   ): Promise<void>;
 }

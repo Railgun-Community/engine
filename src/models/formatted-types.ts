@@ -146,17 +146,18 @@ export type RailgunTransaction = {
   nullifiers: string[];
   boundParamsHash: string;
   blockNumber: number;
-  utxoTreeIn: Optional<number>;
-  globalStartPositionOut: Optional<number>;
+  utxoTreeIn: number;
+  utxoTreeOut: number;
+  utxoBatchStartPositionOut: number;
 };
 
-export type RailgunTransactionWithTxid = RailgunTransaction & {
-  // railgunTxid: string; // Add this when they differ.
+export type RailgunTransactionWithHash = RailgunTransaction & {
+  railgunTxid: string;
   hash: string;
 };
 
 export type TXIDMerkletreeData = {
-  railgunTransaction: RailgunTransactionWithTxid;
+  railgunTransaction: RailgunTransactionWithHash;
   currentMerkleProofForTree: MerkleProof;
   currentTxidIndexForTree: number;
 };
@@ -183,7 +184,6 @@ export type StoredReceiveCommitment = {
   decrypted: NoteSerialized | LegacyNoteSerialized;
   senderAddress: Optional<string>;
   commitmentType: CommitmentType;
-  railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
 };

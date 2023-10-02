@@ -1,11 +1,9 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable no-await-in-loop */
-import EngineDebug from '../debugger/debugger';
-import { UnshieldStoredEvent } from '../models';
+import { Proof } from '../models/prover-types';
 import { Chain } from '../models/engine-types';
 import {
   BlindedCommitmentData,
-  POIEngineProofInputs,
   POIsPerList,
   TXIDVersion,
   TXOPOIListStatus,
@@ -13,6 +11,7 @@ import {
 import { SentCommitment, TXO } from '../models/txo-types';
 import { isDefined } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
+import { UnshieldStoredEvent } from '../models/event-types';
 
 export type POIList = {
   key: string;
@@ -34,7 +33,7 @@ export class POI {
     this.nodeInterface = nodeInterface;
   }
 
-  private static getAllListKeys(): string[] {
+  static getAllListKeys(): string[] {
     return this.lists.map((list) => list.key);
   }
 
@@ -66,6 +65,20 @@ export class POI {
   private static hasValidPOIsActiveLists(pois: POIsPerList): boolean {
     const listKeys = this.getActiveListKeys();
     return this.validatePOIStatusForAllLists(pois, listKeys, [TXOPOIListStatus.Valid]);
+  }
+
+  static getListKeysCanGenerateSpentPOIs(inputPOIsPerList: POIsPerList[]): string[] {
+    const listKeys = this.getAllListKeys();
+    const listKeysShouldGenerateSpentPOIs: string[] = [];
+    listKeys.forEach((listKey) => {
+      const everyInputPOIValid = inputPOIsPerList.every((poisPerList) => {
+        return poisPerList[listKey] === TXOPOIListStatus.Valid;
+      });
+      if (everyInputPOIValid) {
+        listKeysShouldGenerateSpentPOIs.push(listKey);
+      }
+    });
+    return listKeysShouldGenerateSpentPOIs;
   }
 
   private static findListsForNewPOIs(poisPerList: Optional<POIsPerList>): string[] {
@@ -151,39 +164,42 @@ export class POI {
     return this.nodeInterface.getPOIsPerList(txidVersion, chain, listKeys, blindedCommitmentDatas);
   }
 
-  static async generateAndSubmitPOIAllLists(
+  static async getPOIMerkleProofs(
     txidVersion: TXIDVersion,
     chain: Chain,
-    poisPerList: Optional<POIsPerList>,
-    railgunTxid: string,
-    proofInputs: POIEngineProofInputs,
-    blindedCommitmentsOut: string[],
+    listKey: string,
+    blindedCommitmentsIn: string[],
+  ) {
+    if (!isDefined(this.nodeInterface)) {
+      throw new Error('POI node interface not initialized');
+    }
+
+    return this.nodeInterface.getPOIMerkleProofs(txidVersion, chain, listKey, blindedCommitmentsIn);
+  }
+
+  static async submitPOI(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    snarkProof: Proof,
+    poiMerkleroots: string[],
+    txidMerkleroot: string,
     txidMerklerootIndex: number,
-    railgunTransactionBlockNumber: number,
-    progressCallback: (progress: number) => void,
+    blindedCommitmentsOut: string[],
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
       throw new Error('POI node interface not initialized');
     }
 
-    const listKeys = POI.findListsForNewPOIs(poisPerList);
-
-    for (let i = 0; i < listKeys.length; i += 1) {
-      const listKey = listKeys[i];
-
-      const progress = Math.round((i / listKeys.length) * 100);
-      EngineDebug.log(`Generating POIs for txid ${railgunTxid}: ${progress}% (List ${listKey})`);
-      progressCallback(progress);
-
-      await this.nodeInterface.generateAndSubmitPOI(
-        txidVersion,
-        chain,
-        listKey,
-        proofInputs,
-        blindedCommitmentsOut,
-        txidMerklerootIndex,
-        railgunTransactionBlockNumber,
-      );
-    }
+    await this.nodeInterface.submitPOI(
+      txidVersion,
+      chain,
+      listKey,
+      snarkProof,
+      poiMerkleroots,
+      txidMerkleroot,
+      txidMerklerootIndex,
+      blindedCommitmentsOut,
+    );
   }
 }

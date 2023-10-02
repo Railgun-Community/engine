@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { createDummyMerkleProof } from '../merkletree/merkle-proof';
+import { Proof } from '../models/prover-types';
 import { Chain } from '../models/engine-types';
 import {
   BlindedCommitmentData,
-  POIEngineProofInputs,
   POIsPerList,
   TXIDVersion,
   TXOPOIListStatus,
 } from '../models/poi-types';
 import { POINodeInterface } from '../poi/poi-node-interface';
+import { MerkleProof } from '../models/formatted-types';
 
 export const MOCK_LIST_KEY = 'test_list';
 
@@ -24,26 +26,38 @@ export class TestPOINodeInterface extends POINodeInterface {
     listKeys: string[],
     blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }> {
-    const allMissing: { [blindedCommitment: string]: POIsPerList } = {};
+    const poisPerList: { [blindedCommitment: string]: POIsPerList } = {};
     blindedCommitmentDatas.forEach((blindedCommitmentData) => {
-      allMissing[blindedCommitmentData.blindedCommitment] ??= {};
+      poisPerList[blindedCommitmentData.blindedCommitment] ??= {};
       listKeys.forEach((listKey) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        allMissing[blindedCommitmentData.blindedCommitment][listKey] = TXOPOIListStatus.Missing;
+        // All "Missing"
+        poisPerList[blindedCommitmentData.blindedCommitment][listKey] = TXOPOIListStatus.Missing;
       });
     });
-    return allMissing;
+    return poisPerList;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async generateAndSubmitPOI(
+  async getPOIMerkleProofs(
     txidVersion: TXIDVersion,
     chain: Chain,
     listKey: string,
-    proofInputs: POIEngineProofInputs,
-    blindedCommitmentsOut: string[],
+    blindedCommitments: string[],
+  ): Promise<MerkleProof[]> {
+    // Use dummy proofs even after POI launch block, for tests.
+    return blindedCommitments.map(createDummyMerkleProof);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async submitPOI(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    snarkProof: Proof,
+    poiMerkleroots: string[],
+    txidMerkleroot: string,
     txidMerklerootIndex: number,
-    railgunTransactionBlockNumber: number,
+    blindedCommitmentsOut: string[],
   ): Promise<void> {
     return Promise.resolve();
   }

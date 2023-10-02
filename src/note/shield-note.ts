@@ -44,8 +44,12 @@ export abstract class ShieldNote {
     return poseidon([masterPublicKey, hexToBigInt(random)]);
   }
 
-  static getShieldNoteHash(notePublicKey: bigint, tokenHash: string, valueLessFee: bigint): bigint {
-    return poseidon([notePublicKey, hexToBigInt(tokenHash), valueLessFee]);
+  static getShieldNoteHash(
+    notePublicKey: bigint,
+    tokenHash: string,
+    valueAfterFee: bigint,
+  ): bigint {
+    return poseidon([notePublicKey, hexToBigInt(tokenHash), valueAfterFee]);
   }
 
   static decryptRandom(encryptedBundle: [string, string, string], sharedKey: Uint8Array): string {

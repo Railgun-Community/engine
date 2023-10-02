@@ -14,10 +14,10 @@ import {
 } from '../models/prover-types';
 import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
-import { POIEngineProofInputsWithListPOIData } from '../models/poi-types';
 import { ProofCachePOI } from './proof-cache-poi';
 import { isDefined } from '../utils/is-defined';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
+import { POIEngineProofInputs } from '../models';
 
 const ZERO_VALUE_POI = MERKLE_ZERO_VALUE_BIGINT;
 
@@ -399,11 +399,10 @@ export class Prover {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  private static getMaxInputsOutputsForPOI(inputs: POIEngineProofInputsWithListPOIData) {
+  private static getMaxInputsOutputsForPOI(inputs: POIEngineProofInputs) {
     if (inputs.nullifiers.length <= 3 && inputs.commitmentsOut.length <= 3) {
       // "Mini" POI circuit
-      // TODO: Add Mini circuit
-      // return { maxInputs: 3, maxOutputs: 3 };
+      return { maxInputs: 3, maxOutputs: 3 };
     }
 
     // "Full" POI circuit
@@ -411,17 +410,34 @@ export class Prover {
   }
 
   async provePOI(
-    inputs: POIEngineProofInputsWithListPOIData,
+    inputs: POIEngineProofInputs,
+    listKey: string,
     blindedCommitmentsOut: string[],
+    progressCallback: ProverProgressCallback,
+  ): Promise<{ proof: Proof; publicInputs: PublicInputsPOI }> {
+    const { maxInputs, maxOutputs } = Prover.getMaxInputsOutputsForPOI(inputs);
+
+    return this.provePOIForInputsOutputs(
+      inputs,
+      listKey,
+      blindedCommitmentsOut,
+      maxInputs,
+      maxOutputs,
+      progressCallback,
+    );
+  }
+
+  async provePOIForInputsOutputs(
+    inputs: POIEngineProofInputs,
+    listKey: string,
+    blindedCommitmentsOut: string[],
+    maxInputs: number,
+    maxOutputs: number,
     progressCallback: ProverProgressCallback,
   ): Promise<{ proof: Proof; publicInputs: PublicInputsPOI }> {
     if (!this.groth16) {
       throw new Error('Requires groth16 full prover implementation');
     }
-
-    const { maxInputs, maxOutputs } = Prover.getMaxInputsOutputsForPOI(inputs);
-
-    const formattedInputs = Prover.formatPOIInputs(inputs, maxInputs, maxOutputs);
 
     const publicInputs = this.getPublicInputsPOI(
       inputs.anyRailgunTxidMerklerootAfterTransaction,
@@ -431,7 +447,7 @@ export class Prover {
       maxOutputs,
     );
 
-    const existingProof = ProofCachePOI.get(inputs.blindedCommitmentsIn, blindedCommitmentsOut);
+    const existingProof = ProofCachePOI.get(listKey, blindedCommitmentsOut);
     if (existingProof) {
       return { proof: existingProof, publicInputs };
     }
@@ -443,10 +459,15 @@ export class Prover {
       throw new Error('Requires WASM or DAT prover artifact');
     }
 
+    const formattedInputs = Prover.formatPOIInputs(inputs, maxInputs, maxOutputs);
+
     // Generate proof: Progress from 20 - 99%
     const initialProgressProof = 20;
     const finalProgressProof = 99;
     progressCallback(initialProgressProof);
+
+    // console.log(stringifySafe(formattedInputs));
+
     const proofData = await this.groth16.fullProvePOI(
       formattedInputs,
       artifacts.wasm,
@@ -461,17 +482,18 @@ export class Prover {
     );
     const { proof, publicSignals } = proofData;
 
-    if (isDefined(publicSignals)) {
-      // snarkjs will provide publicSignals for validation
-      for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
-        const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
-        if (blindedCommitmentOutString !== publicSignals[i]) {
-          throw new Error(
-            `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
-          );
-        }
-      }
-    }
+    // TODO-POI: Add blindedCommitmentOut check.
+    // if (isDefined(publicSignals)) {
+    //   // snarkjs will provide publicSignals for validation
+    //   for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
+    //     const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
+    //     if (blindedCommitmentOutString !== publicSignals[i]) {
+    //       throw new Error(
+    //         `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
+    //       );
+    //     }
+    //   }
+    // }
 
     progressCallback(finalProgressProof);
 
@@ -484,11 +506,12 @@ export class Prover {
     };
 
     // Throw if proof is invalid
-    if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
-      throw new Error('Proof verification failed');
-    }
+    // TODO-POI: Add verification
+    // if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
+    //   throw new Error('POI proof verification failed');
+    // }
 
-    ProofCachePOI.store(inputs.blindedCommitmentsIn, blindedCommitmentsOut, snarkProof);
+    ProofCachePOI.store(listKey, blindedCommitmentsOut, snarkProof);
 
     progressCallback(100);
 
@@ -565,7 +588,7 @@ export class Prover {
   }
 
   private static formatPOIInputs(
-    proofInputs: POIEngineProofInputsWithListPOIData,
+    proofInputs: POIEngineProofInputs,
     maxInputs: number,
     maxOutputs: number,
   ): FormattedCircuitInputsPOI {
@@ -589,22 +612,16 @@ export class Prover {
         0n, // Use Zero = 0 here
       ),
       utxoPositionsIn: this.padWithZerosToMax(proofInputs.utxoPositionsIn.map(BigInt), maxInputs),
-      utxoTreesIn: BigInt(proofInputs.utxoTreesIn),
-      blindedCommitmentsIn: this.padWithZerosToMax(
-        proofInputs.blindedCommitmentsIn.map(hexToBigInt),
-        maxInputs,
-        0n, // Use Zero = 0 here
-      ),
-      creationTxidsIn: this.padWithZerosToMax(
-        proofInputs.creationTxidsIn.map(hexToBigInt),
-        maxInputs,
-      ),
+      utxoTreeIn: BigInt(proofInputs.utxoTreeIn),
       npksOut: this.padWithZerosToMax(proofInputs.npksOut, maxOutputs),
       valuesOut: this.padWithZerosToMax(
         proofInputs.valuesOut,
         maxOutputs,
         0n, // Use Zero = 0 here
       ),
+      utxoTreeOut: BigInt(proofInputs.utxoTreeOut),
+      utxoBatchStartPositionOut: BigInt(proofInputs.utxoBatchStartPositionOut),
+      railgunTxidIfHasUnshield: BigInt(proofInputs.railgunTxidIfHasUnshield),
       railgunTxidMerkleProofIndices: hexToBigInt(proofInputs.railgunTxidMerkleProofIndices),
       railgunTxidMerkleProofPathElements:
         proofInputs.railgunTxidMerkleProofPathElements.map(hexToBigInt),

@@ -87,6 +87,7 @@ describe('Transaction/Transaction Batch', function run() {
       testMnemonic,
       0,
       undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
     );
     ethersWallet = getEthersWallet(testMnemonic);
 

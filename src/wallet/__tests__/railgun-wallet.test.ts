@@ -14,6 +14,8 @@ import { RailgunEngine } from '../../railgun-engine';
 import { mnemonicToSeed } from '../../key-derivation/bip39';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 import { TXIDVersion } from '../../models';
+import { Prover } from '../../prover/prover';
+import { testArtifactsGetter } from '../../test/helper.test';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -42,18 +44,25 @@ describe('Wallet', () => {
       testMnemonic,
       0,
       undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
     );
     wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
       wallet.generateShareableViewingKey(),
-      undefined, // creationBlockNumbers
+      undefined, // creationBlockNumbers\
+      new Prover(testArtifactsGetter),
     );
   });
 
   it('Should load existing wallet', async () => {
-    const wallet2 = await RailgunWallet.loadExisting(db, testEncryptionKey, wallet.id);
+    const wallet2 = await RailgunWallet.loadExisting(
+      db,
+      testEncryptionKey,
+      wallet.id,
+      new Prover(testArtifactsGetter),
+    );
     expect(wallet2.id).to.equal(wallet.id);
   });
 
@@ -62,6 +71,7 @@ describe('Wallet', () => {
       db,
       testEncryptionKey,
       viewOnlyWallet.id,
+      new Prover(testArtifactsGetter),
     );
     expect(viewOnlyWallet2.id).to.equal(viewOnlyWallet.id);
   });

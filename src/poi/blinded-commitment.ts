@@ -1,5 +1,4 @@
 import { poseidon } from 'circomlibjs';
-import { LegacyEncryptedCommitment, TransactCommitment } from '../models/formatted-types';
 import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 
 const formatHash = (hash: bigint): string => {
@@ -17,24 +16,11 @@ export const getBlindedCommitmentForUnshield = (
   return formatHash(hash);
 };
 
-export const getBlindedCommitmentForTransact = (
-  commitment: TransactCommitment | LegacyEncryptedCommitment,
-  npk: bigint,
-  railgunTxid: string,
-): string => {
-  const hash: bigint = poseidon([hexToBigInt(commitment.hash), npk, hexToBigInt(railgunTxid)]);
-  return formatHash(hash);
-};
-
-export const getBlindedCommitmentForShield = (
+export const getBlindedCommitmentForShieldOrTransact = (
   commitmentHash: string,
   npk: bigint,
-  globalTreePosition: string,
+  globalTreePosition: bigint,
 ) => {
-  const hash: bigint = poseidon([
-    hexToBigInt(commitmentHash),
-    npk,
-    hexToBigInt(globalTreePosition),
-  ]);
+  const hash: bigint = poseidon([hexToBigInt(commitmentHash), npk, globalTreePosition]);
   return formatHash(hash);
 };

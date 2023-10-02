@@ -2,12 +2,13 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
+import { poseidon } from 'circomlibjs';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { TXIDMerkletree } from '../txid-merkletree';
 import { RailgunTransaction, TXIDVersion } from '../../models';
 import {
-  createRailgunTransactionWithID,
+  createRailgunTransactionWithHash,
   getRailgunTransactionID,
 } from '../../transaction/railgun-txid';
 import { ByteLength, nToHex } from '../../utils/bytes';
@@ -97,7 +98,7 @@ describe('Railgun Txid Merkletree', () => {
           db,
           vector.chain,
           TXIDVersion.V2_PoseidonMerkle,
-          undefined,
+          1,
         );
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
@@ -127,8 +128,9 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x03', '0x04'],
           boundParamsHash: '0x05',
           blockNumber: 0,
-          utxoTreeIn: undefined,
-          globalStartPositionOut: undefined,
+          utxoTreeIn: 0,
+          utxoTreeOut: 0,
+          utxoBatchStartPositionOut: 0,
         },
         {
           graphID: '0x10',
@@ -136,12 +138,13 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x13', '0x14'],
           boundParamsHash: '0x15',
           blockNumber: 0,
-          utxoTreeIn: undefined,
-          globalStartPositionOut: undefined,
+          utxoTreeIn: 0,
+          utxoTreeOut: 0,
+          utxoBatchStartPositionOut: 2,
         },
       ];
       const railgunTransactionsWithTxids = railgunTransactions.map((railgunTransaction) =>
-        createRailgunTransactionWithID(railgunTransaction, TXIDVersion.V2_PoseidonMerkle),
+        createRailgunTransactionWithHash(railgunTransaction, TXIDVersion.V2_PoseidonMerkle),
       );
 
       await merkletree.queueRailgunTransactions(railgunTransactionsWithTxids, 1);
@@ -151,15 +154,15 @@ describe('Railgun Txid Merkletree', () => {
 
       expect(await merkletree.getTreeLength(0)).to.equal(2);
       expect(await merkletree.getRoot(0)).to.equal(
-        '283e5b75a4db7a6083eff5c01e9e8e4f12612bd56229e7e795acc492a8d7f99e',
+        '0a03b0bf8dc758a3d5dd7f6b8b1974a4b212a0080425740c92cbd0c860ebde33',
       );
 
       if (merkletree.shouldStoreMerkleroots) {
         expect(await merkletree.getHistoricalMerkleroot(0, 0)).to.equal(
-          '0748198251a6d8d8958ddb5f0d79ecdb1034f3073bb98378c262d130f7507bf3',
+          '2672380de5dc3f4078e8d5a5984fcd95e3e279be354665ba889a472b8cd27966',
         );
         expect(await merkletree.getHistoricalMerkleroot(0, 1)).to.equal(
-          '283e5b75a4db7a6083eff5c01e9e8e4f12612bd56229e7e795acc492a8d7f99e',
+          '0a03b0bf8dc758a3d5dd7f6b8b1974a4b212a0080425740c92cbd0c860ebde33',
         );
       } else {
         expect(await merkletree.getHistoricalMerkleroot(0, 0)).to.equal(undefined);
@@ -167,23 +170,24 @@ describe('Railgun Txid Merkletree', () => {
       }
 
       expect(await merkletree.getRailgunTxidsForCommitments(['0x11'])).to.deep.equal({
-        '0x11': '024357abc258ce12110ea30877928463b0308ffe740e005558ef87f152cd0426',
+        '0x11': railgunTransactionsWithTxids[1].railgunTxid,
       });
 
       expect(await merkletree.getTreeLength(0)).to.equal(2);
       expect(
-        await merkletree.getTreeAndIndexByRailgunTxid(railgunTransactionsWithTxids[0].hash),
-      ).to.deep.equal({ tree: 0, index: 0 });
+        await merkletree.getTxidIndexByRailgunTxid(railgunTransactionsWithTxids[0].railgunTxid),
+      ).to.deep.equal(0);
       expect(
-        await merkletree.getTreeAndIndexByRailgunTxid(railgunTransactionsWithTxids[1].hash),
-      ).to.deep.equal({ tree: 0, index: 1 });
+        await merkletree.getTxidIndexByRailgunTxid(railgunTransactionsWithTxids[1].railgunTxid),
+      ).to.deep.equal(1);
 
       // Ensure stored hash is correct
       const railgunTransaction = await merkletree.getRailgunTransaction(0, 0);
-      const hash = getRailgunTransactionID(railgunTransactions[0]);
-      expect(hash).to.equal(
+      const railgunTxid = getRailgunTransactionID(railgunTransactions[0]);
+      expect(railgunTxid).to.equal(
         14287123277508529327750979990773096097618894834009087566098724348137357265894n,
       );
+      const hash = poseidon([railgunTxid, 0n, 0n]);
       expect(railgunTransaction).to.deep.equal({
         graphID: railgunTransactions[0].graphID,
         nullifiers: railgunTransactions[0].nullifiers,
@@ -191,6 +195,10 @@ describe('Railgun Txid Merkletree', () => {
         boundParamsHash: railgunTransactions[0].boundParamsHash,
         blockNumber: railgunTransactions[0].blockNumber,
         hash: nToHex(hash, ByteLength.UINT_256),
+        railgunTxid: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+        utxoTreeIn: 0,
+        utxoTreeOut: 0,
+        utxoBatchStartPositionOut: 0,
       });
 
       expect(
@@ -203,16 +211,18 @@ describe('Railgun Txid Merkletree', () => {
       });
 
       expect(
-        await merkletree.getRailgunTransactionByTxid(
-          '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-        ),
+        await merkletree.getRailgunTransactionByTxid(railgunTransactionsWithTxids[0].railgunTxid),
       ).to.deep.equal({
         graphID: '0x00',
         commitments: ['0x01', '0x02'],
         nullifiers: ['0x03', '0x04'],
         boundParamsHash: '0x05',
         blockNumber: 0,
-        hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+        hash: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+        railgunTxid: railgunTransactionsWithTxids[0].railgunTxid,
+        utxoTreeIn: 0,
+        utxoTreeOut: 0,
+        utxoBatchStartPositionOut: 0,
       });
 
       // Make sure new constructed tree inherits db values
@@ -220,7 +230,7 @@ describe('Railgun Txid Merkletree', () => {
         db,
         chain,
         TXIDVersion.V2_PoseidonMerkle,
-        undefined,
+        0,
       );
       const treeLength2 = await merkletree2.getTreeLength(0);
       expect(treeLength2).to.equal(2);
@@ -232,8 +242,9 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x0103', '0x0104'],
           boundParamsHash: '0x0105',
           blockNumber: 2,
-          utxoTreeIn: undefined,
-          globalStartPositionOut: undefined,
+          utxoTreeIn: 0,
+          utxoTreeOut: 0,
+          utxoBatchStartPositionOut: 4,
         },
         {
           graphID: '0x13',
@@ -241,12 +252,13 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x0213', '0x0214'],
           boundParamsHash: '0x0215',
           blockNumber: 3, // Will be after POI Launch block
-          utxoTreeIn: undefined,
-          globalStartPositionOut: undefined,
+          utxoTreeIn: 0,
+          utxoTreeOut: 0,
+          utxoBatchStartPositionOut: 6,
         },
       ];
       const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map((railgunTransaction2) =>
-        createRailgunTransactionWithID(railgunTransaction2, TXIDVersion.V2_PoseidonMerkle),
+        createRailgunTransactionWithHash(railgunTransaction2, TXIDVersion.V2_PoseidonMerkle),
       );
 
       await merkletree.queueRailgunTransactions(moreRailgunTransactionsWithTxids, undefined);
@@ -255,7 +267,7 @@ describe('Railgun Txid Merkletree', () => {
       if (merkletree.shouldSavePOILaunchSnapshot) {
         // merkleproof with POI Launch snapshot
         const currentMerkletreeData = await merkletree.getRailgunTxidCurrentMerkletreeData(
-          railgunTransactionsWithTxids[0].hash,
+          railgunTransactionsWithTxids[0].railgunTxid,
         );
         expect(currentMerkletreeData).to.deep.equal({
           railgunTransaction: {
@@ -264,13 +276,17 @@ describe('Railgun Txid Merkletree', () => {
             nullifiers: ['0x03', '0x04'],
             boundParamsHash: '0x05',
             blockNumber: 0,
-            hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+            hash: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+            railgunTxid: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+            utxoTreeIn: 0,
+            utxoTreeOut: 0,
+            utxoBatchStartPositionOut: 0,
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {
             elements: [
-              '024357abc258ce12110ea30877928463b0308ffe740e005558ef87f152cd0426',
-              '1c058e29d7c82743e1c45ed609838c456a485dd5396eda8932867510b4a8b821',
+              '12d0d49bb0803a2dea71223db3c45487909ef49600de461f9d8cc3a0daec012c',
+              '269093692b0655851303944dc9d416c78734119eb584b240f7176c98f929fd9e',
               '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
               '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
               '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
@@ -287,8 +303,8 @@ describe('Railgun Txid Merkletree', () => {
               '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
             ],
             indices: '0000000000000000000000000000000000000000000000000000000000000000',
-            leaf: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-            root: '1e06edcab28e43ef5cf7eaf9a798d1ef44073701585a4d2c709e74e7468a1810',
+            leaf: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+            root: '2f4f37ea40b00388e1415d7b4f762ef388024ea74cfc61845a2d44b2c82dd7db',
           },
         });
 
@@ -303,7 +319,7 @@ describe('Railgun Txid Merkletree', () => {
       } else {
         // merkleproof without POI Launch snapshot
         const currentMerkletreeData = await merkletree.getRailgunTxidCurrentMerkletreeData(
-          railgunTransactionsWithTxids[0].hash,
+          railgunTransactionsWithTxids[0].railgunTxid,
         );
 
         expect(currentMerkletreeData).to.deep.equal({
@@ -313,13 +329,17 @@ describe('Railgun Txid Merkletree', () => {
             nullifiers: ['0x03', '0x04'],
             boundParamsHash: '0x05',
             blockNumber: 0,
-            hash: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+            hash: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+            railgunTxid: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
+            utxoTreeIn: 0,
+            utxoTreeOut: 0,
+            utxoBatchStartPositionOut: 0,
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {
             elements: [
-              '024357abc258ce12110ea30877928463b0308ffe740e005558ef87f152cd0426',
-              '2acf0a0ecba043251913a90ea5f3d661d928d9290c077ad24c19ccb671772f0d',
+              '12d0d49bb0803a2dea71223db3c45487909ef49600de461f9d8cc3a0daec012c',
+              '2097c0eb4015e8fea6dc5062a2e4979cd44852350b4f935387ea027737df91a4',
               '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
               '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
               '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
@@ -336,8 +356,8 @@ describe('Railgun Txid Merkletree', () => {
               '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
             ],
             indices: '0000000000000000000000000000000000000000000000000000000000000000',
-            leaf: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-            root: '0cab5647420c4befab5bca435c46872a60987cfd18b4066ce37ebb1ef518e007',
+            leaf: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+            root: '0a69c8788735b4a86b8bbe292ad5db83e8830fc27c9ed9dc216dd606cef347fe',
           },
         });
 
@@ -364,26 +384,26 @@ describe('Railgun Txid Merkletree', () => {
 
       // Current root (4 elements)
       expect(await merkletree.getRoot(0)).to.equal(
-        '0cab5647420c4befab5bca435c46872a60987cfd18b4066ce37ebb1ef518e007',
+        '0a69c8788735b4a86b8bbe292ad5db83e8830fc27c9ed9dc216dd606cef347fe',
       );
 
       // Rebuild entire tree and check that merkleroot is the same
       await merkletree.rebuildAndWriteTree(0);
       expect(await merkletree.getRoot(0)).to.equal(
-        '0cab5647420c4befab5bca435c46872a60987cfd18b4066ce37ebb1ef518e007',
+        '0a69c8788735b4a86b8bbe292ad5db83e8830fc27c9ed9dc216dd606cef347fe',
       );
 
       await merkletree.clearLeavesAfterTxidIndex(0);
 
       // Current tree root (1 element)
       expect(await merkletree.getRoot(0)).to.equal(
-        '0748198251a6d8d8958ddb5f0d79ecdb1034f3073bb98378c262d130f7507bf3',
+        '2672380de5dc3f4078e8d5a5984fcd95e3e279be354665ba889a472b8cd27966',
       );
 
       if (merkletree.shouldStoreMerkleroots) {
         // DB historical roots
         expect(await merkletree.getHistoricalMerklerootForTxidIndex(0)).to.equal(
-          '0748198251a6d8d8958ddb5f0d79ecdb1034f3073bb98378c262d130f7507bf3',
+          '2672380de5dc3f4078e8d5a5984fcd95e3e279be354665ba889a472b8cd27966',
         );
         expect(await merkletree.getHistoricalMerklerootForTxidIndex(1)).to.equal(undefined);
         expect(await merkletree.getHistoricalMerklerootForTxidIndex(2)).to.equal(undefined);

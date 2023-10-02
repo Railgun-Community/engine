@@ -9,6 +9,7 @@ import { AbstractWallet } from './abstract-wallet';
 import { mnemonicToSeed } from '../key-derivation/bip39';
 import { PublicInputsRailgun } from '../models';
 import { signEDDSA } from '../utils/keys-utils';
+import { Prover } from '../prover/prover';
 
 class RailgunWallet extends AbstractWallet {
   /**
@@ -70,12 +71,20 @@ class RailgunWallet extends AbstractWallet {
     mnemonic: string,
     index: number,
     creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
   ) {
     const nodes = deriveNodes(mnemonic, index);
 
     const viewingKeyPair = await nodes.viewing.getViewingKeyPair();
     const spendingPublicKey = nodes.spending.getSpendingKeyPair().pubkey;
-    return new RailgunWallet(id, db, viewingKeyPair, spendingPublicKey, creationBlockNumbers);
+    return new RailgunWallet(
+      id,
+      db,
+      viewingKeyPair,
+      spendingPublicKey,
+      creationBlockNumbers,
+      prover,
+    );
   }
 
   /**
@@ -92,13 +101,14 @@ class RailgunWallet extends AbstractWallet {
     mnemonic: string,
     index: number,
     creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
   ): Promise<RailgunWallet> {
     const id = RailgunWallet.generateID(mnemonic, index);
 
     // Write encrypted mnemonic to DB
     await AbstractWallet.write(db, id, encryptionKey, { mnemonic, index, creationBlockNumbers });
 
-    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers);
+    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers, prover);
   }
 
   /**
@@ -112,6 +122,7 @@ class RailgunWallet extends AbstractWallet {
     db: Database,
     encryptionKey: string,
     id: string,
+    prover: Prover,
   ): Promise<RailgunWallet> {
     // Get encrypted mnemonic and index from DB
     const { mnemonic, index, creationBlockNumbers } = (await AbstractWallet.read(
@@ -123,7 +134,7 @@ class RailgunWallet extends AbstractWallet {
       throw new Error('Incorrect wallet type.');
     }
 
-    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers);
+    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers, prover);
   }
 }
 

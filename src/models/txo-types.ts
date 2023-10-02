@@ -10,8 +10,6 @@ export type TXO = {
   spendtxid: string | false;
   nullifier: string;
   note: TransactNote;
-  // Railgun TXID that created this TXO
-  railgunTxid: Optional<string>;
   // POIs that created this TXO
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;

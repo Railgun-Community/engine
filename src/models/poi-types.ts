@@ -24,7 +24,7 @@ export type BlindedCommitmentData = {
 export type POIEngineProofInputs = {
   // --- Public inputs ---
   anyRailgunTxidMerklerootAfterTransaction: string;
-  // poiMerkleroots: string[]; - see POIEngineProofInputsWithListPOIData
+  poiMerkleroots: string[];
   // blindedCommitmentsOut: string[] - output of circuit
 
   // --- Private inputs ---
@@ -43,30 +43,22 @@ export type POIEngineProofInputs = {
   randomsIn: string[];
   valuesIn: bigint[];
   utxoPositionsIn: number[];
-  utxoTreesIn: number;
-  blindedCommitmentsIn: string[];
-  creationTxidsIn: string[]; // For shields, this is `bitwiseMerge(tree, position)`
+  utxoTreeIn: number;
 
   // Commitment notes data
   npksOut: bigint[];
   valuesOut: bigint[];
+  utxoTreeOut: number;
+  utxoBatchStartPositionOut: number;
+
+  // Unshield data
+  railgunTxidIfHasUnshield: bigint;
 
   // Railgun txid tree
   railgunTxidMerkleProofIndices: string;
   railgunTxidMerkleProofPathElements: string[];
 
-  // POI tree - see POIEngineProofInputsWithListPOIData
-  // poiInMerkleProofIndices: string[];
-  // poiInMerkleProofPathElements: string[][];
-};
-
-export type POIEngineProofInputsWithListPOIData = POIEngineProofInputs & {
-  // --- Public inputs ---
-  poiMerkleroots: string[];
-
-  // --- Private inputs ---
-
-  // POI tree - added by Wallet SDK
+  // POI tree
   poiInMerkleProofIndices: string[];
   poiInMerkleProofPathElements: string[][];
 };

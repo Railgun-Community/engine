@@ -70,7 +70,6 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     position: MOCK_POSITION,
     tree: 0,
     spendtxid: false,
-    railgunTxid: undefined,
     poisPerList: undefined,
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,

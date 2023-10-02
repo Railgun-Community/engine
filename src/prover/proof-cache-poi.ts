@@ -5,9 +5,9 @@ import { stringifySafe } from '../utils';
 export class ProofCachePOI {
   private static cache: Map<string, Proof> = new Map();
 
-  static get(blindedCommitmentsIn: string[], blindedCommitmentsOut: string[]): Optional<Proof> {
+  static get(listKey: string, blindedCommitmentsOut: string[]): Optional<Proof> {
     try {
-      const stringified = stringifySafe({ blindedCommitmentsIn, blindedCommitmentsOut });
+      const stringified = stringifySafe([listKey, ...blindedCommitmentsOut]);
       return ProofCachePOI.cache.get(stringified);
     } catch (err) {
       if (err instanceof Error) {
@@ -17,14 +17,18 @@ export class ProofCachePOI {
     }
   }
 
-  static store(blindedCommitmentsIn: string[], blindedCommitmentsOut: string[], proof: Proof) {
+  static store(listKey: string, blindedCommitmentsOut: string[], proof: Proof) {
     try {
-      const stringified = stringifySafe({ blindedCommitmentsIn, blindedCommitmentsOut });
+      const stringified = stringifySafe([listKey, ...blindedCommitmentsOut]);
       ProofCachePOI.cache.set(stringified, proof);
     } catch (err) {
       if (err instanceof Error) {
         EngineDebug.error(err);
       }
     }
+  }
+
+  static clear_TEST_ONLY() {
+    ProofCachePOI.cache.clear();
   }
 }

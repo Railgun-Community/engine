@@ -11,7 +11,7 @@ import {
 import { Merkletree } from './merkletree';
 import {
   TXIDMerkletreeData,
-  RailgunTransactionWithTxid,
+  RailgunTransactionWithHash,
   MerkleProof,
 } from '../models/formatted-types';
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify, nToHex } from '../utils/bytes';
@@ -23,13 +23,13 @@ type POILaunchSnapshotNode = {
   index: number;
 };
 
-export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
+export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
   // DO NOT MODIFY
   protected merkletreePrefix = 'railgun-transaction-ids';
 
   protected merkletreeType = 'Railgun Txid';
 
-  private poiLaunchBlock: Optional<number>;
+  poiLaunchBlock: number;
 
   shouldStoreMerkleroots: boolean;
 
@@ -41,7 +41,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
     db: Database,
     chain: Chain,
     txidVersion: TXIDVersion,
-    poiLaunchBlock: Optional<number>,
+    poiLaunchBlock: number,
     merklerootValidator: MerklerootValidator,
     isPOINode: boolean,
   ) {
@@ -64,7 +64,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
     db: Database,
     chain: Chain,
     txidVersion: TXIDVersion,
-    poiLaunchBlock: Optional<number>,
+    poiLaunchBlock: number,
     merklerootValidator: MerklerootValidator,
   ): Promise<TXIDMerkletree> {
     const isPOINode = false;
@@ -88,7 +88,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
     db: Database,
     chain: Chain,
     txidVersion: TXIDVersion,
-    poiLaunchBlock: Optional<number>,
+    poiLaunchBlock: number,
   ): Promise<TXIDMerkletree> {
     // Assume all merkleroots are valid.
     const merklerootValidator = async () => true;
@@ -114,7 +114,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   async getRailgunTransaction(
     tree: number,
     index: number,
-  ): Promise<Optional<RailgunTransactionWithTxid>> {
+  ): Promise<Optional<RailgunTransactionWithHash>> {
     try {
       return await this.getData(tree, index);
     } catch (err) {
@@ -123,11 +123,11 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   }
 
   async getRailgunTxidCurrentMerkletreeData(railgunTxid: string): Promise<TXIDMerkletreeData> {
-    const treeAndIndex = await this.getTreeAndIndexByRailgunTxid(railgunTxid);
-    if (!isDefined(treeAndIndex)) {
+    const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
+    if (!isDefined(txidIndex)) {
       throw new Error('tree/index not found');
     }
-    const { tree, index } = treeAndIndex;
+    const { tree, index } = Merkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
     const railgunTransaction = await this.getRailgunTransaction(tree, index);
     if (!isDefined(railgunTransaction)) {
       throw new Error('railgun transaction not found');
@@ -137,7 +137,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
     // (Ie., after POI has launched for this chain).
     const useSnapshot =
       this.shouldSavePOILaunchSnapshot &&
-      isDefined(this.poiLaunchBlock) &&
       railgunTransaction.blockNumber < this.poiLaunchBlock &&
       (await this.hasSavedPOILaunchSnapshot());
 
@@ -227,7 +226,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   }
 
   async queueRailgunTransactions(
-    railgunTransactionsWithTxids: RailgunTransactionWithTxid[],
+    railgunTransactionsWithTxids: RailgunTransactionWithHash[],
     maxTxidIndex: Optional<number>,
   ): Promise<void> {
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
@@ -255,7 +254,11 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
       await this.storeCommitmentsToRailgunTxid(railgunTransactionWithTxid);
 
       // eslint-disable-next-line no-await-in-loop
-      await this.storeRailgunTxidIndexLookup(railgunTransactionWithTxid.hash, nextTree, nextIndex);
+      await this.storeRailgunTxidIndexLookup(
+        railgunTransactionWithTxid.railgunTxid,
+        nextTree,
+        nextIndex,
+      );
     }
   }
 
@@ -274,7 +277,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   }
 
   private async savePOILaunchSnapshotIfNecessary(
-    railgunTransactionWithTxid: RailgunTransactionWithTxid,
+    railgunTransactionWithTxid: RailgunTransactionWithHash,
     latestLeafIndex: number,
   ): Promise<void> {
     if (!this.shouldSavePOILaunchSnapshot) {
@@ -436,11 +439,14 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
   }
 
   private async storeCommitmentsToRailgunTxid(
-    railgunTransaction: RailgunTransactionWithTxid,
+    railgunTransaction: RailgunTransactionWithHash,
   ): Promise<void> {
     await Promise.all(
       railgunTransaction.commitments.map(async (commitment) => {
-        await this.db.put(this.getCommitmentLookupDBPath(commitment), railgunTransaction.hash);
+        await this.db.put(
+          this.getCommitmentLookupDBPath(commitment),
+          railgunTransaction.railgunTxid,
+        );
       }),
     );
   }
@@ -464,29 +470,27 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
     );
   }
 
-  async getTreeAndIndexByRailgunTxid(
-    railgunTxid: string,
-  ): Promise<Optional<{ tree: number; index: number }>> {
-    if (this.txidVersion !== TXIDVersion.V2_PoseidonMerkle) {
-      throw new Error(
-        'Cannot look up railgun transaction by txid, for non-V2 txid version. Hash will be different.',
-      );
+  async getTxidIndexByRailgunTxid(railgunTxid: string): Promise<Optional<number>> {
+    try {
+      return Number(await this.db.get(this.getRailgunTxidLookupDBPath(railgunTxid), 'utf8'));
+    } catch (err) {
+      return undefined;
     }
-
-    const hash = railgunTxid;
-    return this.getTreeAndIndexByHash(hash);
   }
 
   async getRailgunTransactionByTxid(
     railgunTxid: string,
-  ): Promise<Optional<RailgunTransactionWithTxid>> {
-    if (this.txidVersion !== TXIDVersion.V2_PoseidonMerkle) {
-      throw new Error(
-        'Cannot look up railgun transaction by txid, for non-V2 txid version. Hash will be different.',
-      );
+  ): Promise<Optional<RailgunTransactionWithHash>> {
+    try {
+      const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
+      if (!isDefined(txidIndex)) {
+        return undefined;
+      }
+      const { tree, index } = TXIDMerkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
+      return this.getData(tree, index);
+    } catch (err) {
+      return undefined;
     }
-    const hash = railgunTxid;
-    return this.getDataByHash(hash);
   }
 
   private async storeRailgunTxidIndexLookup(
@@ -495,7 +499,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithTxid> {
     index: number,
   ): Promise<void> {
     const txidIndex = TXIDMerkletree.getGlobalPosition(tree, index);
-    await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), txidIndex, 'utf8');
+    await this.db.put(this.getRailgunTxidLookupDBPath(railgunTxid), String(txidIndex), 'utf8');
   }
 
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {

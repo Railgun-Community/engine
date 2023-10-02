@@ -7,6 +7,7 @@ import { hexStringToBytes } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
 import { getPublicViewingKey } from '../utils/keys-utils';
 import { AbstractWallet } from './abstract-wallet';
+import { Prover } from '../prover/prover';
 
 class ViewOnlyWallet extends AbstractWallet {
   // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-unused-vars
@@ -35,13 +36,21 @@ class ViewOnlyWallet extends AbstractWallet {
     db: Database,
     shareableViewingKey: string,
     creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
   ) {
     const { viewingPrivateKey, spendingPublicKey } =
       AbstractWallet.getKeysFromShareableViewingKey(shareableViewingKey);
     const viewingKeyPair: ViewingKeyPair = await ViewOnlyWallet.getViewingKeyPair(
       viewingPrivateKey,
     );
-    return new ViewOnlyWallet(id, db, viewingKeyPair, spendingPublicKey, creationBlockNumbers);
+    return new ViewOnlyWallet(
+      id,
+      db,
+      viewingKeyPair,
+      spendingPublicKey,
+      creationBlockNumbers,
+      prover,
+    );
   }
 
   /**
@@ -56,6 +65,7 @@ class ViewOnlyWallet extends AbstractWallet {
     encryptionKey: string,
     shareableViewingKey: string,
     creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
   ): Promise<AbstractWallet> {
     const id = ViewOnlyWallet.generateID(shareableViewingKey);
 
@@ -65,7 +75,7 @@ class ViewOnlyWallet extends AbstractWallet {
       creationBlockNumbers,
     });
 
-    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers);
+    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
   }
 
   /**
@@ -79,6 +89,7 @@ class ViewOnlyWallet extends AbstractWallet {
     db: Database,
     encryptionKey: string,
     id: string,
+    prover: Prover,
   ): Promise<AbstractWallet> {
     // Get encrypted shareableViewingKey from DB
     const { shareableViewingKey, creationBlockNumbers } = (await AbstractWallet.read(
@@ -92,7 +103,7 @@ class ViewOnlyWallet extends AbstractWallet {
       );
     }
 
-    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers);
+    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
   }
 }
 

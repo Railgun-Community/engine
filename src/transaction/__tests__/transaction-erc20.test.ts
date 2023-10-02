@@ -97,6 +97,7 @@ describe('Transaction/ERC20', function test() {
       testMnemonic,
       0,
       undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
     );
     WalletInfo.setWalletSource('erc20 Wallet');
     ethersWallet = getEthersWallet(testMnemonic);
@@ -234,6 +235,7 @@ describe('Transaction/ERC20', function test() {
       testMnemonic,
       1,
       undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
     );
 
     const sender = wallet.getViewingKeyPair();
@@ -361,6 +363,7 @@ describe('Transaction/ERC20', function test() {
       testMnemonic,
       1,
       undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
     );
 
     const sender = wallet.getViewingKeyPair();
@@ -480,6 +483,7 @@ describe('Transaction/ERC20', function test() {
       testMnemonic,
       1,
       undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
     );
 
     const sender = wallet.getViewingKeyPair();
