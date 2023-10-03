@@ -220,12 +220,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
 
-  protected getGlobalHashLookupDBPath(hash: string): string[] {
-    const globalHashLookupPrefix = fromUTF8String('global-hash-lookup');
-    const dbPath = [...this.getMerkletreeDBPrefix(), globalHashLookupPrefix, hash];
-    return dbPath.map((el) => formatToByteLength(el, ByteLength.UINT_256));
-  }
-
   async updateData(tree: number, index: number, data: T): Promise<void> {
     try {
       this.lockUpdates = true;
@@ -254,20 +248,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
         throw err;
       }
       throw new Error(err.message);
-    }
-  }
-
-  protected async getTreeAndIndexByHash(
-    hash: string,
-  ): Promise<Optional<{ tree: number; index: number }>> {
-    try {
-      const globalPosition = (await this.db.get(
-        this.getGlobalHashLookupDBPath(hash),
-        'utf8',
-      )) as string;
-      return Merkletree.getTreeAndIndexFromGlobalPosition(Number(globalPosition));
-    } catch (err) {
-      return undefined;
     }
   }
 
@@ -461,11 +441,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
         type: 'put',
         key: this.getDataDBPath(treeIndex, index).join(':'),
         value: data,
-      });
-      globalHashLookupBatch.push({
-        type: 'put',
-        key: this.getGlobalHashLookupDBPath(data.hash).join(':'),
-        value: String(Merkletree.getGlobalPosition(treeIndex, index)),
       });
     });
 

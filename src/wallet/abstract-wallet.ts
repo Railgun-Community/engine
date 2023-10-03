@@ -1602,35 +1602,7 @@ abstract class AbstractWallet extends EventEmitter {
               AbstractWallet.compareUnshieldEvents(existingUnshieldEvent, event),
             ) == null,
         );
-
-        await Promise.all(
-          filteredUnshieldEventsForNullifier.map(async (filteredUnshieldEvent) => {
-            const unshieldEvent = filteredUnshieldEvent;
-
-            // TODO: Remove
-            // // Add railgunTxid and blindedCommitment, if they don't already exist.
-            // if (!isDefined(unshieldEvent.railgunTxid)) {
-            //   const commitmentHash = nToHex(
-            //     getUnshieldEventNoteHash(unshieldEvent),
-            //     ByteLength.UINT_256,
-            //     true,
-            //   );
-
-            //   const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
-            //   const commitmentMap = await txidMerkletree.getRailgunTxidsForCommitments_NEEDS_FIX([
-            //     commitmentHash,
-            //   ]);
-            //   const railgunTxid = commitmentMap[commitmentHash];
-
-            //   if (isDefined(railgunTxid)) {
-            //     unshieldEvent.railgunTxid = railgunTxid;
-            //     await merkletree.updateUnshieldEvent(unshieldEvent);
-            //   }
-            // }
-
-            unshieldEvents.push(unshieldEvent);
-          }),
-        );
+        unshieldEvents.push(...filteredUnshieldEventsForNullifier);
       }),
     );
 

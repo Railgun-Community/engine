@@ -44,9 +44,9 @@ export const ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM: {
 /**
  * Increment to issue fresh utxo merkletree rescan on next launch.
  */
-export const CURRENT_UTXO_MERKLETREE_HISTORY_VERSION = 7;
+export const CURRENT_UTXO_MERKLETREE_HISTORY_VERSION = 8;
 
 /**
  * Increment to issue fresh txid merkletree rescan on next launch.
  */
-export const CURRENT_TXID_MERKLETREE_HISTORY_VERSION = 6;
+export const CURRENT_TXID_MERKLETREE_HISTORY_VERSION = 7;

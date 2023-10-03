@@ -53,7 +53,6 @@ import {
   TXIDVersion,
 } from './models/poi-types';
 import { getUnshieldTokenHash } from './note/note-util';
-import { getGlobalTreePosition } from './poi/global-tree-position';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -868,6 +867,10 @@ class RailgunEngine extends EventEmitter {
    * @param forceRescanDevOnly - can corrupt an existing scan, so only recommended in extreme cases (DEV only)
    */
   async fullRescanUTXOMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
+    // Must reset txid merkletree which is mapped to UTXO commitments.
+    // TODO: Remove after V3.
+    await this.fullResetTXIDMerkletrees(chain);
+
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!this.hasUTXOMerkletree(txidVersion, chain)) {
