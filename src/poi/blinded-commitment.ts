@@ -1,8 +1,12 @@
 import { poseidon } from 'circomlibjs';
-import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 
 const formatHash = (hash: bigint): string => {
   return `0x${nToHex(hash, ByteLength.UINT_256)}`;
+};
+
+export const getBlindedCommitmentForUnshield = (railgunTxid: string) => {
+  return formatToByteLength(railgunTxid, ByteLength.UINT_256, true);
 };
 
 export const getBlindedCommitmentForShieldOrTransact = (

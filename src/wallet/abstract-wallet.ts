@@ -86,7 +86,10 @@ import { PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import { isSentCommitment, isSentCommitmentType } from '../utils/commitment';
 import { POI } from '../poi/poi';
-import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitment';
+import {
+  getBlindedCommitmentForShieldOrTransact,
+  getBlindedCommitmentForUnshield,
+} from '../poi/blinded-commitment';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import {
   ACTIVE_TXID_VERSIONS,
@@ -1076,7 +1079,7 @@ abstract class AbstractWallet extends EventEmitter {
       })),
       ...unshieldEventsNeedPOIs.map((unshieldEvent) => ({
         type: BlindedCommitmentType.Transact,
-        blindedCommitment: unshieldEvent.railgunTxid as string,
+        blindedCommitment: getBlindedCommitmentForUnshield(unshieldEvent.railgunTxid as string),
       })),
     ];
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
@@ -1110,7 +1113,8 @@ abstract class AbstractWallet extends EventEmitter {
       if (!isDefined(unshieldEvent.railgunTxid)) {
         continue;
       }
-      const poisPerList = blindedCommitmentToPOIList[unshieldEvent.railgunTxid];
+      const blindedCommitment = getBlindedCommitmentForUnshield(unshieldEvent.railgunTxid);
+      const poisPerList = blindedCommitmentToPOIList[blindedCommitment];
       if (!isDefined(poisPerList)) {
         continue;
       }
@@ -1244,7 +1248,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Use 0x00 if there is no unshield.
       const railgunTxidIfHasUnshield = hasUnshield
-        ? formatToByteLength(railgunTxid, ByteLength.UINT_256, true)
+        ? getBlindedCommitmentForUnshield(railgunTxid)
         : '0x00';
 
       if (!sentCommitmentsForRailgunTxid.length && !unshieldEventsForRailgunTxid.length) {

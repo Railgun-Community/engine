@@ -1,6 +1,6 @@
 import { Merkletree } from '../merkletree/merkletree';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
-import { UnshieldStoredEvent } from '../models';
+import { POIsPerList, UnshieldStoredEvent } from '../models';
 import {
   SentCommitment,
   TXO,
