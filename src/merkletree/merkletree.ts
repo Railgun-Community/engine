@@ -271,24 +271,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
-  protected async getDataByHash(hash: string): Promise<Optional<T>> {
-    try {
-      const globalPosition = await this.getGlobalPositionByHash(hash);
-      const { tree, index } = Merkletree.getTreeAndIndexFromGlobalPosition(Number(globalPosition));
-      return await this.getData(tree, index);
-    } catch (err) {
-      return undefined;
-    }
-  }
-
-  protected async getGlobalPositionByHash(hash: string): Promise<number> {
-    const globalPosition = (await this.db.get(
-      this.getGlobalHashLookupDBPath(hash),
-      'utf8',
-    )) as string;
-    return Number(globalPosition);
-  }
-
   // eslint-disable-next-line class-methods-use-this
   sortMerkletreeDataByHash(array: T[]): T[] {
     return array.sort((a, b) => (a.hash > b.hash ? 1 : -1));

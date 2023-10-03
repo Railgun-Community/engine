@@ -13,13 +13,11 @@ import { Chain, EngineDebugger } from './models/engine-types';
 import {
   Commitment,
   CommitmentType,
-  LegacyEncryptedCommitment,
   LegacyGeneratedCommitment,
   Nullifier,
   RailgunTransaction,
   RailgunTransactionWithHash,
   ShieldCommitment,
-  TransactCommitment,
 } from './models/formatted-types';
 import {
   CommitmentEvent,
@@ -54,6 +52,8 @@ import {
   ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS,
   TXIDVersion,
 } from './models/poi-types';
+import { getUnshieldTokenHash } from './note/note-util';
+import { getGlobalTreePosition } from './poi/global-tree-position';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -204,23 +204,6 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-param-reassign
       leaf.txid = formatToByteLength(leaf.txid, ByteLength.UINT_256, false);
     });
-
-    // Get railgun txid per sent commitment
-    // TODO: Remove after V3
-    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-    const sentCommitmentHashes = leaves
-      .filter((leaf) => isSentCommitment(leaf))
-      .map((leaf) => leaf.hash);
-    if (!this.isPOINode && sentCommitmentHashes.length) {
-      const commitmentsToRailgunTxids = await txidMerkletree.getRailgunTxidsForCommitments(
-        leaves.map((leaf) => leaf.hash),
-      );
-      // eslint-disable-next-line no-restricted-syntax
-      for (const leaf of leaves) {
-        const railgunTxid = commitmentsToRailgunTxids[leaf.hash];
-        (leaf as TransactCommitment | LegacyEncryptedCommitment).railgunTxid = railgunTxid;
-      }
-    }
 
     // Queue leaves to merkle tree
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
@@ -724,43 +707,76 @@ class RailgunEngine extends EventEmitter {
       (railgunTransaction) => createRailgunTransactionWithHash(railgunTransaction, txidVersion),
     );
 
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
+
     // TODO: Remove after V3
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransactionWithTxid of railgunTransactionsWithTxids) {
-      // eslint-disable-next-line no-await-in-loop
-      await this.updateCommitmentsForRailgunTransaction(
-        txidVersion,
-        chain,
-        railgunTransactionWithTxid,
-      );
-    }
+      const {
+        commitments,
+        hasUnshield,
+        transactionHash,
+        tokenHash,
+        railgunTxid,
+        utxoTreeOut: tree,
+        utxoBatchStartPositionOut,
+      } = railgunTransactionWithTxid;
 
-    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-    await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);
-    await txidMerkletree.updateTreesFromWriteQueue();
-  }
+      // Update existing commitments/unshield events.
+      // If any commitments are missing, wait for UTXO tree to sync first.
 
-  async updateCommitmentsForRailgunTransaction(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    railgunTransaction: RailgunTransactionWithHash,
-  ): Promise<void> {
-    const { commitments: commitmentHashes, railgunTxid } = railgunTransaction;
+      const unshieldCommitment: Optional<string> = hasUnshield
+        ? commitments[commitments.length - 1]
+        : undefined;
+      const standardCommitments: string[] = hasUnshield ? commitments.slice(0, -1) : commitments;
 
-    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
+      let missingAnyCommitments = false;
 
-    const hashesToCommitment = await utxoMerkletree.getCommitmentsForHashes(commitmentHashes);
-
-    // eslint-disable-next-line no-restricted-syntax
-    for (const commitmentHash of commitmentHashes) {
-      const commitment = hashesToCommitment[commitmentHash];
-      if (commitment && isSentCommitment(commitment) && !isDefined(commitment.railgunTxid)) {
-        commitment.railgunTxid = railgunTxid;
-
+      if (isDefined(unshieldCommitment)) {
         // eslint-disable-next-line no-await-in-loop
-        await utxoMerkletree.updateData(commitment.utxoTree, commitment.utxoIndex, commitment);
+        const unshieldEventsForTxid = await utxoMerkletree.getUnshieldEvents(transactionHash);
+        const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
+          const unshieldTokenHash = getUnshieldTokenHash(unshieldEvent);
+          return unshieldTokenHash === tokenHash;
+        });
+        if (matchingUnshieldEvent) {
+          if (matchingUnshieldEvent.railgunTxid !== railgunTxid) {
+            matchingUnshieldEvent.railgunTxid = railgunTxid;
+            // eslint-disable-next-line no-await-in-loop
+            await utxoMerkletree.updateUnshieldEvent(matchingUnshieldEvent);
+          }
+        } else {
+          missingAnyCommitments = true;
+        }
       }
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (let i = 0; i < standardCommitments.length; i += 1) {
+        const position = utxoBatchStartPositionOut + i;
+        // eslint-disable-next-line no-await-in-loop
+        const commitment = await utxoMerkletree.getCommitmentSafe(tree, position);
+        if (isDefined(commitment)) {
+          if (isSentCommitment(commitment) && commitment.railgunTxid !== railgunTxid) {
+            commitment.railgunTxid = railgunTxid;
+            // eslint-disable-next-line no-await-in-loop
+            await utxoMerkletree.updateData(tree, position, commitment);
+          }
+        } else {
+          missingAnyCommitments = true;
+          break;
+        }
+      }
+
+      if (missingAnyCommitments) {
+        break;
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);
     }
+
+    await txidMerkletree.updateTreesFromWriteQueue();
   }
 
   async validateHistoricalRailgunTxidMerkleroot(

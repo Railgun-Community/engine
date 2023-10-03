@@ -431,23 +431,6 @@ describe('UTXO Merkletree', () => {
       utxoTree: 0,
       utxoIndex: 0,
     });
-
-    expect(await merkletree.getCommitmentsForHashes(['0x04', '0x1111111'])).to.deep.equal({
-      '0x04': {
-        commitmentType: CommitmentType.LegacyGeneratedCommitment,
-        hash: '04',
-        txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
-        preImage: {
-          npk: '00',
-          value: '02',
-          token: { tokenAddress: '0x03', tokenType: 0, tokenSubID: TOKEN_SUB_ID_NULL },
-        },
-        encryptedRandom: ['01', '01'],
-        blockNumber: 0,
-        utxoTree: 0,
-        utxoIndex: 0,
-      },
-    });
   }).timeout(1000);
 
   it('Should generate and validate merkle proofs', async () => {

@@ -205,18 +205,22 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     };
   }
 
-  // TODO: Remove after V3
-  async getRailgunTxidsForCommitments(
-    commitments: string[],
-  ): Promise<{ [commitment: string]: Optional<string> }> {
-    const commitmentToTxid: { [commitment: string]: Optional<string> } = {};
-    await Promise.all(
-      commitments.map(async (commitment) => {
-        const railgunTxid = await this.getRailgunTxidByCommitment(commitment);
-        commitmentToTxid[commitment] = railgunTxid;
-      }),
-    );
-    return commitmentToTxid;
+  async getDataByHash(hash: string): Promise<Optional<RailgunTransactionWithHash>> {
+    try {
+      const globalPosition = await this.getGlobalPositionByHash(hash);
+      const { tree, index } = Merkletree.getTreeAndIndexFromGlobalPosition(Number(globalPosition));
+      return await this.getData(tree, index);
+    } catch (err) {
+      return undefined;
+    }
+  }
+
+  async getGlobalPositionByHash(hash: string): Promise<number> {
+    const globalPosition = (await this.db.get(
+      this.getGlobalHashLookupDBPath(hash),
+      'utf8',
+    )) as string;
+    return Number(globalPosition);
   }
 
   async getLatestGraphID(): Promise<Optional<string>> {
@@ -452,7 +456,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     );
   }
 
-  private async getRailgunTxidByCommitment(commitment: string): Promise<Optional<string>> {
+  private async getRailgunTxidByCommitment_NEEDS_FIX(
+    commitment: string,
+  ): Promise<Optional<string>> {
     try {
       const railgunTxid = (await this.db.get(this.getCommitmentLookupDBPath(commitment))) as string;
       return railgunTxid;

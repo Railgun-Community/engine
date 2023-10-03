@@ -11,13 +11,14 @@ import { MerkleProof } from '../../models/formatted-types';
 import { TXIDVersion } from '../../models/poi-types';
 import { TXIDMerkletree } from '../../merkletree/txid-merkletree';
 import { Database } from '../../database/database';
-import { ShieldNote, TransactNote } from '../../note';
+import { ShieldNote, TransactNote, getTokenDataHashERC20 } from '../../note';
 import { ByteLength, hexToBigInt, nToHex } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
 import { getBlindedCommitmentForShieldOrTransact } from '../../poi/blinded-commitment';
 import { PublicInputsPOI } from '../../models';
 import { ProofCachePOI } from '../proof-cache-poi';
+import { config } from '../../test/config.test';
 
 const chain: Chain = {
   type: 0,
@@ -121,6 +122,9 @@ describe('Prover', () => {
         boundParamsHash: testVector.boundParamsHash,
         commitments: testVector.commitmentsOut,
         nullifiers: testVector.nullifiers,
+        tokenHash: getTokenDataHashERC20(config.contracts.rail),
+        transactionHash: '0x00',
+        hasUnshield: true,
         blockNumber: 0,
         utxoTreeIn: 0,
         utxoTreeOut: 0,

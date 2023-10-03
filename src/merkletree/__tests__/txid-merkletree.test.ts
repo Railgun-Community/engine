@@ -13,6 +13,8 @@ import {
 } from '../../transaction/railgun-txid';
 import { ByteLength, nToHex } from '../../utils/bytes';
 import { verifyMerkleProof } from '../merkle-proof';
+import { getTokenDataHashERC20 } from '../../note/note-util';
+import { config } from '../../test/config.test';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -128,6 +130,9 @@ describe('Railgun Txid Merkletree', () => {
           nullifiers: ['0x03', '0x04'],
           boundParamsHash: '0x05',
           blockNumber: 0,
+          tokenHash: getTokenDataHashERC20(config.contracts.rail),
+          transactionHash: '0x00',
+          hasUnshield: true,
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 0,
@@ -137,6 +142,9 @@ describe('Railgun Txid Merkletree', () => {
           commitments: ['0x11', '0x12'],
           nullifiers: ['0x13', '0x14'],
           boundParamsHash: '0x15',
+          tokenHash: getTokenDataHashERC20(config.contracts.rail),
+          transactionHash: '0x00',
+          hasUnshield: true,
           blockNumber: 0,
           utxoTreeIn: 0,
           utxoTreeOut: 0,
@@ -169,10 +177,6 @@ describe('Railgun Txid Merkletree', () => {
         expect(await merkletree.getHistoricalMerkleroot(0, 1)).to.equal(undefined);
       }
 
-      expect(await merkletree.getRailgunTxidsForCommitments(['0x11'])).to.deep.equal({
-        '0x11': railgunTransactionsWithTxids[1].railgunTxid,
-      });
-
       expect(await merkletree.getTreeLength(0)).to.equal(2);
       expect(
         await merkletree.getTxidIndexByRailgunTxid(railgunTransactionsWithTxids[0].railgunTxid),
@@ -195,19 +199,13 @@ describe('Railgun Txid Merkletree', () => {
         boundParamsHash: railgunTransactions[0].boundParamsHash,
         blockNumber: railgunTransactions[0].blockNumber,
         hash: nToHex(hash, ByteLength.UINT_256),
+        hasUnshield: true,
+        tokenHash: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+        transactionHash: '0x00',
         railgunTxid: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
         utxoTreeIn: 0,
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: 0,
-      });
-
-      expect(
-        await merkletree.getRailgunTxidsForCommitments(['0x01', '0x0101', '0x0211', '0x1111111']),
-      ).to.deep.equal({
-        '0x0101': undefined,
-        '0x0211': undefined,
-        '0x01': '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
-        '0x1111111': undefined,
       });
 
       expect(
@@ -219,6 +217,9 @@ describe('Railgun Txid Merkletree', () => {
         boundParamsHash: '0x05',
         blockNumber: 0,
         hash: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+        hasUnshield: true,
+        tokenHash: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+        transactionHash: '0x00',
         railgunTxid: railgunTransactionsWithTxids[0].railgunTxid,
         utxoTreeIn: 0,
         utxoTreeOut: 0,
@@ -241,6 +242,9 @@ describe('Railgun Txid Merkletree', () => {
           commitments: ['0x0101', '0x0102'],
           nullifiers: ['0x0103', '0x0104'],
           boundParamsHash: '0x0105',
+          tokenHash: getTokenDataHashERC20(config.contracts.rail),
+          transactionHash: '0x00',
+          hasUnshield: true,
           blockNumber: 2,
           utxoTreeIn: 0,
           utxoTreeOut: 0,
@@ -251,6 +255,9 @@ describe('Railgun Txid Merkletree', () => {
           commitments: ['0x0211', '0x0212'],
           nullifiers: ['0x0213', '0x0214'],
           boundParamsHash: '0x0215',
+          tokenHash: getTokenDataHashERC20(config.contracts.rail),
+          transactionHash: '0x00',
+          hasUnshield: true,
           blockNumber: 3, // Will be after POI Launch block
           utxoTreeIn: 0,
           utxoTreeOut: 0,
@@ -277,6 +284,9 @@ describe('Railgun Txid Merkletree', () => {
             boundParamsHash: '0x05',
             blockNumber: 0,
             hash: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+            hasUnshield: true,
+            tokenHash: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+            transactionHash: '0x00',
             railgunTxid: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
             utxoTreeIn: 0,
             utxoTreeOut: 0,
@@ -330,6 +340,9 @@ describe('Railgun Txid Merkletree', () => {
             boundParamsHash: '0x05',
             blockNumber: 0,
             hash: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
+            hasUnshield: true,
+            tokenHash: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+            transactionHash: '0x00',
             railgunTxid: '1f9639a75d9aa09f959fb0f347da9a3afcbb09851c5cb398100d1721b5ed4be6',
             utxoTreeIn: 0,
             utxoTreeOut: 0,

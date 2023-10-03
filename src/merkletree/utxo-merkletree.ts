@@ -7,7 +7,7 @@ import {
   InvalidMerklerootDetails,
   MerklerootValidator,
 } from '../models/merkletree-types';
-import { ByteLength, formatToByteLength, hexlify, strip0x } from '../utils/bytes';
+import { ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
@@ -47,19 +47,15 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     return this.getData(tree, index);
   }
 
-  async getCommitmentsForHashes(
-    hashes: string[],
-  ): Promise<{ [hash: string]: Optional<Commitment> }> {
-    const hashToCommitment: { [hash: string]: Optional<Commitment> } = {};
-    await Promise.all(
-      hashes.map(async (hash) => {
-        const data = await this.getDataByHash(strip0x(hash));
-        if (data) {
-          hashToCommitment[hash] = data;
-        }
-      }),
-    );
-    return hashToCommitment;
+  /**
+   * Gets Commitment from UTXO tree
+   */
+  async getCommitmentSafe(tree: number, index: number): Promise<Optional<Commitment>> {
+    try {
+      return await this.getData(tree, index);
+    } catch (err) {
+      return undefined;
+    }
   }
 
   /**

@@ -110,19 +110,26 @@ export const getNoteHash = (address: string, tokenData: TokenData, value: bigint
 };
 
 export const getUnshieldEventNoteHash = (unshieldEvent: UnshieldStoredEvent): bigint => {
-  const tokenData = serializeTokenData(
-    unshieldEvent.tokenAddress,
-    unshieldEvent.tokenType,
-    unshieldEvent.tokenSubID,
-  );
   return getNoteHash(
     unshieldEvent.toAddress,
-    tokenData,
+    getUnshieldTokenData(unshieldEvent),
     BigInt(unshieldEvent.amount) + BigInt(unshieldEvent.fee),
   );
 };
 
-const getTokenDataHashERC20 = (tokenAddress: string): string => {
+export const getUnshieldTokenData = (unshieldEvent: UnshieldStoredEvent): TokenData => {
+  return serializeTokenData(
+    unshieldEvent.tokenAddress,
+    unshieldEvent.tokenType,
+    unshieldEvent.tokenSubID,
+  );
+};
+
+export const getUnshieldTokenHash = (unshieldEvent: UnshieldStoredEvent): string => {
+  return getTokenDataHash(getUnshieldTokenData(unshieldEvent));
+};
+
+export const getTokenDataHashERC20 = (tokenAddress: string): string => {
   return formatToByteLength(hexToBytes(tokenAddress), ByteLength.UINT_256);
 };
 

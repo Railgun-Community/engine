@@ -123,6 +123,7 @@ const shieldTestTokens = async (
 };
 
 const generateAndVerifyPOI = async (
+  shield: ShieldNote,
   transactReceipt: TransactionReceipt,
   transactions: TransactionStruct[],
   expectedProofInputs: POIEngineProofInputs,
@@ -147,6 +148,9 @@ const generateAndVerifyPOI = async (
         commitments: transaction.commitments as string[],
         nullifiers: transaction.nullifiers as string[],
         boundParamsHash: nToHex(hashBoundParams(transactions[0].boundParams), ByteLength.UINT_256),
+        tokenHash: shield.tokenHash,
+        transactionHash: transactReceipt.hash,
+        hasUnshield: true,
         blockNumber,
         utxoTreeIn: 0,
         utxoTreeOut: 0,
@@ -498,6 +502,7 @@ describe('RailgunEngine', function test() {
 
     // Generate POI
     await generateAndVerifyPOI(
+      shield,
       transactReceipt,
       transactions,
       {
@@ -713,6 +718,7 @@ describe('RailgunEngine', function test() {
 
     // Generate POI
     await generateAndVerifyPOI(
+      shield,
       transactReceipt,
       transactions,
       {
