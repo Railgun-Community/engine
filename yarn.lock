@@ -1977,11 +1977,6 @@ crypto-browserify@3.12.0:
     randombytes "^2.0.0"
     randomfill "^1.0.3"
 
-crypto-js@^4.0.0:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/crypto-js/-/crypto-js-4.1.1.tgz#9e485bcf03521041bd85844786b83fb7619736cf"
-  integrity sha512-o2JlM7ydqd3Qk9CA0L4NL6mTzU2sdx96a+oOfPu8Mkl/PK51vSyoi8/rQ8NknZtk44vq15lmhAj9CIAGwgeWKw==
-
 d@1, d@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/d/-/d-1.0.1.tgz#8698095372d58dbee346ffd0c7093f99f8f9eb5a"
@@ -3351,13 +3346,6 @@ he@1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/he/-/he-1.2.0.tgz#84ae65fa7eafb165fddb61566ae14baf05664f0f"
   integrity sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==
-
-hemoji@^0.2.1:
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/hemoji/-/hemoji-0.2.1.tgz#679766bb1dff3bdcc15f8633b2468c5f9044d8df"
-  integrity sha512-JB1fgftoRjIfbLAJy7SYvkLE8oaryr6t6V8vQGYzfjJsBTniU+Bl+d703QczlCRw1C3F8O3wA7/CYsu2c5Smaw==
-  dependencies:
-    crypto-js "^4.0.0"
 
 hmac-drbg@^1.0.1:
   version "1.0.1"

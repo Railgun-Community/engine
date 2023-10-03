@@ -9,7 +9,7 @@ import {
 } from '../models/txo-types';
 import { getUnshieldEventNoteHash } from '../note';
 import { nToHex, ByteLength } from '../utils/bytes';
-import { emojiHashForPOIStatusInfo } from '../utils/hash';
+import { emojiHashForPOIStatusInfo } from '../utils/hash-emoji';
 import { isDefined } from '../utils/is-defined';
 import { POI } from './poi';
 

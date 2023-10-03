@@ -38,3 +38,5 @@ declare type Artifact = {
 // }
 
 declare module 'snarkjs';
+
+declare module 'hash-emoji';

@@ -471,7 +471,7 @@ export class Prover {
     const finalProgressProof = 99;
     progressCallback(initialProgressProof);
 
-    // console.log(stringifySafe(formattedInputs));
+    console.log(stringifySafe(formattedInputs));
 
     const proofData = await this.groth16.fullProvePOI(
       formattedInputs,
