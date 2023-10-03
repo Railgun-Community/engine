@@ -2,7 +2,7 @@
   "anyRailgunTxidMerklerootAfterTransaction": "185cc7d2c8e1c3954ee5421a6589cd05036708ff059b97b9c10e0261ad7d6875",
   "boundParamsHash": "0a4e7bed8287c629fd064665543dc71fdc09b0ab9df7d556f24a1f2f9f018dc7",
   "commitmentsOut": ["0x007aaf0cbee05066820873170e293e44df6766c29da69ac46fd05d4ff2c0a225"],
-  "npksOut": ["1390849295786071768276380950238675083608645509734"],
+  "npksOut": [],
   "nullifiers": ["0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee"],
   "nullifyingKey": "8368299126798249740586535953124199418524409103803955764525436743456763691384",
   "railgunTxidMerkleProofIndices": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -34,9 +34,9 @@
   "utxoPositionsIn": [0],
   "utxoTreeOut": 0,
   "utxoBatchStartPositionOut": 1,
-  "railgunTxidIfHasUnshield": "702109577508614192687157007886308755723992845597739802305604799122078977854",
+  "railgunTxidIfHasUnshield": "0x018d6143a22e09c18ba2a713985bd1e43a095605d5d259d72d96da2cca604f3e",
   "valuesIn": ["109725000000000000000000"],
-  "valuesOut": ["109725000000000000000000"],
+  "valuesOut": [],
   "poiMerkleroots": ["05821c33a316fcf991536a5e744753f5a31c5ef14804df906f746aaad16cb4ac"],
   "poiInMerkleProofIndices": ["0000000000000000000000000000000000000000000000000000000000000000"],
   "poiInMerkleProofPathElements": [
@@ -61,6 +61,6 @@
   ],
 
   "blindedCommitmentsIn": ["0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2"],
-  "blindedCommitmentsOut": ["0x27f34a83697e22f45febe94fd7e66223cd3109736f7cf15a7ab31fdcae73fbcb"],
+  "blindedCommitmentsOut": [],
   "listKey": "abcde"
 }

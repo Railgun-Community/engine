@@ -52,7 +52,7 @@ export type POIEngineProofInputs = {
   utxoBatchStartPositionOut: number;
 
   // Unshield data
-  railgunTxidIfHasUnshield: bigint;
+  railgunTxidIfHasUnshield: string;
 
   // Railgun txid tree
   railgunTxidMerkleProofIndices: string;

@@ -15,10 +15,7 @@ import { ShieldNote, TransactNote } from '../../note';
 import { ByteLength, hexToBigInt, nToHex } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
-import {
-  getBlindedCommitmentForShieldOrTransact,
-  getBlindedCommitmentForUnshield,
-} from '../../poi/blinded-commitment';
+import { getBlindedCommitmentForShieldOrTransact } from '../../poi/blinded-commitment';
 import { PublicInputsPOI } from '../../models';
 import { ProofCachePOI } from '../proof-cache-poi';
 
@@ -59,9 +56,14 @@ describe('Prover', () => {
       testVector.anyRailgunTxidMerklerootAfterTransaction,
       testVector.blindedCommitmentsOut,
       testVector.poiMerkleroots,
+      testVector.railgunTxidIfHasUnshield,
       3,
       3,
     );
+    expect(publicInputs.railgunTxidIfHasUnshield).to.deep.equal(
+      publicInputsCalculated.railgunTxidIfHasUnshield,
+    );
+
     expect(publicInputs).to.deep.equal(publicInputsCalculated);
 
     expect(publicInputs.poiMerkleroots.length).to.equal(3);
@@ -98,6 +100,7 @@ describe('Prover', () => {
       testVector.anyRailgunTxidMerklerootAfterTransaction,
       testVector.blindedCommitmentsOut,
       testVector.poiMerkleroots,
+      testVector.railgunTxidIfHasUnshield,
       13,
       13,
     );
@@ -185,25 +188,5 @@ describe('Prover', () => {
       12151255948031648278500231754672666576376002857793985290167262750766640136930n,
     );
     expect(blindedCommitmentForShield).to.equal(hexToBigInt(testVector.blindedCommitmentsIn[0]));
-
-    // Verify transact note details
-    const unshieldCommitment = TransactNote.getHash(
-      BigInt(testVector.npksOut[0]),
-      testVector.token,
-      BigInt(testVector.valuesOut[0]),
-    );
-    expect(unshieldCommitment).to.equal(
-      216763491134624113411811686074368460908979279854884101816433178521240642085n,
-    );
-    expect(unshieldCommitment).to.equal(hexToBigInt(testVector.commitmentsOut[0]));
-
-    const blindedCommitmentOut = hexToBigInt(
-      getBlindedCommitmentForUnshield(
-        nToHex(unshieldCommitment, ByteLength.UINT_256),
-        '0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266', // toAddress
-        railgunTransaction.railgunTxid, // railgunTxid
-      ),
-    );
-    expect(blindedCommitmentOut).to.equal(hexToBigInt(testVector.blindedCommitmentsOut[0]));
   });
 });

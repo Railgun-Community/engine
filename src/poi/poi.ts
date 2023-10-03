@@ -143,7 +143,7 @@ export class POI {
   }
 
   static shouldGenerateSpentPOIsUnshieldEvent(unshieldEvent: UnshieldStoredEvent) {
-    if (!isDefined(unshieldEvent.blindedCommitment)) {
+    if (!isDefined(unshieldEvent.railgunTxid)) {
       return false;
     }
     if (!isDefined(unshieldEvent.poisPerList)) {

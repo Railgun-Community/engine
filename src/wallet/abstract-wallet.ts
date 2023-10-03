@@ -42,7 +42,6 @@ import {
   fromUTF8String,
   hexlify,
   hexStringToBytes,
-  hexToBigInt,
   hexToBytes,
   nToHex,
   numberify,
@@ -87,10 +86,7 @@ import { PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import { isSentCommitment, isSentCommitmentType } from '../utils/commitment';
 import { POI } from '../poi/poi';
-import {
-  getBlindedCommitmentForShieldOrTransact,
-  getBlindedCommitmentForUnshield,
-} from '../poi/blinded-commitment';
+import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitment';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import {
   ACTIVE_TXID_VERSIONS,
@@ -1236,14 +1232,20 @@ abstract class AbstractWallet extends EventEmitter {
       const unshieldEventsForRailgunTxid = unshieldEvents.filter(
         (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
       );
-      const blindedCommitmentsOutUnshieldEvents = removeUndefineds(
-        unshieldEventsForRailgunTxid.map((unshieldEvent) => unshieldEvent.blindedCommitment),
-      );
       if (unshieldEventsForRailgunTxid.length > 1) {
         throw new Error('Cannot have more than 1 unshield event per railgun txid');
       }
-      const railgunTxidIfHasUnshield =
-        unshieldEventsForRailgunTxid.length > 0 ? hexToBigInt(railgunTxid) : 0n;
+
+      const hasUnshield = unshieldEventsForRailgunTxid.length > 0;
+
+      const commitmentsWithoutUnshields = hasUnshield
+        ? railgunTransaction.commitments.length - 1
+        : railgunTransaction.commitments.length;
+
+      // Use 0x00 if there is no unshield.
+      const railgunTxidIfHasUnshield = hasUnshield
+        ? formatToByteLength(railgunTxid, ByteLength.UINT_256, true)
+        : '0x00';
 
       if (!sentCommitmentsForRailgunTxid.length && !unshieldEventsForRailgunTxid.length) {
         throw new Error(`No sent commitments or unshield events for railgun txid: ${railgunTxid}`);
@@ -1252,35 +1254,31 @@ abstract class AbstractWallet extends EventEmitter {
       // Aggregate Sent + Unshields
       const blindedCommitmentsOut: string[] = removeDuplicates([
         ...blindedCommitmentsOutSentCommitments,
-        ...blindedCommitmentsOutUnshieldEvents,
+        // Do not send blinded commitments for unshields.
       ]);
-      if (blindedCommitmentsOut.length !== railgunTransaction.commitments.length) {
+      if (blindedCommitmentsOut.length !== commitmentsWithoutUnshields) {
         throw new Error(
-          `Not enough blinded commitments for railgun txid commitments: expected ${railgunTransaction.commitments.length}, got ${blindedCommitmentsOut.length}`,
+          `Not enough blinded commitments for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${blindedCommitmentsOut.length}`,
         );
       }
 
       const npksOut: bigint[] = [
         ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.notePublicKey),
-        ...unshieldEventsForRailgunTxid.map((unshieldEvent) =>
-          hexToBigInt(unshieldEvent.toAddress),
-        ),
+        // Do not send npks for unshields
       ];
-      if (npksOut.length !== railgunTransaction.commitments.length) {
+      if (npksOut.length !== commitmentsWithoutUnshields) {
         throw new Error(
-          `Invalid number of npksOut for railgun txid commitments: expected ${railgunTransaction.commitments.length}, got ${npksOut.length}`,
+          `Invalid number of npksOut for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${npksOut.length}`,
         );
       }
 
       const valuesOut: bigint[] = [
         ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.value),
-        ...unshieldEventsForRailgunTxid.map(
-          (unshieldEvent) => BigInt(unshieldEvent.amount) + BigInt(unshieldEvent.fee),
-        ),
+        // Do not send values for unshields
       ];
-      if (valuesOut.length !== railgunTransaction.commitments.length) {
+      if (valuesOut.length !== commitmentsWithoutUnshields) {
         throw new Error(
-          `Invalid number of valuesOut for railgun txid commitments: expected ${railgunTransaction.commitments.length}, got ${valuesOut.length}`,
+          `Invalid number of valuesOut for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${valuesOut.length}`,
         );
       }
 
@@ -1605,10 +1603,7 @@ abstract class AbstractWallet extends EventEmitter {
             const unshieldEvent = filteredUnshieldEvent;
 
             // Add railgunTxid and blindedCommitment, if they don't already exist.
-            if (
-              !isDefined(unshieldEvent.railgunTxid) ||
-              !isDefined(unshieldEvent.blindedCommitment)
-            ) {
+            if (!isDefined(unshieldEvent.railgunTxid)) {
               const commitmentHash = nToHex(
                 getUnshieldEventNoteHash(unshieldEvent),
                 ByteLength.UINT_256,
@@ -1623,11 +1618,6 @@ abstract class AbstractWallet extends EventEmitter {
 
               if (isDefined(railgunTxid)) {
                 unshieldEvent.railgunTxid = railgunTxid;
-                unshieldEvent.blindedCommitment = getBlindedCommitmentForUnshield(
-                  commitmentHash,
-                  unshieldEvent.toAddress,
-                  railgunTxid,
-                );
                 await merkletree.updateUnshieldEvent(unshieldEvent);
               }
             }

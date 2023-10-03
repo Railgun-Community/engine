@@ -287,9 +287,11 @@ export class Prover {
 
     const artifacts = await this.artifactGetter.getArtifactsPOI(maxInputs, maxOutputs);
 
+    // MUST MATCH THE ORDER OF PUBLIC SIGNALS FROM CIRCUIT
     const publicSignals: bigint[] = [
       ...publicInputs.blindedCommitmentsOut,
       publicInputs.anyRailgunTxidMerklerootAfterTransaction,
+      publicInputs.railgunTxidIfHasUnshield,
       ...publicInputs.poiMerkleroots,
     ];
 
@@ -381,17 +383,19 @@ export class Prover {
     anyRailgunTxidMerklerootAfterTransaction: string,
     blindedCommitmentsOut: string[],
     poiMerkleroots: string[],
+    railgunTxidIfHasUnshield: string,
     maxInputs: number,
     maxOutputs: number,
   ): PublicInputsPOI {
     const publicInputs: PublicInputsPOI = {
-      anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
-        anyRailgunTxidMerklerootAfterTransaction,
-      ),
       blindedCommitmentsOut: Prover.padWithZerosToMax(
         blindedCommitmentsOut.map(hexToBigInt),
         maxOutputs,
         0n, // Use Zero = 0 here
+      ),
+      railgunTxidIfHasUnshield: hexToBigInt(railgunTxidIfHasUnshield),
+      anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
+        anyRailgunTxidMerklerootAfterTransaction,
       ),
       poiMerkleroots: Prover.padWithZerosToMax(poiMerkleroots.map(hexToBigInt), maxInputs),
     };
@@ -443,6 +447,7 @@ export class Prover {
       inputs.anyRailgunTxidMerklerootAfterTransaction,
       blindedCommitmentsOut,
       inputs.poiMerkleroots,
+      inputs.railgunTxidIfHasUnshield,
       maxInputs,
       maxOutputs,
     );

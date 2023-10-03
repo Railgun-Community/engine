@@ -512,7 +512,6 @@ describe('RailgunEngine', function test() {
         npksOut: [
           2800314339815912641032015410982157821342520564864853273055282304996901162130n,
           11534906831940272621633961845961479374350832633003460590301493842374950642962n,
-          1390849295786071768276380950238675083608645509734n,
         ],
         nullifiers: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee'],
         nullifyingKey:
@@ -548,9 +547,9 @@ describe('RailgunEngine', function test() {
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: 1,
         railgunTxidIfHasUnshield:
-          7208414477341279549258334011366904179272420379612903908757232887645124844642n,
+          '0x0fefd169291c1deec2affa8dcbfbee4a4bbeddfc3b5723c031665ba631725c62',
         valuesIn: [109725000000000000000000n],
-        valuesOut: [1n, 109424999999999999999999n, 300000000000000000000n],
+        valuesOut: [1n, 109424999999999999999999n],
         poiMerkleroots: poiMerkleProofs.map((proof) => proof.root),
         poiInMerkleProofIndices: poiMerkleProofs.map((proof) => proof.indices),
         poiInMerkleProofPathElements: poiMerkleProofs.map((proof) => proof.elements),
@@ -559,7 +558,6 @@ describe('RailgunEngine', function test() {
       [
         '0x009496b785d48f34983bd248bbf0c0b12bba749689c017d9d016493b419f0571',
         '0x2d1e5b80789879000d35b3bf7028247dc62c0dbabf736264f9d71a6421f008da',
-        '0x17b247216cd083631406631e76c9e052a74fadb38a029b7243784f519251c115',
       ],
     );
 
@@ -722,7 +720,7 @@ describe('RailgunEngine', function test() {
           '185cc7d2c8e1c3954ee5421a6589cd05036708ff059b97b9c10e0261ad7d6875',
         boundParamsHash: '0a4e7bed8287c629fd064665543dc71fdc09b0ab9df7d556f24a1f2f9f018dc7',
         commitmentsOut: ['0x007aaf0cbee05066820873170e293e44df6766c29da69ac46fd05d4ff2c0a225'],
-        npksOut: [1390849295786071768276380950238675083608645509734n],
+        npksOut: [],
         nullifiers: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee'],
         nullifyingKey:
           8368299126798249740586535953124199418524409103803955764525436743456763691384n,
@@ -757,16 +755,16 @@ describe('RailgunEngine', function test() {
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: 1,
         railgunTxidIfHasUnshield:
-          702109577508614192687157007886308755723992845597739802305604799122078977854n,
+          '0x018d6143a22e09c18ba2a713985bd1e43a095605d5d259d72d96da2cca604f3e',
         valuesIn: [109725000000000000000000n],
-        valuesOut: [109725000000000000000000n],
+        valuesOut: [],
 
         poiMerkleroots: poiMerkleProofs.map((proof) => proof.root),
         poiInMerkleProofIndices: poiMerkleProofs.map((proof) => proof.indices),
         poiInMerkleProofPathElements: poiMerkleProofs.map((proof) => proof.elements),
       },
       MOCK_LIST_KEY,
-      ['0x27f34a83697e22f45febe94fd7e66223cd3109736f7cf15a7ab31fdcae73fbcb'],
+      [],
     );
 
     // check the transactions log

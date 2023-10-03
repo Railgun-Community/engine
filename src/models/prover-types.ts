@@ -96,6 +96,7 @@ export type PublicInputsPOI = {
   anyRailgunTxidMerklerootAfterTransaction: bigint;
   blindedCommitmentsOut: bigint[];
   poiMerkleroots: bigint[];
+  railgunTxidIfHasUnshield: bigint;
 };
 
 export type FormattedCircuitInputsPOI = {
