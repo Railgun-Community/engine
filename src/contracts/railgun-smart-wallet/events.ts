@@ -207,7 +207,6 @@ export const formatUnshieldEvent = (
     eventLogIndex,
     railgunTxid: undefined,
     poisPerList: undefined,
-    blindedCommitment: undefined,
   };
 };
 

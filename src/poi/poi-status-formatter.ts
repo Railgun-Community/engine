@@ -212,7 +212,7 @@ const formatSpentStatusInfo = async (
         (sentCommitment) => sentCommitment.poisPerList,
       ),
       unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
-        .map((unshieldEvent) => unshieldEvent.blindedCommitment ?? 'Unavailable')
+        .map((unshieldEvent) => unshieldEvent.railgunTxid ?? 'Unavailable')
         .join(', ')}`,
       poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
         (unshieldEvent) => unshieldEvent.poisPerList,
@@ -236,15 +236,17 @@ const formatSpentStatusInfo = async (
       ),
       unshieldEventsBlinded: `${unshieldEventsForRailgunTxid
         .map((unshieldEvent) => {
-          return isDefined(unshieldEvent.blindedCommitment)
-            ? emojiHashForPOIStatusInfo(unshieldEvent.blindedCommitment)
+          return isDefined(unshieldEvent.railgunTxid)
+            ? emojiHashForPOIStatusInfo(unshieldEvent.railgunTxid)
             : 'Unavailable';
         })
         .join(', ')}`,
       poiStatusesUnshieldEvents: unshieldEventsForRailgunTxid.map(
         (unshieldEvent) => unshieldEvent.poisPerList,
       ),
-      listKeysCanGenerateSpentPOIs,
+      listKeysCanGenerateSpentPOIs: listKeysCanGenerateSpentPOIs.map((listKey) =>
+        emojiHashForPOIStatusInfo(listKey),
+      ),
     },
   };
 

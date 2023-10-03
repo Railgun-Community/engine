@@ -60,7 +60,6 @@ export type UnshieldStoredEvent = {
   eventLogIndex: number;
   railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
-  blindedCommitment: Optional<string>;
 };
 
 export type AccumulatedEvents = {

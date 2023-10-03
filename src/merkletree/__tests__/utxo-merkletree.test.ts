@@ -730,7 +730,6 @@ describe('UTXO Merkletree', () => {
       timestamp: undefined,
       railgunTxid: undefined,
       poisPerList: undefined,
-      blindedCommitment: undefined,
     };
     const unshieldB1: UnshieldStoredEvent = {
       txid: '1',
@@ -745,7 +744,6 @@ describe('UTXO Merkletree', () => {
       timestamp: undefined,
       railgunTxid: undefined,
       poisPerList: undefined,
-      blindedCommitment: undefined,
     };
     const unshieldB2: UnshieldStoredEvent = {
       txid: '1',
@@ -760,21 +758,17 @@ describe('UTXO Merkletree', () => {
       timestamp: undefined,
       railgunTxid: undefined,
       poisPerList: undefined,
-      blindedCommitment: undefined,
     };
     await merkletree.addUnshieldEvents([unshieldA1, unshieldB1, unshieldB2]);
 
     delete unshieldA1.railgunTxid;
     delete unshieldA1.poisPerList;
-    delete unshieldA1.blindedCommitment;
 
     delete unshieldB1.railgunTxid;
     delete unshieldB1.poisPerList;
-    delete unshieldB1.blindedCommitment;
 
     delete unshieldB2.railgunTxid;
     delete unshieldB2.poisPerList;
-    delete unshieldB2.blindedCommitment;
 
     expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA1]);
     expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldB1, unshieldB2]);

@@ -1076,7 +1076,7 @@ abstract class AbstractWallet extends EventEmitter {
       })),
       ...unshieldEventsNeedPOIs.map((unshieldEvent) => ({
         type: BlindedCommitmentType.Transact,
-        blindedCommitment: unshieldEvent.blindedCommitment as string,
+        blindedCommitment: unshieldEvent.railgunTxid as string,
       })),
     ];
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
@@ -1107,10 +1107,10 @@ abstract class AbstractWallet extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const unshieldEvent of unshieldEventsNeedPOIs) {
-      if (!isDefined(unshieldEvent.blindedCommitment)) {
+      if (!isDefined(unshieldEvent.railgunTxid)) {
         continue;
       }
-      const poisPerList = blindedCommitmentToPOIList[unshieldEvent.blindedCommitment];
+      const poisPerList = blindedCommitmentToPOIList[unshieldEvent.railgunTxid];
       if (!isDefined(poisPerList)) {
         continue;
       }
