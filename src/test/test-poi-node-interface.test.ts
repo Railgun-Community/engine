@@ -58,6 +58,7 @@ export class TestPOINodeInterface extends POINodeInterface {
     txidMerkleroot: string,
     txidMerklerootIndex: number,
     blindedCommitmentsOut: string[],
+    railgunTxidIfHasUnshield: string,
   ): Promise<void> {
     return Promise.resolve();
   }

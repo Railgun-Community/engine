@@ -195,6 +195,7 @@ export class POI {
     txidMerkleroot: string,
     txidMerklerootIndex: number,
     blindedCommitmentsOut: string[],
+    railgunTxidIfHasUnshield: string,
   ): Promise<void> {
     if (!isDefined(this.nodeInterface)) {
       throw new Error('POI node interface not initialized');
@@ -209,6 +210,7 @@ export class POI {
       txidMerkleroot,
       txidMerklerootIndex,
       blindedCommitmentsOut,
+      railgunTxidIfHasUnshield,
     );
   }
 }

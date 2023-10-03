@@ -1342,6 +1342,7 @@ abstract class AbstractWallet extends EventEmitter {
         anyRailgunTxidMerklerootAfterTransaction,
         txidMerkletreeData.currentTxidIndexForTree,
         blindedCommitmentsOut,
+        railgunTxidIfHasUnshield,
       );
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access

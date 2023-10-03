@@ -29,5 +29,6 @@ export abstract class POINodeInterface {
     txidMerkleroot: string,
     txidMerklerootIndex: number,
     blindedCommitmentsOut: string[],
+    railgunTxidIfHasUnshield: string,
   ): Promise<void>;
 }
