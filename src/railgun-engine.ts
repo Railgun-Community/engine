@@ -876,6 +876,7 @@ class RailgunEngine extends EventEmitter {
   private async clearAllTXIDMerkletrees(txidVersion: TXIDVersion, chain: Chain) {
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     await txidMerkletree.clearDataForMerkletree();
+    txidMerkletree.savedPOILaunchSnapshot = false;
   }
 
   /**

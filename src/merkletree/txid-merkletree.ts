@@ -35,7 +35,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
   shouldSavePOILaunchSnapshot: boolean;
 
-  private savedPOILaunchSnapshot: Optional<boolean>;
+  savedPOILaunchSnapshot: Optional<boolean>;
 
   private constructor(
     db: Database,
@@ -291,12 +291,11 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
       // eslint-disable-next-line no-await-in-loop
       await this.savePOILaunchSnapshot(latestLeafIndex);
-      this.savedPOILaunchSnapshot = true;
     }
   }
 
   private async hasSavedPOILaunchSnapshot(): Promise<boolean> {
-    if (isDefined(this.savedPOILaunchSnapshot)) {
+    if (this.savedPOILaunchSnapshot === true) {
       return this.savedPOILaunchSnapshot;
     }
     const level = 0;
@@ -351,6 +350,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       });
     }
     await this.db.batch(snapshotNodeWriteBatch, 'json');
+    this.savedPOILaunchSnapshot = true;
   }
 
   async clearLeavesAfterTxidIndex(txidIndex: number): Promise<void> {
