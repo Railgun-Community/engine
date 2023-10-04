@@ -148,7 +148,7 @@ const generateAndVerifyPOI = async (
         commitments: transaction.commitments as string[],
         nullifiers: transaction.nullifiers as string[],
         boundParamsHash: nToHex(hashBoundParams(transactions[0].boundParams), ByteLength.UINT_256),
-        tokenHash: shield.tokenHash,
+        unshieldTokenHash: shield.tokenHash,
         transactionHash: transactReceipt.hash,
         hasUnshield: true,
         blockNumber,

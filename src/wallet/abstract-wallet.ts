@@ -74,12 +74,7 @@ import { TransactNote } from '../note/transact-note';
 import { binarySearchForUpperBoundIndex } from '../utils/search';
 import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
-import {
-  getTokenDataERC20,
-  getTokenDataHash,
-  getUnshieldEventNoteHash,
-  serializeTokenData,
-} from '../note/note-util';
+import { getTokenDataERC20, getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
 import { PublicInputsRailgun } from '../models/prover-types';

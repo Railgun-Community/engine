@@ -147,7 +147,7 @@ export type RailgunTransaction = {
   boundParamsHash: string;
   blockNumber: number;
   transactionHash: string;
-  tokenHash: string;
+  unshieldTokenHash: string;
   hasUnshield: boolean;
   utxoTreeIn: number;
   utxoTreeOut: number;

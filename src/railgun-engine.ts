@@ -716,7 +716,7 @@ class RailgunEngine extends EventEmitter {
         commitments,
         hasUnshield,
         transactionHash,
-        tokenHash,
+        unshieldTokenHash,
         railgunTxid,
         utxoTreeOut: tree,
         utxoBatchStartPositionOut,
@@ -736,8 +736,8 @@ class RailgunEngine extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         const unshieldEventsForTxid = await utxoMerkletree.getUnshieldEvents(transactionHash);
         const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
-          const unshieldTokenHash = getUnshieldTokenHash(unshieldEvent);
-          return unshieldTokenHash === tokenHash;
+          const tokenHash = getUnshieldTokenHash(unshieldEvent);
+          return tokenHash === unshieldTokenHash;
         });
         if (matchingUnshieldEvent) {
           if (matchingUnshieldEvent.railgunTxid !== railgunTxid) {
