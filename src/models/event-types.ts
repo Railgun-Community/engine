@@ -5,10 +5,8 @@ import { POIsPerList, TXIDVersion } from './poi-types';
 export enum EngineEvent {
   WalletScanComplete = 'scanned',
   ContractNullifierReceived = 'nullified',
-  MerkletreeHistoryScanStarted = 'merkletree-history-scan-started',
-  MerkletreeHistoryScanUpdate = 'merkletree-history-scan-update',
-  MerkletreeHistoryScanComplete = 'merkletree-history-scan-complete',
-  MerkletreeHistoryScanIncomplete = 'merkletree-history-scan-incomplete',
+  UTXOMerkletreeHistoryScanUpdate = 'utxo-merkletree-history-scan-update',
+  TXIDMerkletreeHistoryScanUpdate = 'txid-merkletree-history-scan-update',
   POIProofUpdate = 'POIProofUpdate',
 }
 
@@ -77,13 +75,16 @@ export type WalletScannedEventData = {
 export type MerkletreeHistoryScanEventData = {
   txidVersion: TXIDVersion;
   chain: Chain;
+  progress?: number;
+  scanStatus: MerkletreeScanStatus;
 };
 
-export type MerkletreeHistoryScanUpdateData = {
-  txidVersion: TXIDVersion;
-  chain: Chain;
-  progress: number;
-};
+export enum MerkletreeScanStatus {
+  Started = 'Started',
+  Updated = 'Updated',
+  Complete = 'Complete',
+  Incomplete = 'Incomplete',
+}
 
 export type POICurrentProofEventData = {
   txidVersion: TXIDVersion;
