@@ -148,8 +148,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
 
   /**
    * Gets Unshield events
-   * @param txid - txid of unshields
-   * @returns unshields
+   * NOTE: There are no Unshield events pre-V2.
    */
   async getUnshieldEvents(txid: string): Promise<UnshieldStoredEvent[]> {
     const strippedTxid = formatToByteLength(txid, ByteLength.UINT_256, false);

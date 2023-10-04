@@ -441,7 +441,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
         return undefined;
       }
       const { tree, index } = TXIDMerkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
-      return this.getData(tree, index);
+      return await this.getData(tree, index);
     } catch (err) {
       return undefined;
     }

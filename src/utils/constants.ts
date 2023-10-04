@@ -16,9 +16,10 @@ export const ZERO_32_BYTE_VALUE =
   '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
- * Block number per EVM chain designating when events changed for Engine V3 upgrade.
+ * Block number per EVM chain designating when events changed for RAILGUN V2 upgrade.
+ * This is when Unshield events became available.
  */
-export const ENGINE_V3_START_BLOCK_NUMBERS_EVM: { [chainID: number]: number } = {
+export const ENGINE_V2_START_BLOCK_NUMBERS_EVM: { [chainID: number]: number } = {
   1: 16076750,
   5: 7921409,
   56: 23478204,
@@ -29,7 +30,7 @@ export const ENGINE_V3_START_BLOCK_NUMBERS_EVM: { [chainID: number]: number } = 
 /**
  * Block number per EVM chain designating when the shield event changed on Mar 9, 2023.
  */
-export const ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM: {
+export const ENGINE_V2_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM: {
   [chainID: number]: number;
 } = {
   1: 16790263,

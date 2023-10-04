@@ -709,6 +709,8 @@ class RailgunEngine extends EventEmitter {
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
 
+    const v3BlockNumber = RailgunSmartWalletContract.getEngineV2StartBlockNumber(chain);
+
     // TODO: Remove after V3
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransactionWithTxid of railgunTransactionsWithTxids) {
@@ -720,6 +722,7 @@ class RailgunEngine extends EventEmitter {
         railgunTxid,
         utxoTreeOut: tree,
         utxoBatchStartPositionOut,
+        blockNumber,
       } = railgunTransactionWithTxid;
 
       // Update existing commitments/unshield events.
@@ -732,7 +735,10 @@ class RailgunEngine extends EventEmitter {
 
       let missingAnyCommitments = false;
 
-      if (isDefined(unshieldCommitment)) {
+      // No Unshield events exist pre-V3.
+      const isPreV3 = blockNumber < v3BlockNumber;
+
+      if (isDefined(unshieldCommitment) && !isPreV3) {
         // eslint-disable-next-line no-await-in-loop
         const unshieldEventsForTxid = await utxoMerkletree.getUnshieldEvents(txid);
         const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
@@ -746,6 +752,11 @@ class RailgunEngine extends EventEmitter {
             await utxoMerkletree.updateUnshieldEvent(matchingUnshieldEvent);
           }
         } else {
+          EngineDebug.log(
+            `Missing unshield from TXID scan: txid ${txid}, token ${
+              unshieldTokenHash ?? 'UNKNOWN'
+            }`,
+          );
           missingAnyCommitments = true;
         }
       }
@@ -763,11 +774,15 @@ class RailgunEngine extends EventEmitter {
           }
         } else {
           missingAnyCommitments = true;
+          EngineDebug.log(`Missing commitment from TXID scan: UTXO ${tree}:${position}.`);
           break;
         }
       }
 
       if (missingAnyCommitments) {
+        EngineDebug.error(
+          new Error(`Missing a commitment. Cannot continue queuing Railgun TXIDs.`),
+        );
         break;
       }
 
@@ -867,10 +882,6 @@ class RailgunEngine extends EventEmitter {
    * @param forceRescanDevOnly - can corrupt an existing scan, so only recommended in extreme cases (DEV only)
    */
   async fullRescanUTXOMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
-    // Must reset txid merkletree which is mapped to UTXO commitments.
-    // TODO: Remove after V3.
-    await this.fullResetTXIDMerkletrees(chain);
-
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!this.hasUTXOMerkletree(txidVersion, chain)) {
@@ -902,6 +913,10 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-await-in-loop
       await this.scanHistoryForTXIDVersion(txidVersion, chain);
     }
+
+    // Must reset txid merkletree which is mapped to UTXO commitments.
+    // TODO: Remove after V3.
+    await this.fullResetTXIDMerkletrees(chain);
   }
 
   async fullResetTXIDMerkletrees(chain: Chain): Promise<void> {

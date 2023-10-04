@@ -145,6 +145,8 @@ abstract class AbstractWallet extends EventEmitter {
   // [type: [id: CachedStoredSendCommitment[]]]
   private cachedSendCommitments: CachedStoredSendCommitment[][][] = [];
 
+  private generatingPOIsForChain: boolean[][] = [];
+
   /**
    * Create Wallet controller
    * @param id - wallet ID
@@ -965,7 +967,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.getSentCommitments(txidVersion, chain, undefined),
       this.TXOs(txidVersion, chain),
     ]);
-    const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(
+    const unshieldEvents = await this.getUnshieldEventsFromSpentNullifiers(
       txidVersion,
       chain,
       TXOs,
@@ -1039,7 +1041,7 @@ abstract class AbstractWallet extends EventEmitter {
       )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
 
-    const unshieldEvents = await this.getAllUnshieldEventsFromSpentNullifiers(
+    const unshieldEvents = await this.getUnshieldEventsFromSpentNullifiers(
       txidVersion,
       chain,
       TXOs,
@@ -1123,67 +1125,83 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     railgunTxidFilter?: string,
   ): Promise<void> {
-    const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
-      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain, railgunTxidFilter);
-
-    if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
-      if (isDefined(railgunTxidFilter)) {
-        throw new Error(
-          `Railgun TXID ${railgunTxidFilter} not found in sent commitments / unshield events.`,
-        );
-      }
+    if (this.generatingPOIsForChain[chain.id]?.[chain.type]) {
       return;
     }
+    this.generatingPOIsForChain[chain.id] ??= [];
+    this.generatingPOIsForChain[chain.id][chain.type] = true;
 
-    const railgunTxidsNeedPOIs = new Set<string>();
-    sentCommitmentsNeedPOIs.forEach((sentCommitment) => {
-      if (isDefined(sentCommitment.railgunTxid)) {
-        railgunTxidsNeedPOIs.add(sentCommitment.railgunTxid);
-      }
-    });
-    unshieldEventsNeedPOIs.forEach((unshieldEvent) => {
-      if (isDefined(unshieldEvent.railgunTxid)) {
-        railgunTxidsNeedPOIs.add(unshieldEvent.railgunTxid);
-      }
-    });
-    const railgunTxids = Array.from(railgunTxidsNeedPOIs);
-
-    if (isDefined(railgunTxidFilter) && !railgunTxids.includes(railgunTxidFilter)) {
-      throw new Error('Railgun TXID not found in sent commitments / unshield events.');
-    }
-
-    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
-
-    // eslint-disable-next-line no-restricted-syntax
-    for (const railgunTxid of railgunTxids) {
-      const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
-        railgunTxid,
-      );
-      const { railgunTransaction } = txidMerkletreeData;
-
-      const isLegacyPOIProof = railgunTransaction.blockNumber < txidMerkletree.poiLaunchBlock;
-      const spentTXOs = TXOs.filter((txo) =>
-        railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
-      );
-      const listKeys = POI.getListKeysCanGenerateSpentPOIs(spentTXOs, isLegacyPOIProof);
-      if (!listKeys.length) {
-        continue;
-      }
-
-      // eslint-disable-next-line no-restricted-syntax
-      for (const listKey of listKeys) {
-        await this.generatePOIsForRailgunTxidAndListKey(
+    try {
+      const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
+        await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(
           txidVersion,
           chain,
-          railgunTxid,
-          listKey,
-          isLegacyPOIProof,
-          spentTXOs,
-          txidMerkletreeData,
-          sentCommitmentsNeedPOIs,
-          unshieldEventsNeedPOIs,
+          railgunTxidFilter,
         );
+
+      if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
+        if (isDefined(railgunTxidFilter)) {
+          throw new Error(
+            `Railgun TXID ${railgunTxidFilter} not found in sent commitments / unshield events.`,
+          );
+        }
+        this.generatingPOIsForChain[chain.id][chain.type] = false;
+        return;
       }
+
+      const railgunTxidsNeedPOIs = new Set<string>();
+      sentCommitmentsNeedPOIs.forEach((sentCommitment) => {
+        if (isDefined(sentCommitment.railgunTxid)) {
+          railgunTxidsNeedPOIs.add(sentCommitment.railgunTxid);
+        }
+      });
+      unshieldEventsNeedPOIs.forEach((unshieldEvent) => {
+        if (isDefined(unshieldEvent.railgunTxid)) {
+          railgunTxidsNeedPOIs.add(unshieldEvent.railgunTxid);
+        }
+      });
+      const railgunTxids = Array.from(railgunTxidsNeedPOIs);
+
+      if (isDefined(railgunTxidFilter) && !railgunTxids.includes(railgunTxidFilter)) {
+        throw new Error('Railgun TXID not found in sent commitments / unshield events.');
+      }
+
+      const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (const railgunTxid of railgunTxids) {
+        const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
+          railgunTxid,
+        );
+        const { railgunTransaction } = txidMerkletreeData;
+
+        const isLegacyPOIProof = railgunTransaction.blockNumber < txidMerkletree.poiLaunchBlock;
+        const spentTXOs = TXOs.filter((txo) =>
+          railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
+        );
+        const listKeys = POI.getListKeysCanGenerateSpentPOIs(spentTXOs, isLegacyPOIProof);
+        if (!listKeys.length) {
+          continue;
+        }
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const listKey of listKeys) {
+          await this.generatePOIsForRailgunTxidAndListKey(
+            txidVersion,
+            chain,
+            railgunTxid,
+            listKey,
+            isLegacyPOIProof,
+            spentTXOs,
+            txidMerkletreeData,
+            sentCommitmentsNeedPOIs,
+            unshieldEventsNeedPOIs,
+          );
+        }
+      }
+    } catch (err) {
+      this.generatingPOIsForChain[chain.id][chain.type] = false;
+      throw err;
     }
   }
 
@@ -1562,7 +1580,10 @@ abstract class AbstractWallet extends EventEmitter {
     return TransactionHistoryItemVersion.UpdatedNov2022;
   }
 
-  async getAllUnshieldEventsFromSpentNullifiers(
+  /**
+   * NOTE: There are no Unshield events pre-V2.
+   */
+  async getUnshieldEventsFromSpentNullifiers(
     txidVersion: TXIDVersion,
     chain: Chain,
     filteredTXOs: TXO[],
@@ -1590,6 +1611,8 @@ abstract class AbstractWallet extends EventEmitter {
         seenSpentTxids.push(spendtxid);
 
         // Nullifier exists. Find unshield events from txid.
+
+        // NOTE: There are no Unshield events pre-V2.
         const unshieldEventsForNullifier = await merkletree.getUnshieldEvents(spendtxid);
         const filteredUnshieldEventsForNullifier = unshieldEventsForNullifier.filter(
           (event) =>
@@ -1615,7 +1638,7 @@ abstract class AbstractWallet extends EventEmitter {
     startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntrySpent[]> {
     const [allUnshieldEvents, sentCommitments] = await Promise.all([
-      this.getAllUnshieldEventsFromSpentNullifiers(txidVersion, chain, filteredTXOs),
+      this.getUnshieldEventsFromSpentNullifiers(txidVersion, chain, filteredTXOs),
       this.getSentCommitments(txidVersion, chain, startingBlock),
     ]);
 

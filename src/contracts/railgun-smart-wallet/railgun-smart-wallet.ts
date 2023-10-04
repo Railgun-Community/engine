@@ -49,9 +49,9 @@ import {
   RailgunSmartWallet,
 } from '../../abi/typechain/RailgunSmartWallet';
 import {
-  ENGINE_V3_START_BLOCK_NUMBERS_EVM,
-  ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM,
-} from '../../utils';
+  ENGINE_V2_START_BLOCK_NUMBERS_EVM,
+  ENGINE_V2_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM,
+} from '../../utils/constants';
 import { Chain, ChainType } from '../../models/engine-types';
 import {
   TypedContractEvent,
@@ -392,16 +392,16 @@ class RailgunSmartWalletContract extends EventEmitter {
     }
   }
 
-  private static getEngineV3StartBlockNumber(chain: Chain) {
+  static getEngineV2StartBlockNumber(chain: Chain) {
     if (chain.type === ChainType.EVM) {
-      return ENGINE_V3_START_BLOCK_NUMBERS_EVM[chain.id] || 0;
+      return ENGINE_V2_START_BLOCK_NUMBERS_EVM[chain.id] || 0;
     }
     return 0;
   }
 
-  private static getEngineV3ShieldEventUpdate030923BlockNumber(chain: Chain) {
+  private static getEngineV2ShieldEventUpdate030923BlockNumber(chain: Chain) {
     if (chain.type === ChainType.EVM) {
-      return ENGINE_V3_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM[chain.id] || 0;
+      return ENGINE_V2_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM[chain.id] || 0;
     }
     return 0;
   }
@@ -446,9 +446,9 @@ class RailgunSmartWalletContract extends EventEmitter {
     eventsUnshieldListener: EventsUnshieldListener,
     setLastSyncedBlock: (lastSyncedBlock: number) => Promise<void>,
   ) {
-    const engineV3StartBlockNumber = RailgunSmartWalletContract.getEngineV3StartBlockNumber(chain);
+    const engineV3StartBlockNumber = RailgunSmartWalletContract.getEngineV2StartBlockNumber(chain);
     const engineV3ShieldEventUpdate030923BlockNumber =
-      RailgunSmartWalletContract.getEngineV3ShieldEventUpdate030923BlockNumber(chain);
+      RailgunSmartWalletContract.getEngineV2ShieldEventUpdate030923BlockNumber(chain);
 
     // TODO: Possible data integrity issue in using commitment block numbers.
     // Unshields and Nullifiers are scanned from the latest commitment block.
