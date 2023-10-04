@@ -123,7 +123,7 @@ describe('Prover', () => {
         commitments: testVector.commitmentsOut,
         nullifiers: testVector.nullifiers,
         unshieldTokenHash: getTokenDataHashERC20(config.contracts.rail),
-        transactionHash: '0x00',
+        txid: '00',
         hasUnshield: true,
         blockNumber: 0,
         utxoTreeIn: 0,

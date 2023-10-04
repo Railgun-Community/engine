@@ -715,7 +715,7 @@ class RailgunEngine extends EventEmitter {
       const {
         commitments,
         hasUnshield,
-        transactionHash,
+        txid,
         unshieldTokenHash,
         railgunTxid,
         utxoTreeOut: tree,
@@ -734,7 +734,7 @@ class RailgunEngine extends EventEmitter {
 
       if (isDefined(unshieldCommitment)) {
         // eslint-disable-next-line no-await-in-loop
-        const unshieldEventsForTxid = await utxoMerkletree.getUnshieldEvents(transactionHash);
+        const unshieldEventsForTxid = await utxoMerkletree.getUnshieldEvents(txid);
         const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
           const tokenHash = getUnshieldTokenHash(unshieldEvent);
           return tokenHash === unshieldTokenHash;

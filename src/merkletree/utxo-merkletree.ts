@@ -152,7 +152,8 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * @returns unshields
    */
   async getUnshieldEvents(txid: string): Promise<UnshieldStoredEvent[]> {
-    const namespace = this.getUnshieldEventsDBPath(txid);
+    const strippedTxid = formatToByteLength(txid, ByteLength.UINT_256, false);
+    const namespace = this.getUnshieldEventsDBPath(strippedTxid);
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 6);
 

@@ -146,7 +146,7 @@ export type RailgunTransaction = {
   nullifiers: string[];
   boundParamsHash: string;
   blockNumber: number;
-  transactionHash: string;
+  txid: string;
   unshieldTokenHash: Optional<string>;
   hasUnshield: boolean;
   utxoTreeIn: number;

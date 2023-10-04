@@ -29,6 +29,7 @@ import {
   hexToBytes,
   nToHex,
   randomHex,
+  strip0x,
 } from '../utils/bytes';
 import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import {
@@ -149,7 +150,7 @@ const generateAndVerifyPOI = async (
         nullifiers: transaction.nullifiers as string[],
         boundParamsHash: nToHex(hashBoundParams(transactions[0].boundParams), ByteLength.UINT_256),
         unshieldTokenHash: shield.tokenHash,
-        transactionHash: transactReceipt.hash,
+        txid: strip0x(transactReceipt.hash),
         hasUnshield: true,
         blockNumber,
         utxoTreeIn: 0,
