@@ -932,6 +932,14 @@ class RailgunEngine extends EventEmitter {
   }
 
   async fullResetTXIDMerkletrees(chain: Chain): Promise<void> {
+    if (this.pollingRailgunTransactions[chain.type]?.[chain.id] !== true) {
+      const err = new Error(
+        `Cannot re-scan railgun txids. Must get UTXO history first. Please wait and try again.`,
+      );
+      EngineDebug.error(err);
+      throw err;
+    }
+
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       const hasMerkletree = this.hasTXIDMerkletree(txidVersion, chain);
