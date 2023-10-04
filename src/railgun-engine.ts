@@ -577,7 +577,12 @@ class RailgunEngine extends EventEmitter {
   async startSyncRailgunTransactionsPoller(chain: Chain) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      if (!this.hasTXIDMerkletree(txidVersion, chain)) {
+        EngineDebug.log(
+          `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+        );
+        return;
+      }
 
       switch (txidVersion) {
         case TXIDVersion.V2_PoseidonMerkle: {
