@@ -1172,11 +1172,11 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     railgunTxidFilter?: string,
   ): Promise<void> {
-    if (this.generatingPOIsForChain[chain.id]?.[chain.type]) {
+    if (this.generatingPOIsForChain[chain.type]?.[chain.id]) {
       return;
     }
-    this.generatingPOIsForChain[chain.id] ??= [];
-    this.generatingPOIsForChain[chain.id][chain.type] = true;
+    this.generatingPOIsForChain[chain.type] ??= [];
+    this.generatingPOIsForChain[chain.type][chain.id] = true;
 
     try {
       const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
@@ -1192,7 +1192,7 @@ abstract class AbstractWallet extends EventEmitter {
             `Railgun TXID ${railgunTxidFilter} not found in sent commitments / unshield events.`,
           );
         }
-        this.generatingPOIsForChain[chain.id][chain.type] = false;
+        this.generatingPOIsForChain[chain.type][chain.id] = false;
         return;
       }
 
@@ -1259,7 +1259,7 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
     } catch (err) {
-      this.generatingPOIsForChain[chain.id][chain.type] = false;
+      this.generatingPOIsForChain[chain.type][chain.id] = false;
       throw err;
     }
   }

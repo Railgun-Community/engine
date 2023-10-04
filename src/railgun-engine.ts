@@ -79,6 +79,8 @@ class RailgunEngine extends EventEmitter {
 
   private readonly skipMerkletreeScans: boolean;
 
+  private readonly pollingRailgunTransactions: boolean[][] = [];
+
   readonly isPOINode: boolean;
 
   private constructor(
@@ -445,6 +447,10 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-await-in-loop
       await this.scanHistoryForTXIDVersion(txidVersion, chain);
     }
+
+    if (this.pollingRailgunTransactions[chain.type]?.[chain.id] !== true) {
+      await this.startSyncRailgunTransactionsPoller(chain);
+    }
   }
 
   async scanHistoryForTXIDVersion(txidVersion: TXIDVersion, chain: Chain) {
@@ -587,6 +593,9 @@ class RailgunEngine extends EventEmitter {
         //   throw new Error('Railgun transaction sync not implemented for V3 KZG');
       }
     }
+
+    this.pollingRailgunTransactions[chain.id] = [];
+    this.pollingRailgunTransactions[chain.id][chain.type] = true;
   }
 
   async syncRailgunTransactionsPoller(
@@ -1151,14 +1160,14 @@ class RailgunEngine extends EventEmitter {
     await ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].unload();
 
     // Delete contracts
-    delete ContractStore.railgunSmartWalletContracts[chain.id]?.[chain.type];
-    delete ContractStore.relayAdaptContracts[chain.id]?.[chain.type];
+    delete ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+    delete ContractStore.relayAdaptContracts[chain.type]?.[chain.id];
 
     ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
       // Delete UTXO merkletree
-      delete this.utxoMerkletrees[txidVersion]?.[chain.id]?.[chain.type];
+      delete this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
       // Delete Txid merkletree
-      delete this.txidMerkletrees[txidVersion]?.[chain.id]?.[chain.type];
+      delete this.txidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     });
   }
 
