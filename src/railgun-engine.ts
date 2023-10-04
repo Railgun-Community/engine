@@ -711,6 +711,8 @@ class RailgunEngine extends EventEmitter {
 
     const v3BlockNumber = RailgunSmartWalletContract.getEngineV2StartBlockNumber(chain);
 
+    const toQueue: RailgunTransactionWithHash[] = [];
+
     // TODO: Remove after V3
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransactionWithTxid of railgunTransactionsWithTxids) {
@@ -786,10 +788,10 @@ class RailgunEngine extends EventEmitter {
         break;
       }
 
-      // eslint-disable-next-line no-await-in-loop
-      await txidMerkletree.queueRailgunTransactions([railgunTransactionWithTxid], maxTxidIndex);
+      toQueue.push(railgunTransactionWithTxid);
     }
 
+    await txidMerkletree.queueRailgunTransactions(toQueue, maxTxidIndex);
     await txidMerkletree.updateTreesFromWriteQueue();
   }
 
