@@ -787,7 +787,7 @@ class RailgunEngine extends EventEmitter {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await txidMerkletree.queueRailgunTransactions(railgunTransactionsWithTxids, maxTxidIndex);
+      await txidMerkletree.queueRailgunTransactions([railgunTransactionWithTxid], maxTxidIndex);
     }
 
     await txidMerkletree.updateTreesFromWriteQueue();
