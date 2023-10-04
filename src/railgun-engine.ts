@@ -630,8 +630,8 @@ class RailgunEngine extends EventEmitter {
       }
     }
 
-    this.pollingRailgunTransactions[chain.id] = [];
-    this.pollingRailgunTransactions[chain.id][chain.type] = true;
+    this.pollingRailgunTransactions[chain.type] = [];
+    this.pollingRailgunTransactions[chain.type][chain.id] = true;
   }
 
   async syncRailgunTransactionsPoller(
@@ -718,6 +718,12 @@ class RailgunEngine extends EventEmitter {
           !isDefined(latestValidatedTxidIndex) || latestTxidIndex >= latestValidatedTxidIndex;
         if (isAheadOfValidatedTxids) {
           // Do not sync. Wait for POI node to sync / validate.
+          const scanCompleteData: MerkletreeHistoryScanEventData = {
+            scanStatus: MerkletreeScanStatus.Complete,
+            txidVersion,
+            chain,
+          };
+          this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
           return;
         }
         maxTxidIndex = latestValidatedTxidIndex;
