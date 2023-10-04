@@ -8,7 +8,12 @@ import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
 import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../key-derivation/wallet-node';
-import { EngineEvent, UnshieldStoredEvent, WalletScannedEventData } from '../models/event-types';
+import {
+  EngineEvent,
+  POICurrentProofEventData,
+  UnshieldStoredEvent,
+  WalletScannedEventData,
+} from '../models/event-types';
 import {
   BytesData,
   Ciphertext,
@@ -116,6 +121,16 @@ type CachedStoredSendCommitment = {
   storedSendCommitment: StoredSendCommitment;
 };
 
+type GeneratePOIsData = {
+  railgunTxid: string;
+  listKey: string;
+  isLegacyPOIProof: boolean;
+  spentTXOs: TXO[];
+  txidMerkletreeData: TXIDMerkletreeData;
+  sentCommitments: SentCommitment[];
+  unshieldEvents: UnshieldStoredEvent[];
+};
+
 abstract class AbstractWallet extends EventEmitter {
   protected readonly db: Database;
 
@@ -208,6 +223,29 @@ abstract class AbstractWallet extends EventEmitter {
 
   private createTokenDataGetter(chain: Chain): TokenDataGetter {
     return new TokenDataGetter(this.db, chain);
+  }
+
+  private emitPOIProofUpdateEvent(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    progress: number,
+    listKey: string,
+    txid: string,
+    railgunTxid: string,
+    index: number,
+    totalCount: number,
+  ) {
+    const updateData: POICurrentProofEventData = {
+      txidVersion,
+      chain,
+      progress,
+      listKey,
+      txid,
+      railgunTxid,
+      index,
+      totalCount,
+    };
+    this.emit(EngineEvent.POIProofUpdate, updateData);
   }
 
   /**
@@ -976,6 +1014,15 @@ abstract class AbstractWallet extends EventEmitter {
     return formatTXOsSpentPOIStatusInfo(txidMerkletree, sentCommitments, TXOs, unshieldEvents);
   }
 
+  async getNumSpendPOIProofsPossible(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
+    const spendProofStatusInfo = await this.getTXOsSpentPOIStatusInfo(txidVersion, chain);
+    const totalListKeysCanGenerateSpentPOIs = spendProofStatusInfo.reduce(
+      (acc, curr) => acc + curr.strings.listKeysCanGenerateSpentPOIs.length,
+      0,
+    );
+    return totalListKeysCanGenerateSpentPOIs;
+  }
+
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveCreationPOIs(txo)).sort(
@@ -1168,6 +1215,8 @@ abstract class AbstractWallet extends EventEmitter {
 
       const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
 
+      const generatePOIsDatas: GeneratePOIsData[] = [];
+
       // eslint-disable-next-line no-restricted-syntax
       for (const railgunTxid of railgunTxids) {
         const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
@@ -1186,18 +1235,28 @@ abstract class AbstractWallet extends EventEmitter {
 
         // eslint-disable-next-line no-restricted-syntax
         for (const listKey of listKeys) {
-          await this.generatePOIsForRailgunTxidAndListKey(
-            txidVersion,
-            chain,
+          // Use this syntax to capture each index and totalCount.
+          generatePOIsDatas.push({
             railgunTxid,
             listKey,
             isLegacyPOIProof,
             spentTXOs,
             txidMerkletreeData,
-            sentCommitmentsNeedPOIs,
-            unshieldEventsNeedPOIs,
-          );
+            sentCommitments: sentCommitmentsNeedPOIs,
+            unshieldEvents: unshieldEventsNeedPOIs,
+          });
         }
+      }
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (let i = 0; i < generatePOIsDatas.length; i += 1) {
+        await this.generatePOIsForRailgunTxidAndListKey(
+          txidVersion,
+          chain,
+          generatePOIsDatas[i],
+          i,
+          generatePOIsDatas.length,
+        );
       }
     } catch (err) {
       this.generatingPOIsForChain[chain.id][chain.type] = false;
@@ -1208,14 +1267,20 @@ abstract class AbstractWallet extends EventEmitter {
   private async generatePOIsForRailgunTxidAndListKey(
     txidVersion: TXIDVersion,
     chain: Chain,
-    railgunTxid: string,
-    listKey: string,
-    isLegacyPOIProof: boolean,
-    spentTXOs: TXO[],
-    txidMerkletreeData: TXIDMerkletreeData,
-    sentCommitments: SentCommitment[],
-    unshieldEvents: UnshieldStoredEvent[],
+    generatePOIsData: GeneratePOIsData,
+    index: number,
+    totalCount: number,
   ): Promise<void> {
+    const {
+      railgunTxid,
+      listKey,
+      isLegacyPOIProof,
+      spentTXOs,
+      txidMerkletreeData,
+      sentCommitments,
+      unshieldEvents,
+    } = generatePOIsData;
+
     try {
       const { railgunTransaction } = txidMerkletreeData;
       if (railgunTransaction.railgunTxid !== railgunTxid) {
@@ -1347,7 +1412,18 @@ abstract class AbstractWallet extends EventEmitter {
         poiProofInputs,
         listKey,
         blindedCommitmentsOut,
-        () => {}, // progressCallback
+        (progress: number) => {
+          this.emitPOIProofUpdateEvent(
+            txidVersion,
+            chain,
+            progress,
+            listKey,
+            railgunTransaction.txid,
+            railgunTxid,
+            index,
+            totalCount,
+          );
+        },
       );
 
       await POI.submitPOI(

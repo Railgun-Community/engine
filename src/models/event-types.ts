@@ -9,6 +9,7 @@ export enum EngineEvent {
   MerkletreeHistoryScanUpdate = 'merkletree-history-scan-update',
   MerkletreeHistoryScanComplete = 'merkletree-history-scan-complete',
   MerkletreeHistoryScanIncomplete = 'merkletree-history-scan-incomplete',
+  POIProofUpdate = 'POIProofUpdate',
 }
 
 export type QuickSyncEvents = (
@@ -82,4 +83,15 @@ export type MerkletreeHistoryScanUpdateData = {
   txidVersion: TXIDVersion;
   chain: Chain;
   progress: number;
+};
+
+export type POICurrentProofEventData = {
+  txidVersion: TXIDVersion;
+  chain: Chain;
+  progress: number;
+  listKey: string;
+  txid: string;
+  railgunTxid: string;
+  index: number;
+  totalCount: number;
 };
