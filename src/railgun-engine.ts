@@ -1026,6 +1026,7 @@ class RailgunEngine extends EventEmitter {
       txidMerkletree.isScanning = true; // Don't allow scans while removing leaves.
       // eslint-disable-next-line no-await-in-loop
       await txidMerkletree.clearDataForMerkletree();
+      txidMerkletree.savedPOILaunchSnapshot = false;
       txidMerkletree.isScanning = false; // Clear before calling syncRailgunTransactions.
       // eslint-disable-next-line no-await-in-loop
       await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);

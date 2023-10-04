@@ -301,8 +301,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     const level = 0;
     const node = await this.getPOILaunchSnapshotNode(level);
 
-    this.savedPOILaunchSnapshot = isDefined(node);
-    return this.savedPOILaunchSnapshot;
+    return isDefined(node);
   }
 
   async getPOILaunchSnapshotNode(level: number): Promise<Optional<POILaunchSnapshotNode>> {
@@ -350,6 +349,10 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       });
     }
     await this.db.batch(snapshotNodeWriteBatch, 'json');
+
+    if (!(await this.hasSavedPOILaunchSnapshot())) {
+      throw new Error('Error saving POI launch snapshot');
+    }
     this.savedPOILaunchSnapshot = true;
   }
 
