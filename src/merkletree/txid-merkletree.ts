@@ -27,7 +27,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
   // DO NOT MODIFY
   protected merkletreePrefix = 'railgun-transaction-ids';
 
-  protected merkletreeType = 'Railgun Txid';
+  protected merkletreeType = 'TXID';
 
   poiLaunchBlock: number;
 

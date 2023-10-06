@@ -41,6 +41,7 @@ import {
   CommitmentEvent,
   EngineEvent,
   MerkletreeHistoryScanEventData,
+  MerkletreeScanStatus,
   UnshieldStoredEvent,
 } from '../../../models/event-types';
 import { Memo } from '../../../note/memo';
@@ -98,7 +99,7 @@ const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testShield: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe('Railgun Smart Wallet', function runTests() {
+describe('railgun-smart-wallet', function runTests() {
   this.timeout(20000);
 
   beforeEach(async () => {
@@ -713,9 +714,11 @@ describe('Railgun Smart Wallet', function runTests() {
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChain!: Chain;
     const historyScanListener = (data: MerkletreeHistoryScanEventData) => {
-      historyScanCompletedForChain = data.chain;
+      if (data.scanStatus === MerkletreeScanStatus.Complete) {
+        historyScanCompletedForChain = data.chain;
+      }
     };
-    engine.on(EngineEvent.MerkletreeHistoryScanComplete, historyScanListener);
+    engine.on(EngineEvent.UTXOMerkletreeHistoryScanUpdate, historyScanListener);
     await engine.scanHistory(chain);
     expect(historyScanCompletedForChain).to.equal(chain);
     expect(await engine.getStartScanningBlock(txidVersion, chain)).to.be.above(0);

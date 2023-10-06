@@ -31,7 +31,7 @@ const chain: Chain = {
 
 const poiLaunchBlock = 3;
 
-describe('Railgun Txid Merkletree', () => {
+describe('txid-merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
@@ -270,6 +270,17 @@ describe('Railgun Txid Merkletree', () => {
 
       await merkletree.queueRailgunTransactions(moreRailgunTransactionsWithTxids, undefined);
       await merkletree.updateTreesFromWriteQueue();
+
+      if (merkletree.shouldSavePOILaunchSnapshot) {
+        expect(await merkletree.getPOILaunchSnapshotNode(0)).to.deep.equal({
+          index: 2,
+          hash: '146d04257251ebab1d921f66145175d5a8c0b8c0f9298aac8e13f2477a7bc0d5',
+        });
+        expect(merkletree.savedPOILaunchSnapshot).to.equal(true);
+      } else {
+        expect(await merkletree.getPOILaunchSnapshotNode(0)).to.equal(undefined);
+        expect(merkletree.savedPOILaunchSnapshot).to.equal(undefined);
+      }
 
       if (merkletree.shouldSavePOILaunchSnapshot) {
         // merkleproof with POI Launch snapshot
