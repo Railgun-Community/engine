@@ -890,11 +890,7 @@ class RailgunEngine extends EventEmitter {
     blockNumber: number,
   ): Promise<boolean> {
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-    const railgunTransaction = await txidMerkletree.getRailgunTransaction(tree, index);
-    if (!railgunTransaction) {
-      throw new Error(`Railgun transaction at Txid tree ${tree} and index ${index} not found.`);
-    }
-    return railgunTransaction.blockNumber < blockNumber;
+    return txidMerkletree.railgunTxidOccurredBeforeBlockNumber(tree, index, blockNumber);
   }
 
   async getHistoricalRailgunTxidMerkleroot(

@@ -282,6 +282,9 @@ describe('txid-merkletree', () => {
         expect(merkletree.savedPOILaunchSnapshot).to.equal(undefined);
       }
 
+      expect(await merkletree.railgunTxidOccurredBeforeBlockNumber(0, 0, 3)).to.equal(true);
+      expect(await merkletree.railgunTxidOccurredBeforeBlockNumber(0, 3, 3)).to.equal(false);
+
       if (merkletree.shouldSavePOILaunchSnapshot) {
         // merkleproof with POI Launch snapshot
         const currentMerkletreeData = await merkletree.getRailgunTxidCurrentMerkletreeData(
@@ -303,7 +306,7 @@ describe('txid-merkletree', () => {
             utxoTreeOut: 0,
             utxoBatchStartPositionOut: 0,
           },
-          currentTxidIndexForTree: 3,
+          currentTxidIndexForTree: 2,
           currentMerkleProofForTree: {
             elements: [
               '12d0d49bb0803a2dea71223db3c45487909ef49600de461f9d8cc3a0daec012c',

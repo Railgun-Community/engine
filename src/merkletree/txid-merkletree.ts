@@ -138,13 +138,26 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       railgunTransaction.blockNumber < this.poiLaunchBlock &&
       (await this.hasSavedPOILaunchSnapshot());
 
-    const currentMerkleProofForTree = useSnapshot
-      ? await this.getMerkleProofWithSnapshot(tree, index)
-      : await this.getMerkleProof(tree, index);
+    if (useSnapshot) {
+      const snapshotLeaf = await this.getPOILaunchSnapshotNode(0);
+      if (!isDefined(snapshotLeaf)) {
+        throw new Error('POI Launch snapshot not found');
+      }
+      const currentMerkleProofForTree = await this.getMerkleProofWithSnapshot(
+        snapshotLeaf.index,
+        tree,
+        index,
+      );
+      return {
+        railgunTransaction,
+        currentMerkleProofForTree,
+        currentTxidIndexForTree: snapshotLeaf.index,
+      };
+    }
 
+    const currentMerkleProofForTree = await this.getMerkleProof(tree, index);
     const currentIndex = await this.getLatestIndexForTree(tree);
     const currentTxidIndexForTree = TXIDMerkletree.getGlobalPosition(tree, currentIndex);
-
     return {
       railgunTransaction,
       currentMerkleProofForTree,
@@ -152,7 +165,11 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     };
   }
 
-  async getMerkleProofWithSnapshot(tree: number, index: number): Promise<MerkleProof> {
+  async getMerkleProofWithSnapshot(
+    snapshotLeafIndex: number,
+    tree: number,
+    index: number,
+  ): Promise<MerkleProof> {
     // Fetch leaf
     const leaf = await this.getNodeHash(tree, 0, index);
 
@@ -201,6 +218,18 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       indices,
       root,
     };
+  }
+
+  async railgunTxidOccurredBeforeBlockNumber(
+    tree: number,
+    index: number,
+    blockNumber: number,
+  ): Promise<boolean> {
+    const railgunTransaction = await this.getRailgunTransaction(tree, index);
+    if (!railgunTransaction) {
+      throw new Error(`Railgun transaction at Txid tree ${tree} and index ${index} not found.`);
+    }
+    return railgunTransaction.blockNumber < blockNumber;
   }
 
   async getLatestGraphID(): Promise<Optional<string>> {
