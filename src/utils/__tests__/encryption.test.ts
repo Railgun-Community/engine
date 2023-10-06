@@ -7,7 +7,7 @@ import { AES } from '../encryption';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Utils/Encryption', () => {
+describe('encryption', () => {
   it('Should test the correctness of encrypt/decrypt with AES-256-GCM', () => {
     const plaintext: BytesData[] = [];
     for (let i = 0; i < 8; i += 1) plaintext.push(randomHex(32));

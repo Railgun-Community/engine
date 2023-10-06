@@ -12,7 +12,7 @@ import { AES } from '../encryption';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Ciphertext', () => {
+describe('ciphertext', () => {
   it('Should translate ciphertext to encrypted random and back', () => {
     const plaintext: BytesData[] = [randomHex(16)];
     const key = randomHex(32);

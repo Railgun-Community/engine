@@ -5,7 +5,7 @@ import { mnemonicToPrivateKey } from '../mnemonic';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Key Derivation/Mnemonic', () => {
+describe('mnemonic', () => {
   it('Should convert mnemonic to private key', async () => {
     const vectors = [
       {

@@ -82,7 +82,7 @@ const shieldLeaf: LegacyGeneratedCommitment = {
   utxoIndex: 0,
 };
 
-describe('Transaction/ERC20', function test() {
+describe('transaction-erc20', function test() {
   this.timeout(120000);
   this.beforeAll(async () => {
     db = new Database(memdown());

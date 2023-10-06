@@ -121,7 +121,7 @@ const stringVectors = [
   },
 ];
 
-describe('Utils/Bytes', () => {
+describe('bytes', () => {
   it('Should return random values', () => {
     // Check length of random values is what we expect
     expect(randomHex().length).to.equal(64);

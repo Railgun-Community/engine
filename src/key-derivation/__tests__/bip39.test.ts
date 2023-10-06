@@ -12,7 +12,7 @@ import {
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Key Derivation/BIP39', () => {
+describe('bip39', () => {
   it('Should generate mnemonic', () => {
     expect(generateMnemonic().split(' ').length).to.equal(12);
     expect(generateMnemonic(192).split(' ').length).to.equal(18);

@@ -6,7 +6,7 @@ import BinarySearchData from './binary-search-data.json';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Search', () => {
+describe('search', () => {
   it('Should binary search for index', () => {
     expect(binarySearchForUpperBoundIndex([1, 2, 3], (n) => n < 5)).to.equal(2);
     expect(binarySearchForUpperBoundIndex([1, 2, 3], (n) => n < 4)).to.equal(2);

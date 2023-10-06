@@ -31,7 +31,7 @@ const chain: Chain = {
 
 const poiLaunchBlock = 3;
 
-describe('Railgun Txid Merkletree', () => {
+describe('txid-merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());

@@ -7,7 +7,7 @@ import { AddressData, ADDRESS_LENGTH_LIMIT, decodeAddress, encodeAddress } from 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Key Derivation/Bech32 Encode', () => {
+describe('bech32-encode', () => {
   it('Should encode and decode addresses', () => {
     const vectors = [
       {

@@ -7,7 +7,7 @@ import { hexStringToBytes } from '../bytes';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Test keys-utils-legacy', () => {
+describe('keys-utils-legacy', () => {
   it('getSharedSymmetricKeyLegacy stability', async () => {
     const privateKeyPairA = hexStringToBytes(
       '0123456789012345678901234567890123456789012345678901234567891234',

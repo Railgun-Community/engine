@@ -5,7 +5,7 @@ import { isDefined } from '../is-defined';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('isDefined', () => {
+describe('is-defined', () => {
   it('Should return false for undefined/null and true for anything else', () => {
     expect(isDefined(undefined)).to.equal(false);
     expect(isDefined(null)).to.equal(false);

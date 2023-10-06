@@ -25,7 +25,7 @@ const chain: Chain = {
   id: 1,
 };
 
-describe('Prover', () => {
+describe('prover', () => {
   beforeEach(() => {
     ProofCachePOI.clear_TEST_ONLY();
   });
