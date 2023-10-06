@@ -53,6 +53,8 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     super(db, chain, txidVersion, merklerootValidator, commitmentProcessingGroupSize);
 
     this.poiLaunchBlock = poiLaunchBlock;
+
+    // For Txid merkletree on POI Nodes, store all merkleroots.
     this.shouldStoreMerkleroots = isPOINode;
     this.shouldSavePOILaunchSnapshot = !isPOINode;
   }
@@ -67,14 +69,13 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     poiLaunchBlock: number,
     merklerootValidator: MerklerootValidator,
   ): Promise<TXIDMerkletree> {
-    const isPOINode = false;
     const merkletree = new TXIDMerkletree(
       db,
       chain,
       txidVersion,
       poiLaunchBlock,
       merklerootValidator,
-      isPOINode,
+      false, // isPOINode
     );
     await merkletree.init();
     return merkletree;
@@ -93,16 +94,13 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     // Assume all merkleroots are valid.
     const merklerootValidator = async () => true;
 
-    // For Txid merkletree on POI Nodes, store all merkleroots.
-    const isPOINode = true;
-
     const merkletree = new TXIDMerkletree(
       db,
       chain,
       txidVersion,
       poiLaunchBlock,
       merklerootValidator,
-      isPOINode,
+      true, // isPOINode
     );
     await merkletree.init();
     return merkletree;
@@ -466,9 +464,10 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     leaf: string,
     merkleroot: string,
   ): Promise<void> {
-    if (this.shouldStoreMerkleroots) {
-      await this.db.put(this.getHistoricalMerklerootDBPath(tree, index), merkleroot);
+    if (!this.shouldStoreMerkleroots) {
+      return;
     }
+    await this.db.put(this.getHistoricalMerklerootDBPath(tree, index), merkleroot);
   }
 
   async getHistoricalMerkleroot(tree: number, index: number): Promise<Optional<string>> {

@@ -363,7 +363,7 @@ describe('txid-merkletree', () => {
           currentMerkleProofForTree: {
             elements: [
               '12d0d49bb0803a2dea71223db3c45487909ef49600de461f9d8cc3a0daec012c',
-              '2097c0eb4015e8fea6dc5062a2e4979cd44852350b4f935387ea027737df91a4',
+              '2097c0eb4015e8fea6dc5062a2e4979cd44852350b4f935387ea027737df91a4', // different
               '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
               '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
               '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
@@ -381,7 +381,7 @@ describe('txid-merkletree', () => {
             ],
             indices: '0000000000000000000000000000000000000000000000000000000000000000',
             leaf: '1d20db6208e429e0bdfa9ceef6cdb33493a3a9134b4ec6d620d6d2e7c2de37f9',
-            root: '0a69c8788735b4a86b8bbe292ad5db83e8830fc27c9ed9dc216dd606cef347fe',
+            root: '0a69c8788735b4a86b8bbe292ad5db83e8830fc27c9ed9dc216dd606cef347fe', // different
           },
         });
 
