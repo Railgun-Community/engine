@@ -19,7 +19,7 @@ const testEncryptionKey = config.encryptionKey;
 let db: Database;
 let wallet: RailgunWallet;
 
-describe('Memo', function run() {
+describe('memo', function run() {
   this.beforeAll(async () => {
     db = new Database(memdown());
     wallet = await RailgunWallet.fromMnemonic(

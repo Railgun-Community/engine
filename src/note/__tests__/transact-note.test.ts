@@ -314,7 +314,7 @@ let db: Database;
 let tokenDataGetter: TokenDataGetter;
 let chain: Chain;
 
-describe('Note/TransactNote', () => {
+describe('transact-note', () => {
   beforeEach(() => {
     db = new Database(memdown());
     chain = {

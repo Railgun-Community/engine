@@ -6,7 +6,7 @@ import { keccak256, sha256, sha512HMAC } from '../hash';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Utils/Hash', () => {
+describe('hash', () => {
   it('Should perform sha256 hashes', () => {
     const vectors = [
       {

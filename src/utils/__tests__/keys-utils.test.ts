@@ -51,7 +51,7 @@ async function getSharedSymmetricKeyJavascript(
   }
 }
 
-describe('Test keys-utils', () => {
+describe('keys-utils', () => {
   before(async () => {
     privateSpendingKey = randomBytes(32);
     publicSpendingKey = getPublicSpendingKey(privateSpendingKey);

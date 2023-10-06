@@ -5,7 +5,7 @@ import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from '.
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('scalarMultiplyWasmFallbackToJavascript', () => {
+describe('scalar-multiply', () => {
   it('Should throw when y coordinate is invalid', async () => {
     await initCurve25519Promise;
     const point = new Uint8Array([

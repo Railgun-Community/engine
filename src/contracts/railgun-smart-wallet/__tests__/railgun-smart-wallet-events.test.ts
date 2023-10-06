@@ -82,7 +82,7 @@ const testHistoricalEventsForRange = async (startBlock: number, endBlock: number
   expect(foundNullifiers).to.be.greaterThanOrEqual(1);
 };
 
-describe('Railgun Smart Wallet - Live events', function runTests() {
+describe('railgun-smart-wallet-events', function runTests() {
   this.timeout(20000);
 
   beforeEach(async () => {

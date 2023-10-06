@@ -6,7 +6,7 @@ import { randomHex } from '../../utils';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('MerkleProof', () => {
+describe('merkle-proof', () => {
   beforeEach(async () => {});
 
   it('Should create valid dummy merkle proof', () => {

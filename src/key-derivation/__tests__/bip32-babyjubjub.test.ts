@@ -5,7 +5,7 @@ import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } fro
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Key Derivation/BIP32 BabyJubJub', () => {
+describe('bip32-babyjubjub', () => {
   it('Should derive master key', () => {
     const vectors = [
       {

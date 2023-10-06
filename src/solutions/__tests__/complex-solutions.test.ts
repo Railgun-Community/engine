@@ -77,7 +77,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
   };
 };
 
-describe('Solutions/Complex Solutions', () => {
+describe('complex-solutions', () => {
   it('Should get valid next nullifier targets', () => {
     expect(nextNullifierTarget(0)).to.equal(1);
     expect(nextNullifierTarget(1)).to.equal(2);

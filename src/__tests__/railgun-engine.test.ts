@@ -206,7 +206,7 @@ const generateAndVerifyPOI = async (
   }
 };
 
-describe('RailgunEngine', function test() {
+describe('railgun-engine', function test() {
   this.timeout(20000);
 
   beforeEach(async () => {

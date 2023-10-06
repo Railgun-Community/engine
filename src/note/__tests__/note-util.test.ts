@@ -7,7 +7,7 @@ import { getTokenDataHash } from '../note-util';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Note Util', () => {
+describe('note-util', () => {
   it('Should get token data hash for various token types', async () => {
     const tokenDataERC20: TokenData = {
       tokenAddress: '0x1234567890123456789012345678901234567890',

@@ -86,7 +86,7 @@ const VECTORS = [
   },
 ];
 
-describe('Key Derivation', () => {
+describe('key-derivation', () => {
   it('Should derive spending keys', async () => {
     // TODO-VECTORS: Vectors need confirming.
 

@@ -6,7 +6,7 @@ import { TransactionStruct } from '../../models/typechain-types';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Utils/Commitment', () => {
+describe('commitment', () => {
   it('Should convert transaction struct into commitment summary', () => {
     const transactionStruct = {
       commitments: ['0x10f1c4ac23f7d0b0e0a6ba3fa23efaf736a44d3e92f6dd37b5d2044cb5c081dd'],

@@ -5,7 +5,7 @@ import { Merkletree } from '../merkletree';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-describe('Merkletree', () => {
+describe('merkletree', () => {
   it('Should get number of nodes per level', () => {
     expect(Merkletree.numNodesPerLevel(0)).to.equal(65536);
     expect(Merkletree.numNodesPerLevel(1)).to.equal(32768);

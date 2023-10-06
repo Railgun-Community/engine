@@ -26,7 +26,7 @@ const chain: Chain = {
   id: 0,
 };
 
-describe('UTXO Merkletree', () => {
+describe('utxo-merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());

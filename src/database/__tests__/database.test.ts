@@ -11,7 +11,7 @@ const { expect } = chai;
 let db: Database;
 const testEncryptionKey = config.encryptionKey;
 
-describe('Database', () => {
+describe('database', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
