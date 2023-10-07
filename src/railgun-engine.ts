@@ -468,7 +468,7 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       // eslint-disable-next-line no-await-in-loop
-      await this.scanHistoryForTXIDVersion(txidVersion, chain);
+      await this.scanEventHistory(txidVersion, chain);
     }
 
     if (this.pollingRailgunTransactions[chain.type]?.[chain.id] !== true) {
@@ -476,14 +476,14 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async scanHistoryForTXIDVersion(txidVersion: TXIDVersion, chain: Chain) {
+  async scanEventHistory(txidVersion: TXIDVersion, chain: Chain) {
     if (this.skipMerkletreeScans) {
       EngineDebug.log(`Skipping merkletree scan: skipMerkletreeScans set on RAILGUN Engine.`);
       return;
     }
-    if (!this.hasTXIDMerkletree(txidVersion, chain)) {
+    if (!this.hasUTXOMerkletree(txidVersion, chain)) {
       EngineDebug.log(
-        `Cannot scan history. TXID merkletree not yet loaded for ${txidVersion}, chain ${chain.type}:${chain.id}.`,
+        `Cannot scan history. UTXO merkletree not yet loaded for ${txidVersion}, chain ${chain.type}:${chain.id}.`,
       );
       return;
     }
@@ -981,7 +981,7 @@ class RailgunEngine extends EventEmitter {
       await this.clearSyncedUnshieldEvents(txidVersion, chain);
       utxoMerkletree.isScanning = false; // Clear before calling scanHistory.
       // eslint-disable-next-line no-await-in-loop
-      await this.scanHistoryForTXIDVersion(txidVersion, chain);
+      await this.scanEventHistory(txidVersion, chain);
     }
 
     // Must reset txid merkletree which is mapped to UTXO commitments.
