@@ -1134,7 +1134,7 @@ class RailgunEngine extends EventEmitter {
       this.txidMerkletrees[txidVersion] ??= [];
       this.txidMerkletrees[txidVersion][chain.type] ??= [];
 
-      let txidMerkletree: TXIDMerkletree;
+      let txidMerkletree: Optional<TXIDMerkletree>;
 
       if (isDefined(poiLaunchBlock)) {
         if (this.isPOINode) {
@@ -1159,12 +1159,14 @@ class RailgunEngine extends EventEmitter {
           );
           this.txidMerkletrees[txidVersion][chain.type][chain.id] = txidMerkletree;
         }
-      }
 
-      // Load txid merkletree to all wallets
-      Object.values(this.wallets).forEach((wallet) => {
-        wallet.loadRailgunTXIDMerkletree(txidVersion, txidMerkletree);
-      });
+        if (isDefined(txidMerkletree)) {
+          // Load txid merkletree to all wallets
+          Object.values(this.wallets).forEach((wallet) => {
+            wallet.loadRailgunTXIDMerkletree(txidVersion, txidMerkletree as TXIDMerkletree);
+          });
+        }
+      }
 
       // Set deployment block for txidVersion
       this.deploymentBlocks[txidVersion] ??= [];
