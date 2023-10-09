@@ -67,8 +67,8 @@ export abstract class UnshieldNote {
     feeBasisPoints: bigint,
   ): { amount: bigint; fee: bigint } {
     const BASIS_POINTS = 10000n;
-    const amount = value - (value * feeBasisPoints) / BASIS_POINTS;
-    const fee = value - amount;
+    const fee = (value * feeBasisPoints) / BASIS_POINTS;
+    const amount = value - fee;
     return { amount, fee };
   }
 }
