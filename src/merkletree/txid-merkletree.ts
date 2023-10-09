@@ -246,7 +246,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     let nextTree = latestTree;
     let nextIndex = latestIndex;
 
-    const commitmentsToRailgunTxidBatch: PutBatch[] = [];
     const railgunTxidIndexLookupBatch: PutBatch[] = [];
 
     for (let i = 0; i < railgunTransactionsWithTxids.length; i += 1) {
@@ -276,10 +275,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       });
     }
 
-    await Promise.all([
-      this.db.batch(commitmentsToRailgunTxidBatch),
-      this.db.batch(railgunTxidIndexLookupBatch, 'utf8'),
-    ]);
+    await this.db.batch(railgunTxidIndexLookupBatch, 'utf8');
   }
 
   static isOutOfBounds(tree: number, index: number, maxTxidIndex?: number) {

@@ -11,7 +11,7 @@ import { MerkleProof } from '../../models/formatted-types';
 import { TXIDVersion } from '../../models/poi-types';
 import { TXIDMerkletree } from '../../merkletree/txid-merkletree';
 import { Database } from '../../database/database';
-import { ShieldNote, TransactNote, getTokenDataHashERC20 } from '../../note';
+import { ShieldNote, TransactNote, getTokenDataERC20 } from '../../note';
 import { ByteLength, hexToBigInt, nToHex } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
@@ -122,9 +122,13 @@ describe('prover', () => {
         boundParamsHash: testVector.boundParamsHash,
         commitments: testVector.commitmentsOut,
         nullifiers: testVector.nullifiers,
-        unshieldTokenHash: getTokenDataHashERC20(config.contracts.rail),
+        unshield: {
+          tokenData: getTokenDataERC20(config.contracts.rail),
+          toAddress: '0x1234',
+          value: '0x01',
+        },
+        timestamp: 1_000_000,
         txid: '00',
-        hasUnshield: true,
         blockNumber: 0,
         utxoTreeIn: 0,
         utxoTreeOut: 0,

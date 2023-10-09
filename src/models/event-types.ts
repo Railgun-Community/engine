@@ -56,7 +56,7 @@ export type UnshieldStoredEvent = {
   amount: string;
   fee: string;
   blockNumber: number;
-  eventLogIndex: number;
+  eventLogIndex: Optional<number>;
   railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
 };

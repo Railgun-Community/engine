@@ -77,7 +77,11 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * @param txid - unshield txid to get path for
    * @returns database path
    */
-  getUnshieldEventsDBPath(txid?: string, eventLogIndex?: number): string[] {
+  getUnshieldEventsDBPath(
+    txid: Optional<string>,
+    eventLogIndex: Optional<number>,
+    railgunTxid: Optional<string>,
+  ): string[] {
     const path = [
       ...this.getMerkletreeDBPrefix(),
       hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
@@ -87,6 +91,8 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     }
     if (eventLogIndex != null) {
       path.push(eventLogIndex.toString(16));
+    } else if (railgunTxid != null) {
+      path.push(railgunTxid);
     }
     return path.map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
@@ -138,7 +144,11 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     // Build write batch for nullifiers
     const writeBatch: PutBatch[] = unshields.map((unshield) => ({
       type: 'put',
-      key: this.getUnshieldEventsDBPath(unshield.txid, unshield.eventLogIndex).join(':'),
+      key: this.getUnshieldEventsDBPath(
+        unshield.txid,
+        unshield.eventLogIndex,
+        unshield.railgunTxid,
+      ).join(':'),
       value: unshield,
     }));
 
@@ -148,11 +158,10 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
 
   /**
    * Gets Unshield events
-   * NOTE: There are no Unshield events pre-V2.
    */
-  async getUnshieldEvents(txid: string): Promise<UnshieldStoredEvent[]> {
+  async getAllUnshieldEventsForTxid(txid: string): Promise<UnshieldStoredEvent[]> {
     const strippedTxid = formatToByteLength(txid, ByteLength.UINT_256, false);
-    const namespace = this.getUnshieldEventsDBPath(strippedTxid);
+    const namespace = this.getUnshieldEventsDBPath(strippedTxid, undefined, undefined);
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 6);
 

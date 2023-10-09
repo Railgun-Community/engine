@@ -6,7 +6,7 @@ import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
 import { Database, DatabaseNamespace } from './database/database';
 import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
-import { ByteLength, formatToByteLength, hexlify } from './utils/bytes';
+import { ByteLength, formatToByteLength, hexToBigInt, hexlify } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
@@ -52,7 +52,8 @@ import {
   ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS,
   TXIDVersion,
 } from './models/poi-types';
-import { getUnshieldTokenHash } from './note/note-util';
+import { getTokenDataHash, getUnshieldTokenHash } from './note/note-util';
+import { UnshieldNote } from './note';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -777,7 +778,7 @@ class RailgunEngine extends EventEmitter {
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
 
-    const v3BlockNumber = RailgunSmartWalletContract.getEngineV2StartBlockNumber(chain);
+    const v2BlockNumber = RailgunSmartWalletContract.getEngineV2StartBlockNumber(chain);
 
     const toQueue: RailgunTransactionWithHash[] = [];
 
@@ -789,48 +790,78 @@ class RailgunEngine extends EventEmitter {
       );
       const {
         commitments,
-        hasUnshield,
         txid,
-        unshieldTokenHash,
+        unshield,
         railgunTxid,
         utxoTreeOut: tree,
         utxoBatchStartPositionOut,
         blockNumber,
+        timestamp,
       } = railgunTransactionWithTxid;
 
       // Update existing commitments/unshield events.
       // If any commitments are missing, wait for UTXO tree to sync first.
 
-      const unshieldCommitment: Optional<string> = hasUnshield
+      const unshieldCommitment: Optional<string> = unshield
         ? commitments[commitments.length - 1]
         : undefined;
-      const standardCommitments: string[] = hasUnshield ? commitments.slice(0, -1) : commitments;
+      const standardCommitments: string[] = unshield ? commitments.slice(0, -1) : commitments;
 
       let missingAnyCommitments = false;
 
-      // No Unshield events exist pre-V3.
-      const isPreV3 = blockNumber < v3BlockNumber;
+      // No Unshield events exist pre-V2.
+      const isPreV2 = blockNumber < v2BlockNumber;
 
-      if (isDefined(unshieldCommitment) && !isPreV3) {
-        // eslint-disable-next-line no-await-in-loop
-        const unshieldEventsForTxid = await utxoMerkletree.getUnshieldEvents(txid);
-        const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
-          const tokenHash = getUnshieldTokenHash(unshieldEvent);
-          return tokenHash === unshieldTokenHash;
-        });
-        if (matchingUnshieldEvent) {
-          if (matchingUnshieldEvent.railgunTxid !== railgunTxid) {
-            matchingUnshieldEvent.railgunTxid = railgunTxid;
-            // eslint-disable-next-line no-await-in-loop
-            await utxoMerkletree.updateUnshieldEvent(matchingUnshieldEvent);
-          }
-        } else {
-          EngineDebug.log(
-            `Missing unshield from TXID scan: txid ${txid}, token ${
-              unshieldTokenHash ?? 'UNKNOWN'
-            }`,
+      if (isDefined(unshieldCommitment) && unshield) {
+        const unshieldTokenHash = getTokenDataHash(unshield.tokenData);
+
+        if (isPreV2) {
+          // V2 does not have unshield events. Add a new stored Unshield event.
+
+          // Pre-V2 always had a 25n basis points fee for unshields.
+          const preV2FeeBasisPoints = 25n;
+          const { fee, amount } = UnshieldNote.getAmountFeeFromValue(
+            hexToBigInt(unshield.value),
+            preV2FeeBasisPoints,
           );
-          missingAnyCommitments = true;
+
+          const unshieldEvent: UnshieldStoredEvent = {
+            txid,
+            tokenAddress: unshield.tokenData.tokenAddress,
+            tokenType: unshield.tokenData.tokenType,
+            tokenSubID: unshield.tokenData.tokenSubID,
+            toAddress: unshield.toAddress,
+            amount: amount.toString(),
+            fee: fee.toString(),
+            blockNumber,
+            railgunTxid,
+            timestamp,
+            eventLogIndex: undefined, // Does not exist for txid subgraph, which is generated through calldata
+            poisPerList: undefined,
+          };
+        } else {
+          // V2 has unshield events. Map to existing event.
+
+          // eslint-disable-next-line no-await-in-loop
+          const unshieldEventsForTxid = await utxoMerkletree.getAllUnshieldEventsForTxid(txid);
+          const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
+            const tokenHash = getUnshieldTokenHash(unshieldEvent);
+            return tokenHash === unshieldTokenHash;
+          });
+          if (matchingUnshieldEvent) {
+            if (matchingUnshieldEvent.railgunTxid !== railgunTxid) {
+              matchingUnshieldEvent.railgunTxid = railgunTxid;
+              // eslint-disable-next-line no-await-in-loop
+              await utxoMerkletree.updateUnshieldEvent(matchingUnshieldEvent);
+            }
+          } else {
+            EngineDebug.log(
+              `Missing unshield from TXID scan: txid ${txid}, token ${
+                unshieldTokenHash ?? 'UNKNOWN'
+              }`,
+            );
+            missingAnyCommitments = true;
+          }
         }
       }
 
@@ -937,7 +968,10 @@ class RailgunEngine extends EventEmitter {
 
   private async clearSyncedUnshieldEvents(txidVersion: TXIDVersion, chain: Chain) {
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
-    await this.db.clearNamespace(utxoMerkletree.getUnshieldEventsDBPath());
+    await this.db.clearNamespace(
+      // All Unshields
+      utxoMerkletree.getUnshieldEventsDBPath(undefined, undefined, undefined),
+    );
   }
 
   private async clearAllTXIDMerkletrees(txidVersion: TXIDVersion, chain: Chain) {

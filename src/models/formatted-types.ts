@@ -147,11 +147,15 @@ export type RailgunTransaction = {
   boundParamsHash: string;
   blockNumber: number;
   txid: string;
-  unshieldTokenHash: Optional<string>;
-  hasUnshield: boolean;
+  unshield: Optional<{
+    tokenData: TokenData;
+    toAddress: string;
+    value: string;
+  }>;
   utxoTreeIn: number;
   utxoTreeOut: number;
   utxoBatchStartPositionOut: number;
+  timestamp: number;
 };
 
 export type RailgunTransactionWithHash = RailgunTransaction & {

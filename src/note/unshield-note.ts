@@ -61,4 +61,13 @@ export abstract class UnshieldNote {
     const { npk, tokenData, value } = this;
     return { npk, token: tokenData, value };
   }
+
+  static getAmountFeeFromValue(
+    value: bigint,
+    feeBasisPoints: bigint,
+  ): { amount: bigint; fee: bigint } {
+    const fee = value * feeBasisPoints;
+    const amount = value - fee;
+    return { amount, fee };
+  }
 }

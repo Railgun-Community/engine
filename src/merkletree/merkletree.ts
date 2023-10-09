@@ -695,6 +695,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
           }
         } else {
           // Unknown error.
+          EngineDebug.error(err);
           EngineDebug.log(
             `${processWriteQueuePrefix} Unable to process more events. Unknown error.`,
           );

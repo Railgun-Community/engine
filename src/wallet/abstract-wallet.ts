@@ -1689,7 +1689,7 @@ abstract class AbstractWallet extends EventEmitter {
         // Nullifier exists. Find unshield events from txid.
 
         // NOTE: There are no Unshield events pre-V2.
-        const unshieldEventsForNullifier = await merkletree.getUnshieldEvents(spendtxid);
+        const unshieldEventsForNullifier = await merkletree.getAllUnshieldEventsForTxid(spendtxid);
         const filteredUnshieldEventsForNullifier = unshieldEventsForNullifier.filter(
           (event) =>
             unshieldEvents.find((existingUnshieldEvent) =>
@@ -1704,7 +1704,11 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private static compareUnshieldEvents(a: UnshieldStoredEvent, b: UnshieldStoredEvent): boolean {
-    return a.txid === b.txid && a.eventLogIndex === b.eventLogIndex;
+    return (
+      a.txid === b.txid &&
+      (a.eventLogIndex === b.eventLogIndex ||
+        (isDefined(a.railgunTxid) && a.railgunTxid === b.railgunTxid))
+    );
   }
 
   async getTransactionSpendHistory(

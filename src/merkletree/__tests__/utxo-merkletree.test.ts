@@ -699,7 +699,7 @@ describe('utxo-merkletree', () => {
   }).timeout(1000);
 
   it('Should store and retrieve unshield events', async () => {
-    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([]);
+    expect(await merkletree.getAllUnshieldEventsForTxid('0')).to.deep.equal([]);
     const unshieldA1: UnshieldStoredEvent = {
       txid: '0',
       toAddress: '123',
@@ -753,8 +753,11 @@ describe('utxo-merkletree', () => {
     delete unshieldB2.railgunTxid;
     delete unshieldB2.poisPerList;
 
-    expect(await merkletree.getUnshieldEvents('0')).to.deep.equal([unshieldA1]);
-    expect(await merkletree.getUnshieldEvents('1')).to.deep.equal([unshieldB1, unshieldB2]);
+    expect(await merkletree.getAllUnshieldEventsForTxid('0')).to.deep.equal([unshieldA1]);
+    expect(await merkletree.getAllUnshieldEventsForTxid('1')).to.deep.equal([
+      unshieldB1,
+      unshieldB2,
+    ]);
   });
 
   it('Should return latest tree', async () => {
