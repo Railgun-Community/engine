@@ -12,6 +12,7 @@ import { SentCommitment, TXO, WalletBalanceBucket } from '../models/txo-types';
 import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
 import { UnshieldStoredEvent } from '../models/event-types';
+import { OutputType } from '../models';
 
 export type POIList = {
   key: string;
@@ -41,10 +42,15 @@ export class POI {
     return this.lists.filter((list) => list.type === POIListType.Active).map((list) => list.key);
   }
 
-  static getBalanceBucket(pois: Optional<POIsPerList>): WalletBalanceBucket {
+  static getBalanceBucket(txo: TXO): WalletBalanceBucket {
+    const pois = txo.poisPerList;
+    const isChange = txo.note.outputType === OutputType.Change;
+
     const activeListKeys = POI.getActiveListKeys();
     if (!pois || !this.hasAllKeys(pois, activeListKeys)) {
-      return WalletBalanceBucket.MissingPOI;
+      return isChange
+        ? WalletBalanceBucket.MissingInternalPOI
+        : WalletBalanceBucket.MissingExternalPOI;
     }
 
     if (POI.hasValidPOIsActiveLists(pois)) {
@@ -72,7 +78,9 @@ export class POI {
       return WalletBalanceBucket.TransactProofSubmitted;
     }
 
-    return WalletBalanceBucket.MissingPOI;
+    return isChange
+      ? WalletBalanceBucket.MissingInternalPOI
+      : WalletBalanceBucket.MissingExternalPOI;
   }
 
   private static validatePOIStatusForAllLists(

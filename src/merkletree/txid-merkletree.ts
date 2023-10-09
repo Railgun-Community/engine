@@ -17,6 +17,7 @@ import {
 import { ByteLength, formatToByteLength, fromUTF8String, hexlify, nToHex } from '../utils/bytes';
 import { isDefined } from '../utils';
 import { TXIDVersion } from '../models';
+import EngineDebug from '../debugger/debugger';
 
 type POILaunchSnapshotNode = {
   hash: string;
@@ -116,6 +117,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     try {
       return await this.getData(tree, index);
     } catch (err) {
+      EngineDebug.log('Error getting railgun transaction');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      EngineDebug.error(err);
       return undefined;
     }
   }
@@ -253,7 +257,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       nextTree = tree;
       nextIndex = index;
       if (TXIDMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
-        return;
+        break;
       }
 
       const railgunTransactionWithTxid = railgunTransactionsWithTxids[i];
@@ -469,6 +473,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       const { tree, index } = TXIDMerkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
       return await this.getData(tree, index);
     } catch (err) {
+      EngineDebug.log('Error getting railgun txid index');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      EngineDebug.error(err);
       return undefined;
     }
   }

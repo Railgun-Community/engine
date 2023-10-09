@@ -65,6 +65,7 @@ export const shieldNFTForTest = async (
     promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out waiting for NFT shield'),
     txResponse.wait(),
   ]);
+  await wallet.refreshPOIsForAllTXIDVersions(chain, true);
 
   return shield;
 };

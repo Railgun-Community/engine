@@ -56,16 +56,16 @@ import { createPollingJsonRpcProviderForListeners } from '../provider/polling-ut
 import { isDefined } from '../utils/is-defined';
 import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
-import { POI, POIListType } from '../poi/poi';
+import { POI } from '../poi/poi';
 import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-interface.test';
 import { hashBoundParams } from '../transaction/bound-params';
 import { createRailgunTransactionWithHash } from '../transaction/railgun-txid';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
-import { POIEngineProofInputs, TXIDVersion } from '../models/poi-types';
+import { POIEngineProofInputs, TXIDVersion, TXOPOIListStatus } from '../models/poi-types';
 import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitment';
 import { getGlobalTreePosition } from '../poi/global-tree-position';
 import { ShieldNote } from '../note';
-import { TransactionStruct } from '../models';
+import { TransactionStruct, WalletBalanceBucket } from '../models';
 import { AES } from '../utils';
 import { createDummyMerkleProof } from '../merkletree/merkle-proof';
 
@@ -120,6 +120,8 @@ const shieldTestTokens = async (
     tx.wait(),
     promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out scanning after test token shield'),
   ]);
+  await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+
   return shield;
 };
 
@@ -226,8 +228,6 @@ describe('railgun-engine', function test() {
       undefined, // skipMerkletreeScans
     );
     engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
-
-    POI.init([{ key: MOCK_LIST_KEY, type: POIListType.Gather }], new TestPOINodeInterface());
 
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       return;
@@ -344,16 +344,24 @@ describe('railgun-engine', function test() {
     await utxoMerkletree.updateTreesFromWriteQueue();
 
     await wallet.scanBalances(txidVersion, chain, undefined);
-    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
     await wallet.fullRescanBalances(txidVersion, chain, undefined);
-    const balanceRescan = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    const balanceRescan = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balanceRescan).to.equal(value);
 
     await wallet.clearScannedBalances(txidVersion, chain);
-    const balanceClear = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const balanceClear = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balanceClear).to.equal(undefined);
 
     const shieldsPost = await engine.getAllShieldCommitments(txidVersion, chain, 0);
@@ -400,7 +408,10 @@ describe('railgun-engine', function test() {
     await utxoMerkletree.updateTreesFromWriteQueue();
 
     await wallet.scanBalances(txidVersion, chain, undefined);
-    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
@@ -409,11 +420,16 @@ describe('railgun-engine', function test() {
     expect(walletDetails.creationTreeHeight).to.equal(0);
 
     await wallet.fullRescanBalances(txidVersion, chain, undefined);
-    const balanceRescan = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    const balanceRescan = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balanceRescan).to.equal(value);
 
     await wallet.clearScannedBalances(txidVersion, chain);
-    const balanceCleared = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const balanceCleared = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balanceCleared).to.equal(undefined);
 
     const walletDetailsCleared = await wallet.getWalletDetails(txidVersion, chain);
@@ -428,13 +444,17 @@ describe('railgun-engine', function test() {
       return;
     }
 
-    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
     const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     const tokenData = getTokenDataERC20(tokenAddress);
@@ -468,6 +488,9 @@ describe('railgun-engine', function test() {
       testEncryptionKey,
       () => {},
     );
+
+    TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
+
     const transact = await railgunSmartWalletContract.transact(transactions);
 
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
@@ -479,12 +502,18 @@ describe('railgun-engine', function test() {
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
       promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    await wallet2.refreshPOIsForAllTXIDVersions(chain, true);
 
     // BALANCE = shielded amount - 300(decimals) - 1
-    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(newBalance).to.equal(109424999999999999999999n, 'Failed to receive expected balance');
 
-    const newBalance2 = await wallet2.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const newBalance2 = await wallet2.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(newBalance2).to.equal(BigInt(1));
 
     const shieldCommitment = nToHex(
@@ -660,13 +689,17 @@ describe('railgun-engine', function test() {
       return;
     }
 
-    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
     const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     const tokenData = getTokenDataERC20(tokenAddress);
@@ -689,6 +722,9 @@ describe('railgun-engine', function test() {
     expect(transactions.length).to.equal(1);
     expect(transactions[0].nullifiers.length).to.equal(1);
     expect(transactions[0].commitments.length).to.equal(1);
+
+    TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
+
     const transact = await railgunSmartWalletContract.transact(transactions);
 
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
@@ -700,7 +736,9 @@ describe('railgun-engine', function test() {
       throw new Error('No transaction receipt');
     }
 
-    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
 
     const shieldCommitment = nToHex(
@@ -837,13 +875,17 @@ describe('railgun-engine', function test() {
       return;
     }
 
-    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
     await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     // Create transaction
@@ -884,6 +926,8 @@ describe('railgun-engine', function test() {
       ),
     );
 
+    TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
+
     const transactions = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
@@ -899,12 +943,18 @@ describe('railgun-engine', function test() {
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
       promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    await wallet2.refreshPOIsForAllTXIDVersions(chain, true);
 
     // BALANCE = shielded amount - 300(decimals) - 1
-    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(newBalance).to.equal(109724999999999999999989n, 'Failed to receive expected balance');
 
-    const newBalance2 = await wallet2.getBalanceERC20(txidVersion, chain, tokenAddress);
+    const newBalance2 = await wallet2.getBalanceERC20(txidVersion, chain, tokenAddress, [
+      WalletBalanceBucket.Spendable,
+    ]);
     expect(newBalance2).to.equal(BigInt(11));
 
     // check the transactions log
@@ -1126,6 +1176,8 @@ describe('railgun-engine', function test() {
       promiseTimeout(awaitMultipleScans(wallet, chain, 4), 15000, 'Timed out wallet1 scan'),
       promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    await wallet2.refreshPOIsForAllTXIDVersions(chain, true);
 
     const historyAfterTransfer = await wallet.getTransactionHistory(chain, undefined);
     expect(historyAfterTransfer.length).to.equal(4);

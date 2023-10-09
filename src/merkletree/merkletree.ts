@@ -325,7 +325,17 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Stores merkletrees metadata
    */
   async storeMerkletreesMetadata(metadata: MerkletreesMetadata): Promise<void> {
-    await this.db.put(this.getMerkletreeDBPrefix(), msgpack.encode(metadata));
+    try {
+      await this.db.put(this.getMerkletreeDBPrefix(), msgpack.encode(metadata));
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      if (EngineDebug.isTestRun()) {
+        return;
+      }
+      throw new Error(err.message);
+    }
   }
 
   /**

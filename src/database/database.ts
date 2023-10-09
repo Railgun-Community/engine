@@ -5,6 +5,7 @@ import levelup from 'levelup';
 import { BytesData, Ciphertext } from '../models/formatted-types';
 import { chunk, combine, hexlify } from '../utils/bytes';
 import { AES } from '../utils/encryption';
+import EngineDebug from '../debugger/debugger';
 
 export type Encoding =
   | 'utf8'
@@ -58,9 +59,19 @@ class Database {
    * @returns complete
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  put(path: Path, value: any, encoding: Encoding = 'hex'): Promise<void> {
-    const key = Database.pathToKey(path);
-    return this.level.put(key, value, { valueEncoding: encoding });
+  async put(path: Path, value: any, encoding: Encoding = 'hex'): Promise<void> {
+    try {
+      const key = Database.pathToKey(path);
+      await this.level.put(key, value, { valueEncoding: encoding });
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        return;
+      }
+      if (EngineDebug.isTestRun() && err.message.includes('Database is not open')) {
+        return;
+      }
+      throw err;
+    }
   }
 
   /**

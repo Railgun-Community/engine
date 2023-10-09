@@ -19,6 +19,8 @@ export class TestPOINodeInterface extends POINodeInterface {
     return true;
   }
 
+  static overridePOIsListStatus = TXOPOIListStatus.Valid;
+
   // eslint-disable-next-line class-methods-use-this
   async getPOIsPerList(
     txidVersion: TXIDVersion,
@@ -30,8 +32,9 @@ export class TestPOINodeInterface extends POINodeInterface {
     blindedCommitmentDatas.forEach((blindedCommitmentData) => {
       poisPerList[blindedCommitmentData.blindedCommitment] ??= {};
       listKeys.forEach((listKey) => {
-        // All "Missing"
-        poisPerList[blindedCommitmentData.blindedCommitment][listKey] = TXOPOIListStatus.Missing;
+        // Use 'override' value
+        poisPerList[blindedCommitmentData.blindedCommitment][listKey] =
+          TestPOINodeInterface.overridePOIsListStatus;
       });
     });
     return poisPerList;

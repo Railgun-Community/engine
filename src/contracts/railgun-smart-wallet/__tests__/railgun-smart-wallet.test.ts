@@ -71,6 +71,7 @@ import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provi
 import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
 import { isDefined } from '../../../utils/is-defined';
 import { TXIDVersion } from '../../../models/poi-types';
+import { WalletBalanceBucket } from '../../../models/txo-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -173,7 +174,9 @@ describe('railgun-smart-wallet', function runTests() {
 
       // Send shield on chain
       const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
-      return (await Promise.all([tx.wait(), awaitScan(wallet, chain)]))[0];
+      const txReceipt = (await Promise.all([tx.wait(), awaitScan(wallet, chain)]))[0];
+      await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+      return txReceipt;
     };
   });
 
@@ -276,6 +279,7 @@ describe('railgun-smart-wallet', function runTests() {
       txTransact.wait(),
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
     ]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
 
     // Case 1 - Dummy estimate with Null Relayer Fee
     const transactionBatch_DummyNullRelayerFee = new TransactionBatch(chain);
@@ -431,162 +435,178 @@ describe('railgun-smart-wallet', function runTests() {
     expect(fees.nft).to.be.a('bigint');
   });
 
-  it('[HH] Should find shield, transact and unshield as historical events', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
-      this.skip();
-      return;
-    }
+  it.only(
+    '[HH] Should find shield, transact and unshield as historical events',
+    async function run() {
+      if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+        this.skip();
+        return;
+      }
 
-    let resultEvent!: Optional<CommitmentEvent>;
-    const eventsListener = async (_txidVersion: TXIDVersion, commitmentEvent: CommitmentEvent) => {
-      resultEvent = commitmentEvent;
-    };
-    let resultNullifiers: Nullifier[] = [];
-    const nullifiersListener = async (_txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
-      resultNullifiers.push(...nullifiers);
-    };
-    let resultUnshields: UnshieldStoredEvent[] = [];
-    const unshieldListener = async (
-      _txidVersion: TXIDVersion,
-      unshields: UnshieldStoredEvent[],
-    ) => {
-      resultUnshields.push(...unshields);
-    };
+      let resultEvent!: Optional<CommitmentEvent>;
+      const eventsListener = async (
+        _txidVersion: TXIDVersion,
+        commitmentEvent: CommitmentEvent,
+      ) => {
+        resultEvent = commitmentEvent;
+      };
+      let resultNullifiers: Nullifier[] = [];
+      const nullifiersListener = async (_txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
+        resultNullifiers.push(...nullifiers);
+      };
+      let resultUnshields: UnshieldStoredEvent[] = [];
+      const unshieldListener = async (
+        _txidVersion: TXIDVersion,
+        unshields: UnshieldStoredEvent[],
+      ) => {
+        resultUnshields.push(...unshields);
+      };
 
-    let startingBlock = await provider.getBlockNumber();
+      let startingBlock = await provider.getBlockNumber();
 
-    // Add a secondary listener.
-    await railgunSmartWalletContract.setTreeUpdateListeners(
-      eventsListener,
-      nullifiersListener,
-      unshieldListener,
-    );
+      // Add a secondary listener.
+      await railgunSmartWalletContract.setTreeUpdateListeners(
+        eventsListener,
+        nullifiersListener,
+        unshieldListener,
+      );
 
-    // Subscribe to Nullified event
-    const resultNullifiers2: Nullifier[] = [];
-    const nullifiersListener2 = (nullifiers: Nullifier[]) => {
-      resultNullifiers2.push(...nullifiers);
-    };
-    railgunSmartWalletContract.on(EngineEvent.ContractNullifierReceived, nullifiersListener2);
+      // Subscribe to Nullified event
+      const resultNullifiers2: Nullifier[] = [];
+      const nullifiersListener2 = (nullifiers: Nullifier[]) => {
+        resultNullifiers2.push(...nullifiers);
+      };
+      railgunSmartWalletContract.on(EngineEvent.ContractNullifierReceived, nullifiersListener2);
 
-    const txResponse = await testShield();
-    if (txResponse == null) {
-      throw new Error('No shield transaction response');
-    }
+      const txResponse = await testShield();
+      if (txResponse == null) {
+        throw new Error('No shield transaction response');
+      }
 
-    // Listeners should have been updated automatically by contract events.
+      // Listeners should have been updated automatically by contract events.
 
-    expect(resultEvent).to.be.an('object', 'No event in history for shield');
-    expect((resultEvent as CommitmentEvent).txid).to.equal(hexlify(txResponse.hash));
-    expect(resultNullifiers.length).to.equal(0);
+      expect(resultEvent).to.be.an('object', 'No event in history for shield');
+      expect((resultEvent as CommitmentEvent).txid).to.equal(hexlify(txResponse.hash));
+      expect(resultNullifiers.length).to.equal(0);
 
-    resultEvent = undefined;
-    resultNullifiers = [];
-    resultUnshields = [];
+      resultEvent = undefined;
+      resultNullifiers = [];
+      resultUnshields = [];
 
-    let latestBlock = await provider.getBlockNumber();
+      let latestBlock = await provider.getBlockNumber();
 
-    await railgunSmartWalletContract.getHistoricalEvents(
-      chain,
-      startingBlock,
-      latestBlock,
-      () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
-      eventsListener,
-      nullifiersListener,
-      unshieldListener,
-      async () => {},
-    );
+      await railgunSmartWalletContract.getHistoricalEvents(
+        chain,
+        startingBlock,
+        latestBlock,
+        () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
+        eventsListener,
+        nullifiersListener,
+        unshieldListener,
+        async () => {},
+      );
 
-    // Listeners should have been updated by historical event scan.
+      // Listeners should have been updated by historical event scan.
 
-    expect(resultEvent).to.be.an('object', 'No event in history for shield');
-    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(hexlify(txResponse.hash));
-    expect(resultNullifiers.length).to.equal(0);
-    expect(resultUnshields.length).to.equal(0);
+      expect(resultEvent).to.be.an('object', 'No event in history for shield');
+      expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(hexlify(txResponse.hash));
+      expect(resultNullifiers.length).to.equal(0);
+      expect(resultUnshields.length).to.equal(0);
 
-    startingBlock = await provider.getBlockNumber();
+      startingBlock = await provider.getBlockNumber();
 
-    const transactionBatch = new TransactionBatch(chain);
+      const transactionBatch = new TransactionBatch(chain);
 
-    const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
+      const tokenData = getTokenDataERC20(TOKEN_ADDRESS);
 
-    transactionBatch.addOutput(
-      TransactNote.createTransfer(
-        wallet2.addressKeys,
-        wallet.addressKeys,
-        300n,
+      transactionBatch.addOutput(
+        TransactNote.createTransfer(
+          wallet2.addressKeys,
+          wallet.addressKeys,
+          300n,
+          tokenData,
+          wallet.getViewingKeyPair(),
+          false, // showSenderAddressToRecipient
+          OutputType.RelayerFee,
+          undefined, // memoText
+        ),
+      );
+      transactionBatch.addUnshieldData({
+        toAddress: ethersWallet.address,
+        value: 100n,
         tokenData,
-        wallet.getViewingKeyPair(),
-        false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
-        undefined, // memoText
-      ),
-    );
-    transactionBatch.addUnshieldData({
-      toAddress: ethersWallet.address,
-      value: 100n,
-      tokenData,
-    });
-    const serializedTxs = await transactionBatch.generateTransactions(
-      engine.prover,
-      wallet,
-      txidVersion,
-      testEncryptionKey,
-      () => {},
-    );
-    const transact = await railgunSmartWalletContract.transact(serializedTxs);
+      });
+      const serializedTxs = await transactionBatch.generateTransactions(
+        engine.prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+      );
+      const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
-    // Send transact on chain
-    const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
-    const [txResponseTransact] = await Promise.all([
-      txTransact.wait(),
-      promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
-      promiseTimeout(awaitMultipleScans(viewOnlyWallet, chain, 2), 15000, 'Timed out wallet1 scan'),
-    ]);
+      // Send transact on chain
+      const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
+      const [txResponseTransact] = await Promise.all([
+        txTransact.wait(),
+        promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
+        promiseTimeout(
+          awaitMultipleScans(viewOnlyWallet, chain, 2),
+          15000,
+          'Timed out wallet1 scan',
+        ),
+      ]);
+      await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+      await viewOnlyWallet.refreshPOIsForAllTXIDVersions(chain);
 
-    expect(await wallet.getBalanceERC20(txidVersion, chain, TOKEN_ADDRESS)).equal(
-      109724999999999999999600n,
-    );
-    expect(await viewOnlyWallet.getBalanceERC20(txidVersion, chain, TOKEN_ADDRESS)).equal(
-      109724999999999999999600n,
-    );
+      expect(
+        await wallet.getBalanceERC20(txidVersion, chain, TOKEN_ADDRESS, [
+          WalletBalanceBucket.Spendable,
+        ]),
+      ).equal(109724999999999999999600n);
+      expect(
+        await viewOnlyWallet.getBalanceERC20(txidVersion, chain, TOKEN_ADDRESS, [
+          WalletBalanceBucket.Spendable,
+        ]),
+      ).equal(109724999999999999999600n);
 
-    // Event should have been scanned by automatic contract events:
+      // Event should have been scanned by automatic contract events:
 
-    if (txResponseTransact == null) {
-      throw new Error('No transact transaction response');
-    }
-    const txid = hexlify(txResponseTransact.hash);
-    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
-    expect(resultNullifiers[0].txid).to.equal(txid);
-    expect(resultNullifiers2[0].txid).to.equal(txid);
-    expect(resultUnshields.length).to.equal(1);
-    expect(resultUnshields[0].txid).to.equal(txid);
+      if (txResponseTransact == null) {
+        throw new Error('No transact transaction response');
+      }
+      const txid = hexlify(txResponseTransact.hash);
+      expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
+      expect(resultNullifiers[0].txid).to.equal(txid);
+      expect(resultNullifiers2[0].txid).to.equal(txid);
+      expect(resultUnshields.length).to.equal(1);
+      expect(resultUnshields[0].txid).to.equal(txid);
 
-    resultEvent = undefined;
-    resultNullifiers = [];
+      resultEvent = undefined;
+      resultNullifiers = [];
 
-    latestBlock = await provider.getBlockNumber();
+      latestBlock = await provider.getBlockNumber();
 
-    await railgunSmartWalletContract.getHistoricalEvents(
-      chain,
-      startingBlock,
-      latestBlock,
-      () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
-      eventsListener,
-      nullifiersListener,
-      unshieldListener,
-      async () => {},
-    );
+      await railgunSmartWalletContract.getHistoricalEvents(
+        chain,
+        startingBlock,
+        latestBlock,
+        () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
+        eventsListener,
+        nullifiersListener,
+        unshieldListener,
+        async () => {},
+      );
 
-    // Event should have been scanned by historical event scan.
+      // Event should have been scanned by historical event scan.
 
-    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
-    expect((resultEvent as unknown as CommitmentEvent).commitments[0].commitmentType).to.equal(
-      CommitmentType.TransactCommitment,
-    );
-    expect(resultNullifiers.length).to.equal(1);
-  }).timeout(120000);
+      expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
+      expect((resultEvent as unknown as CommitmentEvent).commitments[0].commitmentType).to.equal(
+        CommitmentType.TransactCommitment,
+      );
+      expect(resultNullifiers.length).to.equal(1);
+    },
+  ).timeout(120000);
 
   it('[HH] Should create 11 shields which generates 2 unshield events', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -610,6 +630,7 @@ describe('railgun-smart-wallet', function runTests() {
     // Send shield on chain
     const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
     await Promise.all([tx.wait(), awaitScan(wallet, chain)]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
 
     const transactionBatch = new TransactionBatch(chain);
 
@@ -635,8 +656,13 @@ describe('railgun-smart-wallet', function runTests() {
       txTransact.wait(),
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
     ]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
 
-    expect(await wallet.getBalanceERC20(txidVersion, chain, TOKEN_ADDRESS)).equal(0n);
+    expect(
+      await wallet.getBalanceERC20(txidVersion, chain, TOKEN_ADDRESS, [
+        WalletBalanceBucket.Spendable,
+      ]),
+    ).equal(0n);
 
     const history = await wallet.getTransactionHistory(chain, startingBlock);
 
@@ -727,6 +753,8 @@ describe('railgun-smart-wallet', function runTests() {
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(0);
     expect(await engine.getStartScanningBlock(txidVersion, chain)).to.equal(0);
 
+    const forceRefresh = true;
+    await wallet.refreshPOIsForAllTXIDVersions(chain, forceRefresh);
     await engine.fullRescanUTXOMerkletreesAndWallets(chain);
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
   });
@@ -771,6 +799,7 @@ describe('railgun-smart-wallet', function runTests() {
       promiseTimeout(awaitScan(wallet, chain), 5000),
       txResponse.wait(),
     ]);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
 
     // Check result
     expect(result.treeNumber).to.equal(0);

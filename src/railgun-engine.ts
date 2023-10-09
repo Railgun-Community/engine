@@ -1152,7 +1152,7 @@ class RailgunEngine extends EventEmitter {
         chain,
         txidVersion,
         (_txidVersion, _chain, tree, _index, merkleroot) =>
-          ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].validateMerkleroot(
+          ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id]?.validateMerkleroot(
             tree,
             merkleroot,
           ),

@@ -1934,9 +1934,17 @@ abstract class AbstractWallet extends EventEmitter {
       // If utxo is unspent process it
       const isUnspent = txo.spendtxid === false;
       if (isUnspent) {
-        const balanceBucket = POI.getBalanceBucket(txo.poisPerList);
+        const balanceBucket = POI.getBalanceBucket(txo);
 
         if (!balanceBucketFilter.includes(balanceBucket)) {
+          if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
+            // WARNING FOR TESTS ONLY
+            EngineDebug.error(
+              new Error(
+                'WARNING: Missing SPENDABLE balance - likely needs refreshPOIsForAllTXIDVersions before getting balance',
+              ),
+            );
+          }
           return;
         }
 
@@ -2160,11 +2168,11 @@ abstract class AbstractWallet extends EventEmitter {
   /**
    * Occurs after balances are scanned.
    */
-  async refreshPOIsForAllTXIDVersions(chain: Chain) {
+  async refreshPOIsForAllTXIDVersions(chain: Chain, forceRefresh?: boolean) {
     if (!POI.isActiveForChain(chain)) {
       return;
     }
-    if (this.isRefreshingPOIs[chain.type]?.[chain.id]) {
+    if (forceRefresh !== true && this.isRefreshingPOIs[chain.type]?.[chain.id]) {
       return;
     }
     this.isRefreshingPOIs[chain.type] ??= [];

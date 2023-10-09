@@ -148,6 +148,7 @@ describe('transaction-batch', function run() {
     ]);
     await utxoMerkletree.updateTreesFromWriteQueue();
     await wallet.scanBalances(txidVersion, chain, undefined);
+    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
     expect((await wallet.getWalletDetails(txidVersion, chain)).treeScannedHeights).to.deep.equal([
       1, 5,
     ]);
