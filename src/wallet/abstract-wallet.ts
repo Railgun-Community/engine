@@ -56,7 +56,7 @@ import {
 import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   AddressKeys,
-  AllBalances,
+  TokenBalancesAllTxidVersions,
   TotalBalancesByTreeNumber,
   ShareableViewingKeyData,
   TokenBalances,
@@ -1878,16 +1878,11 @@ abstract class AbstractWallet extends EventEmitter {
     return merkletree;
   }
 
-  /**
-   * Gets wallet balances
-   * @param chain - chain type/id to get balances for
-   * @returns balances
-   */
-  async getAllBalances(
+  async getTokenBalancesAllTxidVersions(
     chain: Chain,
     balanceBucketFilter: WalletBalanceBucket[],
-  ): Promise<AllBalances> {
-    const balances: AllBalances = {};
+  ): Promise<TokenBalancesAllTxidVersions> {
+    const balances: TokenBalancesAllTxidVersions = {};
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
@@ -1904,6 +1899,17 @@ abstract class AbstractWallet extends EventEmitter {
     }
 
     return balances;
+  }
+
+  async getTokenBalances(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    onlySpendable: boolean,
+  ): Promise<TokenBalances> {
+    const balanceBucketFilter = onlySpendable
+      ? POI.getSpendableBalanceBuckets(chain)
+      : Object.values(WalletBalanceBucket);
+    return this.getTokenBalancesByTxidVersion(txidVersion, chain, balanceBucketFilter);
   }
 
   /**

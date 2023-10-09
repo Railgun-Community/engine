@@ -60,6 +60,7 @@ const testEncryptionKey = config.encryptionKey;
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
+const onlySpendable = true;
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
 
@@ -592,7 +593,11 @@ describe('transaction-erc20', function test() {
   it('Should generate a valid signature for hot wallet transaction', async () => {
     transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups =
-      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion);
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      );
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -615,7 +620,11 @@ describe('transaction-erc20', function test() {
   it('Should generate validated inputs for transaction batch', async () => {
     transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups =
-      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion);
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      );
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -660,7 +669,11 @@ describe('transaction-erc20', function test() {
     );
 
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      ),
     ).to.eventually.be.rejectedWith(
       'RAILGUN private token balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192',
     );
@@ -668,7 +681,11 @@ describe('transaction-erc20', function test() {
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(21000000000027360000000000n));
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      ),
     ).to.eventually.be.rejectedWith(
       'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
@@ -676,7 +693,11 @@ describe('transaction-erc20', function test() {
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(11000000000027360000000000n));
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      ),
     ).to.eventually.be.rejectedWith(
       'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
@@ -692,7 +713,11 @@ describe('transaction-erc20', function test() {
     });
 
     await expect(
-      transaction2.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
+      transaction2.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      ),
     ).to.eventually.be.rejectedWith(
       'RAILGUN private token balance too low for 0x00000000000000000000000000000000000000ff',
     );
@@ -706,7 +731,11 @@ describe('transaction-erc20', function test() {
       tokenData,
     });
     const spendingSolutionGroups =
-      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion);
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
+        wallet,
+        txidVersion,
+        onlySpendable,
+      );
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(

@@ -14,8 +14,8 @@ export type TreeBalance = {
   utxos: TXO[];
 };
 
-export type AllBalances = {
-  [txidVersion: string]: { [tokenHash: string]: TreeBalance };
+export type TokenBalancesAllTxidVersions = {
+  [txidVersion: string]: TokenBalances;
 };
 
 export type TokenBalances = {

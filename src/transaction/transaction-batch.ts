@@ -103,11 +103,12 @@ export class TransactionBatch {
   async generateValidSpendingSolutionGroupsAllOutputs(
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
+    onlySpendable: boolean,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenDatas: TokenData[] = this.getOutputTokenDatas();
     const spendingSolutionGroupsPerToken = await Promise.all(
       tokenDatas.map((tokenData) =>
-        this.generateValidSpendingSolutionGroups(wallet, txidVersion, tokenData),
+        this.generateValidSpendingSolutionGroups(wallet, txidVersion, tokenData, onlySpendable),
       ),
     );
     return spendingSolutionGroupsPerToken.flat();
@@ -121,7 +122,7 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     tokenData: TokenData,
-    isSpendable = true,
+    onlySpendable: boolean,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenHash = getTokenDataHash(tokenData);
     const tokenOutputs = this.outputs.filter((output) => output.tokenHash === tokenHash);
@@ -130,7 +131,7 @@ export class TransactionBatch {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
 
-    const balanceBucketFilter = isSpendable
+    const balanceBucketFilter = onlySpendable
       ? POI.getSpendableBalanceBuckets(this.chain)
       : Object.values(WalletBalanceBucket);
 
@@ -316,10 +317,12 @@ export class TransactionBatch {
     txidVersion: TXIDVersion,
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
+    onlySpendable = true,
   ): Promise<TransactionStruct[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
       txidVersion,
+      onlySpendable,
     );
     EngineDebug.log('Actual spending solution groups:');
     EngineDebug.log(
@@ -411,10 +414,12 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     encryptionKey: string,
+    onlySpendable = true,
   ): Promise<TransactionStruct[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
       txidVersion,
+      onlySpendable,
     );
     TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 
