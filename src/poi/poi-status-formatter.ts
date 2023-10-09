@@ -188,6 +188,8 @@ const formatSpentStatusInfo = async (
       );
       listKeysCanGenerateSpentPOIs = POI.getListKeysCanGenerateSpentPOIs(
         spentTXOs,
+        sentCommitmentsForRailgunTxid,
+        unshieldEventsForRailgunTxid,
         isLegacyPOIProof,
       );
     } else {

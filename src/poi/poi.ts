@@ -109,7 +109,7 @@ export class POI {
     return this.validatePOIStatusForAllLists(pois, listKeys, [TXOPOIListStatus.Valid]);
   }
 
-  private static getAllListKeysWithValidPOIs(inputPOIsPerList: POIsPerList[]): string[] {
+  private static getAllListKeysWithValidInputPOIs(inputPOIsPerList: POIsPerList[]): string[] {
     const listKeys = this.getAllListKeys();
     const listKeysShouldGenerateSpentPOIs: string[] = [];
     listKeys.forEach((listKey) => {
@@ -144,13 +144,33 @@ export class POI {
     return keys.every((key) => Object.prototype.hasOwnProperty.call(obj, key));
   }
 
-  static getListKeysCanGenerateSpentPOIs(spentTXOs: TXO[], isLegacyPOIProof: boolean): string[] {
+  static getListKeysCanGenerateSpentPOIs(
+    spentTXOs: TXO[],
+    sentCommitments: SentCommitment[],
+    unshieldEvents: UnshieldStoredEvent[],
+    isLegacyPOIProof: boolean,
+  ): string[] {
     if (isLegacyPOIProof) {
       // Use all list keys for legacy proofs.
       return POI.getAllListKeys();
     }
+
     const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
-    return POI.getAllListKeysWithValidPOIs(inputPOIsPerList);
+    const listKeysWithValidInputPOIs = POI.getAllListKeysWithValidInputPOIs(inputPOIsPerList);
+
+    return listKeysWithValidInputPOIs.filter((listKey) => {
+      // If all statuses are valid, then no need to generate new POIs.
+      const validStatuses = [TXOPOIListStatus.Valid, TXOPOIListStatus.TransactProofSubmitted];
+      const allSentCommitmentPOIsValid = sentCommitments.every((sentCommitment) => {
+        const poiStatus = sentCommitment.poisPerList?.[listKey];
+        return poiStatus && validStatuses.includes(poiStatus);
+      });
+      const allUnshieldPOIsValid = unshieldEvents.every((unshieldEvent) => {
+        const poiStatus = unshieldEvent.poisPerList?.[listKey];
+        return poiStatus && validStatuses.includes(poiStatus);
+      });
+      return !(allSentCommitmentPOIsValid && allUnshieldPOIsValid);
+    });
   }
 
   static shouldRetrieveCreationPOIs(txo: TXO) {

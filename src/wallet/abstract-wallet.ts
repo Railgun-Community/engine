@@ -1229,7 +1229,20 @@ abstract class AbstractWallet extends EventEmitter {
         const spentTXOs = TXOs.filter((txo) =>
           railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
         );
-        const listKeys = POI.getListKeysCanGenerateSpentPOIs(spentTXOs, isLegacyPOIProof);
+
+        const sentCommitmentsForRailgunTxid = sentCommitmentsNeedPOIs.filter(
+          (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
+        );
+        const unshieldEventsForRailgunTxid = unshieldEventsNeedPOIs.filter(
+          (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
+        );
+
+        const listKeys = POI.getListKeysCanGenerateSpentPOIs(
+          spentTXOs,
+          sentCommitmentsForRailgunTxid,
+          unshieldEventsForRailgunTxid,
+          isLegacyPOIProof,
+        );
         if (!listKeys.length) {
           continue;
         }
