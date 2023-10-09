@@ -203,6 +203,12 @@ export class POI {
     }
   }
 
+  static getSpendableBalanceBuckets(chain: Chain): WalletBalanceBucket[] {
+    return this.isActiveForChain(chain)
+      ? [WalletBalanceBucket.Spendable]
+      : Object.values(WalletBalanceBucket); // If inactive, all balance buckets are spendable.
+  }
+
   static async retrievePOIsForBlindedCommitments(
     txidVersion: TXIDVersion,
     chain: Chain,

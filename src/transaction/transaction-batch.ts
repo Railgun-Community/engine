@@ -21,6 +21,7 @@ import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
 import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
 import { isDefined } from '../utils/is-defined';
+import { POI } from '../poi';
 
 export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 7500;
 
@@ -128,9 +129,11 @@ export class TransactionBatch {
 
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
+
     const balanceBucketFilter = isSpendable
-      ? [WalletBalanceBucket.Spendable]
+      ? POI.getSpendableBalanceBuckets(this.chain)
       : Object.values(WalletBalanceBucket);
+
     const treeSortedBalances = await wallet.balancesByTreeForToken(
       txidVersion,
       this.chain,
