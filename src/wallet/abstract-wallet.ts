@@ -37,6 +37,7 @@ import {
   TXO,
   TXOsReceivedPOIStatusInfo,
   TXOsSpentPOIStatusInfo,
+  WalletBalanceBucket,
 } from '../models/txo-types';
 import { Memo, LEGACY_MEMO_METADATA_BYTE_CHUNKS } from '../note/memo';
 import {
@@ -1882,12 +1883,19 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get balances for
    * @returns balances
    */
-  async getAllBalances(chain: Chain): Promise<AllBalances> {
+  async getAllBalances(
+    chain: Chain,
+    balanceBucketFilter: WalletBalanceBucket[],
+  ): Promise<AllBalances> {
     const balances: AllBalances = {};
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      const balancesByTxidVersion = await this.getTokenBalancesByTxidVersion(txidVersion, chain);
+      const balancesByTxidVersion = await this.getTokenBalancesByTxidVersion(
+        txidVersion,
+        chain,
+        balanceBucketFilter,
+      );
 
       Object.keys(balancesByTxidVersion).forEach((tokenHash) => {
         balances[txidVersion] ??= {};
@@ -1906,6 +1914,7 @@ abstract class AbstractWallet extends EventEmitter {
   async getTokenBalancesByTxidVersion(
     txidVersion: TXIDVersion,
     chain: Chain,
+    balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<TokenBalances> {
     const TXOs = await this.TXOs(txidVersion, chain);
     const tokenBalances: TokenBalances = {};
@@ -1923,7 +1932,14 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // If utxo is unspent process it
-      if (txo.spendtxid === false) {
+      const isUnspent = txo.spendtxid === false;
+      if (isUnspent) {
+        const balanceBucket = POI.getBalanceBucket(txo.poisPerList);
+
+        if (!balanceBucketFilter.includes(balanceBucket)) {
+          return;
+        }
+
         // Store utxo
         tokenBalances[tokenHash].utxos.push(txo);
         // Increment balance
@@ -1938,8 +1954,13 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     tokenAddress: string,
+    balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<Optional<bigint>> {
-    const balances = await this.getTokenBalancesByTxidVersion(txidVersion, chain);
+    const balances = await this.getTokenBalancesByTxidVersion(
+      txidVersion,
+      chain,
+      balanceBucketFilter,
+    );
     const tokenHash = getTokenDataHash(getTokenDataERC20(tokenAddress));
     const balanceForToken = balances[tokenHash];
     return isDefined(balanceForToken) ? balanceForToken.balance : undefined;
@@ -1953,9 +1974,14 @@ abstract class AbstractWallet extends EventEmitter {
   async getTotalBalancesByTreeNumber(
     txidVersion: TXIDVersion,
     chain: Chain,
+    balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<TotalBalancesByTreeNumber> {
     // Fetch balances
-    const tokenBalances = await this.getTokenBalancesByTxidVersion(txidVersion, chain);
+    const tokenBalances = await this.getTokenBalancesByTxidVersion(
+      txidVersion,
+      chain,
+      balanceBucketFilter,
+    );
 
     // Sort token balances by tree
     const totalBalancesByTreeNumber: TotalBalancesByTreeNumber = {};
@@ -1988,8 +2014,13 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     tokenHash: string,
+    balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<TreeBalance[]> {
-    const totalBalancesByTreeNumber = await this.getTotalBalancesByTreeNumber(txidVersion, chain);
+    const totalBalancesByTreeNumber = await this.getTotalBalancesByTreeNumber(
+      txidVersion,
+      chain,
+      balanceBucketFilter,
+    );
     const treeSortedBalances = totalBalancesByTreeNumber[tokenHash] ?? [];
     return treeSortedBalances;
   }

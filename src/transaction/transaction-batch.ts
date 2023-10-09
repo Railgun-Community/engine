@@ -3,7 +3,7 @@ import { Prover, ProverProgressCallback } from '../prover/prover';
 import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
-import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
+import { SpendingSolutionGroup, TXO, UnshieldData, WalletBalanceBucket } from '../models/txo-types';
 import { AdaptID, OutputType, TokenData, TokenType } from '../models/formatted-types';
 import { createSpendingSolutionsForValue } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
@@ -120,6 +120,7 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     tokenData: TokenData,
+    isSpendable = true,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenHash = getTokenDataHash(tokenData);
     const tokenOutputs = this.outputs.filter((output) => output.tokenHash === tokenHash);
@@ -127,11 +128,14 @@ export class TransactionBatch {
 
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
-
+    const balanceBucketFilter = isSpendable
+      ? [WalletBalanceBucket.Spendable]
+      : Object.values(WalletBalanceBucket);
     const treeSortedBalances = await wallet.balancesByTreeForToken(
       txidVersion,
       this.chain,
       tokenHash,
+      balanceBucketFilter,
     );
     const tokenBalance = AbstractWallet.tokenBalanceAcrossAllTrees(treeSortedBalances);
 

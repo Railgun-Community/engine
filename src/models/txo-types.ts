@@ -75,3 +75,11 @@ export type TXOsSpentPOIStatusInfo = {
   strings: TXOsSpentPOIStatusInfoShared;
   emojis: TXOsSpentPOIStatusInfoShared;
 };
+
+export enum WalletBalanceBucket {
+  Spendable = 'Spendable',
+  ShieldBlocked = 'ShieldBlocked',
+  ShieldPending = 'ShieldPending',
+  TransactProofSubmitted = 'TransactProofSubmitted',
+  MissingPOI = 'MissingPOI',
+}

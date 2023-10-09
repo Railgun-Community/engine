@@ -8,7 +8,7 @@ import {
   TXIDVersion,
   TXOPOIListStatus,
 } from '../models/poi-types';
-import { SentCommitment, TXO } from '../models/txo-types';
+import { SentCommitment, TXO, WalletBalanceBucket } from '../models/txo-types';
 import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
 import { UnshieldStoredEvent } from '../models/event-types';
@@ -39,6 +39,40 @@ export class POI {
 
   private static getActiveListKeys(): string[] {
     return this.lists.filter((list) => list.type === POIListType.Active).map((list) => list.key);
+  }
+
+  static getBalanceBucket(pois: Optional<POIsPerList>): WalletBalanceBucket {
+    const activeListKeys = POI.getActiveListKeys();
+    if (!pois || !this.hasAllKeys(pois, activeListKeys)) {
+      return WalletBalanceBucket.MissingPOI;
+    }
+
+    if (POI.hasValidPOIsActiveLists(pois)) {
+      return WalletBalanceBucket.Spendable;
+    }
+
+    const anyPOIIsShieldBlocked = activeListKeys.some((listKey) => {
+      return pois[listKey] === TXOPOIListStatus.ShieldBlocked;
+    });
+    if (anyPOIIsShieldBlocked) {
+      return WalletBalanceBucket.ShieldBlocked;
+    }
+
+    const anyPOIIsShieldPending = activeListKeys.some((listKey) => {
+      return pois[listKey] === TXOPOIListStatus.ShieldPending;
+    });
+    if (anyPOIIsShieldPending) {
+      return WalletBalanceBucket.ShieldPending;
+    }
+
+    const anyPOIIsTransactProofSubmitted = activeListKeys.some((listKey) => {
+      return pois[listKey] === TXOPOIListStatus.TransactProofSubmitted;
+    });
+    if (anyPOIIsTransactProofSubmitted) {
+      return WalletBalanceBucket.TransactProofSubmitted;
+    }
+
+    return WalletBalanceBucket.MissingPOI;
   }
 
   private static validatePOIStatusForAllLists(
