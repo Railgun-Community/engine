@@ -1259,6 +1259,7 @@ abstract class AbstractWallet extends EventEmitter {
           generatePOIsDatas.length,
         );
       }
+      this.generatingPOIsForChain[chain.type][chain.id] = false;
     } catch (err) {
       this.generatingPOIsForChain[chain.type][chain.id] = false;
       throw err;
