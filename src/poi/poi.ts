@@ -150,13 +150,10 @@ export class POI {
     unshieldEvents: UnshieldStoredEvent[],
     isLegacyPOIProof: boolean,
   ): string[] {
-    if (isLegacyPOIProof) {
-      // Use all list keys for legacy proofs.
-      return POI.getAllListKeys();
-    }
-
     const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
-    const listKeysWithValidInputPOIs = POI.getAllListKeysWithValidInputPOIs(inputPOIsPerList);
+    const listKeysWithValidInputPOIs = isLegacyPOIProof
+      ? POI.getAllListKeys()
+      : POI.getAllListKeysWithValidInputPOIs(inputPOIsPerList);
 
     const validStatuses = [TXOPOIListStatus.Valid, TXOPOIListStatus.TransactProofSubmitted];
 
