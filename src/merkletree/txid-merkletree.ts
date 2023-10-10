@@ -200,13 +200,22 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     // Fetch path elements
     const elements = await Promise.all(
       elementsIndices.map(async (elementIndex, level) => {
-        if (elementIndex === rightmostIndices[level]) {
+        const snapshotIndexAtLevel = rightmostIndices[level];
+        if (elementIndex > snapshotIndexAtLevel) {
+          // Get snapshot node hash (exact value)
+          return this.zeros[level];
+        }
+
+        if (elementIndex === snapshotIndexAtLevel) {
+          // Get snapshot node hash (exact value)
           const node = await this.getPOILaunchSnapshotNode(level);
           if (!isDefined(node)) {
             throw new Error('POI Launch snapshot node not found');
           }
           return node.hash;
         }
+
+        // Get current node hash (always same as snapshot)
         return this.getNodeHash(tree, level, elementIndex);
       }),
     );
