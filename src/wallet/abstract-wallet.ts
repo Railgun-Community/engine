@@ -126,7 +126,7 @@ type GeneratePOIsData = {
   railgunTxid: string;
   listKey: string;
   isLegacyPOIProof: boolean;
-  spentTXOs: TXO[];
+  orderedSpentTXOs: TXO[];
   txidMerkletreeData: TXIDMerkletreeData;
   sentCommitments: SentCommitment[];
   unshieldEvents: UnshieldStoredEvent[];
@@ -1229,12 +1229,6 @@ abstract class AbstractWallet extends EventEmitter {
         const spentTXOs = TXOs.filter((txo) =>
           railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
         );
-        // Make sure Spent TXOs are ordered, so the prover's NullifierCheck and MerkleProof validation will pass.
-        const orderedSpentTXOs = removeUndefineds(
-          railgunTransaction.nullifiers.map((nullifier) =>
-            spentTXOs.find((txo) => `0x${txo.nullifier}` === nullifier),
-          ),
-        );
 
         const sentCommitmentsForRailgunTxid = sentCommitmentsNeedPOIs.filter(
           (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
@@ -1244,7 +1238,7 @@ abstract class AbstractWallet extends EventEmitter {
         );
 
         const listKeys = POI.getListKeysCanGenerateSpentPOIs(
-          orderedSpentTXOs,
+          spentTXOs,
           sentCommitmentsForRailgunTxid,
           unshieldEventsForRailgunTxid,
           isLegacyPOIProof,
@@ -1253,6 +1247,13 @@ abstract class AbstractWallet extends EventEmitter {
           continue;
         }
 
+        // Make sure Spent TXOs are ordered, so the prover's NullifierCheck and MerkleProof validation will pass.
+        const orderedSpentTXOs = removeUndefineds(
+          railgunTransaction.nullifiers.map((nullifier) =>
+            spentTXOs.find((txo) => `0x${txo.nullifier}` === nullifier),
+          ),
+        );
+
         // eslint-disable-next-line no-restricted-syntax
         for (const listKey of listKeys) {
           // Use this syntax to capture each index and totalCount.
@@ -1260,7 +1261,7 @@ abstract class AbstractWallet extends EventEmitter {
             railgunTxid,
             listKey,
             isLegacyPOIProof,
-            spentTXOs,
+            orderedSpentTXOs,
             txidMerkletreeData,
             sentCommitments: sentCommitmentsNeedPOIs,
             unshieldEvents: unshieldEventsNeedPOIs,
