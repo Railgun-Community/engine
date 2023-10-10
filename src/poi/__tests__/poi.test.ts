@@ -66,7 +66,7 @@ describe('poi', () => {
     POI.init([{ key: MOCK_LIST_KEY, type: POIListType.Gather }], new TestPOINodeInterface());
   });
 
-  it('Should get token data hash for various token types', async () => {
+  it('Should get which list keys can generate spent POIs', async () => {
     const listKeysLegacy = POI.getListKeysCanGenerateSpentPOIs([], [], [], true);
     expect(listKeysLegacy).to.deep.equal([MOCK_LIST_KEY, activeList1, activeList2]);
 
