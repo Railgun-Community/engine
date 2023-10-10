@@ -67,8 +67,13 @@ describe('poi', () => {
   });
 
   it('Should get which list keys can generate spent POIs', async () => {
-    const listKeysLegacy = POI.getListKeysCanGenerateSpentPOIs([], [], [], true);
-    expect(listKeysLegacy).to.deep.equal([MOCK_LIST_KEY, activeList1, activeList2]);
+    const listKeysLegacy = POI.getListKeysCanGenerateSpentPOIs(
+      [invalidPOIsForList1 as TXO],
+      [submittedPOIsForList1 as SentCommitment],
+      [invalidPOIsForList1 as UnshieldStoredEvent],
+      true,
+    );
+    expect(listKeysLegacy).to.deep.equal([MOCK_LIST_KEY, activeList1]);
 
     const listKeysNoInputProofs = POI.getListKeysCanGenerateSpentPOIs(
       [invalidPOIsForList1 as TXO],
