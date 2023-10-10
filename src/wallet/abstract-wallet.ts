@@ -1229,6 +1229,12 @@ abstract class AbstractWallet extends EventEmitter {
         const spentTXOs = TXOs.filter((txo) =>
           railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
         );
+        // Make sure Spent TXOs are ordered, so the prover's NullifierCheck and MerkleProof validation will pass.
+        const orderedSpentTXOs = removeUndefineds(
+          railgunTransaction.nullifiers.map((nullifier) =>
+            spentTXOs.find((txo) => `0x${txo.nullifier}` === nullifier),
+          ),
+        );
 
         const sentCommitmentsForRailgunTxid = sentCommitmentsNeedPOIs.filter(
           (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
@@ -1238,7 +1244,7 @@ abstract class AbstractWallet extends EventEmitter {
         );
 
         const listKeys = POI.getListKeysCanGenerateSpentPOIs(
-          spentTXOs,
+          orderedSpentTXOs,
           sentCommitmentsForRailgunTxid,
           unshieldEventsForRailgunTxid,
           isLegacyPOIProof,

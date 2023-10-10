@@ -145,12 +145,12 @@ export class POI {
   }
 
   static getListKeysCanGenerateSpentPOIs(
-    spentTXOs: TXO[],
+    orderedSpentTXOs: TXO[],
     sentCommitments: SentCommitment[],
     unshieldEvents: UnshieldStoredEvent[],
     isLegacyPOIProof: boolean,
   ): string[] {
-    const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
+    const inputPOIsPerList = removeUndefineds(orderedSpentTXOs.map((txo) => txo.poisPerList));
     const listKeysWithValidInputPOIs = isLegacyPOIProof
       ? POI.getAllListKeys()
       : POI.getAllListKeysWithValidInputPOIs(inputPOIsPerList);
