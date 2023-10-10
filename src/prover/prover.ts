@@ -416,6 +416,7 @@ export class Prover {
   async provePOI(
     inputs: POIEngineProofInputs,
     listKey: string,
+    blindedCommitmentsIn: string[],
     blindedCommitmentsOut: string[],
     progressCallback: ProverProgressCallback,
   ): Promise<{ proof: Proof; publicInputs: PublicInputsPOI }> {
@@ -424,6 +425,7 @@ export class Prover {
     return this.provePOIForInputsOutputs(
       inputs,
       listKey,
+      blindedCommitmentsIn,
       blindedCommitmentsOut,
       maxInputs,
       maxOutputs,
@@ -434,6 +436,7 @@ export class Prover {
   async provePOIForInputsOutputs(
     inputs: POIEngineProofInputs,
     listKey: string,
+    blindedCommitmentsIn: string[],
     blindedCommitmentsOut: string[],
     maxInputs: number,
     maxOutputs: number,
@@ -529,6 +532,10 @@ export class Prover {
 
       EngineDebug.log('Formatted POI proof inputs:');
       EngineDebug.log(stringifySafe(formattedInputs));
+      EngineDebug.log('blindedCommitmentsIn');
+      EngineDebug.log(JSON.stringify(blindedCommitmentsIn));
+      EngineDebug.log('blindedCommitmentsOut');
+      EngineDebug.log(JSON.stringify(blindedCommitmentsOut));
 
       throw new Error(`Unable to generate POI proof: ${err.message}`);
     }

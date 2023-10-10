@@ -107,6 +107,7 @@ import {
   formatTXOsReceivedPOIStatusInfo,
   formatTXOsSpentPOIStatusInfo,
 } from '../poi/poi-status-formatter';
+import { stringifySafe } from '../utils';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -1311,6 +1312,9 @@ abstract class AbstractWallet extends EventEmitter {
         throw new Error('Invalid railgun transaction data for proof');
       }
 
+      EngineDebug.log(`Generating POI for RAILGUN transaction:`);
+      EngineDebug.log(stringifySafe(railgunTransaction));
+
       // Spent TXOs
       const blindedCommitmentsIn = removeUndefineds(
         orderedSpentTXOs.map((txo) => txo.blindedCommitment),
@@ -1437,6 +1441,7 @@ abstract class AbstractWallet extends EventEmitter {
       const { proof: snarkProof } = await this.prover.provePOI(
         poiProofInputs,
         listKey,
+        blindedCommitmentsIn,
         blindedCommitmentsOut,
         (progress: number) => {
           this.emitPOIProofUpdateEvent(

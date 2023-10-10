@@ -15,6 +15,7 @@ import { ByteLength, nToHex } from '../../utils/bytes';
 import { verifyMerkleProof } from '../merkle-proof';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { config } from '../../test/config.test';
+import { TREE_DEPTH } from '../../models/merkletree-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -370,6 +371,7 @@ describe('txid-merkletree', () => {
         const { root } = currentMerkletreeData.currentMerkleProofForTree;
         const currentRoot = await merkletree.getRoot(0);
         expect(root).to.not.equal(currentRoot);
+        expect(root).to.equal((await merkletree.getPOILaunchSnapshotNode(TREE_DEPTH))?.hash);
       } else {
         // merkleproof without POI Launch snapshot
         const currentMerkletreeData = await merkletree.getRailgunTxidCurrentMerkletreeData(

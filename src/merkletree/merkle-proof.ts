@@ -43,5 +43,6 @@ export const verifyMerkleProof = (proof: MerkleProof): boolean => {
     // If index is left
     return Merkletree.hashLeftRight(current, element);
   }, proof.leaf);
-  return hexlify(proof.root) === hexlify(calculatedRoot);
+  const valid = hexlify(proof.root) === hexlify(calculatedRoot);
+  return valid;
 };

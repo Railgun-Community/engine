@@ -18,6 +18,7 @@ import { ByteLength, formatToByteLength, fromUTF8String, hexlify, nToHex } from 
 import { isDefined } from '../utils';
 import { TXIDVersion } from '../models';
 import EngineDebug from '../debugger/debugger';
+import { verifyMerkleProof } from './merkle-proof';
 
 type POILaunchSnapshotNode = {
   hash: string;
@@ -148,10 +149,13 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
         throw new Error('POI Launch snapshot not found');
       }
       const currentMerkleProofForTree = await this.getMerkleProofWithSnapshot(
-        snapshotLeaf.index,
+        snapshotLeaf,
         tree,
         index,
       );
+      if (!verifyMerkleProof(currentMerkleProofForTree)) {
+        throw new Error('Invalid merkle proof for snapshot');
+      }
       return {
         railgunTransaction,
         currentMerkleProofForTree,
@@ -160,6 +164,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     }
 
     const currentMerkleProofForTree = await this.getMerkleProof(tree, index);
+    if (!verifyMerkleProof(currentMerkleProofForTree)) {
+      throw new Error('Invalid merkle proof');
+    }
     const currentIndex = await this.getLatestIndexForTree(tree);
     const currentTxidIndexForTree = TXIDMerkletree.getGlobalPosition(tree, currentIndex);
     return {
@@ -170,17 +177,12 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
   }
 
   async getMerkleProofWithSnapshot(
-    snapshotLeafIndex: number,
+    snapshotLeaf: POILaunchSnapshotNode,
     tree: number,
     index: number,
   ): Promise<MerkleProof> {
-    // Fetch leaf
     const leaf = await this.getNodeHash(tree, 0, index);
 
-    const snapshotLeaf = await this.getPOILaunchSnapshotNode(0);
-    if (!isDefined(snapshotLeaf)) {
-      throw new Error('POI Launch snapshot not found');
-    }
     const rightmostIndices = TXIDMerkletree.getRightmostNonzeroIndices(snapshotLeaf.index);
 
     // Get indexes of path elements to fetch
