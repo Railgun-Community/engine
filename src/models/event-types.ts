@@ -95,4 +95,5 @@ export type POICurrentProofEventData = {
   railgunTxid: string;
   index: number;
   totalCount: number;
+  errorMsg: Optional<string>;
 };

@@ -235,6 +235,7 @@ abstract class AbstractWallet extends EventEmitter {
     railgunTxid: string,
     index: number,
     totalCount: number,
+    errorMsg: Optional<string>,
   ) {
     const updateData: POICurrentProofEventData = {
       txidVersion,
@@ -245,6 +246,7 @@ abstract class AbstractWallet extends EventEmitter {
       railgunTxid,
       index,
       totalCount,
+      errorMsg,
     };
     this.emit(EngineEvent.POIProofUpdate, updateData);
   }
@@ -1302,9 +1304,9 @@ abstract class AbstractWallet extends EventEmitter {
       sentCommitments,
       unshieldEvents,
     } = generatePOIsData;
+    const { railgunTransaction } = txidMerkletreeData;
 
     try {
-      const { railgunTransaction } = txidMerkletreeData;
       if (railgunTransaction.railgunTxid !== railgunTxid) {
         throw new Error('Invalid railgun transaction data for proof');
       }
@@ -1446,6 +1448,7 @@ abstract class AbstractWallet extends EventEmitter {
             railgunTxid,
             index,
             totalCount,
+            undefined, // errorMsg
           );
         },
       );
@@ -1462,6 +1465,18 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxidIfHasUnshield,
       );
     } catch (err) {
+      this.emitPOIProofUpdateEvent(
+        txidVersion,
+        chain,
+        0, // Progress
+        listKey,
+        railgunTransaction.txid,
+        railgunTxid,
+        index,
+        totalCount,
+        err.message, // errorMsg
+      );
+
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
       throw new Error(`Error generating POI - txid ${railgunTxid}: ${err.message}`);
     }
