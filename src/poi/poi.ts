@@ -225,10 +225,15 @@ export class POI {
     }
   }
 
-  static getSpendableBalanceBuckets(chain: Chain): WalletBalanceBucket[] {
-    return this.isActiveForChain(chain)
+  static isRequiredForChain(chain: Chain): Promise<boolean> {
+    return this.nodeInterface.isRequired(chain);
+  }
+
+  static async getSpendableBalanceBuckets(chain: Chain): Promise<WalletBalanceBucket[]> {
+    return this.isActiveForChain(chain) && (await this.isRequiredForChain(chain))
       ? [WalletBalanceBucket.Spendable]
-      : Object.values(WalletBalanceBucket); // If inactive, all balance buckets are spendable.
+      : // If inactive or not required, all balance buckets are spendable.
+        Object.values(WalletBalanceBucket);
   }
 
   static async retrievePOIsForBlindedCommitments(

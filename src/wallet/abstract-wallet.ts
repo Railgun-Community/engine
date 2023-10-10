@@ -1921,7 +1921,7 @@ abstract class AbstractWallet extends EventEmitter {
     onlySpendable: boolean,
   ): Promise<TokenBalances> {
     const balanceBucketFilter = onlySpendable
-      ? POI.getSpendableBalanceBuckets(chain)
+      ? await POI.getSpendableBalanceBuckets(chain)
       : Object.values(WalletBalanceBucket);
     return this.getTokenBalancesByTxidVersion(txidVersion, chain, balanceBucketFilter);
   }

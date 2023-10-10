@@ -132,7 +132,7 @@ export class TransactionBatch {
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
 
     const balanceBucketFilter = onlySpendable
-      ? POI.getSpendableBalanceBuckets(this.chain)
+      ? await POI.getSpendableBalanceBuckets(this.chain)
       : Object.values(WalletBalanceBucket);
 
     const treeSortedBalances = await wallet.balancesByTreeForToken(

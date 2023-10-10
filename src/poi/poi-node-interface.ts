@@ -6,6 +6,8 @@ import { Proof } from '../models/prover-types';
 export abstract class POINodeInterface {
   abstract isActive(chain: Chain): boolean;
 
+  abstract isRequired(chain: Chain): Promise<boolean>;
+
   abstract getPOIsPerList(
     txidVersion: TXIDVersion,
     chain: Chain,
