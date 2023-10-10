@@ -64,6 +64,7 @@ export type TXOsSpentPOIStatusInfoShared = {
   txid: string;
   railgunTxid: string;
   railgunTransactionInfo: string;
+  poiStatusesSpentTXOs: Optional<POIsPerList>[];
   sentCommitmentsBlinded: string;
   poiStatusesSentCommitments: Optional<POIsPerList>[];
   unshieldEventsBlinded: string;

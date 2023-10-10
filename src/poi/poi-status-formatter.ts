@@ -207,6 +207,7 @@ const formatSpentStatusInfo = async (
       txid,
       railgunTxid,
       railgunTransactionInfo,
+      poiStatusesSpentTXOs: TXOs.map((txo) => txo.poisPerList),
       sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
         .map((sentCommitment) => sentCommitment.blindedCommitment ?? 'Unavailable')
         .join(', ')}`,
@@ -233,6 +234,7 @@ const formatSpentStatusInfo = async (
             : 'Unavailable';
         })
         .join(', ')}`,
+      poiStatusesSpentTXOs: TXOs.map((sentCommitment) => sentCommitment.poisPerList),
       poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
         (sentCommitment) => sentCommitment.poisPerList,
       ),
