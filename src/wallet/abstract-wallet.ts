@@ -1197,7 +1197,7 @@ abstract class AbstractWallet extends EventEmitter {
           );
         }
         this.generatingPOIsForChain[chain.type][chain.id] = false;
-        return;
+        return 0;
       }
 
       const railgunTxidsNeedPOIs = new Set<string>();
