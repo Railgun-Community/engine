@@ -158,9 +158,10 @@ export class POI {
     const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
     const listKeysWithValidInputPOIs = POI.getAllListKeysWithValidInputPOIs(inputPOIsPerList);
 
+    const validStatuses = [TXOPOIListStatus.Valid, TXOPOIListStatus.TransactProofSubmitted];
+
     return listKeysWithValidInputPOIs.filter((listKey) => {
       // If all statuses are valid, then no need to generate new POIs.
-      const validStatuses = [TXOPOIListStatus.Valid, TXOPOIListStatus.TransactProofSubmitted];
       const allSentCommitmentPOIsValid = sentCommitments.every((sentCommitment) => {
         const poiStatus = sentCommitment.poisPerList?.[listKey];
         return poiStatus && validStatuses.includes(poiStatus);
@@ -169,7 +170,8 @@ export class POI {
         const poiStatus = unshieldEvent.poisPerList?.[listKey];
         return poiStatus && validStatuses.includes(poiStatus);
       });
-      return !(allSentCommitmentPOIsValid && allUnshieldPOIsValid);
+      const allPOIsValid = allSentCommitmentPOIsValid && allUnshieldPOIsValid;
+      return !allPOIsValid;
     });
   }
 
