@@ -1175,9 +1175,9 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     txidVersion: TXIDVersion,
     railgunTxidFilter?: string,
-  ): Promise<void> {
+  ): Promise<number> {
     if (this.generatingPOIsForChain[chain.type]?.[chain.id]) {
-      return;
+      return 0;
     }
     this.generatingPOIsForChain[chain.type] ??= [];
     this.generatingPOIsForChain[chain.type][chain.id] = true;
@@ -1290,6 +1290,8 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
       this.generatingPOIsForChain[chain.type][chain.id] = false;
+
+      return generatePOIsDatas.length;
     } catch (err) {
       this.generatingPOIsForChain[chain.type][chain.id] = false;
       throw err;
@@ -2294,11 +2296,22 @@ abstract class AbstractWallet extends EventEmitter {
         await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);
 
         // Generate POIs - Sent commitments / unshields
-        // TODO - add this after manual testing
-        // await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);
-      }
+        const numProofs = await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(
+          chain,
+          txidVersion,
+        );
 
-      this.isRefreshingPOIs[chain.type][chain.id] = false;
+        this.isRefreshingPOIs[chain.type][chain.id] = false;
+        if (numProofs > 0) {
+          // TODO: "Loading next batch" status
+
+          // Retrigger
+          await this.refreshPOIsForAllTXIDVersions(chain);
+          return;
+        }
+
+        // TODO: "All Proofs Completed" status
+      }
     } catch (err) {
       this.isRefreshingPOIs[chain.type][chain.id] = false;
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
