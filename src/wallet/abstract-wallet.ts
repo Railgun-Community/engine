@@ -1900,7 +1900,9 @@ abstract class AbstractWallet extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      const balancesByTxidVersion = await this.getTokenBalancesByTxidVersion(
+      const TXOs = await this.TXOs(txidVersion, chain);
+      const balancesByTxidVersion = await AbstractWallet.getTokenBalancesByTxidVersion(
+        TXOs,
         txidVersion,
         chain,
         balanceBucketFilter,
@@ -1924,7 +1926,12 @@ abstract class AbstractWallet extends EventEmitter {
       ? await POI.getSpendableBalanceBuckets(chain)
       : Object.values(WalletBalanceBucket);
     const TXOs = await this.TXOs(txidVersion, chain);
-    return this.getTokenBalancesByTxidVersion(TXOs, txidVersion, chain, balanceBucketFilter);
+    return AbstractWallet.getTokenBalancesByTxidVersion(
+      TXOs,
+      txidVersion,
+      chain,
+      balanceBucketFilter,
+    );
   }
 
   async getTokenBalancesByBucket(
@@ -1938,7 +1945,7 @@ abstract class AbstractWallet extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const balanceBucket of Object.values(WalletBalanceBucket)) {
       const balanceBucketFilter = [balanceBucket];
-      balancesByBucket[balanceBucket] = await this.getTokenBalancesByTxidVersion(
+      balancesByBucket[balanceBucket] = await AbstractWallet.getTokenBalancesByTxidVersion(
         TXOs,
         txidVersion,
         chain,
@@ -1954,7 +1961,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get balances for
    * @returns balances
    */
-  async getTokenBalancesByTxidVersion(
+  static async getTokenBalancesByTxidVersion(
     TXOs: TXO[],
     txidVersion: TXIDVersion,
     chain: Chain,
@@ -2007,7 +2014,9 @@ abstract class AbstractWallet extends EventEmitter {
     tokenAddress: string,
     balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<Optional<bigint>> {
-    const balances = await this.getTokenBalancesByTxidVersion(
+    const TXOs = await this.TXOs(txidVersion, chain);
+    const balances = await AbstractWallet.getTokenBalancesByTxidVersion(
+      TXOs,
       txidVersion,
       chain,
       balanceBucketFilter,
@@ -2027,8 +2036,9 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<TotalBalancesByTreeNumber> {
-    // Fetch balances
-    const tokenBalances = await this.getTokenBalancesByTxidVersion(
+    const TXOs = await this.TXOs(txidVersion, chain);
+    const tokenBalances = await AbstractWallet.getTokenBalancesByTxidVersion(
+      TXOs,
       txidVersion,
       chain,
       balanceBucketFilter,
