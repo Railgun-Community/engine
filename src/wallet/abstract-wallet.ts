@@ -101,7 +101,7 @@ import {
   TXIDVersion,
 } from '../models/poi-types';
 import { getGlobalTreePosition } from '../poi/global-tree-position';
-import { createDummyMerkleProof } from '../merkletree/merkle-proof';
+import { createDummyMerkleProof, verifyMerkleProof } from '../merkletree/merkle-proof';
 import { Prover } from '../prover/prover';
 import {
   formatTXOsReceivedPOIStatusInfo,
@@ -1397,6 +1397,23 @@ abstract class AbstractWallet extends EventEmitter {
       const anyRailgunTxidMerklerootAfterTransaction =
         txidMerkletreeData.currentMerkleProofForTree.root;
 
+      const merkleProofForRailgunTxid: MerkleProof = {
+        leaf: railgunTxid,
+        root: anyRailgunTxidMerklerootAfterTransaction,
+        indices: txidMerkletreeData.currentMerkleProofForTree.indices,
+        elements: txidMerkletreeData.currentMerkleProofForTree.elements,
+      };
+      if (!verifyMerkleProof(merkleProofForRailgunTxid)) {
+        throw new Error(
+          isLegacyPOIProof ? 'Invalid TXID merkleproof (snapshot)' : 'Invalid TXID merkleproof',
+        );
+      }
+      listPOIMerkleProofs.forEach((listMerkleProof, listMerkleProofIndex) => {
+        if (!verifyMerkleProof(listMerkleProof)) {
+          throw new Error(`Invalid list merkleproof: index ${listMerkleProofIndex}`);
+        }
+      });
+
       const poiProofInputs: POIEngineProofInputs = {
         // --- Public inputs ---
         anyRailgunTxidMerklerootAfterTransaction,
@@ -1427,8 +1444,8 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxidIfHasUnshield,
 
         // Railgun txid tree
-        railgunTxidMerkleProofIndices: txidMerkletreeData.currentMerkleProofForTree.indices,
-        railgunTxidMerkleProofPathElements: txidMerkletreeData.currentMerkleProofForTree.elements,
+        railgunTxidMerkleProofIndices: merkleProofForRailgunTxid.indices,
+        railgunTxidMerkleProofPathElements: merkleProofForRailgunTxid.elements,
 
         // POI tree
         poiMerkleroots: listPOIMerkleProofs.map((merkleProof) => merkleProof.root),
