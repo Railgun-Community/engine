@@ -596,10 +596,7 @@ describe('railgun-engine', function test() {
           poiInMerkleProofPathElements: poiMerkleProofs.map((proof) => proof.elements),
         },
         MOCK_LIST_KEY,
-        [
-          '0x009496b785d48f34983bd248bbf0c0b12bba749689c017d9d016493b419f0571',
-          '0x2d1e5b80789879000d35b3bf7028247dc62c0dbabf736264f9d71a6421f008da',
-        ],
+        ['0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2'],
       );
 
       // check the transactions log

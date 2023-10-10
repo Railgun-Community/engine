@@ -116,6 +116,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     index: number,
   ): Promise<Optional<RailgunTransactionWithHash>> {
     try {
+      if (tree < 0 || index < 0) {
+        return undefined;
+      }
       return await this.getData(tree, index);
     } catch (err) {
       EngineDebug.log('Error getting railgun transaction');

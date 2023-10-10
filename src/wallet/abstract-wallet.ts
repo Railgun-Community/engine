@@ -1398,8 +1398,8 @@ abstract class AbstractWallet extends EventEmitter {
         txidMerkletreeData.currentMerkleProofForTree.root;
 
       const merkleProofForRailgunTxid: MerkleProof = {
-        leaf: railgunTxid,
-        root: anyRailgunTxidMerklerootAfterTransaction,
+        leaf: railgunTransaction.hash,
+        root: txidMerkletreeData.currentMerkleProofForTree.root,
         indices: txidMerkletreeData.currentMerkleProofForTree.indices,
         elements: txidMerkletreeData.currentMerkleProofForTree.elements,
       };
@@ -1416,7 +1416,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       const poiProofInputs: POIEngineProofInputs = {
         // --- Public inputs ---
-        anyRailgunTxidMerklerootAfterTransaction,
+        anyRailgunTxidMerklerootAfterTransaction: merkleProofForRailgunTxid.root,
 
         // --- Private inputs ---
 
