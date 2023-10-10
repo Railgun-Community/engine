@@ -1223,52 +1223,59 @@ abstract class AbstractWallet extends EventEmitter {
 
       // eslint-disable-next-line no-restricted-syntax
       for (const railgunTxid of railgunTxids) {
-        const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
-          railgunTxid,
-        );
-        const { railgunTransaction } = txidMerkletreeData;
-
-        const isLegacyPOIProof = railgunTransaction.blockNumber < txidMerkletree.poiLaunchBlock;
-        const spentTXOs = TXOs.filter((txo) =>
-          railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
-        );
-
-        const sentCommitmentsForRailgunTxid = sentCommitmentsNeedPOIs.filter(
-          (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
-        );
-        const unshieldEventsForRailgunTxid = unshieldEventsNeedPOIs.filter(
-          (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
-        );
-
-        const listKeys = POI.getListKeysCanGenerateSpentPOIs(
-          spentTXOs,
-          sentCommitmentsForRailgunTxid,
-          unshieldEventsForRailgunTxid,
-          isLegacyPOIProof,
-        );
-        if (!listKeys.length) {
-          continue;
-        }
-
-        // Make sure Spent TXOs are ordered, so the prover's NullifierCheck and MerkleProof validation will pass.
-        const orderedSpentTXOs = removeUndefineds(
-          railgunTransaction.nullifiers.map((nullifier) =>
-            spentTXOs.find((txo) => `0x${txo.nullifier}` === nullifier),
-          ),
-        );
-
-        // eslint-disable-next-line no-restricted-syntax
-        for (const listKey of listKeys) {
-          // Use this syntax to capture each index and totalCount.
-          generatePOIsDatas.push({
+        try {
+          const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
             railgunTxid,
-            listKey,
+          );
+          const { railgunTransaction } = txidMerkletreeData;
+
+          const isLegacyPOIProof = railgunTransaction.blockNumber < txidMerkletree.poiLaunchBlock;
+          const spentTXOs = TXOs.filter((txo) =>
+            railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
+          );
+
+          const sentCommitmentsForRailgunTxid = sentCommitmentsNeedPOIs.filter(
+            (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
+          );
+          const unshieldEventsForRailgunTxid = unshieldEventsNeedPOIs.filter(
+            (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
+          );
+
+          const listKeys = POI.getListKeysCanGenerateSpentPOIs(
+            spentTXOs,
+            sentCommitmentsForRailgunTxid,
+            unshieldEventsForRailgunTxid,
             isLegacyPOIProof,
-            orderedSpentTXOs,
-            txidMerkletreeData,
-            sentCommitments: sentCommitmentsNeedPOIs,
-            unshieldEvents: unshieldEventsNeedPOIs,
-          });
+          );
+          if (!listKeys.length) {
+            continue;
+          }
+
+          // Make sure Spent TXOs are ordered, so the prover's NullifierCheck and MerkleProof validation will pass.
+          const orderedSpentTXOs = removeUndefineds(
+            railgunTransaction.nullifiers.map((nullifier) =>
+              spentTXOs.find((txo) => `0x${txo.nullifier}` === nullifier),
+            ),
+          );
+
+          // eslint-disable-next-line no-restricted-syntax
+          for (const listKey of listKeys) {
+            // Use this syntax to capture each index and totalCount.
+            generatePOIsDatas.push({
+              railgunTxid,
+              listKey,
+              isLegacyPOIProof,
+              orderedSpentTXOs,
+              txidMerkletreeData,
+              sentCommitments: sentCommitmentsNeedPOIs,
+              unshieldEvents: unshieldEventsNeedPOIs,
+            });
+          }
+        } catch (err) {
+          EngineDebug.log(`Skipping POI generation for railgunTxid: ${railgunTxid}`);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+          EngineDebug.error(err);
+          // DO NOT THROW. Continue with next railgunTxid...
         }
       }
 
