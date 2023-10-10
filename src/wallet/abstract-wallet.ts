@@ -1297,7 +1297,7 @@ abstract class AbstractWallet extends EventEmitter {
       railgunTxid,
       listKey,
       isLegacyPOIProof,
-      spentTXOs,
+      orderedSpentTXOs,
       txidMerkletreeData,
       sentCommitments,
       unshieldEvents,
@@ -1310,7 +1310,9 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // Spent TXOs
-      const blindedCommitmentsIn = removeUndefineds(spentTXOs.map((txo) => txo.blindedCommitment));
+      const blindedCommitmentsIn = removeUndefineds(
+        orderedSpentTXOs.map((txo) => txo.blindedCommitment),
+      );
       if (blindedCommitmentsIn.length !== railgunTransaction.nullifiers.length) {
         throw new Error(
           `Not enough TXO blinded commitments for railgun transaction nullifiers: expected ${railgunTransaction.nullifiers.length}, got ${blindedCommitmentsIn.length}`,
@@ -1405,11 +1407,11 @@ abstract class AbstractWallet extends EventEmitter {
         nullifyingKey: this.nullifyingKey,
 
         // Nullified notes data
-        token: spentTXOs[0].note.tokenHash,
-        randomsIn: spentTXOs.map((txo) => txo.note.random),
-        valuesIn: spentTXOs.map((txo) => txo.note.value),
-        utxoPositionsIn: spentTXOs.map((txo) => txo.position),
-        utxoTreeIn: spentTXOs[0].tree,
+        token: orderedSpentTXOs[0].note.tokenHash,
+        randomsIn: orderedSpentTXOs.map((txo) => txo.note.random),
+        valuesIn: orderedSpentTXOs.map((txo) => txo.note.value),
+        utxoPositionsIn: orderedSpentTXOs.map((txo) => txo.position),
+        utxoTreeIn: orderedSpentTXOs[0].tree,
 
         // Commitment notes data
         npksOut,
