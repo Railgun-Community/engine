@@ -19,6 +19,11 @@ export class TestPOINodeInterface extends POINodeInterface {
     return true;
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  async isRequired(chain: Chain): Promise<boolean> {
+    return true;
+  }
+
   static overridePOIsListStatus = TXOPOIListStatus.Valid;
 
   // eslint-disable-next-line class-methods-use-this
