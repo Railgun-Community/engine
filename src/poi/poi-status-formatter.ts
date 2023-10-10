@@ -162,6 +162,7 @@ const formatSpentStatusInfo = async (
   let railgunTransactionInfo: string;
   let railgunTransactionInfoEmoji: string;
   let listKeysCanGenerateSpentPOIs: string[] = [];
+  let spentTXOs: TXO[] = [];
 
   if (railgunTxid && railgunTxid !== 'Missing') {
     const railgunTransaction = await txidMerkletree.getRailgunTransactionByTxid(railgunTxid);
@@ -183,7 +184,8 @@ const formatSpentStatusInfo = async (
         .join(', ')} (${hasAllCom ? '✓' : 'x'})`;
 
       const isLegacyPOIProof = railgunTransaction.blockNumber < txidMerkletree.poiLaunchBlock;
-      const spentTXOs = TXOs.filter((txo) =>
+
+      spentTXOs = TXOs.filter((txo) =>
         railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
       );
       listKeysCanGenerateSpentPOIs = POI.getListKeysCanGenerateSpentPOIs(
@@ -207,7 +209,7 @@ const formatSpentStatusInfo = async (
       txid,
       railgunTxid,
       railgunTransactionInfo,
-      poiStatusesSpentTXOs: TXOs.map((txo) => txo.poisPerList),
+      poiStatusesSpentTXOs: spentTXOs.map((txo) => txo.poisPerList),
       sentCommitmentsBlinded: `${sentCommitmentsForRailgunTxid
         .map((sentCommitment) => sentCommitment.blindedCommitment ?? 'Unavailable')
         .join(', ')}`,
@@ -234,7 +236,7 @@ const formatSpentStatusInfo = async (
             : 'Unavailable';
         })
         .join(', ')}`,
-      poiStatusesSpentTXOs: TXOs.map((sentCommitment) => sentCommitment.poisPerList),
+      poiStatusesSpentTXOs: spentTXOs.map((sentCommitment) => sentCommitment.poisPerList),
       poiStatusesSentCommitments: sentCommitmentsForRailgunTxid.map(
         (sentCommitment) => sentCommitment.poisPerList,
       ),
