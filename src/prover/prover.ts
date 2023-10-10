@@ -471,56 +471,67 @@ export class Prover {
     const finalProgressProof = 99;
     progressCallback(initialProgressProof);
 
-    const proofData = await this.groth16.fullProvePOI(
-      formattedInputs,
-      artifacts.wasm,
-      artifacts.zkey,
-      { debug: (msg: string) => EngineDebug.log(msg) },
-      artifacts.dat,
-      (progress: number) => {
-        progressCallback(
-          (progress * (finalProgressProof - initialProgressProof)) / 100 + initialProgressProof,
-        );
-      },
-    );
-    const { proof, publicSignals } = proofData;
-
-    if (isDefined(publicSignals)) {
-      // snarkjs will provide publicSignals for validation
-      for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
-        const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
-        if (blindedCommitmentOutString !== publicSignals[i]) {
-          throw new Error(
-            `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
+    try {
+      const proofData = await this.groth16.fullProvePOI(
+        formattedInputs,
+        artifacts.wasm,
+        artifacts.zkey,
+        { debug: (msg: string) => EngineDebug.log(msg) },
+        artifacts.dat,
+        (progress: number) => {
+          progressCallback(
+            (progress * (finalProgressProof - initialProgressProof)) / 100 + initialProgressProof,
           );
+        },
+      );
+      const { proof, publicSignals } = proofData;
+
+      if (isDefined(publicSignals)) {
+        // snarkjs will provide publicSignals for validation
+        for (let i = 0; i < blindedCommitmentsOut.length; i += 1) {
+          const blindedCommitmentOutString = publicInputs.blindedCommitmentsOut[i].toString();
+          if (blindedCommitmentOutString !== publicSignals[i]) {
+            throw new Error(
+              `Invalid blindedCommitmentOut value: expected ${publicSignals[i]}, got ${blindedCommitmentOutString}`,
+            );
+          }
         }
       }
+
+      progressCallback(finalProgressProof);
+
+      // For some reason, the proof returned by snarkjs contains extra fields.
+      // Trim them off.
+      const snarkProof: Proof = {
+        pi_a: [proof.pi_a[0], proof.pi_a[1]],
+        pi_b: [proof.pi_b[0], proof.pi_b[1]],
+        pi_c: [proof.pi_c[0], proof.pi_c[1]],
+      };
+
+      // Throw if proof is invalid
+      if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
+        throw new Error('POI proof verification failed');
+      }
+
+      ProofCachePOI.store(listKey, blindedCommitmentsOut, snarkProof);
+
+      progressCallback(100);
+
+      // Return proof with inputs
+      return {
+        proof: snarkProof,
+        publicInputs,
+      };
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+
+      EngineDebug.log('Formatted POI proof inputs:');
+      EngineDebug.log(stringifySafe(formattedInputs));
+
+      throw new Error(`Unable to generate POI proof: ${err.message}`);
     }
-
-    progressCallback(finalProgressProof);
-
-    // For some reason, the proof returned by snarkjs contains extra fields.
-    // Trim them off.
-    const snarkProof: Proof = {
-      pi_a: [proof.pi_a[0], proof.pi_a[1]],
-      pi_b: [proof.pi_b[0], proof.pi_b[1]],
-      pi_c: [proof.pi_c[0], proof.pi_c[1]],
-    };
-
-    // Throw if proof is invalid
-    if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
-      throw new Error('POI proof verification failed');
-    }
-
-    ProofCachePOI.store(listKey, blindedCommitmentsOut, snarkProof);
-
-    progressCallback(100);
-
-    // Return proof with inputs
-    return {
-      proof: snarkProof,
-      publicInputs,
-    };
   }
 
   static formatProof(proof: Proof): SnarkProof {
