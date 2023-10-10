@@ -230,9 +230,10 @@ export class POI {
   }
 
   static async getSpendableBalanceBuckets(chain: Chain): Promise<WalletBalanceBucket[]> {
-    return this.isActiveForChain(chain) && (await this.isRequiredForChain(chain))
+    const poiRequired = await this.isRequiredForChain(chain);
+    return poiRequired
       ? [WalletBalanceBucket.Spendable]
-      : // If inactive or not required, all balance buckets are spendable.
+      : // Until POI is active, all balance buckets are spendable.
         Object.values(WalletBalanceBucket);
   }
 

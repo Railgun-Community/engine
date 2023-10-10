@@ -1923,7 +1923,30 @@ abstract class AbstractWallet extends EventEmitter {
     const balanceBucketFilter = onlySpendable
       ? await POI.getSpendableBalanceBuckets(chain)
       : Object.values(WalletBalanceBucket);
-    return this.getTokenBalancesByTxidVersion(txidVersion, chain, balanceBucketFilter);
+    const TXOs = await this.TXOs(txidVersion, chain);
+    return this.getTokenBalancesByTxidVersion(TXOs, txidVersion, chain, balanceBucketFilter);
+  }
+
+  async getTokenBalancesByBucket(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<Record<WalletBalanceBucket, TokenBalances>> {
+    const TXOs = await this.TXOs(txidVersion, chain);
+
+    const balancesByBucket: Partial<Record<WalletBalanceBucket, TokenBalances>> = {};
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const balanceBucket of Object.values(WalletBalanceBucket)) {
+      const balanceBucketFilter = [balanceBucket];
+      balancesByBucket[balanceBucket] = await this.getTokenBalancesByTxidVersion(
+        TXOs,
+        txidVersion,
+        chain,
+        balanceBucketFilter,
+      );
+    }
+
+    return balancesByBucket as Record<WalletBalanceBucket, TokenBalances>;
   }
 
   /**
@@ -1932,11 +1955,11 @@ abstract class AbstractWallet extends EventEmitter {
    * @returns balances
    */
   async getTokenBalancesByTxidVersion(
+    TXOs: TXO[],
     txidVersion: TXIDVersion,
     chain: Chain,
     balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<TokenBalances> {
-    const TXOs = await this.TXOs(txidVersion, chain);
     const tokenBalances: TokenBalances = {};
 
     // Loop through each TXO and add to balances if unspent
