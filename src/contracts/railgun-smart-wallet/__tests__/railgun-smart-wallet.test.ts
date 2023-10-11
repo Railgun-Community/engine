@@ -667,6 +667,8 @@ describe('railgun-smart-wallet', function runTests() {
       memoText: undefined,
       senderAddress: undefined,
       shieldFee: '250000', // 100000000 * 0.0025
+      balanceBucket: WalletBalanceBucket.Spendable,
+      hasValidPOIForActiveLists: true,
     };
 
     // Check first output: Shield (receive only).
@@ -702,6 +704,7 @@ describe('railgun-smart-wallet', function runTests() {
         memoText: undefined,
         senderAddress: undefined,
         unshieldFee: '2493750',
+        hasValidPOIForActiveLists: false,
       },
       {
         tokenData: getTokenDataERC20(TOKEN_ADDRESS),
@@ -711,6 +714,7 @@ describe('railgun-smart-wallet', function runTests() {
         memoText: undefined,
         senderAddress: undefined,
         unshieldFee: '249375', // 1097250000n * 1/11 * 0.9975
+        hasValidPOIForActiveLists: false,
       },
     ]);
   }).timeout(120000);

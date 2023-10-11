@@ -203,7 +203,7 @@ const generateAndVerifyPOI = async (
     // listKey: string
     expect(firstCallArgs[1]).to.deep.equal(expectedListKey);
     // blindedCommitmentsOut: string[]
-    expect(firstCallArgs[2]).to.deep.equal(expectedBlindedCommitmentsOut);
+    expect(firstCallArgs[3]).to.deep.equal(expectedBlindedCommitmentsOut);
 
     proverSpy.restore();
   } catch (err) {
@@ -621,6 +621,8 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         shieldFee: '275000000000000000000',
+        balanceBucket: WalletBalanceBucket.Spendable,
+        hasValidPOIForActiveLists: true,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -649,6 +651,7 @@ describe('railgun-engine', function test() {
         walletSource: 'test wallet',
       },
       memoText: undefined,
+      hasValidPOIForActiveLists: false,
     });
     expect(history[1].changeTokenAmounts).deep.eq([
       {
@@ -661,6 +664,7 @@ describe('railgun-engine', function test() {
           walletSource: 'test wallet',
         },
         memoText: undefined,
+        hasValidPOIForActiveLists: false,
       },
     ]);
     expect(history[1].unshieldTokenAmounts).deep.eq([
@@ -672,6 +676,7 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         unshieldFee: '750000000000000000',
+        hasValidPOIForActiveLists: false,
       },
     ]);
 
@@ -837,6 +842,8 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         shieldFee: '275000000000000000000',
+        balanceBucket: WalletBalanceBucket.Spendable,
+        hasValidPOIForActiveLists: true,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -862,6 +869,7 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         unshieldFee: '274312500000000000000',
+        hasValidPOIForActiveLists: false,
       },
     ]);
   }).timeout(120000);
@@ -969,6 +977,8 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         shieldFee: '275000000000000000000',
+        balanceBucket: WalletBalanceBucket.Spendable,
+        hasValidPOIForActiveLists: true,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -995,6 +1005,7 @@ describe('railgun-engine', function test() {
         },
         recipientAddress: wallet2.getAddress(),
         memoText,
+        hasValidPOIForActiveLists: false,
       },
     ]);
     expect(history[1].relayerFeeTokenAmount).deep.eq({
@@ -1008,6 +1019,7 @@ describe('railgun-engine', function test() {
         walletSource: 'test wallet',
       },
       memoText: relayerMemoText,
+      hasValidPOIForActiveLists: false,
     });
     expect(history[1].changeTokenAmounts).deep.eq([
       {
@@ -1020,6 +1032,7 @@ describe('railgun-engine', function test() {
           walletSource: 'test wallet',
         },
         memoText: undefined,
+        hasValidPOIForActiveLists: false,
       },
     ]);
     expect(history[1].unshieldTokenAmounts).deep.eq([]);
@@ -1034,6 +1047,8 @@ describe('railgun-engine', function test() {
         memoText,
         senderAddress: wallet.getAddress(),
         shieldFee: undefined,
+        balanceBucket: WalletBalanceBucket.Spendable,
+        hasValidPOIForActiveLists: true,
       },
       {
         tokenData: getTokenDataERC20(tokenAddress),
@@ -1042,6 +1057,8 @@ describe('railgun-engine', function test() {
         memoText: relayerMemoText,
         senderAddress: undefined,
         shieldFee: undefined,
+        balanceBucket: WalletBalanceBucket.Spendable,
+        hasValidPOIForActiveLists: true,
       },
     ]);
     expect(history2[0].transferTokenAmounts).deep.eq([]);
@@ -1092,6 +1109,8 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         shieldFee: undefined,
+        balanceBucket: WalletBalanceBucket.Spendable,
+        hasValidPOIForActiveLists: true,
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
@@ -1203,6 +1222,7 @@ describe('railgun-engine', function test() {
         },
         recipientAddress: wallet2.getAddress(),
         memoText,
+        hasValidPOIForActiveLists: false,
       },
     ]);
     expect(historyAfterTransfer[3].relayerFeeTokenAmount).deep.eq({
@@ -1217,6 +1237,7 @@ describe('railgun-engine', function test() {
         walletSource: 'test wallet',
       },
       memoText: relayerMemoText,
+      hasValidPOIForActiveLists: false,
     });
     expect(historyAfterTransfer[3].changeTokenAmounts).deep.eq([
       {
@@ -1229,6 +1250,7 @@ describe('railgun-engine', function test() {
           walletSource: 'test wallet',
         },
         memoText: undefined,
+        hasValidPOIForActiveLists: false,
       },
     ]);
     expect(historyAfterTransfer[3].unshieldTokenAmounts).deep.eq([
@@ -1240,6 +1262,7 @@ describe('railgun-engine', function test() {
         memoText: undefined,
         senderAddress: undefined,
         unshieldFee: '0',
+        hasValidPOIForActiveLists: false,
       },
     ]);
   }).timeout(120000);

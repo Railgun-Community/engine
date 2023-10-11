@@ -104,7 +104,10 @@ export class POI {
     return this.validatePOIStatusForAllLists(pois, listKeys, [TXOPOIListStatus.Valid]);
   }
 
-  private static hasValidPOIsActiveLists(pois: POIsPerList): boolean {
+  static hasValidPOIsActiveLists(pois: Optional<POIsPerList>): boolean {
+    if (!pois) {
+      return false;
+    }
     const listKeys = this.getActiveListKeys();
     return this.validatePOIStatusForAllLists(pois, listKeys, [TXOPOIListStatus.Valid]);
   }

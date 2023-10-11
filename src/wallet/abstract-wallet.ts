@@ -661,11 +661,6 @@ abstract class AbstractWallet extends EventEmitter {
         key: this.getWalletReceiveCommitmentDBPrefix(chain, tree, position).join(':'),
         value: msgpack.encode(storedReceiveCommitment),
       });
-      // AbstractWallet.addCachedStoredCommitment(chain, this.cachedReceiveCommitments, {
-      //   storedReceiveCommitment,
-      //   tree,
-      //   position,
-      // });
     }
 
     if (noteSend && serializedNoteSend) {
@@ -686,11 +681,6 @@ abstract class AbstractWallet extends EventEmitter {
         key: this.getWalletSentCommitmentDBPrefix(chain, tree, position).join(':'),
         value: msgpack.encode(storedSendCommitment),
       });
-      // AbstractWallet.addCachedStoredCommitment(chain, this.cachedSendCommitments, {
-      //   storedSendCommitment,
-      //   tree,
-      //   position,
-      // });
     }
 
     return scannedCommitments;
@@ -777,13 +767,6 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private async queryAllStoredSendCommitments(chain: Chain): Promise<CachedStoredSendCommitment[]> {
-    // if (
-    //   isDefined(this.cachedSendCommitments[chain.type]) &&
-    //   isDefined(this.cachedSendCommitments[chain.type][chain.id])
-    // ) {
-    //   return this.cachedSendCommitments[chain.type][chain.id];
-    // }
-
     const namespace = this.getWalletSentCommitmentDBPrefix(chain);
     const keySplits = await this.keySplits(namespace, 5);
 
@@ -799,31 +782,8 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    // this.cachedSendCommitments[chain.type] ??= [];
-    // this.cachedSendCommitments[chain.type][chain.id] = dbStoredSendCommitments;
     return dbStoredSendCommitments;
   }
-
-  // private static addCachedStoredCommitment<Cache extends { tree: number; position: number }[][][]>(
-  //   chain: Chain,
-  //   commitmentCache: Cache,
-  //   cachedCommitment: CachedStoredReceiveCommitment | CachedStoredSendCommitment,
-  // ) {
-  //   if (
-  //     !isDefined(commitmentCache[chain.type]) ||
-  //     !isDefined(commitmentCache[chain.type][chain.id])
-  //   ) {
-  //     return;
-  //   }
-  //   const cacheForChain = commitmentCache[chain.type][chain.id];
-  //   const found = cacheForChain.find((stored) => {
-  //     return stored.tree === cachedCommitment.tree && stored.position === cachedCommitment.position;
-  //   });
-  //   if (found) {
-  //     return;
-  //   }
-  //   cacheForChain.push(cachedCommitment);
-  // }
 
   /**
    * Get TXOs list of a chain
@@ -1727,7 +1687,8 @@ abstract class AbstractWallet extends EventEmitter {
   static getTransactionReceiveHistory(filteredTXOs: TXO[]): TransactionHistoryEntryReceived[] {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
-    filteredTXOs.forEach(({ txid, timestamp, note }) => {
+    filteredTXOs.forEach((txo) => {
+      const { txid, timestamp, note } = txo;
       if (note.value === 0n) {
         return;
       }
@@ -1747,6 +1708,8 @@ abstract class AbstractWallet extends EventEmitter {
         memoText: note.memoText,
         senderAddress: note.getSenderAddress(),
         shieldFee: note.shieldFee,
+        balanceBucket: POI.getBalanceBucket(txo),
+        hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(txo.poisPerList),
       });
     });
 
@@ -1835,45 +1798,45 @@ abstract class AbstractWallet extends EventEmitter {
 
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    sentCommitments.forEach(
-      ({ txid, timestamp, note, isLegacyTransactNote, noteAnnotationData }) => {
-        if (note.value === 0n) {
-          return;
-        }
-        if (!isDefined(txidTransactionMap[txid])) {
-          txidTransactionMap[txid] = {
-            txid,
-            timestamp,
-            blockNumber: note.blockNumber,
-            tokenAmounts: [],
-            unshieldEvents: [],
-            version: AbstractWallet.getTransactionHistoryItemVersion(
-              noteAnnotationData,
-              isLegacyTransactNote,
-            ),
-          };
-        }
-
-        const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
-        const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
-          tokenHash,
-          tokenData: note.tokenData,
-          amount: note.value,
-          noteAnnotationData,
-          memoText: note.memoText,
+    sentCommitments.forEach((sentCommitment) => {
+      const { txid, timestamp, note, isLegacyTransactNote, noteAnnotationData } = sentCommitment;
+      if (note.value === 0n) {
+        return;
+      }
+      if (!isDefined(txidTransactionMap[txid])) {
+        txidTransactionMap[txid] = {
+          txid,
+          timestamp,
+          blockNumber: note.blockNumber,
+          tokenAmounts: [],
+          unshieldEvents: [],
+          version: AbstractWallet.getTransactionHistoryItemVersion(
+            noteAnnotationData,
+            isLegacyTransactNote,
+          ),
         };
-        const isNonLegacyTransfer =
-          !isLegacyTransactNote &&
-          isDefined(noteAnnotationData) &&
-          noteAnnotationData.outputType === OutputType.Transfer;
-        if (isNonLegacyTransfer) {
-          (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
-            note.receiverAddressData,
-          );
-        }
-        txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
-      },
-    );
+      }
+
+      const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
+      const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
+        tokenHash,
+        tokenData: note.tokenData,
+        amount: note.value,
+        noteAnnotationData,
+        memoText: note.memoText,
+        hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(sentCommitment.poisPerList),
+      };
+      const isNonLegacyTransfer =
+        !isLegacyTransactNote &&
+        isDefined(noteAnnotationData) &&
+        noteAnnotationData.outputType === OutputType.Transfer;
+      if (isNonLegacyTransfer) {
+        (tokenAmount as TransactionHistoryTransferTokenAmount).recipientAddress = encodeAddress(
+          note.receiverAddressData,
+        );
+      }
+      txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
+    });
 
     // Add unshield events to txidTransactionMap
     allUnshieldEvents.forEach((unshieldEvent) => {
@@ -1922,9 +1885,13 @@ abstract class AbstractWallet extends EventEmitter {
             transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
             return;
           }
+
           switch (tokenAmount.noteAnnotationData.outputType) {
             case OutputType.Transfer:
-              transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
+              transferTokenAmounts.push(
+                // NOTE: recipientAddress is set during pre-process for all non-legacy Transfers.
+                tokenAmount as TransactionHistoryTransferTokenAmount,
+              );
               break;
             case OutputType.RelayerFee:
               relayerFeeTokenAmount = tokenAmount;
@@ -1951,6 +1918,7 @@ abstract class AbstractWallet extends EventEmitter {
               recipientAddress: unshieldEvent.toAddress,
               senderAddress: undefined,
               unshieldFee: unshieldEvent.fee,
+              hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(unshieldEvent.poisPerList),
             };
           },
         );
