@@ -255,6 +255,9 @@ export class POI {
     if (!isDefined(this.nodeInterface)) {
       throw new Error('POI node interface not initialized');
     }
+    if (blindedCommitmentDatas.length > 100) {
+      throw new Error('Cannot retrieve POIs for more than 100 blinded commitments at a time');
+    }
     const listKeys = this.getAllListKeys();
     return this.nodeInterface.getPOIsPerList(txidVersion, chain, listKeys, blindedCommitmentDatas);
   }

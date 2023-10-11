@@ -108,7 +108,7 @@ import {
   formatTXOsReceivedPOIStatusInfo,
   formatTXOsSpentPOIStatusInfo,
 } from '../poi/poi-status-formatter';
-import { stringifySafe } from '../utils';
+import { ZERO_32_BYTE_VALUE, stringifySafe } from '../utils';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -1020,12 +1020,14 @@ abstract class AbstractWallet extends EventEmitter {
       return;
     }
 
-    const blindedCommitmentDatas: BlindedCommitmentData[] = txosNeedCreationPOIs.map((txo) => ({
-      type: isSentCommitmentType(txo.commitmentType)
-        ? BlindedCommitmentType.Transact
-        : BlindedCommitmentType.Shield,
-      blindedCommitment: txo.blindedCommitment as string,
-    }));
+    const blindedCommitmentDatas: BlindedCommitmentData[] = txosNeedCreationPOIs
+      .slice(0, 100) // 100 max in request
+      .map((txo) => ({
+        type: isSentCommitmentType(txo.commitmentType)
+          ? BlindedCommitmentType.Transact
+          : BlindedCommitmentType.Shield,
+        blindedCommitment: txo.blindedCommitment as string,
+      }));
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
       txidVersion,
       chain,
@@ -1365,9 +1367,6 @@ abstract class AbstractWallet extends EventEmitter {
       const sentCommitmentsForRailgunTxid = sentCommitments.filter(
         (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
       );
-      const blindedCommitmentsOutSentCommitments = removeUndefineds(
-        sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.blindedCommitment),
-      );
       // Unshield Events
       const unshieldEventsForRailgunTxid = unshieldEvents.filter(
         (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
@@ -1391,17 +1390,6 @@ abstract class AbstractWallet extends EventEmitter {
         throw new Error(`No sent commitments or unshield events for railgun txid: ${railgunTxid}`);
       }
 
-      // Aggregate Sent + Unshields
-      const blindedCommitmentsOut: string[] = removeDuplicates([
-        ...blindedCommitmentsOutSentCommitments,
-        // Do not send blinded commitments for unshields.
-      ]);
-      if (blindedCommitmentsOut.length !== commitmentsWithoutUnshields) {
-        throw new Error(
-          `Not enough blinded commitments for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${blindedCommitmentsOut.length}`,
-        );
-      }
-
       const npksOut: bigint[] = [
         ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.notePublicKey),
         // Do not send npks for unshields
@@ -1419,6 +1407,23 @@ abstract class AbstractWallet extends EventEmitter {
       if (valuesOut.length !== commitmentsWithoutUnshields) {
         throw new Error(
           `Invalid number of valuesOut for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${valuesOut.length}`,
+        );
+      }
+
+      // All sent blinded commitments - Do not send blinded commitments for unshields.
+      const blindedCommitmentsOut: string[] = removeUndefineds(
+        sentCommitmentsForRailgunTxid.map((sentCommitment, i) => {
+          if (valuesOut[i] === 0n) {
+            // If value is 0n, the circuit won't output a blindedCommitmentOut for this value.
+            // Ie. for 0-value transfers or (legacy) 0-value change notes.
+            return ZERO_32_BYTE_VALUE;
+          }
+          return sentCommitment.blindedCommitment;
+        }),
+      );
+      if (blindedCommitmentsOut.length !== commitmentsWithoutUnshields) {
+        throw new Error(
+          `Not enough blinded commitments for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${blindedCommitmentsOut.length}`,
         );
       }
 
