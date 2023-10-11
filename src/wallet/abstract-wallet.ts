@@ -11,6 +11,7 @@ import { SpendingPublicKey, ViewingKeyPair, WalletNode } from '../key-derivation
 import {
   EngineEvent,
   POICurrentProofEventData,
+  POIProofEventStatus,
   UnshieldStoredEvent,
   WalletScannedEventData,
 } from '../models/event-types';
@@ -228,6 +229,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private emitPOIProofUpdateEvent(
+    status: POIProofEventStatus,
     txidVersion: TXIDVersion,
     chain: Chain,
     progress: number,
@@ -239,6 +241,7 @@ abstract class AbstractWallet extends EventEmitter {
     errorMsg: Optional<string>,
   ) {
     const updateData: POICurrentProofEventData = {
+      status,
       txidVersion,
       chain,
       progress,
@@ -1506,6 +1509,7 @@ abstract class AbstractWallet extends EventEmitter {
         blindedCommitmentsOut,
         (progress: number) => {
           this.emitPOIProofUpdateEvent(
+            POIProofEventStatus.InProgress,
             txidVersion,
             chain,
             progress,
@@ -1532,6 +1536,7 @@ abstract class AbstractWallet extends EventEmitter {
       );
     } catch (err) {
       this.emitPOIProofUpdateEvent(
+        POIProofEventStatus.Error,
         txidVersion,
         chain,
         0, // Progress
@@ -1540,7 +1545,8 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxid,
         index,
         totalCount,
-        err.message, // errorMsg
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        err.message,
       );
 
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
@@ -2338,14 +2344,36 @@ abstract class AbstractWallet extends EventEmitter {
 
         this.isRefreshingPOIs[chain.type][chain.id] = false;
         if (numProofs > 0) {
-          // TODO: "Loading next batch" status
+          this.emitPOIProofUpdateEvent(
+            POIProofEventStatus.LoadingNextBatch,
+            txidVersion,
+            chain,
+            0, // Progress
+            'Loading...',
+            'N/A',
+            'N/A',
+            0,
+            0,
+            undefined, // errorMsg
+          );
 
           // Retrigger
           await this.refreshPOIsForAllTXIDVersions(chain);
           return;
         }
 
-        // TODO: "All Proofs Completed" status
+        this.emitPOIProofUpdateEvent(
+          POIProofEventStatus.AllProofsCompleted,
+          txidVersion,
+          chain,
+          0, // Progress
+          'Loading...',
+          'N/A',
+          'N/A',
+          0,
+          0,
+          undefined, // errorMsg
+        );
       }
     } catch (err) {
       this.isRefreshingPOIs[chain.type][chain.id] = false;

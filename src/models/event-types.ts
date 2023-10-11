@@ -86,7 +86,15 @@ export enum MerkletreeScanStatus {
   Incomplete = 'Incomplete',
 }
 
+export enum POIProofEventStatus {
+  LoadingNextBatch = 'LoadingNextBatch',
+  InProgress = 'InProgress',
+  Error = 'Error',
+  AllProofsCompleted = 'AllProofsCompleted',
+}
+
 export type POICurrentProofEventData = {
+  status: POIProofEventStatus;
   txidVersion: TXIDVersion;
   chain: Chain;
   progress: number;
