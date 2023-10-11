@@ -2304,11 +2304,12 @@ abstract class AbstractWallet extends EventEmitter {
         // Refresh POIs - Sent commitments / unshields
         await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);
 
-        // Generate POIs - Sent commitments / unshields
-        const numProofs = await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(
-          chain,
-          txidVersion,
-        );
+        // TODO: Auto-generate POIs - Sent commitments / unshields
+        // const numProofs = await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(
+        //   chain,
+        //   txidVersion,
+        // );
+        const numProofs = 0;
 
         this.isRefreshingPOIs[chain.type][chain.id] = false;
         if (numProofs > 0) {
@@ -2335,7 +2336,7 @@ abstract class AbstractWallet extends EventEmitter {
           txidVersion,
           chain,
           0, // Progress
-          'Loading...',
+          'N/A',
           'N/A',
           'N/A',
           0,
