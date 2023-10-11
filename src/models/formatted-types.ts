@@ -1,5 +1,5 @@
 import BN from 'bn.js';
-import { POIsPerList } from './poi-types';
+import { POIsPerList, TXIDVersion } from './poi-types';
 
 export type BytesData = ArrayLike<number> | string | BN;
 
@@ -184,6 +184,7 @@ export type Nullifier = {
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type StoredReceiveCommitment = {
+  txidVersion: TXIDVersion;
   spendtxid: string | false;
   txid: string;
   timestamp: Optional<number>;
@@ -197,6 +198,7 @@ export type StoredReceiveCommitment = {
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type StoredSendCommitment = {
+  txidVersion: TXIDVersion;
   txid: string;
   timestamp: Optional<number>;
   decrypted: NoteSerialized | LegacyNoteSerialized;

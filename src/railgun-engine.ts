@@ -839,6 +839,9 @@ class RailgunEngine extends EventEmitter {
             eventLogIndex: undefined, // Does not exist for txid subgraph, which is generated through calldata
             poisPerList: undefined,
           };
+
+          // eslint-disable-next-line no-await-in-loop
+          await utxoMerkletree.addUnshieldEvents([unshieldEvent]);
         } else {
           // V2 has unshield events. Map to existing event.
 

@@ -643,6 +643,7 @@ abstract class AbstractWallet extends EventEmitter {
     if (noteReceive && serializedNoteReceive) {
       const nullifier = TransactNote.getNullifier(this.nullifyingKey, position);
       const storedReceiveCommitment: StoredReceiveCommitment = {
+        txidVersion,
         spendtxid: false,
         txid: leaf.txid,
         timestamp: leaf.timestamp,
@@ -665,6 +666,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     if (noteSend && serializedNoteSend) {
       const storedSendCommitment: StoredSendCommitment = {
+        txidVersion,
         txid: leaf.txid,
         timestamp: leaf.timestamp,
         decrypted: serializedNoteSend,
@@ -747,39 +749,55 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   private async queryAllStoredReceiveCommitments(
+    txidVersion: TXIDVersion,
     chain: Chain,
   ): Promise<CachedStoredReceiveCommitment[]> {
     const namespace = this.getWalletDBPrefix(chain);
     const keySplits = await this.keySplits(namespace, 5);
 
-    const dbStoredReceiveCommitments: CachedStoredReceiveCommitment[] = await Promise.all(
-      keySplits.map(async (keySplit) => {
-        const data = (await this.db.get(keySplit)) as BytesData;
-        const storedReceiveCommitment = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
+    const dbStoredReceiveCommitments: CachedStoredReceiveCommitment[] = removeUndefineds(
+      await Promise.all(
+        keySplits.map(async (keySplit) => {
+          const data = (await this.db.get(keySplit)) as BytesData;
+          const storedReceiveCommitment = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
 
-        const tree = numberify(keySplit[3]).toNumber();
-        const position = numberify(keySplit[4]).toNumber();
+          if (storedReceiveCommitment.txidVersion !== txidVersion) {
+            return undefined;
+          }
 
-        return { storedReceiveCommitment, tree, position };
-      }),
+          const tree = numberify(keySplit[3]).toNumber();
+          const position = numberify(keySplit[4]).toNumber();
+
+          return { storedReceiveCommitment, tree, position };
+        }),
+      ),
     );
     return dbStoredReceiveCommitments;
   }
 
-  private async queryAllStoredSendCommitments(chain: Chain): Promise<CachedStoredSendCommitment[]> {
+  private async queryAllStoredSendCommitments(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<CachedStoredSendCommitment[]> {
     const namespace = this.getWalletSentCommitmentDBPrefix(chain);
     const keySplits = await this.keySplits(namespace, 5);
 
-    const dbStoredSendCommitments: CachedStoredSendCommitment[] = await Promise.all(
-      keySplits.map(async (keySplit) => {
-        const data = (await this.db.get(keySplit)) as BytesData;
-        const storedSendCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
+    const dbStoredSendCommitments: CachedStoredSendCommitment[] = removeUndefineds(
+      await Promise.all(
+        keySplits.map(async (keySplit) => {
+          const data = (await this.db.get(keySplit)) as BytesData;
+          const storedSendCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
 
-        const tree = numberify(keySplit[3]).toNumber();
-        const position = numberify(keySplit[4]).toNumber();
+          if (storedSendCommitment.txidVersion !== txidVersion) {
+            return undefined;
+          }
 
-        return { storedSendCommitment, tree, position };
-      }),
+          const tree = numberify(keySplit[3]).toNumber();
+          const position = numberify(keySplit[4]).toNumber();
+
+          return { storedSendCommitment, tree, position };
+        }),
+      ),
     );
 
     return dbStoredSendCommitments;
@@ -796,7 +814,10 @@ abstract class AbstractWallet extends EventEmitter {
     const merkletree = this.getUTXOMerkletree(txidVersion, chain);
     const tokenDataGetter = this.createTokenDataGetter(chain);
 
-    const storedReceiveCommitments = await this.queryAllStoredReceiveCommitments(chain);
+    const storedReceiveCommitments = await this.queryAllStoredReceiveCommitments(
+      txidVersion,
+      chain,
+    );
 
     return Promise.all(
       storedReceiveCommitments.map(async ({ storedReceiveCommitment, tree, position }) => {
@@ -865,7 +886,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     const sentCommitments: SentCommitment[] = [];
 
-    const storedSendCommitments = await this.queryAllStoredSendCommitments(chain);
+    const storedSendCommitments = await this.queryAllStoredSendCommitments(txidVersion, chain);
 
     await Promise.all(
       storedSendCommitments.map(async ({ storedSendCommitment, tree, position }) => {
