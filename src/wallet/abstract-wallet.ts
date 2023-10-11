@@ -1029,8 +1029,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveCreationPOIs(txo)).sort(
-      (a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b),
+    const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(txo)).sort((a, b) =>
+      AbstractWallet.sortPOIsPerListUndefinedFirst(a, b),
     );
     if (txosNeedCreationPOIs.length === 0) {
       return;
@@ -1076,6 +1076,37 @@ abstract class AbstractWallet extends EventEmitter {
     return isDefined(railgunTxid) ? item.railgunTxid === railgunTxid : true;
   }
 
+  async getSentCommitmentsAndUnshieldEventsNeedPOIRefresh(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    filterRailgunTxid?: string,
+  ) {
+    const [sentCommitments, TXOs] = await Promise.all([
+      this.getSentCommitments(txidVersion, chain, undefined),
+      this.TXOs(txidVersion, chain),
+    ]);
+    const sentCommitmentsNeedPOIRefresh = sentCommitments
+      .filter((sendCommitment) => POI.shouldRetrieveSentCommitmentPOIs(sendCommitment))
+      .filter((sentCommitment) =>
+        AbstractWallet.filterByRailgunTxid(sentCommitment, filterRailgunTxid),
+      )
+      .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
+
+    const unshieldEvents = await this.getUnshieldEventsFromSpentNullifiers(
+      txidVersion,
+      chain,
+      TXOs,
+    );
+    const unshieldEventsNeedPOIRefresh = unshieldEvents
+      .filter((unshieldEvent) => POI.shouldRetrieveUnshieldEventPOIs(unshieldEvent))
+      .filter((unshieldEvent) =>
+        AbstractWallet.filterByRailgunTxid(unshieldEvent, filterRailgunTxid),
+      )
+      .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
+
+    return { sentCommitmentsNeedPOIRefresh, unshieldEventsNeedPOIRefresh, TXOs };
+  }
+
   async getSentCommitmentsAndUnshieldEventsNeedPOIs(
     txidVersion: TXIDVersion,
     chain: Chain,
@@ -1086,7 +1117,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.TXOs(txidVersion, chain),
     ]);
     const sentCommitmentsNeedPOIs = sentCommitments
-      .filter((sendCommitment) => POI.shouldRetrieveSpentPOIs(sendCommitment))
+      .filter((sendCommitment) => POI.shouldGenerateSpentPOIsSentCommitment(sendCommitment))
       .filter((sentCommitment) =>
         AbstractWallet.filterByRailgunTxid(sentCommitment, filterRailgunTxid),
       )
@@ -1112,20 +1143,24 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     filterRailgunTxid?: string,
   ): Promise<void> {
-    const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs } =
-      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain, filterRailgunTxid);
-    if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
+    const { sentCommitmentsNeedPOIRefresh, unshieldEventsNeedPOIRefresh } =
+      await this.getSentCommitmentsAndUnshieldEventsNeedPOIRefresh(
+        txidVersion,
+        chain,
+        filterRailgunTxid,
+      );
+    if (!sentCommitmentsNeedPOIRefresh.length && !unshieldEventsNeedPOIRefresh.length) {
       return;
     }
 
     const blindedCommitmentDatas: BlindedCommitmentData[] = [
-      ...sentCommitmentsNeedPOIs.map((sentCommitment) => ({
+      ...sentCommitmentsNeedPOIRefresh.map((sentCommitment) => ({
         type: isSentCommitmentType(sentCommitment.commitmentType)
           ? BlindedCommitmentType.Transact
           : BlindedCommitmentType.Shield,
         blindedCommitment: sentCommitment.blindedCommitment as string,
       })),
-      ...unshieldEventsNeedPOIs.map((unshieldEvent) => ({
+      ...unshieldEventsNeedPOIRefresh.map((unshieldEvent) => ({
         type: BlindedCommitmentType.Transact,
         blindedCommitment: getBlindedCommitmentForUnshield(unshieldEvent.railgunTxid as string),
       })),
@@ -1137,7 +1172,7 @@ abstract class AbstractWallet extends EventEmitter {
     );
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const sentCommitment of sentCommitmentsNeedPOIs) {
+    for (const sentCommitment of sentCommitmentsNeedPOIRefresh) {
       if (!isDefined(sentCommitment.blindedCommitment)) {
         continue;
       }
@@ -1157,7 +1192,7 @@ abstract class AbstractWallet extends EventEmitter {
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const unshieldEvent of unshieldEventsNeedPOIs) {
+    for (const unshieldEvent of unshieldEventsNeedPOIRefresh) {
       if (!isDefined(unshieldEvent.railgunTxid)) {
         continue;
       }

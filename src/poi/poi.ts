@@ -172,7 +172,7 @@ export class POI {
     });
   }
 
-  static shouldRetrieveCreationPOIs(txo: TXO) {
+  static shouldRetrieveTXOPOIs(txo: TXO) {
     if (!isDefined(txo.blindedCommitment)) {
       return false;
     }
@@ -182,7 +182,7 @@ export class POI {
     return !POI.hasValidPOIsAllLists(txo.poisPerList);
   }
 
-  static shouldRetrieveSpentPOIs(sentCommitment: SentCommitment) {
+  static shouldRetrieveSentCommitmentPOIs(sentCommitment: SentCommitment) {
     if (!isDefined(sentCommitment.blindedCommitment)) {
       return false;
     }
@@ -190,6 +190,16 @@ export class POI {
       return true;
     }
     return !POI.hasValidPOIsAllLists(sentCommitment.poisPerList);
+  }
+
+  static shouldRetrieveUnshieldEventPOIs(unshieldEvent: UnshieldStoredEvent) {
+    if (!isDefined(unshieldEvent.railgunTxid)) {
+      return false;
+    }
+    if (!isDefined(unshieldEvent.poisPerList)) {
+      return true;
+    }
+    return !POI.hasValidPOIsAllLists(unshieldEvent.poisPerList);
   }
 
   static shouldGenerateSpentPOIsSentCommitment(sentCommitment: SentCommitment) {
