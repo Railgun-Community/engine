@@ -18,6 +18,7 @@ import { ProofCachePOI } from './proof-cache-poi';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { POIEngineProofInputs } from '../models';
 import { isDefined } from '../utils/is-defined';
+import { ProgressService } from './progress-service';
 
 const ZERO_VALUE_POI = MERKLE_ZERO_VALUE_BIGINT;
 
@@ -93,19 +94,63 @@ export class Prover {
     const suppressDebugLogger = { debug: () => {} };
 
     this.groth16 = {
-      fullProveRailgun: (
+      fullProveRailgun: async (
         formattedInputs: FormattedCircuitInputsRailgun,
         wasm: Optional<ArrayLike<number>>,
         zkey: ArrayLike<number>,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _logger: { debug: (log: string) => void },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _dat: ArrayLike<number> | undefined,
+        progressCallback: ProverProgressCallback,
       ) => {
-        return snarkJSGroth16.fullProve(formattedInputs, wasm, zkey, suppressDebugLogger);
+        const progressService = new ProgressService(
+          0, // startValue
+          95, // endValue
+          1500, // totalMsec
+          250, // delayMsec
+        );
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        progressService.progressSteadily(progressCallback);
+
+        const proof = await snarkJSGroth16.fullProve(
+          formattedInputs,
+          wasm,
+          zkey,
+          suppressDebugLogger,
+        );
+
+        progressService.stop();
+        return proof;
       },
-      fullProvePOI: (
+      fullProvePOI: async (
         formattedInputs: FormattedCircuitInputsPOI,
         wasm: Optional<ArrayLike<number>>,
         zkey: ArrayLike<number>,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _logger: { debug: (log: string) => void },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _dat: ArrayLike<number> | undefined,
+        progressCallback: ProverProgressCallback,
       ) => {
-        return snarkJSGroth16.fullProve(formattedInputs, wasm, zkey, suppressDebugLogger);
+        const progressService = new ProgressService(
+          0, // startValue
+          95, // endValue
+          3000, // totalMsec
+          250, // delayMsec
+        );
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        progressService.progressSteadily(progressCallback);
+
+        const proof = await snarkJSGroth16.fullProve(
+          formattedInputs,
+          wasm,
+          zkey,
+          suppressDebugLogger,
+        );
+
+        progressService.stop();
+        return proof;
       },
       verify: snarkJSGroth16.verify,
     };
@@ -469,9 +514,9 @@ export class Prover {
 
     const formattedInputs = Prover.formatPOIInputs(inputs, maxInputs, maxOutputs);
 
-    // Generate proof: Progress from 20 - 99%
-    const initialProgressProof = 20;
-    const finalProgressProof = 99;
+    // Generate proof: Progress from 10 - 95%
+    const initialProgressProof = 10;
+    const finalProgressProof = 95;
     progressCallback(initialProgressProof);
 
     try {

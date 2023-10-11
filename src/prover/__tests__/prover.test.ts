@@ -43,7 +43,10 @@ describe('prover', () => {
       testVector.listKey,
       [], // blindedCommitmentsIn - just for logging
       testVector.blindedCommitmentsOut,
-      () => {}, // progress
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      (progress) => {
+        // console.log(progress);
+      },
     );
 
     expect(proof.pi_a.length).to.equal(2);
