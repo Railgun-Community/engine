@@ -1863,7 +1863,7 @@ abstract class AbstractWallet extends EventEmitter {
         memoText: note.memoText,
         senderAddress: note.getSenderAddress(),
         shieldFee: note.shieldFee,
-        balanceBucket: POI.getBalanceBucket(chain, txo),
+        balanceBucket: POI.getBalanceBucket(txo),
         hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(txo.poisPerList),
       });
     });
@@ -2203,7 +2203,7 @@ abstract class AbstractWallet extends EventEmitter {
       // If utxo is unspent process it
       const isUnspent = txo.spendtxid === false;
       if (isUnspent) {
-        const balanceBucket = POI.getBalanceBucket(chain, txo);
+        const balanceBucket = POI.getBalanceBucket(txo);
 
         if (!balanceBucketFilter.includes(balanceBucket)) {
           if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
