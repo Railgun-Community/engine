@@ -942,6 +942,21 @@ class RailgunEngine extends EventEmitter {
     return historicalMerkleroot;
   }
 
+  async getGlobalUTXOTreePositionForRailgunTransactionCommitment(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    tree: number,
+    index: number,
+    commitmentHash: string,
+  ) {
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
+    return txidMerkletree.getGlobalUTXOTreePositionForRailgunTransactionCommitment(
+      tree,
+      index,
+      commitmentHash,
+    );
+  }
+
   async getLatestRailgunTxidData(
     txidVersion: TXIDVersion,
     chain: Chain,

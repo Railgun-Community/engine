@@ -133,6 +133,24 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     }
   }
 
+  async getGlobalUTXOTreePositionForRailgunTransactionCommitment(
+    tree: number,
+    index: number,
+    commitmentHash: string,
+  ) {
+    const railgunTransaction = await this.getRailgunTransaction(tree, index);
+    if (!railgunTransaction) {
+      throw new Error('Railgun transaction for tree/index not found');
+    }
+    const commitmentIndex = railgunTransaction.commitments
+      .map((c) => formatToByteLength(c, ByteLength.UINT_256))
+      .indexOf(formatToByteLength(commitmentHash, ByteLength.UINT_256));
+    if (commitmentIndex < 0) {
+      throw new Error('Could not find commitmentHash for RailgunTransaction');
+    }
+    return railgunTransaction.utxoBatchStartPositionOut + commitmentIndex;
+  }
+
   async getRailgunTxidCurrentMerkletreeData(railgunTxid: string): Promise<TXIDMerkletreeData> {
     const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
     if (!isDefined(txidIndex)) {

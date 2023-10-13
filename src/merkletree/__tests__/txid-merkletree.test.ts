@@ -179,6 +179,10 @@ describe('txid-merkletree', () => {
         '0a03b0bf8dc758a3d5dd7f6b8b1974a4b212a0080425740c92cbd0c860ebde33',
       );
 
+      expect(
+        await merkletree.getGlobalUTXOTreePositionForRailgunTransactionCommitment(0, 1, '0x12'),
+      ).to.equal(3);
+
       if (merkletree.shouldStoreMerkleroots) {
         expect(await merkletree.getHistoricalMerkleroot(0, 0)).to.equal(
           '2672380de5dc3f4078e8d5a5984fcd95e3e279be354665ba889a472b8cd27966',
