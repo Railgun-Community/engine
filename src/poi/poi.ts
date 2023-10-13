@@ -57,8 +57,7 @@ export class POI {
     const pois = txo.poisPerList;
     const isChange = txo.note.outputType === OutputType.Change;
 
-    const launchBlock = this.getLaunchBlock(chain);
-    if (!isDefined(launchBlock) || txo.blockNumber < launchBlock) {
+    if (this.isLegacyTXO(chain, txo)) {
       return WalletBalanceBucket.Spendable;
     }
 
@@ -191,12 +190,20 @@ export class POI {
     });
   }
 
-  static shouldRetrieveTXOPOIs(txo: TXO, poiLaunchBlock: number) {
+  static isLegacyTXO(chain: Chain, txo: TXO) {
+    const launchBlock = this.getLaunchBlock(chain);
+    if (!isDefined(launchBlock) || txo.blockNumber < launchBlock) {
+      return true;
+    }
+    return false;
+  }
+
+  static shouldRetrieveTXOPOIs(chain: Chain, txo: TXO) {
     if (!isDefined(txo.blindedCommitment)) {
       return false;
     }
-    if (txo.blockNumber < poiLaunchBlock) {
-      return false;
+    if (this.isLegacyTXO(chain, txo)) {
+      return true;
     }
     if (!isDefined(txo.poisPerList)) {
       return true;

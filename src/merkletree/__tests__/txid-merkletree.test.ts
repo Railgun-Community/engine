@@ -16,6 +16,7 @@ import { verifyMerkleProof } from '../merkle-proof';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { config } from '../../test/config.test';
 import { TREE_DEPTH } from '../../models/merkletree-types';
+import { POI } from '../../poi/poi';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -36,6 +37,8 @@ describe('txid-merkletree', () => {
   beforeEach(async () => {
     // Create database
     db = new Database(memdown());
+
+    POI.setLaunchBlock(chain, poiLaunchBlock);
 
     merkletreePOINode = await TXIDMerkletree.createForPOINode(
       db,
@@ -58,15 +61,20 @@ describe('txid-merkletree', () => {
   it('Should get Txid merkletree DB paths', async () => {
     type Vector = {
       chain: Chain;
+      poiLaunchBlock: number;
       treeNumber: number;
       level: number;
       index: number;
       result: string[];
     };
 
+    POI.setLaunchBlock({ type: ChainType.EVM, id: 0 }, 10);
+    POI.setLaunchBlock({ type: ChainType.EVM, id: 4 }, 11);
+
     const vectors: Vector[] = [
       {
         chain: { type: ChainType.EVM, id: 0 },
+        poiLaunchBlock: 10,
         treeNumber: 0,
         level: 1,
         index: 5,
@@ -81,6 +89,7 @@ describe('txid-merkletree', () => {
       },
       {
         chain: { type: ChainType.EVM, id: 4 },
+        poiLaunchBlock: 11,
         treeNumber: 2,
         level: 7,
         index: 10,
@@ -101,7 +110,7 @@ describe('txid-merkletree', () => {
           db,
           vector.chain,
           TXIDVersion.V2_PoseidonMerkle,
-          1,
+          vector.poiLaunchBlock,
         );
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
@@ -248,7 +257,7 @@ describe('txid-merkletree', () => {
         db,
         chain,
         TXIDVersion.V2_PoseidonMerkle,
-        0,
+        poiLaunchBlock,
       );
       const treeLength2 = await merkletree2.getTreeLength(0);
       expect(treeLength2).to.equal(2);

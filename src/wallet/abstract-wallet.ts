@@ -1015,10 +1015,9 @@ abstract class AbstractWallet extends EventEmitter {
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
-    const txosNeedCreationPOIs = TXOs.filter((txo) =>
-      POI.shouldRetrieveTXOPOIs(txo, txidMerkletree.poiLaunchBlock),
-    ).sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
+    const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(chain, txo)).sort(
+      (a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b),
+    );
     if (txosNeedCreationPOIs.length === 0) {
       return;
     }

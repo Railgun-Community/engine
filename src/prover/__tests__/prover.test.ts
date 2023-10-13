@@ -19,6 +19,7 @@ import { getBlindedCommitmentForShieldOrTransact } from '../../poi/blinded-commi
 import { PublicInputsPOI } from '../../models';
 import { ProofCachePOI } from '../proof-cache-poi';
 import { config } from '../../test/config.test';
+import { POI } from '../../poi/poi';
 
 const chain: Chain = {
   type: 0,
@@ -28,6 +29,7 @@ const chain: Chain = {
 describe('prover', () => {
   beforeEach(() => {
     ProofCachePOI.clear_TEST_ONLY();
+    POI.setLaunchBlock(chain, 0);
   });
 
   it('Should generate and validate POI proof - 3x3', async () => {

@@ -39,6 +39,7 @@ import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 import { AES } from '../../utils';
+import { POI } from '../../poi/poi';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -106,6 +107,8 @@ describe('transaction-erc20', function test() {
     prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
     wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+
+    POI.setLaunchBlock(chain, 0);
 
     // Load fake contract
     ContractStore.railgunSmartWalletContracts[chain.type] = [];

@@ -63,6 +63,7 @@ describe('poi', () => {
       ],
       new TestPOINodeInterface(),
     );
+    POI.setLaunchBlock(chain, 0);
   });
 
   after(() => {
