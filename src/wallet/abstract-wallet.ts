@@ -1390,7 +1390,7 @@ abstract class AbstractWallet extends EventEmitter {
       const numCommitmentsWithoutUnshields = hasUnshield
         ? railgunTransaction.commitments.length - 1
         : railgunTransaction.commitments.length;
-      const numCommitmentsWithoutUnshieldsAndZeroValues =
+      const numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues =
         numCommitmentsWithoutUnshields - numZeroValueCommitments;
 
       // Use 0x00 if there is no unshield.
@@ -1398,44 +1398,42 @@ abstract class AbstractWallet extends EventEmitter {
         ? getBlindedCommitmentForUnshield(railgunTxid)
         : '0x00';
 
-      if (!sentCommitmentsForRailgunTxid.length && !unshieldEventsForRailgunTxid.length) {
-        throw new Error(`No sent commitments or unshield events for railgun txid: ${railgunTxid}`);
-      }
-
-      const npksOut: bigint[] = [
-        ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.notePublicKey),
-        // Do not send npks for unshields
-      ];
-      if (npksOut.length !== numCommitmentsWithoutUnshieldsAndZeroValues) {
+      if (!sentCommitmentsWithoutZeroValues.length && !unshieldEventsForRailgunTxid.length) {
         throw new Error(
-          `Invalid number of npksOut for transaction sent commitments w/ values: expected ${numCommitmentsWithoutUnshieldsAndZeroValues}, got ${npksOut.length}`,
+          `No sent commitments w/ values or unshield events for railgun txid: ${railgunTxid}`,
         );
       }
 
-      const valuesOut: bigint[] = [
-        ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.value),
-        // Do not send values for unshields
-      ];
-      if (valuesOut.length !== numCommitmentsWithoutUnshieldsAndZeroValues) {
-        throw new Error(
-          `Invalid number of valuesOut for transaction sent commitments w/ values: expected ${numCommitmentsWithoutUnshieldsAndZeroValues}, got ${valuesOut.length}`,
-        );
-      }
-
-      // All sent blinded commitments - Do not send blinded commitments for unshields.
-      const blindedCommitmentsOut: string[] = removeUndefineds(
-        sentCommitmentsForRailgunTxid.map((sentCommitment, i) => {
-          if (valuesOut[i] === 0n) {
-            // If value is 0n, the circuit won't output a blindedCommitmentOut for this value.
-            // Ie. for 0-value transfers or (legacy) 0-value change notes.
-            return ZERO_32_BYTE_VALUE;
-          }
-          return sentCommitment.blindedCommitment;
-        }),
+      // Do not send 'npks' for unshields.
+      const npksOut: bigint[] = sentCommitmentsWithoutZeroValues.map(
+        (sentCommitment) => sentCommitment.note.notePublicKey,
       );
-      if (blindedCommitmentsOut.length !== numCommitmentsWithoutUnshieldsAndZeroValues) {
+      if (npksOut.length !== numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues) {
         throw new Error(
-          `Not enough blinded commitments for transaction sent commitments w/ values: expected ${numCommitmentsWithoutUnshieldsAndZeroValues}, got ${blindedCommitmentsOut.length}`,
+          `Invalid number of npksOut for transaction sent commitments w/ values: expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${npksOut.length}`,
+        );
+      }
+
+      // Do not send 'values' for unshields
+      const valuesOut: bigint[] = sentCommitmentsWithoutZeroValues.map(
+        (sentCommitment) => sentCommitment.note.value,
+      );
+      if (valuesOut.length !== numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues) {
+        throw new Error(
+          `Invalid number of valuesOut for transaction sent commitments w/ values: expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${valuesOut.length}`,
+        );
+      }
+
+      // Do not send 'blinded commitments' for unshields.
+      const blindedCommitmentsOut: string[] = removeUndefineds(
+        sentCommitmentsWithoutZeroValues.map((sentCommitment) => sentCommitment.blindedCommitment),
+      );
+      if (
+        blindedCommitmentsOut.length !==
+        numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues
+      ) {
+        throw new Error(
+          `Not enough blindedCommitments out for transaction sent commitments w/ values: expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${blindedCommitmentsOut.length}`,
         );
       }
 
