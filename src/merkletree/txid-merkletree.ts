@@ -19,6 +19,7 @@ import { isDefined } from '../utils';
 import { TXIDVersion } from '../models';
 import EngineDebug from '../debugger/debugger';
 import { verifyMerkleProof } from './merkle-proof';
+import { POI } from '../poi/poi';
 
 type POILaunchSnapshotNode = {
   hash: string;
@@ -53,6 +54,10 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       : CommitmentProcessingGroupSize.XXXLarge;
 
     super(db, chain, txidVersion, merklerootValidator, commitmentProcessingGroupSize);
+
+    if (POI.getLaunchBlock(chain) !== poiLaunchBlock) {
+      throw new Error('POI launch block is invalid.');
+    }
 
     this.poiLaunchBlock = poiLaunchBlock;
 

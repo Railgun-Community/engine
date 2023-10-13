@@ -29,9 +29,20 @@ export class POI {
 
   private static nodeInterface: POINodeInterface;
 
+  private static launchBlocks: number[][] = [];
+
   static init(lists: POIList[], nodeInterface: POINodeInterface) {
     this.lists = lists;
     this.nodeInterface = nodeInterface;
+  }
+
+  static setLaunchBlock(chain: Chain, launchBlock: number) {
+    this.launchBlocks[chain.type] ??= [];
+    this.launchBlocks[chain.type][chain.id] = launchBlock;
+  }
+
+  static getLaunchBlock(chain: Chain): Optional<number> {
+    return this.launchBlocks[chain.type]?.[chain.id];
   }
 
   static getAllListKeys(): string[] {
@@ -42,9 +53,14 @@ export class POI {
     return this.lists.filter((list) => list.type === POIListType.Active).map((list) => list.key);
   }
 
-  static getBalanceBucket(txo: TXO): WalletBalanceBucket {
+  static getBalanceBucket(chain: Chain, txo: TXO): WalletBalanceBucket {
     const pois = txo.poisPerList;
     const isChange = txo.note.outputType === OutputType.Change;
+
+    const launchBlock = this.getLaunchBlock(chain);
+    if (!isDefined(launchBlock) || txo.blockNumber < launchBlock) {
+      return WalletBalanceBucket.Spendable;
+    }
 
     const activeListKeys = POI.getActiveListKeys();
     if (!pois || !this.hasAllKeys(pois, activeListKeys)) {
@@ -175,8 +191,11 @@ export class POI {
     });
   }
 
-  static shouldRetrieveTXOPOIs(txo: TXO) {
+  static shouldRetrieveTXOPOIs(txo: TXO, poiLaunchBlock: number) {
     if (!isDefined(txo.blindedCommitment)) {
+      return false;
+    }
+    if (txo.blockNumber < poiLaunchBlock) {
       return false;
     }
     if (!isDefined(txo.poisPerList)) {
@@ -187,6 +206,9 @@ export class POI {
 
   static shouldRetrieveSentCommitmentPOIs(sentCommitment: SentCommitment) {
     if (!isDefined(sentCommitment.blindedCommitment)) {
+      return false;
+    }
+    if (sentCommitment.note.value === 0n) {
       return false;
     }
     if (!isDefined(sentCommitment.poisPerList)) {
@@ -207,6 +229,9 @@ export class POI {
 
   static shouldGenerateSpentPOIsSentCommitment(sentCommitment: SentCommitment) {
     if (!isDefined(sentCommitment.blindedCommitment)) {
+      return false;
+    }
+    if (sentCommitment.note.value === 0n) {
       return false;
     }
     if (!isDefined(sentCommitment.poisPerList)) {

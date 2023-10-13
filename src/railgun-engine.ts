@@ -54,6 +54,7 @@ import {
 } from './models/poi-types';
 import { getTokenDataHash, getUnshieldTokenHash } from './note/note-util';
 import { UnshieldNote } from './note';
+import { POI } from './poi';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -1174,6 +1175,8 @@ class RailgunEngine extends EventEmitter {
       let txidMerkletree: Optional<TXIDMerkletree>;
 
       if (isDefined(poiLaunchBlock)) {
+        POI.setLaunchBlock(chain, poiLaunchBlock);
+
         if (this.isPOINode) {
           // POI Node Txid merkletree
           // eslint-disable-next-line no-await-in-loop

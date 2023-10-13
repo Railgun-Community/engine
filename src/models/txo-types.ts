@@ -7,6 +7,7 @@ export type TXO = {
   position: number;
   txid: string;
   timestamp: Optional<number>;
+  blockNumber: number;
   spendtxid: string | false;
   nullifier: string;
   note: TransactNote;

@@ -83,7 +83,7 @@ import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import { getTokenDataERC20, getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
-import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
+import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import { isSentCommitment, isSentCommitmentType } from '../utils/commitment';
@@ -647,6 +647,7 @@ abstract class AbstractWallet extends EventEmitter {
         spendtxid: false,
         txid: leaf.txid,
         timestamp: leaf.timestamp,
+        blockNumber: leaf.blockNumber,
         nullifier: nToHex(nullifier, ByteLength.UINT_256),
         decrypted: noteReceive.serialize(),
         senderAddress: noteReceive.senderAddressData
@@ -856,6 +857,7 @@ abstract class AbstractWallet extends EventEmitter {
         const txo: TXO = {
           tree,
           position,
+          blockNumber: receiveCommitment.blockNumber,
           txid: receiveCommitment.txid,
           timestamp: receiveCommitment.timestamp,
           spendtxid: receiveCommitment.spendtxid,
@@ -1013,9 +1015,10 @@ abstract class AbstractWallet extends EventEmitter {
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(txo)).sort((a, b) =>
-      AbstractWallet.sortPOIsPerListUndefinedFirst(a, b),
-    );
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
+    const txosNeedCreationPOIs = TXOs.filter((txo) =>
+      POI.shouldRetrieveTXOPOIs(txo, txidMerkletree.poiLaunchBlock),
+    ).sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
     if (txosNeedCreationPOIs.length === 0) {
       return;
     }
@@ -1375,11 +1378,21 @@ abstract class AbstractWallet extends EventEmitter {
         throw new Error('Cannot have more than 1 unshield event per railgun txid');
       }
 
+      const sentCommitmentsWithoutZeroValues = sentCommitmentsForRailgunTxid.filter(
+        (sentCommitment) => {
+          return sentCommitment.note.value > 0n;
+        },
+      );
+      const numZeroValueCommitments =
+        sentCommitmentsForRailgunTxid.length - sentCommitmentsWithoutZeroValues.length;
+
       const hasUnshield = unshieldEventsForRailgunTxid.length > 0;
 
-      const commitmentsWithoutUnshields = hasUnshield
+      const numCommitmentsWithoutUnshields = hasUnshield
         ? railgunTransaction.commitments.length - 1
         : railgunTransaction.commitments.length;
+      const numCommitmentsWithoutUnshieldsAndZeroValues =
+        numCommitmentsWithoutUnshields - numZeroValueCommitments;
 
       // Use 0x00 if there is no unshield.
       const railgunTxidIfHasUnshield = hasUnshield
@@ -1394,9 +1407,9 @@ abstract class AbstractWallet extends EventEmitter {
         ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.notePublicKey),
         // Do not send npks for unshields
       ];
-      if (npksOut.length !== commitmentsWithoutUnshields) {
+      if (npksOut.length !== numCommitmentsWithoutUnshieldsAndZeroValues) {
         throw new Error(
-          `Invalid number of npksOut for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${npksOut.length}`,
+          `Invalid number of npksOut for transaction sent commitments w/ values: expected ${numCommitmentsWithoutUnshieldsAndZeroValues}, got ${npksOut.length}`,
         );
       }
 
@@ -1404,9 +1417,9 @@ abstract class AbstractWallet extends EventEmitter {
         ...sentCommitmentsForRailgunTxid.map((sentCommitment) => sentCommitment.note.value),
         // Do not send values for unshields
       ];
-      if (valuesOut.length !== commitmentsWithoutUnshields) {
+      if (valuesOut.length !== numCommitmentsWithoutUnshieldsAndZeroValues) {
         throw new Error(
-          `Invalid number of valuesOut for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${valuesOut.length}`,
+          `Invalid number of valuesOut for transaction sent commitments w/ values: expected ${numCommitmentsWithoutUnshieldsAndZeroValues}, got ${valuesOut.length}`,
         );
       }
 
@@ -1421,9 +1434,9 @@ abstract class AbstractWallet extends EventEmitter {
           return sentCommitment.blindedCommitment;
         }),
       );
-      if (blindedCommitmentsOut.length !== commitmentsWithoutUnshields) {
+      if (blindedCommitmentsOut.length !== numCommitmentsWithoutUnshieldsAndZeroValues) {
         throw new Error(
-          `Not enough blinded commitments for railgun txid commitments (without unshields): expected ${commitmentsWithoutUnshields}, got ${blindedCommitmentsOut.length}`,
+          `Not enough blinded commitments for transaction sent commitments w/ values: expected ${numCommitmentsWithoutUnshieldsAndZeroValues}, got ${blindedCommitmentsOut.length}`,
         );
       }
 
@@ -1622,7 +1635,7 @@ abstract class AbstractWallet extends EventEmitter {
     const filteredTXOs = AbstractWallet.filterTXOsByBlockNumber(TXOs, startingBlock);
 
     const [receiveHistory, spendHistory] = await Promise.all([
-      AbstractWallet.getTransactionReceiveHistory(filteredTXOs),
+      AbstractWallet.getTransactionReceiveHistory(chain, filteredTXOs),
       this.getTransactionSpendHistory(txidVersion, chain, filteredTXOs, startingBlock),
     ]);
 
@@ -1710,7 +1723,10 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get balances for
    * @returns history
    */
-  static getTransactionReceiveHistory(filteredTXOs: TXO[]): TransactionHistoryEntryReceived[] {
+  static getTransactionReceiveHistory(
+    chain: Chain,
+    filteredTXOs: TXO[],
+  ): TransactionHistoryEntryReceived[] {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
     filteredTXOs.forEach((txo) => {
@@ -1734,7 +1750,7 @@ abstract class AbstractWallet extends EventEmitter {
         memoText: note.memoText,
         senderAddress: note.getSenderAddress(),
         shieldFee: note.shieldFee,
-        balanceBucket: POI.getBalanceBucket(txo),
+        balanceBucket: POI.getBalanceBucket(chain, txo),
         hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(txo.poisPerList),
       });
     });
@@ -2074,7 +2090,7 @@ abstract class AbstractWallet extends EventEmitter {
       // If utxo is unspent process it
       const isUnspent = txo.spendtxid === false;
       if (isUnspent) {
-        const balanceBucket = POI.getBalanceBucket(txo);
+        const balanceBucket = POI.getBalanceBucket(chain, txo);
 
         if (!balanceBucketFilter.includes(balanceBucket)) {
           if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {

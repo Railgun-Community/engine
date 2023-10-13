@@ -74,6 +74,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     blindedCommitment: undefined,
     commitmentType: CommitmentType.TransactCommitment,
     nullifier: randomHex(32),
+    blockNumber: 100,
   };
 };
 

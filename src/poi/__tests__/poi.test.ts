@@ -3,6 +3,7 @@ import chaiAsPromised from 'chai-as-promised';
 import { POI, POIListType } from '../poi';
 import { MOCK_LIST_KEY, TestPOINodeInterface } from '../../test/test-poi-node-interface.test';
 import {
+  Chain,
   OutputType,
   POIsPerList,
   SentCommitment,
@@ -49,6 +50,8 @@ const shieldBlockedPOIsForList1 = {
     [activeList2]: TXOPOIListStatus.Valid,
   } as POIsPerList,
 };
+
+const chain: Chain = { type: 0, id: 1 };
 
 describe('poi', () => {
   before(() => {
@@ -103,41 +106,41 @@ describe('poi', () => {
   it('Should get appropriate balance bucket for TXO', async () => {
     const changeNote = { outputType: OutputType.Change } as TransactNote;
 
-    const balanceBucketChange = POI.getBalanceBucket({
+    const balanceBucketChange = POI.getBalanceBucket(chain, {
       note: changeNote,
     } as TXO);
     expect(balanceBucketChange).to.deep.equal(WalletBalanceBucket.MissingInternalPOI);
 
-    const balanceBucketTransfer = POI.getBalanceBucket({
+    const balanceBucketTransfer = POI.getBalanceBucket(chain, {
       note: { outputType: OutputType.Transfer } as TransactNote,
     } as TXO);
     expect(balanceBucketTransfer).to.deep.equal(WalletBalanceBucket.MissingExternalPOI);
 
-    const balanceBucketInvalid = POI.getBalanceBucket({
+    const balanceBucketInvalid = POI.getBalanceBucket(chain, {
       note: changeNote,
       ...invalidPOIsForList1,
     } as TXO);
     expect(balanceBucketInvalid).to.deep.equal(WalletBalanceBucket.MissingInternalPOI);
 
-    const balanceBucketSubmitted = POI.getBalanceBucket({
+    const balanceBucketSubmitted = POI.getBalanceBucket(chain, {
       note: changeNote,
       ...submittedPOIsForList1,
     } as TXO);
     expect(balanceBucketSubmitted).to.deep.equal(WalletBalanceBucket.TransactProofSubmitted);
 
-    const balanceBucketValid = POI.getBalanceBucket({
+    const balanceBucketValid = POI.getBalanceBucket(chain, {
       note: changeNote,
       ...validPOIsForList1,
     } as TXO);
     expect(balanceBucketValid).to.deep.equal(WalletBalanceBucket.Spendable);
 
-    const balanceBucketShieldPending = POI.getBalanceBucket({
+    const balanceBucketShieldPending = POI.getBalanceBucket(chain, {
       note: changeNote,
       ...shieldPendingPOIsForList1,
     } as TXO);
     expect(balanceBucketShieldPending).to.deep.equal(WalletBalanceBucket.ShieldPending);
 
-    const balanceBucketShieldBlocked = POI.getBalanceBucket({
+    const balanceBucketShieldBlocked = POI.getBalanceBucket(chain, {
       note: changeNote,
       ...shieldBlockedPOIsForList1,
     } as TXO);

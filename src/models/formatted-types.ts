@@ -189,6 +189,7 @@ export type StoredReceiveCommitment = {
   txid: string;
   timestamp: Optional<number>;
   nullifier: string;
+  blockNumber: number;
   decrypted: NoteSerialized | LegacyNoteSerialized;
   senderAddress: Optional<string>;
   commitmentType: CommitmentType;
