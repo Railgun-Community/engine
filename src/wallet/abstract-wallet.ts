@@ -1156,7 +1156,7 @@ abstract class AbstractWallet extends EventEmitter {
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
       txidVersion,
       chain,
-      blindedCommitmentDatas,
+      blindedCommitmentDatas.slice(0, 100), // 100 max in request
     );
 
     // eslint-disable-next-line no-restricted-syntax

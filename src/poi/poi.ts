@@ -168,6 +168,10 @@ export class POI {
     unshieldEvents: UnshieldStoredEvent[],
     isLegacyPOIProof: boolean,
   ): string[] {
+    if (!sentCommitments.length && !unshieldEvents.length) {
+      return [];
+    }
+
     const inputPOIsPerList = removeUndefineds(spentTXOs.map((txo) => txo.poisPerList));
     const listKeysWithValidInputPOIs = isLegacyPOIProof
       ? POI.getAllListKeys()
@@ -203,7 +207,7 @@ export class POI {
       return false;
     }
     if (this.isLegacyTXO(chain, txo)) {
-      return true;
+      return false;
     }
     if (!isDefined(txo.poisPerList)) {
       return true;
