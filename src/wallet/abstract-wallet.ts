@@ -1382,16 +1382,16 @@ abstract class AbstractWallet extends EventEmitter {
           return sentCommitment.note.value > 0n;
         },
       );
-      const numZeroValueCommitments =
+      const numZeroValueSentCommitments =
         sentCommitmentsForRailgunTxid.length - sentCommitmentsWithoutZeroValues.length;
 
       const hasUnshield = unshieldEventsForRailgunTxid.length > 0;
 
-      const numCommitmentsWithoutUnshields = hasUnshield
+      const numRailgunTransactionCommitmentsWithoutUnshields = hasUnshield
         ? railgunTransaction.commitments.length - 1
         : railgunTransaction.commitments.length;
       const numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues =
-        numCommitmentsWithoutUnshields - numZeroValueCommitments;
+        numRailgunTransactionCommitmentsWithoutUnshields - numZeroValueSentCommitments;
 
       // Use 0x00 if there is no unshield.
       const railgunTxidIfHasUnshield = hasUnshield
@@ -1404,36 +1404,42 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
 
-      // Do not send 'npks' for unshields.
+      // Do not send 'npks' for unshields. Send for all commitments (so they match the number of commitmentsOut - unshields).
       const npksOut: bigint[] = sentCommitmentsWithoutZeroValues.map(
         (sentCommitment) => sentCommitment.note.notePublicKey,
       );
-      if (npksOut.length !== numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues) {
+      if (npksOut.length !== numRailgunTransactionCommitmentsWithoutUnshields) {
         throw new Error(
-          `Invalid number of npksOut for transaction sent commitments w/ values: expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${npksOut.length}`,
+          `Invalid number of npksOut for transaction sent commitments: expected ${numRailgunTransactionCommitmentsWithoutUnshields}, got ${npksOut.length}`,
         );
       }
 
-      // Do not send 'values' for unshields
+      // Do not send 'values' for unshields. Send for all commitments (so they match the number of commitmentsOut - unshields).
       const valuesOut: bigint[] = sentCommitmentsWithoutZeroValues.map(
         (sentCommitment) => sentCommitment.note.value,
       );
-      if (valuesOut.length !== numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues) {
+      if (valuesOut.length !== numRailgunTransactionCommitmentsWithoutUnshields) {
         throw new Error(
-          `Invalid number of valuesOut for transaction sent commitments w/ values: expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${valuesOut.length}`,
+          `Invalid number of valuesOut for transaction sent commitments: expected ${numRailgunTransactionCommitmentsWithoutUnshields}, got ${valuesOut.length}`,
         );
       }
 
-      // Do not send 'blinded commitments' for unshields.
+      // Do not send 'blinded commitments' for unshields. Send for all commitments. Zero out any with 0-values.
       const blindedCommitmentsOut: string[] = removeUndefineds(
-        sentCommitmentsWithoutZeroValues.map((sentCommitment) => sentCommitment.blindedCommitment),
+        sentCommitmentsWithoutZeroValues.map((sentCommitment) => {
+          if (sentCommitment.note.value === 0n) {
+            // Zero-out the 0-value so this blindedCommitment matches the circuit.
+            return ZERO_32_BYTE_VALUE;
+          }
+          return sentCommitment.blindedCommitment;
+        }),
       );
       if (
         blindedCommitmentsOut.length !==
         numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues
       ) {
         throw new Error(
-          `Not enough blindedCommitments out for transaction sent commitments w/ values: expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${blindedCommitmentsOut.length}`,
+          `Not enough blindedCommitments out for transaction sent commitments (ONLY with values): expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${blindedCommitmentsOut.length}`,
         );
       }
 
