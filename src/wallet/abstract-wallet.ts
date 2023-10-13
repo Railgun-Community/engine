@@ -108,7 +108,11 @@ import {
   formatTXOsReceivedPOIStatusInfo,
   formatTXOsSpentPOIStatusInfo,
 } from '../poi/poi-status-formatter';
-import { ZERO_32_BYTE_VALUE, stringifySafe } from '../utils';
+import {
+  CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
+  ZERO_32_BYTE_VALUE,
+  stringifySafe,
+} from '../utils';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -193,7 +197,20 @@ abstract class AbstractWallet extends EventEmitter {
   /**
    * Loads utxo merkle tree into wallet
    */
-  loadUTXOMerkletree(txidVersion: TXIDVersion, utxoMerkletree: UTXOMerkletree) {
+  async loadUTXOMerkletree(
+    txidVersion: TXIDVersion,
+    utxoMerkletree: UTXOMerkletree,
+  ): Promise<void> {
+    // Remove balances if the UTXO merkletree is out of date for this wallet.
+    const { chain } = utxoMerkletree;
+    const utxoMerkletreeHistoryVersion = await this.getUTXOMerkletreeHistoryVersion(chain);
+    if (
+      !isDefined(utxoMerkletreeHistoryVersion) ||
+      utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
+    ) {
+      await this.clearScannedBalances(txidVersion, chain);
+    }
+
     this.utxoMerkletrees[txidVersion] ??= [];
     this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type] ??= [];
     this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
@@ -215,6 +232,29 @@ abstract class AbstractWallet extends EventEmitter {
    */
   unloadUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain) {
     delete this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+  }
+
+  private getUTXOMerkletreeHistoryVersionDBPrefix(chain: Chain): string[] {
+    const path = [...this.getWalletDBPrefix(chain), 'merkleetree_history_version'];
+    if (chain != null) {
+      path.push(getChainFullNetworkID(chain));
+    }
+    return path;
+  }
+
+  setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+    return this.db.put(
+      this.getUTXOMerkletreeHistoryVersionDBPrefix(chain),
+      merkletreeHistoryVersion,
+      'utf8',
+    );
+  }
+
+  getUTXOMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+    return this.db
+      .get(this.getUTXOMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
+      .then((val: string) => parseInt(val, 10))
+      .catch(() => Promise.resolve(undefined));
   }
 
   /**

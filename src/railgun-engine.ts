@@ -501,7 +501,7 @@ class RailgunEngine extends EventEmitter {
       !isDefined(utxoMerkletreeHistoryVersion) ||
       utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
-      await this.clearUTXOMerkletreeAndWallets(txidVersion, chain);
+      await this.clearUTXOMerkletreeAndLoadedWallets(txidVersion, chain);
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
@@ -963,7 +963,7 @@ class RailgunEngine extends EventEmitter {
     await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
 
-  private async clearUTXOMerkletreeAndWallets(txidVersion: TXIDVersion, chain: Chain) {
+  private async clearUTXOMerkletreeAndLoadedWallets(txidVersion: TXIDVersion, chain: Chain) {
     await this.clearSyncedUTXOMerkletreeLeaves(txidVersion, chain);
     await Promise.all(
       this.allWallets().map((wallet) => wallet.clearScannedBalances(txidVersion, chain)),
@@ -1014,7 +1014,7 @@ class RailgunEngine extends EventEmitter {
       this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 0.01); // 1%
       utxoMerkletree.isScanning = true; // Don't allow scans while removing leaves.
       // eslint-disable-next-line no-await-in-loop
-      await this.clearUTXOMerkletreeAndWallets(txidVersion, chain);
+      await this.clearUTXOMerkletreeAndLoadedWallets(txidVersion, chain);
       // eslint-disable-next-line no-await-in-loop
       await this.clearSyncedUnshieldEvents(txidVersion, chain);
       utxoMerkletree.isScanning = false; // Clear before calling scanHistory.
@@ -1164,9 +1164,12 @@ class RailgunEngine extends EventEmitter {
       this.utxoMerkletrees[txidVersion][chain.type][chain.id] = utxoMerkletree;
 
       // Load utxo merkletree to all wallets
-      Object.values(this.wallets).forEach((wallet) => {
-        wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
-      });
+      // eslint-disable-next-line no-await-in-loop
+      await Promise.all(
+        Object.values(this.wallets).map(async (wallet) => {
+          await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+        }),
+      );
 
       // Create railgun txid merkletrees
       this.txidMerkletrees[txidVersion] ??= [];
@@ -1476,7 +1479,7 @@ class RailgunEngine extends EventEmitter {
     await this.db.close();
   }
 
-  private loadWallet(wallet: AbstractWallet): void {
+  private async loadWallet(wallet: AbstractWallet): Promise<void> {
     // Store wallet against ID
     this.wallets[wallet.id] = wallet;
 
@@ -1489,11 +1492,16 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       // Load UTXO and TXID merkletrees for wallet
-      this.utxoMerkletrees[txidVersion]?.forEach((merkletreesForChainType) => {
-        merkletreesForChainType.forEach((merkletree) => {
-          wallet.loadUTXOMerkletree(txidVersion, merkletree);
-        });
-      });
+      const utxoMerkletrees = this.utxoMerkletrees[txidVersion] ?? [];
+
+      // eslint-disable-next-line no-await-in-loop
+      await Promise.all(
+        utxoMerkletrees.map(async (merkletreesForChainType) => {
+          return merkletreesForChainType.map(async (merkletree) => {
+            await wallet.loadUTXOMerkletree(txidVersion, merkletree);
+          });
+        }),
+      );
       this.txidMerkletrees[txidVersion]?.forEach((merkletreesForChainType) => {
         merkletreesForChainType.forEach((merkletree) => {
           wallet.loadRailgunTXIDMerkletree(txidVersion, merkletree);
@@ -1513,7 +1521,7 @@ class RailgunEngine extends EventEmitter {
       return this.wallets[id] as RailgunWallet;
     }
     const wallet = await RailgunWallet.loadExisting(this.db, encryptionKey, id, this.prover);
-    this.loadWallet(wallet);
+    await this.loadWallet(wallet);
     return wallet;
   }
 
@@ -1528,7 +1536,7 @@ class RailgunEngine extends EventEmitter {
       return this.wallets[id] as ViewOnlyWallet;
     }
     const wallet = await ViewOnlyWallet.loadExisting(this.db, encryptionKey, id, this.prover);
-    this.loadWallet(wallet);
+    await this.loadWallet(wallet);
     return wallet;
   }
 
@@ -1558,7 +1566,7 @@ class RailgunEngine extends EventEmitter {
       creationBlockNumbers,
       this.prover,
     );
-    this.loadWallet(wallet);
+    await this.loadWallet(wallet);
     return wallet;
   }
 
@@ -1574,7 +1582,7 @@ class RailgunEngine extends EventEmitter {
       creationBlockNumbers,
       this.prover,
     );
-    this.loadWallet(wallet);
+    await this.loadWallet(wallet);
     return wallet;
   }
 
