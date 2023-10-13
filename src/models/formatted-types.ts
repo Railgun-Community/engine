@@ -195,6 +195,7 @@ export type StoredReceiveCommitment = {
   commitmentType: CommitmentType;
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
+  transactCreationRailgunTxid: Optional<string>;
 };
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!

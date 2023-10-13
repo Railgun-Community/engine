@@ -45,7 +45,7 @@ import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
-import { delay, isSentCommitment } from './utils';
+import { delay, isTransactCommitment } from './utils';
 import { createRailgunTransactionWithHash } from './transaction/railgun-txid';
 import {
   ACTIVE_TXID_VERSIONS,
@@ -875,7 +875,7 @@ class RailgunEngine extends EventEmitter {
         // eslint-disable-next-line no-await-in-loop
         const commitment = await utxoMerkletree.getCommitmentSafe(tree, position);
         if (isDefined(commitment)) {
-          if (isSentCommitment(commitment) && commitment.railgunTxid !== railgunTxid) {
+          if (isTransactCommitment(commitment) && commitment.railgunTxid !== railgunTxid) {
             commitment.railgunTxid = railgunTxid;
             // eslint-disable-next-line no-await-in-loop
             await utxoMerkletree.updateData(tree, position, commitment);

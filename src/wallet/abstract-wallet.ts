@@ -86,7 +86,7 @@ import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
-import { isSentCommitment, isSentCommitmentType } from '../utils/commitment';
+import { isTransactCommitment, isTransactCommitmentType } from '../utils/commitment';
 import { POI } from '../poi/poi';
 import {
   getBlindedCommitmentForShieldOrTransact,
@@ -97,6 +97,7 @@ import {
   ACTIVE_TXID_VERSIONS,
   BlindedCommitmentData,
   BlindedCommitmentType,
+  LegacyTransactProofData,
   POIEngineProofInputs,
   POIsPerList,
   TXIDVersion,
@@ -111,6 +112,7 @@ import {
 import {
   CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
   ZERO_32_BYTE_VALUE,
+  delay,
   stringifySafe,
 } from '../utils';
 
@@ -696,6 +698,7 @@ abstract class AbstractWallet extends EventEmitter {
         commitmentType: leaf.commitmentType,
         poisPerList: undefined,
         blindedCommitment: undefined,
+        transactCreationRailgunTxid: 'railgunTxid' in leaf ? leaf.railgunTxid : undefined,
       };
       EngineDebug.log(`Adding RECEIVE commitment at ${position} (Wallet ${this.id}).`);
       scannedCommitments.push({
@@ -886,12 +889,26 @@ abstract class AbstractWallet extends EventEmitter {
         if (!isDefined(receiveCommitment.blindedCommitment)) {
           const globalTreePosition = getGlobalTreePosition(tree, position);
           const commitment = await merkletree.getCommitment(tree, position);
+          if (isTransactCommitment(commitment)) {
+            receiveCommitment.transactCreationRailgunTxid = commitment.railgunTxid;
+          }
           receiveCommitment.blindedCommitment = getBlindedCommitmentForShieldOrTransact(
             commitment.hash,
             note.notePublicKey,
             globalTreePosition,
           );
           await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+        }
+
+        if (
+          isDefined(receiveCommitment.blindedCommitment) &&
+          isTransactCommitmentType(receiveCommitment.commitmentType) &&
+          !isDefined(receiveCommitment.transactCreationRailgunTxid)
+        ) {
+          // Error case - should never happen.
+          EngineDebug.log(
+            `Received transact UTXO ${tree}:${position} missing railgunTxid - required for legacy transact POI events.`,
+          );
         }
 
         const txo: TXO = {
@@ -906,6 +923,7 @@ abstract class AbstractWallet extends EventEmitter {
           poisPerList: receiveCommitment.poisPerList,
           blindedCommitment: receiveCommitment.blindedCommitment,
           commitmentType: receiveCommitment.commitmentType,
+          transactCreationRailgunTxid: receiveCommitment.transactCreationRailgunTxid,
         };
         return txo;
       }),
@@ -951,7 +969,7 @@ abstract class AbstractWallet extends EventEmitter {
           const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
           const commitment = await utxoMerkletree.getCommitment(tree, position);
 
-          if (isSentCommitment(commitment) && isDefined(commitment.railgunTxid)) {
+          if (isTransactCommitment(commitment) && isDefined(commitment.railgunTxid)) {
             sentCommitment.blindedCommitment = getBlindedCommitmentForShieldOrTransact(
               commitment.hash,
               note.notePublicKey,
@@ -1053,6 +1071,58 @@ abstract class AbstractWallet extends EventEmitter {
     return totalListKeysCanGenerateSpentPOIs;
   }
 
+  async submitLegacyTransactPOIEventsReceiveCommitments(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<void> {
+    const TXOs = await this.TXOs(txidVersion, chain);
+    const txosNeedLegacyCreationPOIs = TXOs.filter((txo) =>
+      POI.shouldSubmitLegacyTransactEventsTXOs(chain, txo),
+    );
+    if (txosNeedLegacyCreationPOIs.length === 0) {
+      return;
+    }
+
+    const legacyTransactProofDatas: LegacyTransactProofData[] = [];
+
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txo of TXOs) {
+      const txidIndex = await txidMerkletree.getTxidIndexByRailgunTxid(
+        txo.transactCreationRailgunTxid as string,
+      );
+      if (!isDefined(txidIndex)) {
+        throw new Error(
+          `txidIndex not found for railgunTxid - cannot submit legacy transact POI event: railgun txid ${
+            txo.transactCreationRailgunTxid ?? 'N/A'
+          }`,
+        );
+        continue;
+      }
+      legacyTransactProofDatas.push({
+        txidIndex: txidIndex.toString(),
+        blindedCommitment: txo.blindedCommitment as string,
+        npk: nToHex(txo.note.notePublicKey, ByteLength.UINT_256, true),
+        value: txo.note.value.toString(),
+        tokenHash: txo.note.tokenHash,
+      });
+    }
+
+    const listKeys = POI.getListKeysCanSubmitLegacyTransactEvents(TXOs);
+
+    await POI.submitLegacyTransactProofs(
+      txidVersion,
+      chain,
+      listKeys,
+      legacyTransactProofDatas.slice(0, 100), // 100 max in request
+    );
+
+    // Delay slightly, so POI queue can index the events. Refresh after submitting all legacy events.
+    await delay(1000);
+    await this.refreshReceivePOIsAllTXOs(txidVersion, chain);
+  }
+
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(chain, txo)).sort(
@@ -1065,7 +1135,7 @@ abstract class AbstractWallet extends EventEmitter {
     const blindedCommitmentDatas: BlindedCommitmentData[] = txosNeedCreationPOIs
       .slice(0, 100) // 100 max in request
       .map((txo) => ({
-        type: isSentCommitmentType(txo.commitmentType)
+        type: isTransactCommitmentType(txo.commitmentType)
           ? BlindedCommitmentType.Transact
           : BlindedCommitmentType.Shield,
         blindedCommitment: txo.blindedCommitment as string,
@@ -1183,7 +1253,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     const blindedCommitmentDatas: BlindedCommitmentData[] = [
       ...sentCommitmentsNeedPOIRefresh.map((sentCommitment) => ({
-        type: isSentCommitmentType(sentCommitment.commitmentType)
+        type: isTransactCommitmentType(sentCommitment.commitmentType)
           ? BlindedCommitmentType.Transact
           : BlindedCommitmentType.Shield,
         blindedCommitment: sentCommitment.blindedCommitment as string,
@@ -2385,6 +2455,9 @@ abstract class AbstractWallet extends EventEmitter {
       for (const txidVersion of ACTIVE_TXID_VERSIONS) {
         // Refresh POIs - Receive commitments
         await this.refreshReceivePOIsAllTXOs(txidVersion, chain);
+
+        // Submit POI events - Legacy received transact commitments
+        await this.submitLegacyTransactPOIEventsReceiveCommitments(txidVersion, chain);
 
         // Refresh POIs - Sent commitments / unshields
         await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);

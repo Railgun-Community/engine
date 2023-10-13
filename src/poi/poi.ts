@@ -4,6 +4,7 @@ import { Proof } from '../models/prover-types';
 import { Chain } from '../models/engine-types';
 import {
   BlindedCommitmentData,
+  LegacyTransactProofData,
   POIsPerList,
   TXIDVersion,
   TXOPOIListStatus,
@@ -13,6 +14,7 @@ import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { OutputType } from '../models';
+import { isTransactCommitmentType } from '../utils/commitment';
 
 export type POIList = {
   key: string;
@@ -53,13 +55,9 @@ export class POI {
     return this.lists.filter((list) => list.type === POIListType.Active).map((list) => list.key);
   }
 
-  static getBalanceBucket(chain: Chain, txo: TXO): WalletBalanceBucket {
+  static getBalanceBucket(txo: TXO): WalletBalanceBucket {
     const pois = txo.poisPerList;
     const isChange = txo.note.outputType === OutputType.Change;
-
-    if (this.isLegacyTXO(chain, txo)) {
-      return WalletBalanceBucket.Spendable;
-    }
 
     const activeListKeys = POI.getActiveListKeys();
     if (!pois || !this.hasAllKeys(pois, activeListKeys)) {
@@ -194,6 +192,13 @@ export class POI {
     });
   }
 
+  static getListKeysCanSubmitLegacyTransactEvents(TXOs: TXO[]): string[] {
+    const listKeys = this.getAllListKeys();
+    return listKeys.filter((listKey) => {
+      return !TXOs.every((txo) => txo.poisPerList?.[listKey] === TXOPOIListStatus.Valid);
+    });
+  }
+
   static isLegacyTXO(chain: Chain, txo: TXO) {
     const launchBlock = this.getLaunchBlock(chain);
     if (!isDefined(launchBlock) || txo.blockNumber < launchBlock) {
@@ -202,11 +207,27 @@ export class POI {
     return false;
   }
 
-  static shouldRetrieveTXOPOIs(chain: Chain, txo: TXO) {
+  static shouldSubmitLegacyTransactEventsTXOs(chain: Chain, txo: TXO) {
+    if (!isDefined(txo.transactCreationRailgunTxid)) {
+      return false;
+    }
     if (!isDefined(txo.blindedCommitment)) {
       return false;
     }
-    if (this.isLegacyTXO(chain, txo)) {
+    if (!this.isLegacyTXO(chain, txo)) {
+      return false;
+    }
+    if (!isDefined(txo.poisPerList)) {
+      return false;
+    }
+    if (!isTransactCommitmentType(txo.commitmentType)) {
+      return false;
+    }
+    return !POI.hasValidPOIsAllLists(txo.poisPerList);
+  }
+
+  static shouldRetrieveTXOPOIs(chain: Chain, txo: TXO) {
+    if (!isDefined(txo.blindedCommitment)) {
       return false;
     }
     if (!isDefined(txo.poisPerList)) {
@@ -336,6 +357,24 @@ export class POI {
       txidMerklerootIndex,
       blindedCommitmentsOut,
       railgunTxidIfHasUnshield,
+    );
+  }
+
+  static async submitLegacyTransactProofs(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKeys: string[],
+    legacyTransactProofDatas: LegacyTransactProofData[],
+  ) {
+    if (!isDefined(this.nodeInterface)) {
+      throw new Error('POI node interface not initialized');
+    }
+
+    await this.nodeInterface.submitLegacyTransactProofs(
+      txidVersion,
+      chain,
+      listKeys,
+      legacyTransactProofDatas,
     );
   }
 }

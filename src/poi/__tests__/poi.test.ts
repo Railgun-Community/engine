@@ -104,6 +104,14 @@ describe('poi', () => {
     expect(listKeysInvalidUnshieldProof).to.deep.equal([activeList1]);
   });
 
+  it('Should get listKeys to submit legacy transact events', async () => {
+    const listKeys = POI.getListKeysCanSubmitLegacyTransactEvents([
+      invalidPOIsForList1 as TXO,
+      validPOIsForList1 as TXO,
+    ]);
+    expect(listKeys).to.deep.equal([MOCK_LIST_KEY, activeList1]);
+  });
+
   it('Should get appropriate balance bucket for TXO', async () => {
     const changeNote = { outputType: OutputType.Change } as TransactNote;
 

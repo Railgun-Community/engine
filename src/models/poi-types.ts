@@ -21,6 +21,14 @@ export type BlindedCommitmentData = {
   type: BlindedCommitmentType;
 };
 
+export type LegacyTransactProofData = {
+  txidIndex: string;
+  npk: string;
+  value: string;
+  tokenHash: string;
+  blindedCommitment: string;
+};
+
 export type POIEngineProofInputs = {
   // --- Public inputs ---
   anyRailgunTxidMerklerootAfterTransaction: string;
@@ -54,7 +62,7 @@ export type POIEngineProofInputs = {
   // Unshield data
   railgunTxidIfHasUnshield: string;
 
-  // Railgun txid tree
+  // Railgun txidIndex: string; tree
   railgunTxidMerkleProofIndices: string;
   railgunTxidMerkleProofPathElements: string[];
 

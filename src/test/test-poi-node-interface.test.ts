@@ -4,6 +4,7 @@ import { Proof } from '../models/prover-types';
 import { Chain } from '../models/engine-types';
 import {
   BlindedCommitmentData,
+  LegacyTransactProofData,
   POIsPerList,
   TXIDVersion,
   TXOPOIListStatus,
@@ -67,6 +68,16 @@ export class TestPOINodeInterface extends POINodeInterface {
     txidMerklerootIndex: number,
     blindedCommitmentsOut: string[],
     railgunTxidIfHasUnshield: string,
+  ): Promise<void> {
+    return Promise.resolve();
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async submitLegacyTransactProofs(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKeys: string[],
+    legacyTransactProofDatas: LegacyTransactProofData[],
   ): Promise<void> {
     return Promise.resolve();
   }

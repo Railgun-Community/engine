@@ -15,6 +15,7 @@ export type TXO = {
   poisPerList: Optional<POIsPerList>;
   blindedCommitment: Optional<string>;
   commitmentType: CommitmentType;
+  transactCreationRailgunTxid: Optional<string>;
 };
 
 export type SentCommitment = {
