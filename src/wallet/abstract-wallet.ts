@@ -1085,15 +1085,17 @@ abstract class AbstractWallet extends EventEmitter {
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
 
     // eslint-disable-next-line no-restricted-syntax
-    for (const txo of TXOs) {
+    for (const txo of txosNeedLegacyCreationPOIs) {
       const txidIndex = await txidMerkletree.getTxidIndexByRailgunTxid(
         txo.transactCreationRailgunTxid as string,
       );
       if (!isDefined(txidIndex)) {
-        throw new Error(
-          `txidIndex not found for railgunTxid - cannot submit legacy transact POI event: railgun txid ${
-            txo.transactCreationRailgunTxid ?? 'N/A'
-          }`,
+        EngineDebug.error(
+          new Error(
+            `txidIndex not found for railgunTxid - cannot submit legacy transact POI event: railgun txid ${
+              txo.transactCreationRailgunTxid ?? 'N/A'
+            }`,
+          ),
         );
         continue;
       }
