@@ -164,10 +164,7 @@ abstract class AbstractWallet extends EventEmitter {
   private creationBlockNumbers: Optional<number[][]>;
 
   // [type: [id: CachedStoredReceiveCommitment[]]]
-  private cachedReceiveCommitments: CachedStoredReceiveCommitment[][][] = [];
-
-  // [type: [id: CachedStoredSendCommitment[]]]
-  private cachedSendCommitments: CachedStoredSendCommitment[][][] = [];
+  private: CachedStoredReceiveCommitment[][][] = [];
 
   private generatingPOIsForChain: boolean[][] = [];
 
@@ -863,6 +860,8 @@ abstract class AbstractWallet extends EventEmitter {
       chain,
     );
 
+    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
+
     return Promise.all(
       storedReceiveCommitments.map(async ({ storedReceiveCommitment, tree, position }) => {
         const receiveCommitment = storedReceiveCommitment;
@@ -886,9 +885,20 @@ abstract class AbstractWallet extends EventEmitter {
         }
 
         // Look up blinded commitment.
-        if (!isDefined(receiveCommitment.blindedCommitment)) {
+        if (
+          !isDefined(receiveCommitment.blindedCommitment) ||
+          (!isDefined(receiveCommitment.transactCreationRailgunTxid) &&
+            isTransactCommitmentType(receiveCommitment.commitmentType))
+        ) {
           const globalTreePosition = getGlobalTreePosition(tree, position);
           const commitment = await merkletree.getCommitment(tree, position);
+          if (
+            isTransactCommitment(commitment) &&
+            !isTransactCommitmentType(receiveCommitment.commitmentType)
+          ) {
+            // Should never happen
+            throw new Error('Fatal - Invalid commitment type');
+          }
           if (isTransactCommitment(commitment)) {
             receiveCommitment.transactCreationRailgunTxid = commitment.railgunTxid;
           }
@@ -903,11 +913,12 @@ abstract class AbstractWallet extends EventEmitter {
         if (
           isDefined(receiveCommitment.blindedCommitment) &&
           isTransactCommitmentType(receiveCommitment.commitmentType) &&
-          !isDefined(receiveCommitment.transactCreationRailgunTxid)
+          !isDefined(receiveCommitment.transactCreationRailgunTxid) &&
+          receiveCommitment.blockNumber < txidMerkletree.poiLaunchBlock
         ) {
           // Error case - should never happen.
           EngineDebug.log(
-            `Received transact UTXO ${tree}:${position} missing railgunTxid - required for legacy transact POI events.`,
+            `Fatal - Received transact UTXO ${tree}:${position} missing railgunTxid - required for legacy transact POI events.`,
           );
         }
 
@@ -1009,13 +1020,6 @@ abstract class AbstractWallet extends EventEmitter {
       this.getWalletReceiveCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(receiveCommitment),
     );
-    // Update cache
-    // this.cachedReceiveCommitments?.[chain.type]?.[chain.id].forEach((cachedCommitment) => {
-    //   if (cachedCommitment.tree === tree && cachedCommitment.position === position) {
-    //     // eslint-disable-next-line no-param-reassign
-    //     cachedCommitment.storedReceiveCommitment = receiveCommitment;
-    //   }
-    // });
   }
 
   private async updateSentCommitmentInDB(
@@ -1028,13 +1032,6 @@ abstract class AbstractWallet extends EventEmitter {
       this.getWalletSentCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(sentCommitment),
     );
-    // Update cache
-    // this.cachedSendCommitments?.[chain.type]?.[chain.id].forEach((cachedCommitment) => {
-    //   if (cachedCommitment.tree === tree && cachedCommitment.position === position) {
-    //     // eslint-disable-next-line no-param-reassign
-    //     cachedCommitment.storedSendCommitment = sentCommitment;
-    //   }
-    // });
   }
 
   async getTXOsReceivedPOIStatusInfo(
@@ -2566,10 +2563,9 @@ abstract class AbstractWallet extends EventEmitter {
    */
   async clearScannedBalances(txidVersion: TXIDVersion, chain: Chain) {
     const walletDetails = await this.getWalletDetails(txidVersion, chain);
-    this.cachedReceiveCommitments = [];
 
-    // Clear namespace and then resave the walletDetails
-    const namespace = this.getWalletDetailsPath(chain);
+    // Clear wallet namespace, including scanned TXOs and all details
+    const namespace = this.getWalletDBPrefix(chain);
     await this.db.clearNamespace(namespace);
 
     walletDetails.treeScannedHeights = [];
