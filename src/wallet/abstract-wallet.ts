@@ -910,18 +910,6 @@ abstract class AbstractWallet extends EventEmitter {
           await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
         }
 
-        if (
-          isDefined(receiveCommitment.blindedCommitment) &&
-          isTransactCommitmentType(receiveCommitment.commitmentType) &&
-          !isDefined(receiveCommitment.transactCreationRailgunTxid) &&
-          receiveCommitment.blockNumber < txidMerkletree.poiLaunchBlock
-        ) {
-          // Error case - should never happen.
-          EngineDebug.log(
-            `Fatal - Received transact UTXO ${tree}:${position} missing railgunTxid - required for legacy transact POI events.`,
-          );
-        }
-
         const txo: TXO = {
           tree,
           position,
