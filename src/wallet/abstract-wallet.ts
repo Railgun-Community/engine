@@ -132,6 +132,7 @@ type CachedStoredSendCommitment = {
 
 type GeneratePOIsData = {
   railgunTxid: string;
+  txid: string;
   listKey: string;
   isLegacyPOIProof: boolean;
   orderedSpentTXOs: TXO[];
@@ -1397,6 +1398,7 @@ abstract class AbstractWallet extends EventEmitter {
             // Use this syntax to capture each index and totalCount.
             generatePOIsDatas.push({
               railgunTxid,
+              txid: railgunTransaction.txid,
               listKey,
               isLegacyPOIProof,
               orderedSpentTXOs,
@@ -1413,17 +1415,51 @@ abstract class AbstractWallet extends EventEmitter {
         }
       }
 
+      const generatePOIErrors: {
+        index: number;
+        errMessage: string;
+        generatePOIData: GeneratePOIsData;
+      }[] = [];
+
       // eslint-disable-next-line no-restricted-syntax
       for (let i = 0; i < generatePOIsDatas.length; i += 1) {
-        await this.generatePOIsForRailgunTxidAndListKey(
-          txidVersion,
-          chain,
-          generatePOIsDatas[i],
-          i,
-          generatePOIsDatas.length,
-        );
+        try {
+          await this.generatePOIsForRailgunTxidAndListKey(
+            txidVersion,
+            chain,
+            generatePOIsDatas[i],
+            i,
+            generatePOIsDatas.length,
+          );
+        } catch (err) {
+          // Capture error, but continue with all POIs. Throw the error after.
+          generatePOIErrors.push({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            index: i,
+            errMessage: err.message,
+            generatePOIData: generatePOIsDatas[i],
+          });
+        }
       }
       this.generatingPOIsForChain[chain.type][chain.id] = false;
+
+      if (generatePOIErrors.length > 0) {
+        const { index, errMessage, generatePOIData } = generatePOIErrors[0];
+        const { listKey, railgunTxid, txid } = generatePOIData;
+        this.emitPOIProofUpdateEvent(
+          POIProofEventStatus.Error,
+          txidVersion,
+          chain,
+          0, // Progress
+          listKey,
+          txid,
+          railgunTxid,
+          index, // index
+          generatePOIsDatas.length,
+          errMessage,
+        );
+        throw generatePOIErrors[0];
+      }
 
       return generatePOIsDatas.length;
     } catch (err) {
@@ -1463,6 +1499,9 @@ abstract class AbstractWallet extends EventEmitter {
         orderedSpentTXOs.map((txo) => txo.blindedCommitment),
       );
       if (blindedCommitmentsIn.length !== railgunTransaction.nullifiers.length) {
+        if (!orderedSpentTXOs.length) {
+          throw new Error(`No spent TXOs found for nullifier - data is likely still syncing.`);
+        }
         throw new Error(
           `Not enough TXO blinded commitments for railgun transaction nullifiers: expected ${railgunTransaction.nullifiers.length}, got ${blindedCommitmentsIn.length}`,
         );
@@ -1627,22 +1666,9 @@ abstract class AbstractWallet extends EventEmitter {
         railgunTxidIfHasUnshield,
       );
     } catch (err) {
-      this.emitPOIProofUpdateEvent(
-        POIProofEventStatus.Error,
-        txidVersion,
-        chain,
-        0, // Progress
-        listKey,
-        railgunTransaction.txid,
-        railgunTxid,
-        index,
-        totalCount,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-        err.message,
-      );
-
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
-      throw new Error(`Error generating POI - txid ${railgunTxid}: ${err.message}`);
+      EngineDebug.error(new Error(`Error generating proof - txid ${railgunTxid}: ${err.message}`));
+      throw err;
     }
   }
 
