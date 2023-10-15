@@ -136,8 +136,8 @@ type GeneratePOIsData = {
   isLegacyPOIProof: boolean;
   orderedSpentTXOs: TXO[];
   txidMerkletreeData: TXIDMerkletreeData;
-  sentCommitments: SentCommitment[];
-  unshieldEvents: UnshieldStoredEvent[];
+  sentCommitmentsForRailgunTxid: SentCommitment[];
+  unshieldEventsForRailgunTxid: UnshieldStoredEvent[];
 };
 
 abstract class AbstractWallet extends EventEmitter {
@@ -1220,7 +1220,13 @@ abstract class AbstractWallet extends EventEmitter {
       )
       .sort((a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b));
 
-    return { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs };
+    return {
+      sentCommitments,
+      sentCommitmentsNeedPOIs,
+      unshieldEvents,
+      unshieldEventsNeedPOIs,
+      TXOs,
+    };
   }
 
   async refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(
@@ -1303,12 +1309,17 @@ abstract class AbstractWallet extends EventEmitter {
     this.generatingPOIsForChain[chain.type][chain.id] = true;
 
     try {
-      const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs, TXOs } =
-        await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(
-          txidVersion,
-          chain,
-          railgunTxidFilter,
-        );
+      const {
+        sentCommitments,
+        sentCommitmentsNeedPOIs,
+        unshieldEvents,
+        unshieldEventsNeedPOIs,
+        TXOs,
+      } = await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(
+        txidVersion,
+        chain,
+        railgunTxidFilter,
+      );
 
       if (!sentCommitmentsNeedPOIs.length && !unshieldEventsNeedPOIs.length) {
         if (isDefined(railgunTxidFilter)) {
@@ -1354,10 +1365,10 @@ abstract class AbstractWallet extends EventEmitter {
             railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
           );
 
-          const sentCommitmentsForRailgunTxid = sentCommitmentsNeedPOIs.filter(
+          const sentCommitmentsForRailgunTxid = sentCommitments.filter(
             (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
           );
-          const unshieldEventsForRailgunTxid = unshieldEventsNeedPOIs.filter(
+          const unshieldEventsForRailgunTxid = unshieldEvents.filter(
             (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
           );
 
@@ -1387,8 +1398,8 @@ abstract class AbstractWallet extends EventEmitter {
               isLegacyPOIProof,
               orderedSpentTXOs,
               txidMerkletreeData,
-              sentCommitments: sentCommitmentsNeedPOIs,
-              unshieldEvents: unshieldEventsNeedPOIs,
+              sentCommitmentsForRailgunTxid,
+              unshieldEventsForRailgunTxid,
             });
           }
         } catch (err) {
@@ -1431,8 +1442,8 @@ abstract class AbstractWallet extends EventEmitter {
       isLegacyPOIProof,
       orderedSpentTXOs,
       txidMerkletreeData,
-      sentCommitments,
-      unshieldEvents,
+      sentCommitmentsForRailgunTxid,
+      unshieldEventsForRailgunTxid,
     } = generatePOIsData;
     const { railgunTransaction } = txidMerkletreeData;
 
@@ -1462,14 +1473,6 @@ abstract class AbstractWallet extends EventEmitter {
         isLegacyPOIProof,
       );
 
-      // Sent Commitments
-      const sentCommitmentsForRailgunTxid = sentCommitments.filter(
-        (sentCommitment) => sentCommitment.railgunTxid === railgunTxid,
-      );
-      // Unshield Events
-      const unshieldEventsForRailgunTxid = unshieldEvents.filter(
-        (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
-      );
       if (unshieldEventsForRailgunTxid.length > 1) {
         throw new Error('Cannot have more than 1 unshield event per railgun txid');
       }
