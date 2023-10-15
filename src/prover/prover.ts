@@ -500,7 +500,12 @@ export class Prover {
       maxOutputs,
     );
 
-    const existingProof = ProofCachePOI.get(listKey, blindedCommitmentsOut);
+    const existingProof = ProofCachePOI.get(
+      listKey,
+      blindedCommitmentsIn,
+      blindedCommitmentsOut,
+      inputs.railgunTxidIfHasUnshield,
+    );
     if (existingProof) {
       return { proof: existingProof, publicInputs };
     }
@@ -561,7 +566,13 @@ export class Prover {
         throw new Error('POI proof verification failed');
       }
 
-      ProofCachePOI.store(listKey, blindedCommitmentsOut, snarkProof);
+      ProofCachePOI.store(
+        listKey,
+        blindedCommitmentsIn,
+        blindedCommitmentsOut,
+        inputs.railgunTxidIfHasUnshield,
+        snarkProof,
+      );
 
       progressCallback(100);
 
