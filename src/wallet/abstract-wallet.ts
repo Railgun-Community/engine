@@ -208,6 +208,7 @@ abstract class AbstractWallet extends EventEmitter {
       utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
       await this.clearScannedBalances(txidVersion, chain);
+      await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
     this.utxoMerkletrees[txidVersion] ??= [];
