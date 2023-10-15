@@ -222,8 +222,8 @@ class RailgunEngine extends EventEmitter {
   }
 
   async triggerDelayedTXIDMerkletreeSync(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
-    // Delay 15 seconds, and then trigger a Railgun Txid Merkletree sync.
-    await delay(15000);
+    // Delay 3 seconds, and then trigger a Railgun Txid Merkletree sync.
+    await delay(3000);
     await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
   }
 
@@ -755,6 +755,12 @@ class RailgunEngine extends EventEmitter {
         chain,
       };
       this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
+
+      if (railgunTransactions.length) {
+        // Scan wallets - kicks off a POI refresh.
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.scanAllWallets(txidVersion, chain, () => {});
+      }
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
