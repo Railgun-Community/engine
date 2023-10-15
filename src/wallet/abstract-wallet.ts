@@ -2439,12 +2439,11 @@ abstract class AbstractWallet extends EventEmitter {
         // Refresh POIs - Sent commitments / unshields
         await this.refreshSpentPOIsAllSentCommitmentsAndUnshieldEvents(txidVersion, chain);
 
-        // TODO: Auto-generate POIs - Sent commitments / unshields
-        // const numProofs = await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(
-        //   chain,
-        //   txidVersion,
-        // );
-        const numProofs = 0;
+        // Auto-generate POIs - Sent commitments / unshields
+        const numProofs = await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(
+          chain,
+          txidVersion,
+        );
 
         this.isRefreshingPOIs[chain.type][chain.id] = false;
         if (numProofs > 0) {
