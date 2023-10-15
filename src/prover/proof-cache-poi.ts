@@ -7,15 +7,17 @@ export class ProofCachePOI {
 
   static get(
     listKey: string,
-    blindedCommitmentsIn: string[],
+    anyRailgunTxidMerklerootAfterTransaction: string,
     blindedCommitmentsOut: string[],
+    poiMerkleroots: string[],
     railgunTxidIfHasUnshield: string,
   ): Optional<Proof> {
     try {
       const stringified = stringifySafe([
         listKey,
-        ...blindedCommitmentsIn,
+        anyRailgunTxidMerklerootAfterTransaction,
         ...blindedCommitmentsOut,
+        ...poiMerkleroots,
         railgunTxidIfHasUnshield,
       ]);
       return ProofCachePOI.cache.get(stringified);
@@ -29,16 +31,18 @@ export class ProofCachePOI {
 
   static store(
     listKey: string,
-    blindedCommitmentsIn: string[],
+    anyRailgunTxidMerklerootAfterTransaction: string,
     blindedCommitmentsOut: string[],
+    poiMerkleroots: string[],
     railgunTxidIfHasUnshield: string,
     proof: Proof,
   ) {
     try {
       const stringified = stringifySafe([
         listKey,
-        ...blindedCommitmentsIn,
+        anyRailgunTxidMerklerootAfterTransaction,
         ...blindedCommitmentsOut,
+        ...poiMerkleroots,
         railgunTxidIfHasUnshield,
       ]);
       ProofCachePOI.cache.set(stringified, proof);

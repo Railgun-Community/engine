@@ -120,44 +120,6 @@ describe('prover', () => {
     expect(await prover.verifyPOIProof(publicInputs, proof, 13, 13)).to.equal(true);
   }).timeout(30000);
 
-  it.only('Verify POI proof with public inputs', async () => {
-    const prover = new Prover(testArtifactsGetter);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    prover.setSnarkJSGroth16(groth16);
-
-    const snarkProof: Proof = {
-      pi_a: [
-        '1937123732879379460242321768155924141429153458070135239585480622326347739288',
-        '9622711170354942130550946224183468200029756276493040132122829205399245004300',
-      ],
-      pi_b: [
-        [
-          '3802823765484261186347519882271329229163866389610265891354144976161602856046',
-          '5360240987988154654634929172052439398477282269564506443984358935440815928969',
-        ],
-        [
-          '18611634726703772097248778124769635795098289830565262356022937072824464715870',
-          '17152882128897237568404227095044525334374676037000992334803272920157156071862',
-        ],
-      ],
-      pi_c: [
-        '1129313319730499027817802936638192501040963184938745837941378128368148241075',
-        '5708243839326963861733372981738470362170967751368529607037510968436597237877',
-      ],
-    };
-
-    const publicInputs: PublicInputsPOI = prover.getPublicInputsPOI(
-      '29aed79402ab3bd4beb40e176655f3ab2e40a7ac1c8bb8e470d243598b993748',
-      ['0x0000000000000000000000000000000000000000000000000000000000000000'],
-      ['26d910096b34cb34f27eb107f58d2116e1f9b930f18bc6fd3130bf579244b9ca'],
-      '0x0d3ae42afbabe6e86957a173d72fc01205b70a90d29c08def6be4b9b7e641a7e',
-      3,
-      3,
-    );
-
-    expect(await prover.verifyPOIProof(publicInputs, snarkProof, 3, 3)).to.equal(true);
-  });
-
   it('Should verify input vector', async () => {
     const testVector = TestVectorPOI;
 

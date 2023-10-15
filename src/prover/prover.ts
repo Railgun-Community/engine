@@ -502,11 +502,15 @@ export class Prover {
 
     const existingProof = ProofCachePOI.get(
       listKey,
-      blindedCommitmentsIn,
+      inputs.anyRailgunTxidMerklerootAfterTransaction,
       blindedCommitmentsOut,
+      inputs.poiMerkleroots,
       inputs.railgunTxidIfHasUnshield,
     );
-    if (existingProof) {
+    if (
+      existingProof &&
+      (await this.verifyPOIProof(publicInputs, existingProof, maxInputs, maxOutputs))
+    ) {
       return { proof: existingProof, publicInputs };
     }
 
@@ -568,8 +572,9 @@ export class Prover {
 
       ProofCachePOI.store(
         listKey,
-        blindedCommitmentsIn,
+        inputs.anyRailgunTxidMerklerootAfterTransaction,
         blindedCommitmentsOut,
+        inputs.poiMerkleroots,
         inputs.railgunTxidIfHasUnshield,
         snarkProof,
       );
