@@ -209,7 +209,10 @@ abstract class AbstractWallet extends EventEmitter {
     ) {
       await this.clearScannedBalances(txidVersion, chain);
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
-      // Will require a balance rescan.
+
+      // Kick off a synchronous refresh.
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.scanBalances(txidVersion, chain, () => {});
     }
 
     this.utxoMerkletrees[txidVersion] ??= [];
@@ -2295,12 +2298,11 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     progressCallback: Optional<(progress: number) => void>,
   ) {
-    EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
-
-    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
-
-    // eslint-disable-next-line no-useless-catch
     try {
+      EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
+
+      const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
+
       if (txidVersion !== TXIDVersion.V2_PoseidonMerkle) {
         throw new Error('Wallet details will be incorrect for this TXID version - needs migration');
       }
