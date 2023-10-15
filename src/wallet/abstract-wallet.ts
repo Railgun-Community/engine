@@ -2486,6 +2486,23 @@ abstract class AbstractWallet extends EventEmitter {
     }
   }
 
+  async generatePOIsForRailgunTxid(chain: Chain, txidVersion: TXIDVersion, railgunTxid: string) {
+    await this.generatePOIsAllSentCommitmentsAndUnshieldEvents(chain, txidVersion, railgunTxid);
+
+    this.emitPOIProofUpdateEvent(
+      POIProofEventStatus.AllProofsCompleted,
+      txidVersion,
+      chain,
+      0, // Progress
+      'N/A',
+      'N/A',
+      'N/A',
+      0,
+      0,
+      undefined, // errorMsg
+    );
+  }
+
   /**
    * Searches for creation tree height for given merkletree.
    * @param merkletree - Merkletree
