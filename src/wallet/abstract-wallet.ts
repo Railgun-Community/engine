@@ -860,8 +860,6 @@ abstract class AbstractWallet extends EventEmitter {
       chain,
     );
 
-    const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
-
     return Promise.all(
       storedReceiveCommitments.map(async ({ storedReceiveCommitment, tree, position }) => {
         const receiveCommitment = storedReceiveCommitment;

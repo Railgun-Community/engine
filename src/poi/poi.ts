@@ -179,7 +179,11 @@ export class POI {
 
     return listKeysWithValidInputPOIs.filter((listKey) => {
       // If all statuses are valid, then no need to generate new POIs.
-      const allSentCommitmentPOIsValid = sentCommitments.every((sentCommitment) => {
+      const allSentCommitmentZeroOrPOIsValid = sentCommitments.every((sentCommitment) => {
+        if (sentCommitment.note.value === 0n) {
+          // If sentCommitment value is 0, then no need to generate new POIs.
+          return true;
+        }
         const poiStatus = sentCommitment.poisPerList?.[listKey];
         return poiStatus && validStatuses.includes(poiStatus);
       });
@@ -187,7 +191,7 @@ export class POI {
         const poiStatus = unshieldEvent.poisPerList?.[listKey];
         return poiStatus && validStatuses.includes(poiStatus);
       });
-      const allPOIsValid = allSentCommitmentPOIsValid && allUnshieldPOIsValid;
+      const allPOIsValid = allSentCommitmentZeroOrPOIsValid && allUnshieldPOIsValid;
       return !allPOIsValid;
     });
   }
@@ -261,9 +265,6 @@ export class POI {
 
   static shouldGenerateSpentPOIsSentCommitment(sentCommitment: SentCommitment) {
     if (!isDefined(sentCommitment.blindedCommitment)) {
-      return false;
-    }
-    if (sentCommitment.note.value === 0n) {
       return false;
     }
     if (!isDefined(sentCommitment.poisPerList)) {
