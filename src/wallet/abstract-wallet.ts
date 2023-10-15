@@ -1472,35 +1472,25 @@ abstract class AbstractWallet extends EventEmitter {
         throw new Error('Cannot have more than 1 unshield event per railgun txid');
       }
 
-      const sentCommitmentsWithoutZeroValues = sentCommitmentsForRailgunTxid.filter(
-        (sentCommitment) => {
-          return sentCommitment.note.value > 0n;
-        },
-      );
-      const numZeroValueSentCommitments =
-        sentCommitmentsForRailgunTxid.length - sentCommitmentsWithoutZeroValues.length;
-
       const hasUnshield = unshieldEventsForRailgunTxid.length > 0;
 
       const numRailgunTransactionCommitmentsWithoutUnshields = hasUnshield
         ? railgunTransaction.commitments.length - 1
         : railgunTransaction.commitments.length;
-      const numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues =
-        numRailgunTransactionCommitmentsWithoutUnshields - numZeroValueSentCommitments;
 
       // Use 0x00 if there is no unshield.
       const railgunTxidIfHasUnshield = hasUnshield
         ? getBlindedCommitmentForUnshield(railgunTxid)
         : '0x00';
 
-      if (!sentCommitmentsWithoutZeroValues.length && !unshieldEventsForRailgunTxid.length) {
+      if (!sentCommitmentsForRailgunTxid.length && !unshieldEventsForRailgunTxid.length) {
         throw new Error(
           `No sent commitments w/ values or unshield events for railgun txid: ${railgunTxid}`,
         );
       }
 
       // Do not send 'npks' for unshields. Send for all commitments (so they match the number of commitmentsOut - unshields).
-      const npksOut: bigint[] = sentCommitmentsWithoutZeroValues.map(
+      const npksOut: bigint[] = sentCommitmentsForRailgunTxid.map(
         (sentCommitment) => sentCommitment.note.notePublicKey,
       );
       if (npksOut.length !== numRailgunTransactionCommitmentsWithoutUnshields) {
@@ -1510,7 +1500,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // Do not send 'values' for unshields. Send for all commitments (so they match the number of commitmentsOut - unshields).
-      const valuesOut: bigint[] = sentCommitmentsWithoutZeroValues.map(
+      const valuesOut: bigint[] = sentCommitmentsForRailgunTxid.map(
         (sentCommitment) => sentCommitment.note.value,
       );
       if (valuesOut.length !== numRailgunTransactionCommitmentsWithoutUnshields) {
@@ -1521,20 +1511,17 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Do not send 'blinded commitments' for unshields. Send for all commitments. Zero out any with 0-values.
       const blindedCommitmentsOut: string[] = removeUndefineds(
-        sentCommitmentsWithoutZeroValues.map((sentCommitment) => {
+        sentCommitmentsForRailgunTxid.map((sentCommitment) => {
           if (sentCommitment.note.value === 0n) {
-            // Zero-out the 0-value so this blindedCommitment matches the circuit.
+            // Zero-out any 0-value commitment so this blindedCommitment matches the circuit.
             return ZERO_32_BYTE_VALUE;
           }
           return sentCommitment.blindedCommitment;
         }),
       );
-      if (
-        blindedCommitmentsOut.length !==
-        numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues
-      ) {
+      if (blindedCommitmentsOut.length !== numRailgunTransactionCommitmentsWithoutUnshields) {
         throw new Error(
-          `Not enough blindedCommitments out for transaction sent commitments (ONLY with values): expected ${numRailgunTransactionCommitmentsWithoutUnshieldsAndZeroValues}, got ${blindedCommitmentsOut.length}`,
+          `Not enough blindedCommitments out for transaction sent commitments (ONLY with values): expected ${numRailgunTransactionCommitmentsWithoutUnshields}, got ${blindedCommitmentsOut.length}`,
         );
       }
 
