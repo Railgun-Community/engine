@@ -895,7 +895,9 @@ class RailgunEngine extends EventEmitter {
 
       if (missingAnyCommitments) {
         EngineDebug.error(
-          new Error(`Missing a commitment. Cannot continue queuing Railgun TXIDs.`),
+          new Error(
+            `Missing a commitment. Stopping queue of Railgun TXIDs. This will occur if the TXIDs are further than the UTXOs data source.`,
+          ),
         );
         break;
       }
