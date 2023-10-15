@@ -267,6 +267,9 @@ export class POI {
     if (!isDefined(sentCommitment.blindedCommitment)) {
       return false;
     }
+    if (sentCommitment.note.value === 0n) {
+      return false;
+    }
     if (!isDefined(sentCommitment.poisPerList)) {
       return true;
     }
