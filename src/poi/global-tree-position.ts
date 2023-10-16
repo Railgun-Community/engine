@@ -1,12 +1,5 @@
-import { TREE_DEPTH } from '../models/merkletree-types';
+import { TREE_MAX_ITEMS } from '../models/merkletree-types';
 
-const bitwiseMerge = (tree: number, index: number): number => {
-  return (tree << TREE_DEPTH) + index;
-};
-
-/**
- * Shields don't have txids, so we generate an ID from the UTXO tree and position.
- */
-export const getGlobalTreePosition = (tree: number, position: number): bigint => {
-  return BigInt(bitwiseMerge(tree, position));
+export const getGlobalTreePosition = (tree: number, index: number): bigint => {
+  return BigInt(tree * TREE_MAX_ITEMS + index);
 };
