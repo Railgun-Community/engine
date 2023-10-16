@@ -473,6 +473,9 @@ describe('txid-merkletree', () => {
 
       await merkletree.clearLeavesAfterTxidIndex(0);
 
+      // expect(await merkletree.getRailgunTransaction(0, 1)).to.equal(undefined);
+      expect(await merkletree.getNodeHash(0, 0, 1)).to.equal(merkletree.zeros[0]);
+
       // Current tree root (1 element)
       expect(await merkletree.getRoot(0)).to.equal(
         '2672380de5dc3f4078e8d5a5984fcd95e3e279be354665ba889a472b8cd27966',

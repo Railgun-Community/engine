@@ -193,6 +193,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       // eslint-disable-next-line no-await-in-loop
       await this.db.clearNamespace(this.getNodeHashLevelPath(tree, level));
     }
+    if (isDefined(this.cachedNodeHashes[tree])) {
+      this.cachedNodeHashes[tree] = {};
+    }
   }
 
   static getGlobalPosition(tree: number, index: number): number {
