@@ -112,16 +112,19 @@ export class Prover {
         );
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         progressService.progressSteadily(progressCallback);
-
-        const proof = await snarkJSGroth16.fullProve(
-          formattedInputs,
-          wasm,
-          zkey,
-          suppressDebugLogger,
-        );
-
-        progressService.stop();
-        return proof;
+        try {
+          const proof = await snarkJSGroth16.fullProve(
+            formattedInputs,
+            wasm,
+            zkey,
+            suppressDebugLogger,
+          );
+          progressService.stop();
+          return proof;
+        } catch (err) {
+          progressService.stop();
+          throw err;
+        }
       },
       fullProvePOI: async (
         formattedInputs: FormattedCircuitInputsPOI,
@@ -142,15 +145,19 @@ export class Prover {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         progressService.progressSteadily(progressCallback);
 
-        const proof = await snarkJSGroth16.fullProve(
-          formattedInputs,
-          wasm,
-          zkey,
-          suppressDebugLogger,
-        );
-
-        progressService.stop();
-        return proof;
+        try {
+          const proof = await snarkJSGroth16.fullProve(
+            formattedInputs,
+            wasm,
+            zkey,
+            suppressDebugLogger,
+          );
+          progressService.stop();
+          return proof;
+        } catch (err) {
+          progressService.stop();
+          throw err;
+        }
       },
       verify: snarkJSGroth16.verify,
     };
