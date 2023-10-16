@@ -124,7 +124,7 @@ describe('transaction-batch', function run() {
     prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
 
-    wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+    await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
     makeNote = async (value: bigint = 65n * DECIMALS_18): Promise<TransactNote> => {
       return TransactNote.createTransfer(
         address,

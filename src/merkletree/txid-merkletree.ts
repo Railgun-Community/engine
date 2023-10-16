@@ -154,7 +154,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
   async getRailgunTxidCurrentMerkletreeData(railgunTxid: string): Promise<TXIDMerkletreeData> {
     const txidIndex = await this.getTxidIndexByRailgunTxid(railgunTxid);
     if (!isDefined(txidIndex)) {
-      throw new Error('tree/index not found');
+      throw new Error(`tree/index not found: railgun txid ${railgunTxid}`);
     }
     const { tree, index } = Merkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
     const railgunTransaction = await this.getRailgunTransaction(tree, index);

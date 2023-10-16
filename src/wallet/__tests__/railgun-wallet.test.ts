@@ -46,7 +46,7 @@ describe('railgun-wallet', () => {
       undefined, // creationBlockNumbers
       new Prover(testArtifactsGetter),
     );
-    wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+    await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,

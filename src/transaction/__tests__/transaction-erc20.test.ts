@@ -106,7 +106,7 @@ describe('transaction-erc20', function test() {
     prover = new Prover(testArtifactsGetter);
     prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
-    wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+    await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
 
     POI.setLaunchBlock(chain, 0);
 

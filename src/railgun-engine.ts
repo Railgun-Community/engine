@@ -666,7 +666,7 @@ class RailgunEngine extends EventEmitter {
       !isDefined(txidMerkletreeHistoryVersion) ||
       txidMerkletreeHistoryVersion < CURRENT_TXID_MERKLETREE_HISTORY_VERSION
     ) {
-      await this.clearAllTXIDMerkletrees(txidVersion, chain);
+      await this.clearTXIDMerkletree(txidVersion, chain);
       await this.setTxidMerkletreeHistoryVersion(chain, CURRENT_TXID_MERKLETREE_HISTORY_VERSION);
     }
 
@@ -691,7 +691,7 @@ class RailgunEngine extends EventEmitter {
     txidMerkletree.isScanning = false;
   }
 
-  private async performSyncRailgunTransactionsV2(chain: Chain) {
+  private async performSyncRailgunTransactionsV2(chain: Chain): Promise<void> {
     const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
     try {
@@ -754,12 +754,19 @@ class RailgunEngine extends EventEmitter {
         txidVersion,
         chain,
       };
-      this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
 
       if (railgunTransactions.length) {
         // Scan wallets - kicks off a POI refresh.
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.scanAllWallets(txidVersion, chain, () => {});
+
+        if (railgunTransactions.length === 5000) {
+          // Max query amount is 5000 from Wallet. Kick off any query.
+          await this.performSyncRailgunTransactionsV2(chain);
+        } else {
+          // Finish
+          this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
+        }
       }
     } catch (err) {
       if (!(err instanceof Error)) {
@@ -1001,7 +1008,7 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  private async clearAllTXIDMerkletrees(txidVersion: TXIDVersion, chain: Chain) {
+  private async clearTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain) {
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     await txidMerkletree.clearDataForMerkletree();
     txidMerkletree.savedPOILaunchSnapshot = false;
