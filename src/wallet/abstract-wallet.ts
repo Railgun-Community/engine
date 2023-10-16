@@ -1520,6 +1520,9 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       const hasUnshield = unshieldEventsForRailgunTxid.length > 0;
+      if (isDefined(railgunTransaction.unshield) !== hasUnshield) {
+        throw new Error(`Expected unshield railgun transaction to have matching unshield event`);
+      }
 
       const numRailgunTransactionCommitmentsWithoutUnshields = hasUnshield
         ? railgunTransaction.commitments.length - 1
