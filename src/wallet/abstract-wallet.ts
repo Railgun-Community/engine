@@ -1376,6 +1376,10 @@ abstract class AbstractWallet extends EventEmitter {
             (unshieldEvent) => unshieldEvent.railgunTxid === railgunTxid,
           );
 
+          if (isDefined(railgunTransaction.unshield) && !unshieldEventsForRailgunTxid.length) {
+            continue;
+          }
+
           const listKeys = POI.getListKeysCanGenerateSpentPOIs(
             spentTXOs,
             sentCommitmentsForRailgunTxid,
