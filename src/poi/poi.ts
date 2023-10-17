@@ -51,7 +51,7 @@ export class POI {
     return this.lists.map((list) => list.key);
   }
 
-  private static getActiveListKeys(): string[] {
+  static getActiveListKeys(): string[] {
     return this.lists.filter((list) => list.type === POIListType.Active).map((list) => list.key);
   }
 

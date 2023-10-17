@@ -1,13 +1,14 @@
 import { poseidon } from 'circomlibjs';
 import { MerkleProof } from '../models/formatted-types';
 import { TREE_DEPTH } from '../models/merkletree-types';
-import { ByteLength, hexToBigInt, hexlify, nToHex, numberify, randomHex } from '../utils/bytes';
+import { ByteLength, hexToBigInt, hexlify, nToHex, numberify } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 
 export const createDummyMerkleProof = (leaf: string): MerkleProof => {
   const indices = nToHex(0n, ByteLength.UINT_256);
 
-  const elements: bigint[] = new Array<bigint>(TREE_DEPTH).fill(hexToBigInt(randomHex(31)));
+  // Fill with 0n dummy value
+  const elements: bigint[] = new Array<bigint>(TREE_DEPTH).fill(0n);
 
   let latestHash = hexToBigInt(leaf);
 
