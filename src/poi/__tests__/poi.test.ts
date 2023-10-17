@@ -31,7 +31,7 @@ const invalidPOIsForList1 = {
 };
 const submittedPOIsForList1 = {
   poisPerList: {
-    [activeList1]: TXOPOIListStatus.TransactProofSubmitted,
+    [activeList1]: TXOPOIListStatus.ProofSubmitted,
     [activeList2]: TXOPOIListStatus.Valid,
   } as POIsPerList,
   commitmentType: CommitmentType.TransactCommitment,
@@ -154,7 +154,7 @@ describe('poi', () => {
       ...submittedPOIsForList1,
       note: changeNote,
     } as TXO);
-    expect(balanceBucketSubmitted).to.deep.equal(WalletBalanceBucket.TransactProofSubmitted);
+    expect(balanceBucketSubmitted).to.deep.equal(WalletBalanceBucket.ProofSubmitted);
 
     const balanceBucketValid = POI.getBalanceBucket({
       ...validPOIsForList1,

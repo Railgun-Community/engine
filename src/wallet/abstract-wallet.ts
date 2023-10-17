@@ -201,6 +201,9 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     utxoMerkletree: UTXOMerkletree,
   ): Promise<void> {
+    this.utxoMerkletrees[txidVersion] ??= [];
+    this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type] ??= [];
+
     // Remove balances if the UTXO merkletree is out of date for this wallet.
     const { chain } = utxoMerkletree;
     const utxoMerkletreeHistoryVersion = await this.getUTXOMerkletreeHistoryVersion(chain);
@@ -211,13 +214,15 @@ abstract class AbstractWallet extends EventEmitter {
       await this.clearScannedBalances(txidVersion, chain);
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
 
+      this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
+        utxoMerkletree;
+
       // Kick off a synchronous refresh.
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.scanBalances(txidVersion, chain, () => {});
+      return;
     }
 
-    this.utxoMerkletrees[txidVersion] ??= [];
-    this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type] ??= [];
     this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
       utxoMerkletree;
   }

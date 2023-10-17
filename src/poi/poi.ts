@@ -81,11 +81,11 @@ export class POI {
       return WalletBalanceBucket.ShieldPending;
     }
 
-    const anyPOIIsTransactProofSubmitted = activeListKeys.some((listKey) => {
-      return pois[listKey] === TXOPOIListStatus.TransactProofSubmitted;
+    const anyPOIIsProofSubmitted = activeListKeys.some((listKey) => {
+      return pois[listKey] === TXOPOIListStatus.ProofSubmitted;
     });
-    if (anyPOIIsTransactProofSubmitted) {
-      return WalletBalanceBucket.TransactProofSubmitted;
+    if (anyPOIIsProofSubmitted) {
+      return WalletBalanceBucket.ProofSubmitted;
     }
 
     return isChange
@@ -141,7 +141,7 @@ export class POI {
     if (!isDefined(poisPerList)) {
       return listKeys;
     }
-    const submittedStatuses = [TXOPOIListStatus.TransactProofSubmitted, TXOPOIListStatus.Valid];
+    const submittedStatuses = [TXOPOIListStatus.ProofSubmitted, TXOPOIListStatus.Valid];
     const needsSpendPOI: string[] = [];
     for (const listKey of listKeys) {
       const isUnsubmitted =
@@ -172,7 +172,7 @@ export class POI {
       ? POI.getAllListKeys()
       : POI.getAllListKeysWithValidInputPOIs(inputPOIsPerList);
 
-    const validStatuses = [TXOPOIListStatus.Valid, TXOPOIListStatus.TransactProofSubmitted];
+    const validStatuses = [TXOPOIListStatus.Valid, TXOPOIListStatus.ProofSubmitted];
 
     return listKeysWithValidInputPOIs.filter((listKey) => {
       // If all statuses are valid, then no need to generate new POIs.
