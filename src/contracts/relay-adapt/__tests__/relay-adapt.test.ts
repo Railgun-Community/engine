@@ -340,14 +340,15 @@ describe('relay-adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateTransactions(
+    const { provedTransactions } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
-    transactions.forEach((transaction) => {
+    provedTransactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
@@ -356,7 +357,7 @@ describe('relay-adapt', function test() {
 
     // 5: Generate final relay transaction for unshield base token.
     const relayTransaction = await relayAdaptContract.populateUnshieldBaseToken(
-      transactions,
+      provedTransactions,
       ethersWallet.address,
       random,
     );
@@ -513,21 +514,22 @@ describe('relay-adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateTransactions(
+    const { provedTransactions } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
-    transactions.forEach((transaction) => {
+    provedTransactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
     // 8. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
-      transactions,
+      provedTransactions,
       crossContractCalls,
       relayShieldInputs,
       random,
@@ -583,12 +585,13 @@ describe('relay-adapt', function test() {
     );
     transactionBatch.addUnshieldData(unshieldNote.unshieldData);
 
-    const serializedTxs = await transactionBatch.generateTransactions(
+    const { provedTransactions: serializedTxs } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
     const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
@@ -738,21 +741,22 @@ describe('relay-adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateTransactions(
+    const { provedTransactions } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
-    transactions.forEach((transaction) => {
+    provedTransactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
     // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
-      transactions,
+      provedTransactions,
       crossContractCalls,
       relayShieldInputs,
       random,
@@ -913,21 +917,22 @@ describe('relay-adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateTransactions(
+    const { provedTransactions } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
-    transactions.forEach((transaction) => {
+    provedTransactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
     // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
-      transactions,
+      provedTransactions,
       crossContractCalls,
       relayShieldInputs,
       random,
@@ -1086,21 +1091,22 @@ describe('relay-adapt', function test() {
       contract: relayAdaptContract.address,
       parameters: relayAdaptParams,
     });
-    const transactions = await transactionBatch.generateTransactions(
+    const { provedTransactions } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
-    transactions.forEach((transaction) => {
+    provedTransactions.forEach((transaction) => {
       expect(transaction.boundParams.adaptContract).to.equal(relayAdaptContract.address);
       expect(transaction.boundParams.adaptParams).to.equal(relayAdaptParams);
     });
 
     // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await relayAdaptContract.populateCrossContractCalls(
-      transactions,
+      provedTransactions,
       crossContractCalls,
       relayShieldInputs,
       random,

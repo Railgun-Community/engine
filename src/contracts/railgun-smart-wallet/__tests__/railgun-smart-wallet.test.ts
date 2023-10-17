@@ -266,12 +266,13 @@ describe('railgun-smart-wallet', function runTests() {
     // Submit actual transaction so the tree has a spent note/nullifier at position 0.
     const initialTransactionBatch = new TransactionBatch(chain);
     initialTransactionBatch.addOutput(actualRelayerFeeOutput);
-    const txs_initial = await initialTransactionBatch.generateTransactions(
+    const { provedTransactions: txs_initial } = await initialTransactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
     const tx_initial = await railgunSmartWalletContract.transact(txs_initial);
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, tx_initial);
@@ -358,13 +359,15 @@ describe('railgun-smart-wallet', function runTests() {
     const transactionBatch_ActualTransaction = new TransactionBatch(chain);
     transactionBatch_ActualTransaction.addOutput(actualRelayerFeeOutput);
     transactionBatch_ActualTransaction.addOutput(nftTransferOutput);
-    const txs_ActualTransaction = await transactionBatch_ActualTransaction.generateTransactions(
-      engine.prover,
-      wallet,
-      txidVersion,
-      testEncryptionKey,
-      () => {},
-    );
+    const { provedTransactions: txs_ActualTransaction } =
+      await transactionBatch_ActualTransaction.generateTransactions(
+        engine.prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+        false, // shouldGeneratePreTransactionPOIs
+      );
     expect(txs_ActualTransaction.length).to.equal(2);
     expect(txs_ActualTransaction.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
     expect(txs_ActualTransaction.map((tx) => tx.commitments.length)).to.deep.equal([2, 1]);
@@ -531,12 +534,13 @@ describe('railgun-smart-wallet', function runTests() {
       value: 100n,
       tokenData,
     });
-    const serializedTxs = await transactionBatch.generateTransactions(
+    const { provedTransactions: serializedTxs } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
     const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
@@ -631,12 +635,13 @@ describe('railgun-smart-wallet', function runTests() {
       value: 1097250000n, // 11 * 100000000 * 0.9975
       tokenData,
     });
-    const serializedTxs = await transactionBatch.generateTransactions(
+    const { provedTransactions: serializedTxs } = await transactionBatch.generateTransactions(
       engine.prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
     const transact = await railgunSmartWalletContract.transact(serializedTxs);
 
@@ -907,15 +912,15 @@ describe('railgun-smart-wallet', function runTests() {
     });
 
     // Create transact
-    const transact = await railgunSmartWalletContract.transact(
-      await transactionBatch.generateTransactions(
-        engine.prover,
-        wallet,
-        txidVersion,
-        testEncryptionKey,
-        () => {},
-      ),
+    const { provedTransactions } = await transactionBatch.generateTransactions(
+      engine.prover,
+      wallet,
+      txidVersion,
+      testEncryptionKey,
+      () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
+    const transact = await railgunSmartWalletContract.transact(provedTransactions);
 
     // Send transact on chain
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, transact);

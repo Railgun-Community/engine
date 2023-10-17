@@ -346,6 +346,7 @@ export class Prover {
       publicInputs.railgunTxidIfHasUnshield,
       ...publicInputs.poiMerkleroots,
     ];
+    console.log(publicSignals);
 
     return this.groth16.verify(artifacts.vkey, publicSignals, proof);
   }
@@ -574,6 +575,8 @@ export class Prover {
 
       // Throw if proof is invalid
       if (!(await this.verifyPOIProof(publicInputs, snarkProof, maxInputs, maxOutputs))) {
+        // eslint-disable-next-line no-console
+        console.log(publicSignals);
         throw new Error('POI proof verification failed');
       }
 

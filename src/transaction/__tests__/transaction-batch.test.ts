@@ -250,6 +250,7 @@ describe('transaction-batch', function run() {
         txidVersion,
         testEncryptionKey,
         () => {},
+        false, // shouldGeneratePreTransactionPOIs
       ),
     ).to.eventually.be.rejectedWith(
       'Cannot prove transaction with null (zero value) inputs and outputs.',

@@ -654,6 +654,7 @@ describe('transaction-erc20', function test() {
         txidVersion,
         testEncryptionKey,
         () => {},
+        false, // shouldGeneratePreTransactionPOIs
       ),
     ).to.eventually.be.rejectedWith('Can not add more than 4 outputs.');
 
@@ -757,12 +758,13 @@ describe('transaction-erc20', function test() {
 
   it('Should create transaction proofs and serialized transactions', async () => {
     transactionBatch.addOutput(await makeNote(1n));
-    const txs = await transactionBatch.generateTransactions(
+    const { provedTransactions: txs } = await transactionBatch.generateTransactions(
       prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
     expect(txs.length).to.equal(1);
     expect(txs[0].nullifiers.length).to.equal(1);
@@ -771,12 +773,13 @@ describe('transaction-erc20', function test() {
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(1715000000000n));
 
-    const txs2 = await transactionBatch.generateTransactions(
+    const { provedTransactions: txs2 } = await transactionBatch.generateTransactions(
       prover,
       wallet,
       txidVersion,
       testEncryptionKey,
       () => {},
+      false, // shouldGeneratePreTransactionPOIs
     );
     expect(txs2.length).to.equal(1);
     expect(txs2[0].nullifiers.length).to.equal(1);
@@ -793,6 +796,7 @@ describe('transaction-erc20', function test() {
       (progress) => {
         loadProgress = progress;
       },
+      false, // shouldGeneratePreTransactionPOIs
     );
     expect(loadProgress).to.equal(100);
   });

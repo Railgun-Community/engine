@@ -1,3 +1,5 @@
+import { Proof } from './prover-types';
+
 export enum TXOPOIListStatus {
   Valid = 'Valid',
   ShieldBlocked = 'ShieldBlocked',
@@ -28,6 +30,22 @@ export type LegacyTransactProofData = {
   tokenHash: string;
   blindedCommitment: string;
 };
+
+export type PreTransactionPOI = {
+  snarkProof: Proof;
+  txidMerkleroot: string;
+  poiMerkleroots: string[];
+  blindedCommitmentsOut: string[];
+  railgunTxidIfHasUnshield: string;
+};
+
+export type PreTransactionPOIsPerTxidLeafPerList = Record<
+  string, // listKey
+  Record<
+    string, // txidLeafHash
+    PreTransactionPOI
+  >
+>;
 
 export type POIEngineProofInputs = {
   // --- Public inputs ---

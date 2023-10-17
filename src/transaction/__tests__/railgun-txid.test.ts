@@ -1,8 +1,9 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { getRailgunTxidLeafHash } from '../railgun-txid';
-import { RailgunTransaction, TXIDVersion } from '../../models';
+import { TXIDVersion } from '../../models';
 import { ByteLength, nToHex } from '../../utils';
+import { getGlobalTreePosition } from '../../poi/global-tree-position';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -12,11 +13,8 @@ describe('railgun-txid', () => {
     expect(
       getRailgunTxidLeafHash(
         12157249116530410877712851712509084797672039320300907005218073634829938454808n,
-        {
-          utxoTreeIn: 0,
-          utxoTreeOut: 99999,
-          utxoBatchStartPositionOut: 99999,
-        } as RailgunTransaction,
+        0n,
+        getGlobalTreePosition(99999, 99999),
         TXIDVersion.V2_PoseidonMerkle,
       ),
     ).to.equal(

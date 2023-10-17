@@ -16,7 +16,12 @@ import { stringifySafe } from '../utils/stringify';
 import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
-import { TXIDVersion, TreeBalance, UnprovedTransactionInputs } from '../models';
+import {
+  PreTransactionPOIsPerTxidLeafPerList,
+  TXIDVersion,
+  TreeBalance,
+  UnprovedTransactionInputs,
+} from '../models';
 import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
 import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
@@ -317,8 +322,12 @@ export class TransactionBatch {
     txidVersion: TXIDVersion,
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
+    shouldGeneratePreTransactionPOIs: boolean,
     onlySpendable = true,
-  ): Promise<TransactionStruct[]> {
+  ): Promise<{
+    provedTransactions: TransactionStruct[];
+    preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList;
+  }> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
       txidVersion,
@@ -343,6 +352,9 @@ export class TransactionBatch {
 
     const provedTransactions: TransactionStruct[] = [];
 
+    const preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList = {};
+    const activeListKeys = POI.getActiveListKeys();
+
     for (let index = 0; index < spendingSolutionGroups.length; index += 1) {
       const spendingSolutionGroup = spendingSolutionGroups[index];
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
@@ -358,6 +370,27 @@ export class TransactionBatch {
           encryptionKey,
           this.overallBatchMinGasPrice,
         );
+
+      if (shouldGeneratePreTransactionPOIs) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const listKey of activeListKeys) {
+          preTransactionPOIsPerTxidLeafPerList[listKey] ??= {};
+
+          // eslint-disable-next-line no-await-in-loop
+          const { txidLeafHash, preTransactionPOI } = await wallet.generatePreTransactionPOI(
+            txidVersion,
+            this.chain,
+            listKey,
+            spendingSolutionGroup.utxos,
+            publicInputs,
+            privateInputs,
+            boundParams,
+          );
+
+          preTransactionPOIsPerTxidLeafPerList[listKey][txidLeafHash] = preTransactionPOI;
+        }
+      }
+
       // eslint-disable-next-line no-await-in-loop
       const signature = await wallet.sign(publicInputs, encryptionKey);
       const unprovedTransactionInputs: UnprovedTransactionInputs = {
@@ -376,7 +409,7 @@ export class TransactionBatch {
       );
       provedTransactions.push(provedTransaction);
     }
-    return provedTransactions;
+    return { provedTransactions, preTransactionPOIsPerTxidLeafPerList };
   }
 
   private static logDummySpendingSolutionGroupsSummary(

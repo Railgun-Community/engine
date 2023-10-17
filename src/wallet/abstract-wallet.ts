@@ -84,7 +84,7 @@ import { ShieldNote } from '../note';
 import { getTokenDataERC20, getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined, removeUndefineds } from '../utils/is-defined';
-import { PublicInputsRailgun } from '../models/prover-types';
+import { PrivateInputsRailgun, PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import { isTransactCommitment, isTransactCommitmentType } from '../utils/commitment';
 import { POI } from '../poi/poi';
@@ -100,9 +100,15 @@ import {
   LegacyTransactProofData,
   POIEngineProofInputs,
   POIsPerList,
+  PreTransactionPOI,
   TXIDVersion,
 } from '../models/poi-types';
-import { getGlobalTreePosition } from '../poi/global-tree-position';
+import {
+  GLOBAL_UTXO_POSITION_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+  GLOBAL_UTXO_TREE_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+  getGlobalTreePosition,
+  getGlobalTreePositionPreTransactionPOIProof,
+} from '../poi/global-tree-position';
 import { createDummyMerkleProof, verifyMerkleProof } from '../merkletree/merkle-proof';
 import { Prover } from '../prover/prover';
 import {
@@ -115,6 +121,11 @@ import {
   delay,
   stringifySafe,
 } from '../utils';
+import {
+  getRailgunTransactionIDFromBigInts,
+  getRailgunTxidLeafHash,
+} from '../transaction/railgun-txid';
+import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -1478,6 +1489,135 @@ abstract class AbstractWallet extends EventEmitter {
       this.generatingPOIsForChain[chain.type][chain.id] = false;
       throw err;
     }
+  }
+
+  async generatePreTransactionPOI(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    utxos: TXO[],
+    publicInputs: PublicInputsRailgun,
+    privateInputs: PrivateInputsRailgun,
+    boundParams: BoundParamsStruct,
+  ): Promise<{ txidLeafHash: string; preTransactionPOI: PreTransactionPOI }> {
+    const { commitmentsOut, nullifiers, boundParamsHash } = publicInputs;
+    const utxoTreeIn = BigInt(boundParams.treeNumber);
+
+    const globalTreePosition = getGlobalTreePositionPreTransactionPOIProof();
+
+    const railgunTxidBigInt = getRailgunTransactionIDFromBigInts(
+      nullifiers,
+      commitmentsOut,
+      boundParamsHash,
+    );
+    const txidLeafHash = getRailgunTxidLeafHash(
+      railgunTxidBigInt,
+      utxoTreeIn,
+      globalTreePosition,
+      txidVersion,
+    );
+    const railgunTxidHex = nToHex(railgunTxidBigInt, ByteLength.UINT_256);
+
+    const blindedCommitmentsIn = removeUndefineds(utxos.map((txo) => txo.blindedCommitment));
+    if (blindedCommitmentsIn.length !== nullifiers.length) {
+      throw new Error(
+        `Not enough UTXO blinded commitments for railgun transaction nullifiers: expected ${nullifiers.length}, got ${blindedCommitmentsIn.length}`,
+      );
+    }
+
+    const listPOIMerkleProofs: MerkleProof[] = await AbstractWallet.getListPOIMerkleProofs(
+      txidVersion,
+      chain,
+      listKey,
+      blindedCommitmentsIn,
+      false, // isLegacyPOIProof
+    );
+
+    const hasUnshield = BigInt(boundParams.unshield) !== 0n;
+    const railgunTxidIfHasUnshield = hasUnshield
+      ? getBlindedCommitmentForUnshield(railgunTxidHex)
+      : '0x00';
+
+    listPOIMerkleProofs.forEach((listMerkleProof, listMerkleProofIndex) => {
+      if (!verifyMerkleProof(listMerkleProof)) {
+        throw new Error(`Invalid list merkleproof: index ${listMerkleProofIndex}`);
+      }
+    });
+
+    const merkleProofForRailgunTxid = createDummyMerkleProof(txidLeafHash);
+    if (!verifyMerkleProof(merkleProofForRailgunTxid)) {
+      throw new Error('Invalid txid merkle proof');
+    }
+
+    const nonUnshieldCommitments = hasUnshield ? commitmentsOut.slice(0, -1) : commitmentsOut;
+    const blindedCommitmentsOut = nonUnshieldCommitments.map((commitment, i) => {
+      return getBlindedCommitmentForShieldOrTransact(
+        nToHex(commitment, ByteLength.UINT_256, true),
+        privateInputs.npkOut[i],
+        globalTreePosition + BigInt(i),
+      );
+    });
+
+    const poiMerkleroots = listPOIMerkleProofs.map((merkleProof) => merkleProof.root);
+
+    const poiProofInputs: POIEngineProofInputs = {
+      // --- Public inputs ---
+      anyRailgunTxidMerklerootAfterTransaction: merkleProofForRailgunTxid.root,
+
+      // --- Private inputs ---
+
+      // Railgun Transaction info
+      boundParamsHash: nToHex(boundParamsHash, ByteLength.UINT_256, true),
+      nullifiers: nullifiers.map((el) => nToHex(el, ByteLength.UINT_256, true)),
+      commitmentsOut: commitmentsOut.map((el) => nToHex(el, ByteLength.UINT_256, true)),
+
+      // Spender wallet info
+      spendingPublicKey: this.spendingPublicKey,
+      nullifyingKey: this.nullifyingKey,
+
+      // Nullified notes data
+      token: utxos[0].note.tokenHash,
+      randomsIn: utxos.map((txo) => txo.note.random),
+      valuesIn: utxos.map((txo) => txo.note.value),
+      utxoPositionsIn: utxos.map((txo) => txo.position),
+      utxoTreeIn: utxos[0].tree,
+
+      // Commitment notes data
+      npksOut: hasUnshield ? privateInputs.npkOut.slice(0, -1) : privateInputs.npkOut,
+      valuesOut: hasUnshield ? privateInputs.valueOut.slice(0, -1) : privateInputs.valueOut,
+      utxoTreeOut: GLOBAL_UTXO_TREE_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+      utxoBatchStartPositionOut: GLOBAL_UTXO_POSITION_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+      railgunTxidIfHasUnshield,
+
+      // Railgun txid tree
+      railgunTxidMerkleProofIndices: merkleProofForRailgunTxid.indices,
+      railgunTxidMerkleProofPathElements: merkleProofForRailgunTxid.elements,
+
+      // POI tree
+      poiMerkleroots,
+      poiInMerkleProofIndices: listPOIMerkleProofs.map((merkleProof) => merkleProof.indices),
+      poiInMerkleProofPathElements: listPOIMerkleProofs.map((merkleProof) => merkleProof.elements),
+    };
+
+    const { proof: snarkProof } = await this.prover.provePOI(
+      poiProofInputs,
+      listKey,
+      blindedCommitmentsIn,
+      blindedCommitmentsOut,
+      (progress: number) => {
+        console.log(`pre-transaction proof progress: ${progress}`);
+      },
+    );
+
+    const preTransactionPOI: PreTransactionPOI = {
+      snarkProof,
+      txidMerkleroot: merkleProofForRailgunTxid.root,
+      poiMerkleroots,
+      blindedCommitmentsOut,
+      railgunTxidIfHasUnshield,
+    };
+
+    return { txidLeafHash, preTransactionPOI };
   }
 
   private async generatePOIsForRailgunTxidAndListKey(
