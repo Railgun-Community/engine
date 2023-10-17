@@ -678,7 +678,7 @@ describe('transaction-erc20', function test() {
         onlySpendable,
       ),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192',
+      'RAILGUN spendable private balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192',
     );
 
     transactionBatch.resetOutputs();
@@ -690,7 +690,7 @@ describe('transaction-erc20', function test() {
         onlySpendable,
       ),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
+      'RAILGUN spendable private balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
 
     transactionBatch.resetOutputs();
@@ -702,7 +702,7 @@ describe('transaction-erc20', function test() {
         onlySpendable,
       ),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
+      'RAILGUN spendable private balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
 
     const transaction2 = new TransactionBatch(chain);
@@ -722,7 +722,7 @@ describe('transaction-erc20', function test() {
         onlySpendable,
       ),
     ).to.eventually.be.rejectedWith(
-      'RAILGUN private token balance too low for 0x00000000000000000000000000000000000000ff',
+      'RAILGUN spendable private balance too low for 0x00000000000000000000000000000000000000ff',
     );
   });
 

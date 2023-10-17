@@ -157,14 +157,14 @@ export class TransactionBatch {
             ? `${totalRequired.toString()} (includes ${relayerFeeOutput.value.toString()} Relayer Fee)`
             : totalRequired.toString();
           throw new Error(
-            `RAILGUN private token balance too low for ${
+            `RAILGUN spendable private balance too low for ${
               tokenData.tokenAddress
             }. Amount required: ${amountRequiredMessage}. Balance: ${tokenBalance.toString()}.`,
           );
         }
         case TokenType.ERC721:
         case TokenType.ERC1155:
-          throw new Error(`RAILGUN private NFT balance too low.`);
+          throw new Error(`RAILGUN spendable private NFT balance too low.`);
       }
     }
 

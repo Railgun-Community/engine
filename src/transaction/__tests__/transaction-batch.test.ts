@@ -181,7 +181,7 @@ describe('transaction-batch', function run() {
     await expect(
       transactionBatch.generateDummyTransactions(prover, wallet, txidVersion, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
-      `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}`,
+      `RAILGUN spendable private balance too low for ${tokenAddress.toLowerCase()}`,
     );
 
     transactionBatch.resetOutputs();
@@ -299,7 +299,7 @@ describe('transaction-batch', function run() {
     await expect(
       transactionBatch.generateDummyTransactions(prover, wallet, txidVersion, testEncryptionKey),
     ).to.eventually.be.rejectedWith(
-      `RAILGUN private token balance too low for ${tokenAddress.toLowerCase()}`,
+      `RAILGUN spendable private balance too low for ${tokenAddress.toLowerCase()}`,
     );
 
     transactionBatch.resetOutputs();
