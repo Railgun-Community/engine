@@ -13,6 +13,7 @@ export type POIsPerList = {
 export enum BlindedCommitmentType {
   Shield = 'Shield',
   Transact = 'Transact',
+  Unshield = 'Unshield',
 }
 
 export type BlindedCommitmentData = {

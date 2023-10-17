@@ -34,7 +34,7 @@ const chain: Chain = {
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-describe.only('railgun-wallet', () => {
+describe('railgun-wallet', () => {
   beforeEach(async () => {
     db = new Database(memdown());
     utxoMerkletree = await UTXOMerkletree.create(db, chain, txidVersion, async () => true);

@@ -1259,7 +1259,7 @@ abstract class AbstractWallet extends EventEmitter {
         blindedCommitment: sentCommitment.blindedCommitment as string,
       })),
       ...unshieldEventsNeedPOIRefresh.map((unshieldEvent) => ({
-        type: BlindedCommitmentType.Transact,
+        type: BlindedCommitmentType.Unshield,
         blindedCommitment: getBlindedCommitmentForUnshield(unshieldEvent.railgunTxid as string),
       })),
     ];
