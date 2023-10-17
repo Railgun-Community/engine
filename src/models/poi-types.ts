@@ -1,7 +1,6 @@
 export enum TXOPOIListStatus {
   Valid = 'Valid',
   ShieldBlocked = 'ShieldBlocked',
-  ShieldPending = 'ShieldPending',
   TransactProofSubmitted = 'TransactProofSubmitted',
   Missing = 'Missing',
 }

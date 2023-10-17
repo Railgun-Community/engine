@@ -34,7 +34,7 @@ const chain: Chain = {
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-describe('railgun-wallet', () => {
+describe.only('railgun-wallet', () => {
   beforeEach(async () => {
     db = new Database(memdown());
     utxoMerkletree = await UTXOMerkletree.create(db, chain, txidVersion, async () => true);
@@ -54,6 +54,7 @@ describe('railgun-wallet', () => {
       undefined, // creationBlockNumbers\
       new Prover(testArtifactsGetter),
     );
+    await viewOnlyWallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
   });
 
   it('Should load existing wallet', async () => {
@@ -192,12 +193,14 @@ describe('railgun-wallet', () => {
   });
 
   it('Should get empty wallet details', async () => {
-    expect(await wallet.getWalletDetails(txidVersion, chain)).to.deep.equal({
+    const walletDetails = await wallet.getWalletDetails(txidVersion, chain);
+    expect(walletDetails).to.deep.equal({
       treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,
     });
-    expect(await viewOnlyWallet.getWalletDetails(txidVersion, chain)).to.deep.equal({
+    const viewOnlyWalletDetails = await viewOnlyWallet.getWalletDetails(txidVersion, chain);
+    expect(viewOnlyWalletDetails).to.deep.equal({
       treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,

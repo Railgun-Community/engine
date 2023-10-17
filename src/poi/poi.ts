@@ -14,7 +14,7 @@ import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { POINodeInterface } from './poi-node-interface';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { OutputType } from '../models';
-import { isTransactCommitmentType } from '../utils/commitment';
+import { isShieldCommitmentType, isTransactCommitmentType } from '../utils/commitment';
 
 export type POIList = {
   key: string;
@@ -77,10 +77,7 @@ export class POI {
       return WalletBalanceBucket.ShieldBlocked;
     }
 
-    const anyPOIIsShieldPending = activeListKeys.some((listKey) => {
-      return pois[listKey] === TXOPOIListStatus.ShieldPending;
-    });
-    if (anyPOIIsShieldPending) {
+    if (isShieldCommitmentType(txo.commitmentType)) {
       return WalletBalanceBucket.ShieldPending;
     }
 
@@ -230,7 +227,7 @@ export class POI {
     return !POI.hasValidPOIsAllLists(txo.poisPerList);
   }
 
-  static shouldRetrieveTXOPOIs(chain: Chain, txo: TXO) {
+  static shouldRetrieveTXOPOIs(txo: TXO) {
     if (!isDefined(txo.blindedCommitment)) {
       return false;
     }

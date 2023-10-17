@@ -32,8 +32,8 @@ export const convertTransactionStructToCommitmentSummary = (
   };
 };
 
-export const isReceiveShieldCommitment = (receiveCommitment: StoredReceiveCommitment): boolean => {
-  switch (receiveCommitment.commitmentType) {
+export const isShieldCommitmentType = (commitmentType: CommitmentType): boolean => {
+  switch (commitmentType) {
     case CommitmentType.ShieldCommitment:
     case CommitmentType.LegacyGeneratedCommitment:
       return true;
@@ -42,6 +42,10 @@ export const isReceiveShieldCommitment = (receiveCommitment: StoredReceiveCommit
       return false;
   }
   return false;
+};
+
+export const isReceiveShieldCommitment = (receiveCommitment: StoredReceiveCommitment): boolean => {
+  return isShieldCommitmentType(receiveCommitment.commitmentType);
 };
 
 export const isTransactCommitmentType = (commitmentType: CommitmentType): boolean => {

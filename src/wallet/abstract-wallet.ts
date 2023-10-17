@@ -434,6 +434,9 @@ abstract class AbstractWallet extends EventEmitter {
         this.getWalletDetailsPath(chain),
       )) as BytesData;
       walletDetails = msgpack.decode(arrayify(walletDetailsEncoded)) as WalletDetails;
+      if (walletDetails.creationTree == null) {
+        walletDetails.creationTree = undefined;
+      }
       if (walletDetails.creationTreeHeight == null) {
         walletDetails.creationTreeHeight = undefined;
       }
@@ -1116,8 +1119,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(chain, txo)).sort(
-      (a, b) => AbstractWallet.sortPOIsPerListUndefinedFirst(a, b),
+    const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(txo)).sort((a, b) =>
+      AbstractWallet.sortPOIsPerListUndefinedFirst(a, b),
     );
     if (txosNeedCreationPOIs.length === 0) {
       return;
