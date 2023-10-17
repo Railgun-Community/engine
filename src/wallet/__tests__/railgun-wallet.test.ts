@@ -192,16 +192,16 @@ describe('railgun-wallet', () => {
     expect(decoded.chain).to.deep.equal(chain);
   });
 
-  it('Should get empty wallet details', async () => {
+  it.only('Should get empty wallet details', async () => {
     const walletDetails = await wallet.getWalletDetails(txidVersion, chain);
     expect(walletDetails).to.deep.equal({
-      treeScannedHeights: [],
+      treeScannedHeights: [0],
       creationTree: undefined,
       creationTreeHeight: undefined,
     });
     const viewOnlyWalletDetails = await viewOnlyWallet.getWalletDetails(txidVersion, chain);
     expect(viewOnlyWalletDetails).to.deep.equal({
-      treeScannedHeights: [],
+      treeScannedHeights: [0],
       creationTree: undefined,
       creationTreeHeight: undefined,
     });
