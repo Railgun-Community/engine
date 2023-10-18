@@ -1525,9 +1525,11 @@ class RailgunEngine extends EventEmitter {
       // eslint-disable-next-line no-await-in-loop
       await Promise.all(
         utxoMerkletrees.map(async (merkletreesForChainType) => {
-          return merkletreesForChainType.map(async (merkletree) => {
-            await wallet.loadUTXOMerkletree(txidVersion, merkletree);
-          });
+          await Promise.all(
+            merkletreesForChainType.map(async (merkletree) => {
+              await wallet.loadUTXOMerkletree(txidVersion, merkletree);
+            }),
+          );
         }),
       );
       this.txidMerkletrees[txidVersion]?.forEach((merkletreesForChainType) => {
