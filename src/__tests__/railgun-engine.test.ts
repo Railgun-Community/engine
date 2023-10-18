@@ -497,6 +497,7 @@ describe('railgun-engine', function test() {
         () => {},
         true, // shouldGeneratePreTransactionPOIs
       );
+    expect(Object.keys(preTransactionPOIsPerTxidLeafPerList[MOCK_LIST_KEY]).length).to.equal(1);
 
     TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
 
@@ -505,9 +506,6 @@ describe('railgun-engine', function test() {
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
     const transactReceipt = await transactTx.wait();
 
-    console.log(stringifySafe(preTransactionPOIsPerTxidLeafPerList));
-    console.log(transact);
-
     if (!transactReceipt) {
       throw new Error('Failed to get transact receipt');
     }
@@ -515,6 +513,7 @@ describe('railgun-engine', function test() {
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
       promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
+    TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Valid;
     await wallet.refreshPOIsForAllTXIDVersions(chain, true);
     await wallet2.refreshPOIsForAllTXIDVersions(chain, true);
 
@@ -738,7 +737,7 @@ describe('railgun-engine', function test() {
       txidVersion,
       testEncryptionKey,
       () => {},
-      false, // shouldGeneratePreTransactionPOIs
+      true, // shouldGeneratePreTransactionPOIs
     );
     expect(provedTransactions.length).to.equal(1);
     expect(provedTransactions[0].nullifiers.length).to.equal(1);
@@ -970,6 +969,7 @@ describe('railgun-engine', function test() {
       promiseTimeout(awaitMultipleScans(wallet, chain, 2), 15000, 'Timed out wallet1 scan'),
       promiseTimeout(awaitMultipleScans(wallet2, chain, 2), 15000, 'Timed out wallet2 scan'),
     ]);
+    TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Valid;
     await wallet.refreshPOIsForAllTXIDVersions(chain, true);
     await wallet2.refreshPOIsForAllTXIDVersions(chain, true);
 

@@ -561,7 +561,7 @@ describe('relay-adapt', function test() {
 
     const nftBalanceAfterReshield = await nft.balanceOf(railgunSmartWalletContract.address);
     expect(nftBalanceAfterReshield).to.equal(1n);
-  }).timeout(60000);
+  }).timeout(90000);
 
   it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {

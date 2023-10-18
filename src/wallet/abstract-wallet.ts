@@ -1605,7 +1605,7 @@ abstract class AbstractWallet extends EventEmitter {
       blindedCommitmentsIn,
       blindedCommitmentsOut,
       (progress: number) => {
-        console.log(`pre-transaction proof progress: ${progress}`);
+        // console.log(`pre-transaction proof progress: ${progress}`);
       },
     );
 
