@@ -612,6 +612,14 @@ describe('railgun-engine', function test() {
       ],
     );
 
+    // check if relayer wallet finds valid POI for received commitment
+    const hasValidRelayerPOI = await wallet2.receiveCommitmentHasValidPOI(
+      txidVersion,
+      chain,
+      '0x2c5acad8f41f95a2795997353f6cdb0838493cd5604f8ddc1859a468233e15ac',
+    );
+    expect(hasValidRelayerPOI).to.equal(true);
+
     // check the transactions log
     const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);

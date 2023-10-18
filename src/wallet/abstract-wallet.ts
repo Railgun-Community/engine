@@ -1133,6 +1133,38 @@ abstract class AbstractWallet extends EventEmitter {
     await this.refreshReceivePOIsAllTXOs(txidVersion, chain);
   }
 
+  async receiveCommitmentHasValidPOI(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    commitment: string,
+  ): Promise<boolean> {
+    const cachedStoredReceiveCommitments = await this.queryAllStoredReceiveCommitments(
+      txidVersion,
+      chain,
+    );
+
+    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
+
+    const formattedCommitment = formatToByteLength(commitment, ByteLength.UINT_256);
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const cachedStoredReceiveCommitment of cachedStoredReceiveCommitments) {
+      const receiveCommitment = await utxoMerkletree.getCommitment(
+        cachedStoredReceiveCommitment.tree,
+        cachedStoredReceiveCommitment.position,
+      );
+      if (!isTransactCommitmentType(receiveCommitment.commitmentType)) {
+        continue;
+      }
+      if (formattedCommitment === formatToByteLength(receiveCommitment.hash, ByteLength.UINT_256)) {
+        return POI.hasValidPOIsActiveLists(
+          cachedStoredReceiveCommitment.storedReceiveCommitment.poisPerList,
+        );
+      }
+    }
+    return false;
+  }
+
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(txo)).sort((a, b) =>
