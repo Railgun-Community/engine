@@ -83,7 +83,7 @@ import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import { getTokenDataERC20, getTokenDataHash, serializeTokenData } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
-import { isDefined, removeUndefineds } from '../utils/is-defined';
+import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
 import { PrivateInputsRailgun, PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import { isTransactCommitment, isTransactCommitmentType } from '../utils/commitment';
@@ -1163,6 +1163,17 @@ abstract class AbstractWallet extends EventEmitter {
       }
     }
     return false;
+  }
+
+  async getChainTxidsStillPendingSpentPOIs(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<string[]> {
+    const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs } =
+      await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain);
+
+    const txids = [...sentCommitmentsNeedPOIs, ...unshieldEventsNeedPOIs].map((item) => item.txid);
+    return removeDuplicates(txids);
   }
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
