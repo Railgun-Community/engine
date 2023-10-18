@@ -57,8 +57,6 @@ describe('keys-utils', () => {
     publicSpendingKey = getPublicSpendingKey(privateSpendingKey);
     privateViewingKey = randomBytes(32);
     publicViewingKey = await getPublicViewingKey(privateViewingKey);
-
-    EngineDebug.init(console);
   });
 
   it('Should return a random scalar', () => {
