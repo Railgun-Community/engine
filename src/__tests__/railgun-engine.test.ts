@@ -66,7 +66,7 @@ import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitme
 import { getGlobalTreePosition } from '../poi/global-tree-position';
 import { ShieldNote } from '../note';
 import { TransactionStruct, WalletBalanceBucket } from '../models';
-import { AES, stringifySafe } from '../utils';
+import { AES } from '../utils';
 import { createDummyMerkleProof } from '../merkletree/merkle-proof';
 
 chai.use(chaiAsPromised);
@@ -267,7 +267,7 @@ describe('railgun-engine', function test() {
 
     wallet = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic);
     wallet2 = await engine.createWalletFromMnemonic(testEncryptionKey, testMnemonic, 1);
-    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider, chain.id);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,

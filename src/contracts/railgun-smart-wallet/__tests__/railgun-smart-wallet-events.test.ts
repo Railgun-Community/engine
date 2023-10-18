@@ -107,7 +107,7 @@ describe('railgun-smart-wallet-events', function runTests() {
       id: Number((await provider.getNetwork()).chainId),
     };
     const fakeRelayAdaptContract = '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9';
-    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider, chain.id);
     await engine.loadNetwork(
       chain,
       '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9', // Live ETH proxy

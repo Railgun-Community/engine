@@ -109,7 +109,7 @@ describe('transaction-batch', function run() {
 
     const provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 500, 1);
 
-    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider);
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(provider, chain.id);
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,

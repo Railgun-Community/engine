@@ -131,7 +131,10 @@ describe('relay-adapt', function test() {
       type: ChainType.EVM,
       id: Number((await provider.getNetwork()).chainId),
     };
-    const pollingProvider = await createPollingJsonRpcProviderForListeners(fallbackProvider);
+    const pollingProvider = await createPollingJsonRpcProviderForListeners(
+      fallbackProvider,
+      chain.id,
+    );
     await engine.loadNetwork(
       chain,
       config.contracts.proxy,

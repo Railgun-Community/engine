@@ -21,6 +21,7 @@ export const assertIsPollingProvider = (provider: AbstractProvider) => {
  */
 export const createPollingJsonRpcProviderForListeners = async (
   provider: JsonRpcProvider | FallbackProvider,
+  chainId: number,
   pollingInterval?: number,
 ): Promise<PollingJsonRpcProvider> => {
   if (isPollingProvider(provider)) {
@@ -30,8 +31,7 @@ export const createPollingJsonRpcProviderForListeners = async (
   if (provider.providerType === 'jsonrpc') {
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider._getConnection();
-    const { chainId } = await provider.getNetwork();
-    return new PollingJsonRpcProvider(url, Number(chainId), pollingInterval);
+    return new PollingJsonRpcProvider(url, chainId, pollingInterval);
   }
 
   if (provider.providerType === 'fallback') {
@@ -47,10 +47,9 @@ export const createPollingJsonRpcProviderForListeners = async (
 
     // eslint-disable-next-line no-underscore-dangle
     const { url } = firstProvider._getConnection();
-    const { chainId } = await provider.getNetwork();
     // eslint-disable-next-line no-underscore-dangle
     const maxLogsPerBatch = firstProvider._getOption('batchMaxCount');
-    return new PollingJsonRpcProvider(url, Number(chainId), pollingInterval, maxLogsPerBatch);
+    return new PollingJsonRpcProvider(url, chainId, pollingInterval, maxLogsPerBatch);
   }
 
   throw new Error('Invalid ethers provider type');
