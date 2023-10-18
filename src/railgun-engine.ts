@@ -45,7 +45,7 @@ import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
-import { delay, isTransactCommitment } from './utils';
+import { delay, isTransactCommitment, promiseTimeout } from './utils';
 import { createRailgunTransactionWithHash } from './transaction/railgun-txid';
 import {
   ACTIVE_TXID_VERSIONS,
@@ -1126,18 +1126,28 @@ class RailgunEngine extends EventEmitter {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
     try {
-      await defaultProvider.getBlockNumber();
+      await promiseTimeout(
+        defaultProvider.getBlockNumber(),
+        10000,
+        'Timed out waiting for default RPC provider to connect.',
+      );
     } catch (err) {
       EngineDebug.error(err as Error);
-      throw new Error(`Cannot connect to default fallback RPC provider.`);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      throw new Error(err.message);
     }
 
     assertIsPollingProvider(pollingProvider);
     try {
-      await pollingProvider.getBlockNumber();
+      await promiseTimeout(
+        pollingProvider.getBlockNumber(),
+        10000,
+        'Timed out waiting for polling RPC provider to connect.',
+      );
     } catch (err) {
       EngineDebug.error(err as Error);
-      throw new Error(`Cannot connect to polling RPC provider.`);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+      throw new Error(err.message);
     }
 
     const hasAnyMerkletree = ACTIVE_TXID_VERSIONS.every(
