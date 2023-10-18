@@ -1176,6 +1176,18 @@ abstract class AbstractWallet extends EventEmitter {
     return removeDuplicates(txids);
   }
 
+  async getNonSpendableReceivedChainTxids(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<string[]> {
+    const TXOs = await this.TXOs(txidVersion, chain);
+    const nonSpendableTXOs = TXOs.filter(
+      (txo) => POI.getBalanceBucket(txo) !== WalletBalanceBucket.Spendable,
+    );
+    const txids = nonSpendableTXOs.map((item) => item.txid);
+    return removeDuplicates(txids);
+  }
+
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     const TXOs = await this.TXOs(txidVersion, chain);
     const txosNeedCreationPOIs = TXOs.filter((txo) => POI.shouldRetrieveTXOPOIs(txo)).sort((a, b) =>
