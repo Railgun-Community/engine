@@ -86,4 +86,5 @@ export enum WalletBalanceBucket {
   ProofSubmitted = 'ProofSubmitted',
   MissingInternalPOI = 'MissingInternalPOI', // Change or DeFi interaction (Swap receipt)
   MissingExternalPOI = 'MissingExternalPOI',
+  Spent = 'Spent', // ie. Unshielded To Origin
 }

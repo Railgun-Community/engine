@@ -1967,7 +1967,7 @@ abstract class AbstractWallet extends EventEmitter {
     const filteredTXOs = AbstractWallet.filterTXOsByBlockNumber(TXOs, startingBlock);
 
     const [receiveHistory, spendHistory] = await Promise.all([
-      AbstractWallet.getTransactionReceiveHistory(chain, filteredTXOs),
+      AbstractWallet.getTransactionReceiveHistory(filteredTXOs),
       this.getTransactionSpendHistory(txidVersion, chain, filteredTXOs, startingBlock),
     ]);
 
@@ -2055,8 +2055,7 @@ abstract class AbstractWallet extends EventEmitter {
    * @param chain - chain type/id to get balances for
    * @returns history
    */
-  static getTransactionReceiveHistory(
-    chain: Chain,
+  private static getTransactionReceiveHistory(
     filteredTXOs: TXO[],
   ): TransactionHistoryEntryReceived[] {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
@@ -2159,7 +2158,7 @@ abstract class AbstractWallet extends EventEmitter {
     );
   }
 
-  async getTransactionSpendHistory(
+  private async getTransactionSpendHistory(
     txidVersion: TXIDVersion,
     chain: Chain,
     filteredTXOs: TXO[],
@@ -2422,38 +2421,39 @@ abstract class AbstractWallet extends EventEmitter {
         };
       }
 
-      // If utxo is unspent process it
-      const isUnspent = txo.spendtxid === false;
-      if (isUnspent) {
-        const balanceBucket = POI.getBalanceBucket(txo);
+      const isSpent = txo.spendtxid !== false;
+      if (isSpent) {
+        return;
+      }
 
-        if (isDefined(originShieldTxidForSpendabilityOverride)) {
-          // Only for Unshield-To-Origin transactions. Filter TXOs by the provided shield txid.
-          if (
-            !isShieldCommitmentType(txo.commitmentType) ||
-            formatToByteLength(txo.txid, ByteLength.UINT_256) !==
-              formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
-          ) {
-            // Skip if txid doesn't match.
-            return;
-          }
-        } else if (!balanceBucketFilter.includes(balanceBucket)) {
-          if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
-            // WARNING FOR TESTS ONLY
-            EngineDebug.error(
-              new Error(
-                'WARNING: Missing SPENDABLE balance - likely needs refreshPOIsForAllTXIDVersions before getting balance',
-              ),
-            );
-          }
+      const balanceBucket = POI.getBalanceBucket(txo);
+
+      if (isDefined(originShieldTxidForSpendabilityOverride)) {
+        // Only for Unshield-To-Origin transactions. Filter TXOs by the provided shield txid.
+        if (
+          !isShieldCommitmentType(txo.commitmentType) ||
+          formatToByteLength(txo.txid, ByteLength.UINT_256) !==
+            formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
+        ) {
+          // Skip if txid doesn't match.
           return;
         }
-
-        // Store utxo
-        tokenBalances[tokenHash].utxos.push(txo);
-        // Increment balance
-        tokenBalances[tokenHash].balance += txo.note.value;
+      } else if (!balanceBucketFilter.includes(balanceBucket)) {
+        if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
+          // WARNING FOR TESTS ONLY
+          EngineDebug.error(
+            new Error(
+              'WARNING: Missing SPENDABLE balance - likely needs refreshPOIsForAllTXIDVersions before getting balance',
+            ),
+          );
+        }
+        return;
       }
+
+      // Store utxo
+      tokenBalances[tokenHash].utxos.push(txo);
+      // Increment balance
+      tokenBalances[tokenHash].balance += txo.note.value;
     });
 
     return tokenBalances;

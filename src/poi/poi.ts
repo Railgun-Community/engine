@@ -58,6 +58,10 @@ export class POI {
   }
 
   static getBalanceBucket(txo: TXO): WalletBalanceBucket {
+    if (txo.spendtxid !== false) {
+      return WalletBalanceBucket.Spent;
+    }
+
     const pois = txo.poisPerList;
     const isChange = txo.note.outputType === OutputType.Change;
 
