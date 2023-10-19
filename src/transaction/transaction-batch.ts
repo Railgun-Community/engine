@@ -3,7 +3,7 @@ import { Prover, ProverProgressCallback } from '../prover/prover';
 import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
-import { SpendingSolutionGroup, TXO, UnshieldData, WalletBalanceBucket } from '../models/txo-types';
+import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
 import { AdaptID, OutputType, TokenData, TokenType } from '../models/formatted-types';
 import { createSpendingSolutionsForValue } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
@@ -108,12 +108,17 @@ export class TransactionBatch {
   async generateValidSpendingSolutionGroupsAllOutputs(
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
-    onlySpendable: boolean,
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenDatas: TokenData[] = this.getOutputTokenDatas();
     const spendingSolutionGroupsPerToken = await Promise.all(
       tokenDatas.map((tokenData) =>
-        this.generateValidSpendingSolutionGroups(wallet, txidVersion, tokenData, onlySpendable),
+        this.generateValidSpendingSolutionGroups(
+          wallet,
+          txidVersion,
+          tokenData,
+          originShieldTxidForSpendabilityOverride,
+        ),
       ),
     );
     return spendingSolutionGroupsPerToken.flat();
@@ -127,7 +132,7 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     tokenData: TokenData,
-    onlySpendable: boolean,
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<SpendingSolutionGroup[]> {
     const tokenHash = getTokenDataHash(tokenData);
     const tokenOutputs = this.outputs.filter((output) => output.tokenHash === tokenHash);
@@ -136,15 +141,14 @@ export class TransactionBatch {
     // Calculate total required to be supplied by UTXOs
     const totalRequired = outputTotal + this.unshieldTotal(tokenHash);
 
-    const balanceBucketFilter = onlySpendable
-      ? await POI.getSpendableBalanceBuckets(this.chain)
-      : Object.values(WalletBalanceBucket);
+    const balanceBucketFilter = await POI.getSpendableBalanceBuckets(this.chain);
 
     const treeSortedBalances = await wallet.balancesByTreeForToken(
       txidVersion,
       this.chain,
       tokenHash,
       balanceBucketFilter,
+      originShieldTxidForSpendabilityOverride,
     );
     const tokenBalance = AbstractWallet.tokenBalanceAcrossAllTrees(treeSortedBalances);
 
@@ -161,6 +165,13 @@ export class TransactionBatch {
           const amountRequiredMessage = relayerFeeOutput
             ? `${totalRequired.toString()} (includes ${relayerFeeOutput.value.toString()} Relayer Fee)`
             : totalRequired.toString();
+          if (isDefined(originShieldTxidForSpendabilityOverride)) {
+            throw new Error(
+              `RAILGUN balance too low for ${
+                tokenData.tokenAddress
+              } from shield origin txid ${originShieldTxidForSpendabilityOverride}. Amount required: ${amountRequiredMessage}. Amount available: ${tokenBalance.toString()}.`,
+            );
+          }
           throw new Error(
             `RAILGUN spendable private balance too low for ${
               tokenData.tokenAddress
@@ -323,7 +334,7 @@ export class TransactionBatch {
     encryptionKey: string,
     progressCallback: ProverProgressCallback,
     shouldGeneratePreTransactionPOIs: boolean,
-    onlySpendable = true,
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<{
     provedTransactions: TransactionStruct[];
     preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList;
@@ -331,7 +342,7 @@ export class TransactionBatch {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
       txidVersion,
-      onlySpendable,
+      originShieldTxidForSpendabilityOverride,
     );
     EngineDebug.log('Actual spending solution groups:');
     EngineDebug.log(
@@ -447,12 +458,12 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     encryptionKey: string,
-    onlySpendable = true,
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<TransactionStruct[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
       txidVersion,
-      onlySpendable,
+      originShieldTxidForSpendabilityOverride,
     );
     TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 

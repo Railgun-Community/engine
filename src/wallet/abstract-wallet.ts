@@ -2337,8 +2337,6 @@ abstract class AbstractWallet extends EventEmitter {
       const TXOs = await this.TXOs(txidVersion, chain);
       const balancesByTxidVersion = await AbstractWallet.getTokenBalancesByTxidVersion(
         TXOs,
-        txidVersion,
-        chain,
         balanceBucketFilter,
       );
 
@@ -2360,12 +2358,7 @@ abstract class AbstractWallet extends EventEmitter {
       ? await POI.getSpendableBalanceBuckets(chain)
       : Object.values(WalletBalanceBucket);
     const TXOs = await this.TXOs(txidVersion, chain);
-    return AbstractWallet.getTokenBalancesByTxidVersion(
-      TXOs,
-      txidVersion,
-      chain,
-      balanceBucketFilter,
-    );
+    return AbstractWallet.getTokenBalancesByTxidVersion(TXOs, balanceBucketFilter);
   }
 
   async getTokenBalancesByBucket(
@@ -2381,8 +2374,6 @@ abstract class AbstractWallet extends EventEmitter {
       const balanceBucketFilter = [balanceBucket];
       balancesByBucket[balanceBucket] = await AbstractWallet.getTokenBalancesByTxidVersion(
         TXOs,
-        txidVersion,
-        chain,
         balanceBucketFilter,
       );
     }
@@ -2397,9 +2388,8 @@ abstract class AbstractWallet extends EventEmitter {
    */
   static async getTokenBalancesByTxidVersion(
     TXOs: TXO[],
-    txidVersion: TXIDVersion,
-    chain: Chain,
     balanceBucketFilter: WalletBalanceBucket[],
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<TokenBalances> {
     const tokenBalances: TokenBalances = {};
 
@@ -2420,7 +2410,16 @@ abstract class AbstractWallet extends EventEmitter {
       if (isUnspent) {
         const balanceBucket = POI.getBalanceBucket(txo);
 
-        if (!balanceBucketFilter.includes(balanceBucket)) {
+        if (isDefined(originShieldTxidForSpendabilityOverride)) {
+          // Only for Unshield-To-Origin transactions. Filter TXOs by the provided txid.
+          if (
+            formatToByteLength(txo.txid, ByteLength.UINT_256) !==
+            formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
+          ) {
+            // Skip if txid doesn't match.
+            return;
+          }
+        } else if (!balanceBucketFilter.includes(balanceBucket)) {
           if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
             // WARNING FOR TESTS ONLY
             EngineDebug.error(
@@ -2449,12 +2448,7 @@ abstract class AbstractWallet extends EventEmitter {
     balanceBucketFilter: WalletBalanceBucket[],
   ): Promise<Optional<bigint>> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const balances = await AbstractWallet.getTokenBalancesByTxidVersion(
-      TXOs,
-      txidVersion,
-      chain,
-      balanceBucketFilter,
-    );
+    const balances = await AbstractWallet.getTokenBalancesByTxidVersion(TXOs, balanceBucketFilter);
     const tokenHash = getTokenDataHash(getTokenDataERC20(tokenAddress));
     const balanceForToken = balances[tokenHash];
     return isDefined(balanceForToken) ? balanceForToken.balance : undefined;
@@ -2469,13 +2463,14 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     balanceBucketFilter: WalletBalanceBucket[],
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<TotalBalancesByTreeNumber> {
     const TXOs = await this.TXOs(txidVersion, chain);
+
     const tokenBalances = await AbstractWallet.getTokenBalancesByTxidVersion(
       TXOs,
-      txidVersion,
-      chain,
       balanceBucketFilter,
+      originShieldTxidForSpendabilityOverride,
     );
 
     // Sort token balances by tree
@@ -2510,11 +2505,13 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     tokenHash: string,
     balanceBucketFilter: WalletBalanceBucket[],
+    originShieldTxidForSpendabilityOverride?: string,
   ): Promise<TreeBalance[]> {
     const totalBalancesByTreeNumber = await this.getTotalBalancesByTreeNumber(
       txidVersion,
       chain,
       balanceBucketFilter,
+      originShieldTxidForSpendabilityOverride,
     );
     const treeSortedBalances = totalBalancesByTreeNumber[tokenHash] ?? [];
     return treeSortedBalances;

@@ -38,7 +38,7 @@ import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet
 import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
-import { AES } from '../../utils';
+import { AES, ZERO_32_BYTE_VALUE } from '../../utils';
 import { POI } from '../../poi/poi';
 
 chai.use(chaiAsPromised);
@@ -61,7 +61,6 @@ const testEncryptionKey = config.encryptionKey;
 
 const tokenAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const tokenData = getTokenDataERC20(tokenAddress);
-const onlySpendable = true;
 type makeNoteFn = (value?: bigint) => Promise<TransactNote>;
 let makeNote: makeNoteFn;
 
@@ -596,11 +595,7 @@ describe('transaction-erc20', function test() {
   it('Should generate a valid signature for hot wallet transaction', async () => {
     transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups =
-      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      );
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion);
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -623,11 +618,7 @@ describe('transaction-erc20', function test() {
   it('Should generate validated inputs for transaction batch', async () => {
     transactionBatch.addOutput(await makeNote());
     const spendingSolutionGroups =
-      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      );
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion);
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -673,11 +664,7 @@ describe('transaction-erc20', function test() {
     );
 
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      ),
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
     ).to.eventually.be.rejectedWith(
       'RAILGUN spendable private balance too low for 0x000925cdf66ddf5b88016df1fe915e68eff8f192',
     );
@@ -685,11 +672,7 @@ describe('transaction-erc20', function test() {
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(21000000000027360000000000n));
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      ),
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
     ).to.eventually.be.rejectedWith(
       'RAILGUN spendable private balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
@@ -697,11 +680,7 @@ describe('transaction-erc20', function test() {
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(await makeNote(11000000000027360000000000n));
     await expect(
-      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      ),
+      transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
     ).to.eventually.be.rejectedWith(
       'RAILGUN spendable private balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3',
     );
@@ -717,11 +696,7 @@ describe('transaction-erc20', function test() {
     });
 
     await expect(
-      transaction2.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      ),
+      transaction2.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion),
     ).to.eventually.be.rejectedWith(
       'RAILGUN spendable private balance too low for 0x00000000000000000000000000000000000000ff',
     );
@@ -735,11 +710,7 @@ describe('transaction-erc20', function test() {
       tokenData,
     });
     const spendingSolutionGroups =
-      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(
-        wallet,
-        txidVersion,
-        onlySpendable,
-      );
+      await transactionBatch.generateValidSpendingSolutionGroupsAllOutputs(wallet, txidVersion);
     expect(spendingSolutionGroups.length).to.equal(1);
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
@@ -812,6 +783,32 @@ describe('transaction-erc20', function test() {
     expect(txs.length).to.equal(1);
     expect(txs[0].nullifiers.length).to.equal(1);
     expect(txs[0].commitments.length).to.equal(2);
+  });
+
+  it('Should create dummy transaction proofs with origin shield txid', async () => {
+    transactionBatch.addOutput(await makeNote());
+    const txs = await transactionBatch.generateDummyTransactions(
+      prover,
+      wallet,
+      txidVersion,
+      testEncryptionKey,
+      '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee', // originShieldTxidForSpendabilityOverride
+    );
+    expect(txs.length).to.equal(1);
+    expect(txs[0].nullifiers.length).to.equal(1);
+    expect(txs[0].commitments.length).to.equal(2);
+
+    await expect(
+      transactionBatch.generateDummyTransactions(
+        prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        ZERO_32_BYTE_VALUE, // originShieldTxidForSpendabilityOverride
+      ),
+    ).to.be.rejectedWith(
+      'RAILGUN balance too low for 0x5fbdb2315678afecb367f032d93f642f64180aa3 from shield origin txid 0x0000000000000000000000000000000000000000000000000000000000000000. Amount required: 65000000000000000000. Amount available: 0.',
+    );
   });
 
   this.afterAll(async () => {
