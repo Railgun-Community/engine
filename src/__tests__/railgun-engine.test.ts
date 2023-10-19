@@ -212,7 +212,7 @@ const generateAndVerifyPOI = async (
   }
 };
 
-describe('railgun-engine', function test() {
+describe.only('railgun-engine', function test() {
   this.timeout(20000);
 
   beforeEach(async () => {

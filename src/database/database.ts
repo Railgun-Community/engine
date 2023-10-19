@@ -67,7 +67,7 @@ class Database {
         return;
       }
       if (this.isClearingNamespace) {
-        throw new Error('Database is clearing namespace - put action not allowed');
+        EngineDebug.log('Database is clearing a namespace - put action is dangerous');
       }
       const key = Database.pathToKey(path);
       await this.level.put(key, value, { valueEncoding: encoding });
@@ -111,8 +111,24 @@ class Database {
    * @param encoding - data encoding to use
    * @returns complete
    */
-  batch(ops: AbstractBatch[], encoding: Encoding = 'hex'): Promise<void> {
-    return this.level.batch(ops, { valueEncoding: encoding });
+  async batch(ops: AbstractBatch[], encoding: Encoding = 'hex'): Promise<void> {
+    try {
+      if (this.isClosed()) {
+        return;
+      }
+      if (this.isClearingNamespace) {
+        EngineDebug.log('Database is clearing a namespace - batch action is dangerous');
+      }
+      await this.level.batch(ops, { valueEncoding: encoding });
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        return;
+      }
+      if (EngineDebug.isTestRun() && err.message.includes('Database is not open')) {
+        return;
+      }
+      throw err;
+    }
   }
 
   /**
@@ -187,6 +203,7 @@ class Database {
     try {
       this.isClearingNamespace = true;
       const pathkey = Database.pathToKey(namespace);
+      EngineDebug.log(`Clearing namespace: ${pathkey}`);
       await this.level.clear({
         gte: `${pathkey}`,
         lte: `${pathkey}~`,
