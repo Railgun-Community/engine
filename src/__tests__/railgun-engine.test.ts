@@ -710,197 +710,200 @@ describe.only('railgun-engine', function test() {
     expect(historyHighStartingBlock.length).to.equal(0);
   }).timeout(90000);
 
-  it('[HH] Should shield, max-unshield without relayer, generate POIs, and pull formatted spend/receive transaction history', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
-      this.skip();
-      return;
-    }
+  it.only(
+    '[HH] Should shield, max-unshield without relayer, generate POIs, and pull formatted spend/receive transaction history',
+    async function run() {
+      if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+        this.skip();
+        return;
+      }
 
-    const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
-      WalletBalanceBucket.Spendable,
-    ]);
-    expect(initialBalance).to.equal(undefined);
+      const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+        WalletBalanceBucket.Spendable,
+      ]);
+      expect(initialBalance).to.equal(undefined);
 
-    const address = wallet.getAddress(chain);
-    const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
+      const address = wallet.getAddress(chain);
+      const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
-    const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
-      WalletBalanceBucket.Spendable,
-    ]);
-    expect(balance).to.equal(BigInt('109725000000000000000000'));
+      const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+        WalletBalanceBucket.Spendable,
+      ]);
+      expect(balance).to.equal(BigInt('109725000000000000000000'));
 
-    const tokenData = getTokenDataERC20(tokenAddress);
+      const tokenData = getTokenDataERC20(tokenAddress);
 
-    // Create transaction
-    const transactionBatch = new TransactionBatch(chain);
-    transactionBatch.addUnshieldData({
-      toAddress: ethersWallet.address,
-      value: BigInt('109725000000000000000000'),
-      tokenData,
-    });
+      // Create transaction
+      const transactionBatch = new TransactionBatch(chain);
+      transactionBatch.addUnshieldData({
+        toAddress: ethersWallet.address,
+        value: BigInt('109725000000000000000000'),
+        tokenData,
+      });
 
-    const { provedTransactions } = await transactionBatch.generateTransactions(
-      engine.prover,
-      wallet,
-      txidVersion,
-      testEncryptionKey,
-      () => {},
-      true, // shouldGeneratePreTransactionPOIs
-    );
-    expect(provedTransactions.length).to.equal(1);
-    expect(provedTransactions[0].nullifiers.length).to.equal(1);
-    expect(provedTransactions[0].commitments.length).to.equal(1);
+      const { provedTransactions } = await transactionBatch.generateTransactions(
+        engine.prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+        true, // shouldGeneratePreTransactionPOIs
+      );
+      expect(provedTransactions.length).to.equal(1);
+      expect(provedTransactions[0].nullifiers.length).to.equal(1);
+      expect(provedTransactions[0].commitments.length).to.equal(1);
 
-    TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
+      TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
 
-    const transact = await railgunSmartWalletContract.transact(provedTransactions);
+      const transact = await railgunSmartWalletContract.transact(provedTransactions);
 
-    const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
-    const [transactReceipt] = await Promise.all([
-      transactTx.wait(),
-      promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
-    ]);
-    if (!transactReceipt) {
-      throw new Error('No transaction receipt');
-    }
+      const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
+      const [transactReceipt] = await Promise.all([
+        transactTx.wait(),
+        promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out wallet1 scan'),
+      ]);
+      if (!transactReceipt) {
+        throw new Error('No transaction receipt');
+      }
 
-    const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
-      WalletBalanceBucket.Spendable,
-    ]);
-    expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
+      const newBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
+        WalletBalanceBucket.Spendable,
+      ]);
+      expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
 
-    const shieldCommitment = nToHex(
-      ShieldNote.getShieldNoteHash(
+      const shieldCommitment = nToHex(
+        ShieldNote.getShieldNoteHash(
+          shield.notePublicKey,
+          shield.tokenHash,
+          BigInt('109725000000000000000000'), // Value after fee
+        ),
+        ByteLength.UINT_256,
+      );
+      const blindedCommitmentIn = getBlindedCommitmentForShieldOrTransact(
+        shieldCommitment,
         shield.notePublicKey,
-        shield.tokenHash,
-        BigInt('109725000000000000000000'), // Value after fee
-      ),
-      ByteLength.UINT_256,
-    );
-    const blindedCommitmentIn = getBlindedCommitmentForShieldOrTransact(
-      shieldCommitment,
-      shield.notePublicKey,
-      getGlobalTreePosition(0, 0),
-    );
-    expect(blindedCommitmentIn).to.equal(
-      '0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2',
-    );
-    const poiMerkleProofs = [blindedCommitmentIn].map(createDummyMerkleProof);
+        getGlobalTreePosition(0, 0),
+      );
+      expect(blindedCommitmentIn).to.equal(
+        '0x1add5dfd0299e9dc5af6fdfc0d86c0aaad29f9f9ca61674f67d3d185e28802e2',
+      );
+      const poiMerkleProofs = [blindedCommitmentIn].map(createDummyMerkleProof);
 
-    // Generate POI
-    await generateAndVerifyPOI(
-      shield,
-      transactReceipt,
-      provedTransactions,
-      {
-        anyRailgunTxidMerklerootAfterTransaction:
-          '185cc7d2c8e1c3954ee5421a6589cd05036708ff059b97b9c10e0261ad7d6875',
-        boundParamsHash: '0a4e7bed8287c629fd064665543dc71fdc09b0ab9df7d556f24a1f2f9f018dc7',
-        commitmentsOut: ['0x007aaf0cbee05066820873170e293e44df6766c29da69ac46fd05d4ff2c0a225'],
-        npksOut: [],
-        nullifiers: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee'],
-        nullifyingKey:
-          8368299126798249740586535953124199418524409103803955764525436743456763691384n,
-        railgunTxidMerkleProofIndices:
-          '0000000000000000000000000000000000000000000000000000000000000000',
-        railgunTxidMerkleProofPathElements: [
-          '0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc',
-          '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
-          '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
-          '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
-          '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
-          '1437bb465994e0453357c17a676b9fdba554e215795ebc17ea5012770dfb77c7',
-          '12359ef9572912b49f44556b8bbbfa69318955352f54cfa35cb0f41309ed445a',
-          '2dc656dadc82cf7a4707786f4d682b0f130b6515f7927bde48214d37ec25a46c',
-          '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
-          '244ae3b19397e842778b254cd15c037ed49190141b288ff10eb1390b34dc2c31',
-          '0ca2b107491c8ca6e5f7e22403ea8529c1e349a1057b8713e09ca9f5b9294d46',
-          '18593c75a9e42af27b5e5b56b99c4c6a5d7e7d6e362f00c8e3f69aeebce52313',
-          '17aca915b237b04f873518947a1f440f0c1477a6ac79299b3be46858137d4bfb',
-          '2726c22ad3d9e23414887e8233ee83cc51603f58c48a9c9e33cb1f306d4365c0',
-          '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
-          '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
-        ],
-        randomsIn: ['67c600e777b86d3a1e72a53092e9fe85'],
-        spendingPublicKey: [
-          15684838006997671713939066069845237677934334329285343229142447933587909549584n,
-          11878614856120328179849762231924033298788609151532558727282528569229552954628n,
-        ],
-        token: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
-        utxoPositionsIn: [0],
-        utxoTreeIn: 0,
-        utxoTreeOut: 0,
-        utxoBatchStartPositionOut: 1,
-        railgunTxidIfHasUnshield:
-          '0x018d6143a22e09c18ba2a713985bd1e43a095605d5d259d72d96da2cca604f3e',
-        valuesIn: [109725000000000000000000n],
-        valuesOut: [],
+      // Generate POI
+      await generateAndVerifyPOI(
+        shield,
+        transactReceipt,
+        provedTransactions,
+        {
+          anyRailgunTxidMerklerootAfterTransaction:
+            '185cc7d2c8e1c3954ee5421a6589cd05036708ff059b97b9c10e0261ad7d6875',
+          boundParamsHash: '0a4e7bed8287c629fd064665543dc71fdc09b0ab9df7d556f24a1f2f9f018dc7',
+          commitmentsOut: ['0x007aaf0cbee05066820873170e293e44df6766c29da69ac46fd05d4ff2c0a225'],
+          npksOut: [],
+          nullifiers: ['0x05802951a46d9e999151eb0eb9e4c7c1260b7ee88539011c207dc169c4dd17ee'],
+          nullifyingKey:
+            8368299126798249740586535953124199418524409103803955764525436743456763691384n,
+          railgunTxidMerkleProofIndices:
+            '0000000000000000000000000000000000000000000000000000000000000000',
+          railgunTxidMerkleProofPathElements: [
+            '0488f89b25bc7011eaf6a5edce71aeafb9fe706faa3c0a5cd9cbe868ae3b9ffc',
+            '01c405064436affeae1fc8e30b2e417b4243bbb819adca3b55bb32efc3e43a4f',
+            '0888d37652d10d1781db54b70af87b42a2916e87118f507218f9a42a58e85ed2',
+            '183f531ead7217ebc316b4c02a2aad5ad87a1d56d4fb9ed81bf84f644549eaf5',
+            '093c48f1ecedf2baec231f0af848a57a76c6cf05b290a396707972e1defd17df',
+            '1437bb465994e0453357c17a676b9fdba554e215795ebc17ea5012770dfb77c7',
+            '12359ef9572912b49f44556b8bbbfa69318955352f54cfa35cb0f41309ed445a',
+            '2dc656dadc82cf7a4707786f4d682b0f130b6515f7927bde48214d37ec25a46c',
+            '2500bdfc1592791583acefd050bc439a87f1d8e8697eb773e8e69b44973e6fdc',
+            '244ae3b19397e842778b254cd15c037ed49190141b288ff10eb1390b34dc2c31',
+            '0ca2b107491c8ca6e5f7e22403ea8529c1e349a1057b8713e09ca9f5b9294d46',
+            '18593c75a9e42af27b5e5b56b99c4c6a5d7e7d6e362f00c8e3f69aeebce52313',
+            '17aca915b237b04f873518947a1f440f0c1477a6ac79299b3be46858137d4bfb',
+            '2726c22ad3d9e23414887e8233ee83cc51603f58c48a9c9e33cb1f306d4365c0',
+            '08c5bd0f85cef2f8c3c1412a2b69ee943c6925ecf79798bb2b84e1b76d26871f',
+            '27f7c465045e0a4d8bec7c13e41d793734c50006ca08920732ce8c3096261435',
+          ],
+          randomsIn: ['67c600e777b86d3a1e72a53092e9fe85'],
+          spendingPublicKey: [
+            15684838006997671713939066069845237677934334329285343229142447933587909549584n,
+            11878614856120328179849762231924033298788609151532558727282528569229552954628n,
+          ],
+          token: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+          utxoPositionsIn: [0],
+          utxoTreeIn: 0,
+          utxoTreeOut: 0,
+          utxoBatchStartPositionOut: 1,
+          railgunTxidIfHasUnshield:
+            '0x018d6143a22e09c18ba2a713985bd1e43a095605d5d259d72d96da2cca604f3e',
+          valuesIn: [109725000000000000000000n],
+          valuesOut: [],
 
-        poiMerkleroots: poiMerkleProofs.map((proof) => proof.root),
-        poiInMerkleProofIndices: poiMerkleProofs.map((proof) => proof.indices),
-        poiInMerkleProofPathElements: poiMerkleProofs.map((proof) => proof.elements),
-      },
-      MOCK_LIST_KEY,
-      [],
-    );
+          poiMerkleroots: poiMerkleProofs.map((proof) => proof.root),
+          poiInMerkleProofIndices: poiMerkleProofs.map((proof) => proof.indices),
+          poiInMerkleProofPathElements: poiMerkleProofs.map((proof) => proof.elements),
+        },
+        MOCK_LIST_KEY,
+        [],
+      );
 
-    // check the transactions log
-    const history = await wallet.getTransactionHistory(chain, undefined);
-    expect(history.length).to.equal(2);
+      // check the transactions log
+      const history = await wallet.getTransactionHistory(chain, undefined);
+      expect(history.length).to.equal(2);
 
-    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+      const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
 
-    // Make sure nullifier events map to completed txid.
-    const nullifiers = provedTransactions
-      .map((transaction) => transaction.nullifiers)
-      .flat() as string[];
-    const completedTxid = await engine.getCompletedTxidFromNullifiers(
-      TXIDVersion.V2_PoseidonMerkle,
-      chain,
-      nullifiers,
-    );
-    expect(completedTxid).to.equal(transactTx.hash);
+      // Make sure nullifier events map to completed txid.
+      const nullifiers = provedTransactions
+        .map((transaction) => transaction.nullifiers)
+        .flat() as string[];
+      const completedTxid = await engine.getCompletedTxidFromNullifiers(
+        TXIDVersion.V2_PoseidonMerkle,
+        chain,
+        nullifiers,
+      );
+      expect(completedTxid).to.equal(transactTx.hash);
 
-    // Check first output: Shield (receive only).
-    expect(history[0].receiveTokenAmounts).deep.eq([
-      {
-        tokenData: getTokenDataERC20(tokenAddress),
-        tokenHash: tokenFormatted,
-        amount: BigInt('109725000000000000000000'),
-        memoText: undefined,
-        senderAddress: undefined,
-        shieldFee: '275000000000000000000',
-        balanceBucket: WalletBalanceBucket.Spendable,
-        hasValidPOIForActiveLists: true,
-      },
-    ]);
-    expect(history[0].transferTokenAmounts).deep.eq([]);
-    expect(history[0].relayerFeeTokenAmount).eq(undefined);
-    expect(history[0].changeTokenAmounts).deep.eq([]);
-    expect(history[0].unshieldTokenAmounts).deep.eq([]);
+      // Check first output: Shield (receive only).
+      expect(history[0].receiveTokenAmounts).deep.eq([
+        {
+          tokenData: getTokenDataERC20(tokenAddress),
+          tokenHash: tokenFormatted,
+          amount: BigInt('109725000000000000000000'),
+          memoText: undefined,
+          senderAddress: undefined,
+          shieldFee: '275000000000000000000',
+          balanceBucket: WalletBalanceBucket.Spendable,
+          hasValidPOIForActiveLists: true,
+        },
+      ]);
+      expect(history[0].transferTokenAmounts).deep.eq([]);
+      expect(history[0].relayerFeeTokenAmount).eq(undefined);
+      expect(history[0].changeTokenAmounts).deep.eq([]);
+      expect(history[0].unshieldTokenAmounts).deep.eq([]);
 
-    // Check second output: Unshield (relayer fee + change).
-    // NOTE: No receive token amounts should be logged by history.
-    expect(history[1].receiveTokenAmounts).deep.eq(
-      [],
-      "Receive amount should be filtered out - it's the same as change output.",
-    );
-    expect(history[1].transferTokenAmounts).deep.eq([]);
-    expect(history[1].relayerFeeTokenAmount).eq(undefined);
-    expect(history[1].changeTokenAmounts).deep.eq([]); // No change output
-    expect(history[1].unshieldTokenAmounts).deep.eq([
-      {
-        tokenData: getTokenDataERC20(tokenAddress),
-        tokenHash: tokenFormatted,
-        amount: BigInt('109450687500000000000000'), // balance minus fee
-        recipientAddress: ethersWallet.address,
-        memoText: undefined,
-        senderAddress: undefined,
-        unshieldFee: '274312500000000000000',
-        hasValidPOIForActiveLists: false,
-      },
-    ]);
-  }).timeout(120000);
+      // Check second output: Unshield (relayer fee + change).
+      // NOTE: No receive token amounts should be logged by history.
+      expect(history[1].receiveTokenAmounts).deep.eq(
+        [],
+        "Receive amount should be filtered out - it's the same as change output.",
+      );
+      expect(history[1].transferTokenAmounts).deep.eq([]);
+      expect(history[1].relayerFeeTokenAmount).eq(undefined);
+      expect(history[1].changeTokenAmounts).deep.eq([]); // No change output
+      expect(history[1].unshieldTokenAmounts).deep.eq([
+        {
+          tokenData: getTokenDataERC20(tokenAddress),
+          tokenHash: tokenFormatted,
+          amount: BigInt('109450687500000000000000'), // balance minus fee
+          recipientAddress: ethersWallet.address,
+          memoText: undefined,
+          senderAddress: undefined,
+          unshieldFee: '274312500000000000000',
+          hasValidPOIForActiveLists: false,
+        },
+      ]);
+    },
+  ).timeout(120000);
 
   it('[HH] Should shield, transfer and update balance, and pull formatted spend/receive transaction history', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {

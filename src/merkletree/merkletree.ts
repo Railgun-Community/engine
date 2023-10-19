@@ -189,6 +189,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearAllNodeHashes(tree: number): Promise<void> {
+    this.lockUpdates = true;
     for (let level = 0; level < TREE_DEPTH; level += 1) {
       // eslint-disable-next-line no-await-in-loop
       await this.db.clearNamespace(this.getNodeHashLevelPath(tree, level));
@@ -196,6 +197,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     if (isDefined(this.cachedNodeHashes[tree])) {
       this.cachedNodeHashes[tree] = {};
     }
+    this.lockUpdates = false;
   }
 
   static getGlobalPosition(tree: number, index: number): number {
@@ -215,7 +217,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   /**
    * Construct data DB path from tree number and index
    */
-  getDataDBPath(tree: number, index: number): string[] {
+  protected getDataDBPath(tree: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
       hexlify(new BN(0).notn(32)), // 2^32-1
@@ -225,6 +227,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   async updateData(tree: number, index: number, data: T): Promise<void> {
     try {
+      if (this.lockUpdates) {
+        throw new Error('Updates locked for merkletree');
+      }
+
       this.lockUpdates = true;
       const oldData = await this.getData(tree, index);
       if (oldData.hash !== data.hash) {
@@ -410,7 +416,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearDataForMerkletree(): Promise<void> {
+    this.lockUpdates = true;
     await this.db.clearNamespace(this.getMerkletreeDBPrefix());
+    this.lockUpdates = false;
     this.cachedNodeHashes = {};
     this.treeLengths = [];
   }
@@ -456,6 +464,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
         value: data,
       });
     });
+
+    if (this.lockUpdates) {
+      throw new Error('Updates locked for merkletree');
+    }
 
     await Promise.all([
       this.db.batch(nodeWriteBatch),
@@ -814,10 +826,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * @param startingIndex - index of first leaf
    */
   async queueLeaves(tree: number, startingIndex: number, leaves: T[]): Promise<void> {
-    if (this.lockUpdates) {
-      return;
-    }
-
     // Get tree length
     const treeLength = await this.getTreeLength(tree);
 

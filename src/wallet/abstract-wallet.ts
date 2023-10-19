@@ -173,6 +173,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   private readonly prover: Prover;
 
+  private readonly isClearingBalances: boolean[][] = [];
+
   private creationBlockNumbers: Optional<number[][]>;
 
   // [type: [id: CachedStoredReceiveCommitment[]]]
@@ -2532,6 +2534,11 @@ abstract class AbstractWallet extends EventEmitter {
     progressCallback: Optional<(progress: number) => void>,
   ) {
     try {
+      if (this.isClearingBalances[chain.type]?.[chain.id] === true) {
+        EngineDebug.log('Clearing balances... cannot scan wallet balances.');
+        return;
+      }
+
       EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
@@ -2797,7 +2804,10 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Clear wallet namespace, including scanned TXOs and all details
     const namespace = this.getWalletDBPrefix(chain);
+    this.isClearingBalances[chain.type] ??= [];
+    this.isClearingBalances[chain.type][chain.id] = true;
     await this.db.clearNamespace(namespace);
+    this.isClearingBalances[chain.type][chain.id] = false;
 
     walletDetails.treeScannedHeights = [];
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetails));
