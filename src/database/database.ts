@@ -28,6 +28,8 @@ type Path = BytesData[];
 class Database {
   readonly level: LevelUp;
 
+  private isClearingNamespace: boolean = false;
+
   /**
    * Create a Database object from levelDB store
    * @param leveldown - abstract-leveldown compatible store
@@ -61,6 +63,12 @@ class Database {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async put(path: Path, value: any, encoding: Encoding = 'hex'): Promise<void> {
     try {
+      if (this.isClosed()) {
+        return;
+      }
+      if (this.isClearingNamespace) {
+        throw new Error('Database is clearing namespace - put action not allowed');
+      }
       const key = Database.pathToKey(path);
       await this.level.put(key, value, { valueEncoding: encoding });
     } catch (err) {
@@ -176,11 +184,18 @@ class Database {
    * @returns complete
    */
   async clearNamespace(namespace: string[]): Promise<void> {
-    const pathkey = Database.pathToKey(namespace);
-    await this.level.clear({
-      gte: `${pathkey}`,
-      lte: `${pathkey}~`,
-    });
+    try {
+      this.isClearingNamespace = true;
+      const pathkey = Database.pathToKey(namespace);
+      await this.level.clear({
+        gte: `${pathkey}`,
+        lte: `${pathkey}~`,
+      });
+      this.isClearingNamespace = false;
+    } catch (err) {
+      this.isClearingNamespace = false;
+      throw err;
+    }
   }
 
   /**
