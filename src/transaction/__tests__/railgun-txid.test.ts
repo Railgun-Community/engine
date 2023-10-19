@@ -34,7 +34,7 @@ describe('railgun-txid', () => {
         undefined,
         '0x1e52cee52f67c37a468458671cddde6b56390dcbdc4cf3b770badc0e78d66401',
       ),
-    ).to.equal('0x9dab1e67409e2f7e248c634732cc669e39b739a8255a2bd7af99d078022845d5');
+    ).to.equal('0x099cd3ebcadaf6ff470d16bc0186fb5f26cd4103e9970effc9b6679478e11c72');
     expect(
       calculateRailgunTransactionVerificationHash(
         '0x9dab1e67409e2f7e248c634732cc669e39b739a8255a2bd7af99d078022845d5',

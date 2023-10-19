@@ -106,5 +106,5 @@ export const calculateRailgunTransactionVerificationHash = (
     hexToBytes(previousVerificationHash ?? '0x'),
     hexToBytes(firstNullifier),
   ]);
-  return formatToByteLength(keccak256(combinedData), ByteLength.UINT_256, true);
+  return formatToByteLength(keccak256(hexToBytes(combinedData)), ByteLength.UINT_256, true);
 };
