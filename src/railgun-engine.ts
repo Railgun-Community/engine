@@ -620,9 +620,9 @@ class RailgunEngine extends EventEmitter {
       switch (txidVersion) {
         case TXIDVersion.V2_PoseidonMerkle: {
           // Every 1 min for POI nodes, 3 min for wallets
-          const refreshDelayMin = this.isPOINode ? 1 * 60 * 1000 : 3 * 60 * 1000;
+          const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 3 * 60 * 1000;
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMin);
+          this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMsec);
           break;
         }
         // case TXIDVersion.V3_PoseidonMerkle:
@@ -632,21 +632,21 @@ class RailgunEngine extends EventEmitter {
       }
     }
 
-    this.pollingRailgunTransactions[chain.type] = [];
+    this.pollingRailgunTransactions[chain.type] ??= [];
     this.pollingRailgunTransactions[chain.type][chain.id] = true;
   }
 
   async syncRailgunTransactionsPoller(
     txidVersion: TXIDVersion,
     chain: Chain,
-    refreshDelayMin: number,
+    refreshDelayMsec: number,
   ) {
     await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
 
-    await delay(refreshDelayMin);
+    await delay(refreshDelayMsec);
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMin);
+    this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMsec);
   }
 
   /**
