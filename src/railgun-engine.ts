@@ -224,7 +224,11 @@ class RailgunEngine extends EventEmitter {
   async triggerDelayedTXIDMerkletreeSync(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
     // Delay 10 seconds, and then trigger a Railgun Txid Merkletree sync.
     await delay(10000);
-    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
+    await this.syncRailgunTransactionsForTXIDVersion(
+      txidVersion,
+      chain,
+      'delayed sync after new utxo',
+    );
   }
 
   /**
@@ -641,7 +645,7 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     refreshDelayMsec: number,
   ) {
-    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
+    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'poller');
 
     await delay(refreshDelayMsec);
 
@@ -653,7 +657,11 @@ class RailgunEngine extends EventEmitter {
    * Sync Railgun txid merkletree.
    * @param chain - chain type/id to scan
    */
-  async syncRailgunTransactionsForTXIDVersion(txidVersion: TXIDVersion, chain: Chain) {
+  async syncRailgunTransactionsForTXIDVersion(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    trigger: string,
+  ) {
     if (!this.hasTXIDMerkletree(txidVersion, chain)) {
       EngineDebug.log(
         `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
@@ -680,7 +688,7 @@ class RailgunEngine extends EventEmitter {
 
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle:
-        await this.performSyncRailgunTransactionsV2(chain);
+        await this.performSyncRailgunTransactionsV2(chain, trigger);
         break;
       // case TXIDVersion.V3_PoseidonMerkle:
       //   throw new Error('Sync not implemented for V3 Poseidon Merkle');
@@ -691,11 +699,13 @@ class RailgunEngine extends EventEmitter {
     txidMerkletree.isScanning = false;
   }
 
-  private async performSyncRailgunTransactionsV2(chain: Chain): Promise<void> {
+  private async performSyncRailgunTransactionsV2(chain: Chain, trigger: string): Promise<void> {
     const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
     try {
-      EngineDebug.log(`sync railgun txids: chain ${chain.type}:${chain.id}`);
+      EngineDebug.log(
+        `sync railgun txids: chain ${chain.type}:${chain.id}: triggered by ${trigger}`,
+      );
 
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.03); // 3%
 
@@ -762,7 +772,7 @@ class RailgunEngine extends EventEmitter {
 
         if (railgunTransactions.length === 5000) {
           // Max query amount is 5000 from Wallet. Kick off any query.
-          await this.performSyncRailgunTransactionsV2(chain);
+          await this.performSyncRailgunTransactionsV2(chain, 'retrigger after 5000 synced');
         } else {
           // Finish
           this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
@@ -1091,7 +1101,7 @@ class RailgunEngine extends EventEmitter {
       txidMerkletree.savedPOILaunchSnapshot = false;
       txidMerkletree.isScanning = false; // Clear before calling syncRailgunTransactions.
       // eslint-disable-next-line no-await-in-loop
-      await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
+      await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'full txid reset');
     }
   }
 
@@ -1104,7 +1114,7 @@ class RailgunEngine extends EventEmitter {
     txidMerkletree.isScanning = true; // Don't allow scans while removing leaves.
     await txidMerkletree.clearLeavesAfterTxidIndex(txidIndex);
     txidMerkletree.isScanning = false; // Clear before calling syncRailgunTransactions.
-    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain);
+    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'reset after txid index');
   }
 
   /**
