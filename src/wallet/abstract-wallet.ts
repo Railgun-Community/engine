@@ -2365,6 +2365,19 @@ abstract class AbstractWallet extends EventEmitter {
     return AbstractWallet.getTokenBalancesByTxidVersion(TXOs, balanceBucketFilter);
   }
 
+  async getTokenBalancesForUnshieldToOrigin(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    originShieldTxidForSpendabilityOverride?: string,
+  ): Promise<TokenBalances> {
+    const TXOs = await this.TXOs(txidVersion, chain);
+    return AbstractWallet.getTokenBalancesByTxidVersion(
+      TXOs,
+      [],
+      originShieldTxidForSpendabilityOverride,
+    );
+  }
+
   async getTokenBalancesByBucket(
     txidVersion: TXIDVersion,
     chain: Chain,

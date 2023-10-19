@@ -31,7 +31,7 @@ import { hashBoundParams } from '../bound-params';
 import { MEMO_SENDER_RANDOM_NULL, TXIDVersion } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { TransactionBatch } from '../transaction-batch';
-import { getTokenDataERC20 } from '../../note/note-util';
+import { getTokenDataERC20, getTokenDataHashERC20 } from '../../note/note-util';
 import { TokenDataGetter } from '../../token/token-data-getter';
 import { ContractStore } from '../../contracts/contract-store';
 import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
@@ -787,6 +787,17 @@ describe('transaction-erc20', function test() {
 
   it('Should create dummy transaction proofs with origin shield txid', async () => {
     transactionBatch.addOutput(await makeNote());
+
+    const tokenBalancesForUnshieldToOrigin = await wallet.getTokenBalancesForUnshieldToOrigin(
+      txidVersion,
+      chain,
+      '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee',
+    );
+
+    expect(tokenBalancesForUnshieldToOrigin[getTokenDataHashERC20(tokenAddress)]?.balance).to.equal(
+      9975062344139650872817n, // 000000000000021cbfcc6fd98333b5f1
+    );
+
     const txs = await transactionBatch.generateDummyTransactions(
       prover,
       wallet,
