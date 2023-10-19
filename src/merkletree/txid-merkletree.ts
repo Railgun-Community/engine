@@ -273,10 +273,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     return railgunTransaction.blockNumber < blockNumber;
   }
 
-  async getLatestGraphID(): Promise<Optional<string>> {
+  async getLatestRailgunTransaction(): Promise<Optional<RailgunTransactionWithHash>> {
     const { tree, index } = await this.getLatestTreeAndIndex();
-    const railgunTransaction = await this.getRailgunTransaction(tree, index);
-    return railgunTransaction?.graphID;
+    return this.getRailgunTransaction(tree, index);
   }
 
   async queueRailgunTransactions(

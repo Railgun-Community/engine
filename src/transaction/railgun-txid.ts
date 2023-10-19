@@ -1,8 +1,16 @@
 import { poseidon } from 'circomlibjs';
 import { RailgunTransaction, RailgunTransactionWithHash, TXIDVersion } from '../models';
-import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import {
+  ByteLength,
+  combine,
+  formatToByteLength,
+  hexToBigInt,
+  hexToBytes,
+  nToHex,
+} from '../utils/bytes';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { getGlobalTreePosition } from '../poi/global-tree-position';
+import { ZERO_32_BYTE_VALUE, keccak256 } from '../utils';
 
 const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
   const padded = [...array];
@@ -86,4 +94,17 @@ export const createRailgunTransactionWithHash = (
       txidVersion,
     ),
   };
+};
+
+export const calculateRailgunTransactionVerificationHash = (
+  previousVerificationHash: Optional<string>,
+  firstNullifier: string,
+): string => {
+  // hash[n] = keccak(hash[n-1] ?? 0, n_firstNullifier);
+
+  const combinedData: string = combine([
+    hexToBytes(previousVerificationHash ?? '0x'),
+    hexToBytes(firstNullifier),
+  ]);
+  return formatToByteLength(keccak256(combinedData), ByteLength.UINT_256, true);
 };

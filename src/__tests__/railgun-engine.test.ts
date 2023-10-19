@@ -59,7 +59,10 @@ import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import { POI, POIListType } from '../poi/poi';
 import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-interface.test';
 import { hashBoundParams } from '../transaction/bound-params';
-import { createRailgunTransactionWithHash } from '../transaction/railgun-txid';
+import {
+  calculateRailgunTransactionVerificationHash,
+  createRailgunTransactionWithHash,
+} from '../transaction/railgun-txid';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import { POIEngineProofInputs, TXIDVersion, TXOPOIListStatus } from '../models/poi-types';
 import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitment';
@@ -162,6 +165,10 @@ const generateAndVerifyPOI = async (
         utxoTreeIn: 0,
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: utxoBatchStartPosition,
+        verificationHash: calculateRailgunTransactionVerificationHash(
+          undefined,
+          transaction.nullifiers[0] as string,
+        ),
       };
       utxoBatchStartPosition += transaction.commitments.length;
 

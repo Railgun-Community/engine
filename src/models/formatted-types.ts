@@ -156,6 +156,7 @@ export type RailgunTransaction = {
   utxoTreeOut: number;
   utxoBatchStartPositionOut: number;
   timestamp: number;
+  verificationHash: string;
 };
 
 export type RailgunTransactionWithHash = RailgunTransaction & {

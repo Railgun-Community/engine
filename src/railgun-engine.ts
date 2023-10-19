@@ -46,7 +46,10 @@ import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
 import { delay, isTransactCommitment, promiseTimeout } from './utils';
-import { createRailgunTransactionWithHash } from './transaction/railgun-txid';
+import {
+  calculateRailgunTransactionVerificationHash,
+  createRailgunTransactionWithHash,
+} from './transaction/railgun-txid';
 import {
   ACTIVE_TXID_VERSIONS,
   ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS,
@@ -734,10 +737,11 @@ class RailgunEngine extends EventEmitter {
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.15); // 15%
 
       const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-      const latestGraphID: Optional<string> = await txidMerkletree.getLatestGraphID();
+      const latestRailgunTransaction: Optional<RailgunTransactionWithHash> =
+        await txidMerkletree.getLatestRailgunTransaction();
       const railgunTransactions: RailgunTransaction[] = await this.quickSyncRailgunTransactions(
         chain,
-        latestGraphID,
+        latestRailgunTransaction?.graphID,
       );
 
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.4); // 40%
@@ -746,6 +750,7 @@ class RailgunEngine extends EventEmitter {
         txidVersion,
         chain,
         railgunTransactions,
+        latestRailgunTransaction?.verificationHash,
         maxTxidIndex,
       );
 
@@ -787,6 +792,7 @@ class RailgunEngine extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransaction[],
+    latestVerificationHash?: string,
     maxTxidIndex?: number,
   ) {
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
@@ -796,6 +802,8 @@ class RailgunEngine extends EventEmitter {
 
     const toQueue: RailgunTransactionWithHash[] = [];
 
+    let previousVerificationHash = latestVerificationHash;
+
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransaction of railgunTransactions) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(
@@ -804,6 +812,7 @@ class RailgunEngine extends EventEmitter {
       );
       const {
         commitments,
+        nullifiers,
         txid,
         unshield,
         railgunTxid,
@@ -811,6 +820,7 @@ class RailgunEngine extends EventEmitter {
         utxoBatchStartPositionOut,
         blockNumber,
         timestamp,
+        verificationHash,
       } = railgunTransactionWithTxid;
 
       // Update existing commitments/unshield events.
@@ -906,6 +916,22 @@ class RailgunEngine extends EventEmitter {
         );
         break;
       }
+
+      const expectedVerificationHash = calculateRailgunTransactionVerificationHash(
+        previousVerificationHash,
+        nullifiers[0],
+      );
+
+      if (expectedVerificationHash !== verificationHash) {
+        EngineDebug.error(
+          new Error(
+            `Stopping queue of Railgun TXIDs - Invalid verification hash. This occurs very rarely during a chain re-org and will resolve itself in minutes.`,
+          ),
+        );
+        break;
+      }
+
+      previousVerificationHash = expectedVerificationHash;
 
       toQueue.push(railgunTransactionWithTxid);
     }

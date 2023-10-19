@@ -1,6 +1,9 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { getRailgunTxidLeafHash } from '../railgun-txid';
+import {
+  calculateRailgunTransactionVerificationHash,
+  getRailgunTxidLeafHash,
+} from '../railgun-txid';
 import { TXIDVersion } from '../../models';
 import { ByteLength, nToHex } from '../../utils';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
@@ -23,5 +26,20 @@ describe('railgun-txid', () => {
         ByteLength.UINT_256,
       ),
     );
+  });
+
+  it('Should calculate verificationHash', () => {
+    expect(
+      calculateRailgunTransactionVerificationHash(
+        undefined,
+        '0x1e52cee52f67c37a468458671cddde6b56390dcbdc4cf3b770badc0e78d66401',
+      ),
+    ).to.equal('0x9dab1e67409e2f7e248c634732cc669e39b739a8255a2bd7af99d078022845d5');
+    expect(
+      calculateRailgunTransactionVerificationHash(
+        '0x9dab1e67409e2f7e248c634732cc669e39b739a8255a2bd7af99d078022845d5',
+        '0x26d7d0d235dc1849e9794061ebc74e9ea211b8b5004081d26c7d086bdd3c0c35',
+      ),
+    ).to.equal('0x5b56d81f2ac6b4caf15508fce1d68d5a6e9a157b97c1d0938078574b0aca3842');
   });
 });
