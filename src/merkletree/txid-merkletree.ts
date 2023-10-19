@@ -273,10 +273,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     return railgunTransaction.blockNumber < blockNumber;
   }
 
-  async getLatestGraphID(): Promise<Optional<string>> {
+  async getLatestRailgunTransaction(): Promise<Optional<RailgunTransactionWithHash>> {
     const { tree, index } = await this.getLatestTreeAndIndex();
-    const railgunTransaction = await this.getRailgunTransaction(tree, index);
-    return railgunTransaction?.graphID;
+    return this.getRailgunTransaction(tree, index);
   }
 
   async queueRailgunTransactions(
@@ -418,6 +417,13 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       throw new Error('Error saving POI launch snapshot');
     }
     this.savedPOILaunchSnapshot = true;
+  }
+
+  async clearLeavesForInvalidVerificationHash(numLeavesToClear: number): Promise<void> {
+    const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
+    const latestTxidIndex = TXIDMerkletree.getGlobalPosition(latestTree, latestIndex);
+    const clearToTxidIndex = Math.max(-1, latestTxidIndex - numLeavesToClear);
+    await this.clearLeavesAfterTxidIndex(clearToTxidIndex);
   }
 
   async clearLeavesAfterTxidIndex(txidIndex: number): Promise<void> {

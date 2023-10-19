@@ -140,6 +140,7 @@ describe('prover', () => {
         utxoTreeIn: 0,
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: 1,
+        verificationHash: 'todo',
       },
       TXIDVersion.V2_PoseidonMerkle,
     );

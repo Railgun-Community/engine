@@ -8,6 +8,7 @@ import { Database } from '../../database/database';
 import { TXIDMerkletree } from '../txid-merkletree';
 import { RailgunTransaction, TXIDVersion } from '../../models';
 import {
+  calculateRailgunTransactionVerificationHash,
   createRailgunTransactionWithHash,
   getRailgunTransactionID,
 } from '../../transaction/railgun-txid';
@@ -150,6 +151,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 0,
+          verificationHash: 'todo',
         },
         {
           graphID: '0x10',
@@ -163,6 +165,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 2,
+          verificationHash: 'todo',
         },
       ];
       const railgunTransactionsWithTxids = railgunTransactions.map((railgunTransaction) =>
@@ -283,6 +286,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 4,
+          verificationHash: 'todo',
         },
         {
           graphID: '0x13',
@@ -300,6 +304,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 6,
+          verificationHash: 'todo',
         },
       ];
       const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map((railgunTransaction2) =>

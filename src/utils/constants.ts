@@ -51,4 +51,4 @@ export const CURRENT_UTXO_MERKLETREE_HISTORY_VERSION = 12;
 /**
  * Increment to issue fresh txid merkletree rescan on next launch.
  */
-export const CURRENT_TXID_MERKLETREE_HISTORY_VERSION = 13;
+export const CURRENT_TXID_MERKLETREE_HISTORY_VERSION = 15;
