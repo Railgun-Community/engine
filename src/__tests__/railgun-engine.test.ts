@@ -56,8 +56,12 @@ import { createPollingJsonRpcProviderForListeners } from '../provider/polling-ut
 import { isDefined } from '../utils/is-defined';
 import { PollingJsonRpcProvider } from '../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
-import { POI, POIListType } from '../poi/poi';
-import { MOCK_LIST_KEY, TestPOINodeInterface } from '../test/test-poi-node-interface.test';
+import { POI } from '../poi/poi';
+import {
+  MOCK_LIST,
+  MOCK_LIST_KEY,
+  TestPOINodeInterface,
+} from '../test/test-poi-node-interface.test';
 import { hashBoundParams } from '../transaction/bound-params';
 import { createRailgunTransactionWithHash } from '../transaction/railgun-txid';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
@@ -245,7 +249,7 @@ describe('railgun-engine', function test() {
       .returns([MOCK_LIST_KEY]);
 
     // Activate POI list
-    POI.init([{ key: MOCK_LIST_KEY, type: POIListType.Active }], new TestPOINodeInterface());
+    POI.init([MOCK_LIST], new TestPOINodeInterface());
 
     // EngineDebug.init(console); // uncomment for logs
     provider = new PollingJsonRpcProvider(config.rpc, config.chainId);
@@ -284,7 +288,7 @@ describe('railgun-engine', function test() {
   });
 
   after(() => {
-    POI.init([{ key: MOCK_LIST_KEY, type: POIListType.Gather }], new TestPOINodeInterface());
+    POI.init([MOCK_LIST], new TestPOINodeInterface());
   });
 
   it('[HH] Should load existing wallets', async function run() {

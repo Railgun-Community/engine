@@ -1,7 +1,11 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { POI, POIListType } from '../poi';
-import { MOCK_LIST_KEY, TestPOINodeInterface } from '../../test/test-poi-node-interface.test';
+import {
+  MOCK_LIST,
+  MOCK_LIST_KEY,
+  TestPOINodeInterface,
+} from '../../test/test-poi-node-interface.test';
 import {
   Chain,
   CommitmentType,
@@ -68,9 +72,19 @@ describe('poi', () => {
   before(() => {
     POI.init(
       [
-        { key: MOCK_LIST_KEY, type: POIListType.Gather },
-        { key: activeList1, type: POIListType.Active },
-        { key: activeList2, type: POIListType.Active },
+        { key: MOCK_LIST_KEY, type: POIListType.Gather, name: 'mock list', description: 'mock' },
+        {
+          key: activeList1,
+          type: POIListType.Active,
+          name: 'active list 1',
+          description: 'active-1',
+        },
+        {
+          key: activeList2,
+          type: POIListType.Active,
+          name: 'active list 2',
+          description: 'active-2',
+        },
       ],
       new TestPOINodeInterface(),
     );
@@ -78,7 +92,7 @@ describe('poi', () => {
   });
 
   after(() => {
-    POI.init([{ key: MOCK_LIST_KEY, type: POIListType.Gather }], new TestPOINodeInterface());
+    POI.init([MOCK_LIST], new TestPOINodeInterface());
   });
 
   it('Should get which list keys can generate spent POIs', async () => {

@@ -11,8 +11,16 @@ import {
 } from '../models/poi-types';
 import { POINodeInterface } from '../poi/poi-node-interface';
 import { MerkleProof } from '../models/formatted-types';
+import { POIList, POIListType } from '../poi';
 
 export const MOCK_LIST_KEY = 'test_list';
+
+export const MOCK_LIST: POIList = {
+  key: MOCK_LIST_KEY,
+  type: POIListType.Gather,
+  name: 'mock list',
+  description: 'mock',
+};
 
 export class TestPOINodeInterface extends POINodeInterface {
   // eslint-disable-next-line class-methods-use-this

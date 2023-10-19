@@ -19,6 +19,8 @@ import { isShieldCommitmentType, isTransactCommitmentType } from '../utils/commi
 export type POIList = {
   key: string;
   type: POIListType;
+  name: string;
+  description: string;
 };
 
 export enum POIListType {
