@@ -86,7 +86,11 @@ import { TokenDataGetter } from '../token/token-data-getter';
 import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
 import { PrivateInputsRailgun, PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
-import { isTransactCommitment, isTransactCommitmentType } from '../utils/commitment';
+import {
+  isShieldCommitmentType,
+  isTransactCommitment,
+  isTransactCommitmentType,
+} from '../utils/commitment';
 import { POI } from '../poi/poi';
 import {
   getBlindedCommitmentForShieldOrTransact,
@@ -2411,10 +2415,11 @@ abstract class AbstractWallet extends EventEmitter {
         const balanceBucket = POI.getBalanceBucket(txo);
 
         if (isDefined(originShieldTxidForSpendabilityOverride)) {
-          // Only for Unshield-To-Origin transactions. Filter TXOs by the provided txid.
+          // Only for Unshield-To-Origin transactions. Filter TXOs by the provided shield txid.
           if (
+            !isShieldCommitmentType(txo.commitmentType) ||
             formatToByteLength(txo.txid, ByteLength.UINT_256) !==
-            formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
+              formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
           ) {
             // Skip if txid doesn't match.
             return;
