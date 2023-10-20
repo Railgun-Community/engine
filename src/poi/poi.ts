@@ -67,6 +67,9 @@ export class POI {
 
     const activeListKeys = POI.getActiveListKeys();
     if (!pois || !this.hasAllKeys(pois, activeListKeys)) {
+      if (isShieldCommitmentType(txo.commitmentType)) {
+        return WalletBalanceBucket.ShieldPending;
+      }
       return isChange
         ? WalletBalanceBucket.MissingInternalPOI
         : WalletBalanceBucket.MissingExternalPOI;
