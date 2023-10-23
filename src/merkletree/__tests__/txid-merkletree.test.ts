@@ -151,7 +151,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 0,
-          verificationHash: 'todo',
+          verificationHash: 'test',
         },
         {
           graphID: '0x10',
@@ -165,7 +165,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 2,
-          verificationHash: 'todo',
+          verificationHash: 'test',
         },
       ];
       const railgunTransactionsWithTxids = railgunTransactions.map((railgunTransaction) =>
@@ -233,6 +233,7 @@ describe('txid-merkletree', () => {
         utxoTreeIn: 0,
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: 0,
+        verificationHash: 'test',
       });
 
       expect(
@@ -257,6 +258,7 @@ describe('txid-merkletree', () => {
         utxoTreeIn: 0,
         utxoTreeOut: 0,
         utxoBatchStartPositionOut: 0,
+        verificationHash: 'test',
       });
 
       // Make sure new constructed tree inherits db values
@@ -286,7 +288,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 4,
-          verificationHash: 'todo',
+          verificationHash: 'test',
         },
         {
           graphID: '0x13',
@@ -304,7 +306,7 @@ describe('txid-merkletree', () => {
           utxoTreeIn: 0,
           utxoTreeOut: 0,
           utxoBatchStartPositionOut: 6,
-          verificationHash: 'todo',
+          verificationHash: 'test',
         },
       ];
       const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map((railgunTransaction2) =>
@@ -354,6 +356,7 @@ describe('txid-merkletree', () => {
             utxoTreeIn: 0,
             utxoTreeOut: 0,
             utxoBatchStartPositionOut: 0,
+            verificationHash: 'test',
           },
           currentTxidIndexForTree: 2,
           currentMerkleProofForTree: {
@@ -417,6 +420,7 @@ describe('txid-merkletree', () => {
             utxoTreeIn: 0,
             utxoTreeOut: 0,
             utxoBatchStartPositionOut: 0,
+            verificationHash: 'test',
           },
           currentTxidIndexForTree: 3,
           currentMerkleProofForTree: {

@@ -672,7 +672,7 @@ describe('railgun-smart-wallet', function runTests() {
       memoText: undefined,
       senderAddress: undefined,
       shieldFee: '250000', // 100000000 * 0.0025
-      balanceBucket: WalletBalanceBucket.Spendable,
+      balanceBucket: WalletBalanceBucket.Spent,
       hasValidPOIForActiveLists: true,
     };
 

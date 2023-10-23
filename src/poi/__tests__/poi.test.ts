@@ -146,46 +146,62 @@ describe('poi', () => {
   });
 
   it('Should get appropriate balance bucket for TXO', async () => {
-    const changeNote = { outputType: OutputType.Change } as TransactNote;
+    const changeNote = {
+      outputType: OutputType.Change,
+    } as TransactNote;
 
     const balanceBucketChange = POI.getBalanceBucket({
       note: changeNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketChange).to.deep.equal(WalletBalanceBucket.MissingInternalPOI);
 
     const balanceBucketTransfer = POI.getBalanceBucket({
       note: { outputType: OutputType.Transfer } as TransactNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketTransfer).to.deep.equal(WalletBalanceBucket.MissingExternalPOI);
 
     const balanceBucketInvalid = POI.getBalanceBucket({
       ...invalidPOIsForList1,
       note: changeNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketInvalid).to.deep.equal(WalletBalanceBucket.MissingInternalPOI);
 
     const balanceBucketSubmitted = POI.getBalanceBucket({
       ...submittedPOIsForList1,
       note: changeNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketSubmitted).to.deep.equal(WalletBalanceBucket.ProofSubmitted);
 
     const balanceBucketValid = POI.getBalanceBucket({
       ...validPOIsForList1,
       note: changeNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketValid).to.deep.equal(WalletBalanceBucket.Spendable);
 
     const balanceBucketShieldPending = POI.getBalanceBucket({
       ...shieldPendingPOIsForList1,
       note: changeNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketShieldPending).to.deep.equal(WalletBalanceBucket.ShieldPending);
 
     const balanceBucketShieldBlocked = POI.getBalanceBucket({
       ...shieldBlockedPOIsForList1,
       note: changeNote,
+      spendtxid: false,
     } as TXO);
     expect(balanceBucketShieldBlocked).to.deep.equal(WalletBalanceBucket.ShieldBlocked);
+
+    const balanceBucketSpent = POI.getBalanceBucket({
+      ...shieldBlockedPOIsForList1,
+      note: changeNote,
+      spendtxid: '123',
+    } as TXO);
+    expect(balanceBucketSpent).to.deep.equal(WalletBalanceBucket.Spent);
   });
 });
