@@ -41,5 +41,12 @@ describe('railgun-txid', () => {
         '0x26d7d0d235dc1849e9794061ebc74e9ea211b8b5004081d26c7d086bdd3c0c35',
       ),
     ).to.equal('0x63b79987230ed89bcfbaf94c72c42515f116057e2c2f5d19c5b47d094858e874');
+
+    expect(
+      calculateRailgunTransactionVerificationHash(
+        '0x7497bd492633825701d6eefc644139d236f46ef961936f0aa69b6751af14497b',
+        '0x000727631f24f543408350df5883261cd5ab89d191c43da1436824ce637328c4',
+      ),
+    ).to.equal('0x31972b456d6d34a379e8576ed2a51d097f4046438456653914460d5e346f9dd4');
   });
 });
