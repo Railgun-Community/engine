@@ -22,6 +22,13 @@ export const MOCK_LIST: POIList = {
   description: 'mock',
 };
 
+export const MOCK_LIST_ACTIVE: POIList = {
+  key: MOCK_LIST_KEY,
+  type: POIListType.Active,
+  name: 'mock list',
+  description: 'mock',
+};
+
 export class TestPOINodeInterface extends POINodeInterface {
   // eslint-disable-next-line class-methods-use-this
   isActive() {

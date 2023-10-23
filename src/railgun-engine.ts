@@ -651,7 +651,7 @@ class RailgunEngine extends EventEmitter {
     const poll = async () => {
       await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'poller');
       await delay(refreshDelayMsec);
-    }
+    };
     while (true) {
       // eslint-disable-next-line no-await-in-loop
       await poll();
@@ -780,11 +780,12 @@ class RailgunEngine extends EventEmitter {
         if (railgunTransactions.length === 5000) {
           // Max query amount is 5000 from Wallet. Kick off any query.
           await this.performSyncRailgunTransactionsV2(chain, 'retrigger after 5000 synced');
-        } else {
-          // Finish
-          this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
+          return;
         }
       }
+
+      // Finish
+      this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
