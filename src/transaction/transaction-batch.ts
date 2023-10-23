@@ -332,7 +332,7 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     encryptionKey: string,
-    progressCallback: ProverProgressCallback,
+    progressCallback: (progress: number, status: string) => void,
     shouldGeneratePreTransactionPOIs: boolean,
     originShieldTxidForSpendabilityOverride?: string,
   ): Promise<{
@@ -353,14 +353,6 @@ export class TransactionBatch {
       ),
     );
 
-    const individualProgressAmounts: number[] = new Array<number>(
-      spendingSolutionGroups.length,
-    ).fill(0);
-    const updateProgressCallback = () => {
-      const averageProgress = averageNumber(individualProgressAmounts);
-      progressCallback(averageProgress);
-    };
-
     const provedTransactions: TransactionStruct[] = [];
 
     const preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList = {};
@@ -369,10 +361,6 @@ export class TransactionBatch {
     for (let index = 0; index < spendingSolutionGroups.length; index += 1) {
       const spendingSolutionGroup = spendingSolutionGroups[index];
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
-      const individualProgressCallback = (progress: number) => {
-        individualProgressAmounts[index] = progress;
-        updateProgressCallback();
-      };
       const { publicInputs, privateInputs, boundParams } =
         // eslint-disable-next-line no-await-in-loop
         await transaction.generateTransactionRequest(
@@ -384,8 +372,13 @@ export class TransactionBatch {
 
       if (shouldGeneratePreTransactionPOIs) {
         // eslint-disable-next-line no-restricted-syntax
-        for (const listKey of activeListKeys) {
+        for (let i = 0; i < activeListKeys.length; i += 1) {
+          const listKey = activeListKeys[i];
           preTransactionPOIsPerTxidLeafPerList[listKey] ??= {};
+
+          const preTransactionProofProgressStatus = `Generating proof of spendability ${i + 1}/${
+            activeListKeys.length
+          }...`;
 
           // eslint-disable-next-line no-await-in-loop
           const { txidLeafHash, preTransactionPOI } = await wallet.generatePreTransactionPOI(
@@ -396,6 +389,7 @@ export class TransactionBatch {
             publicInputs,
             privateInputs,
             boundParams,
+            (progress: number) => progressCallback(progress, preTransactionProofProgressStatus),
           );
 
           preTransactionPOIsPerTxidLeafPerList[listKey][txidLeafHash] = preTransactionPOI;
@@ -412,11 +406,16 @@ export class TransactionBatch {
       };
       // NOTE: For multisig, at this point the UnprovedTransactionInputs are
       // forwarded to the next participant, along with an array of signatures.
+
+      const preTransactionProofProgressStatus = `Generating transaction proof ${index + 1}/${
+        spendingSolutionGroups.length
+      }...`;
+
       // eslint-disable-next-line no-await-in-loop
       const provedTransaction = await transaction.generateProvedTransaction(
         prover,
         unprovedTransactionInputs,
-        individualProgressCallback,
+        (progress: number) => progressCallback(progress, preTransactionProofProgressStatus),
       );
       provedTransactions.push(provedTransaction);
     }

@@ -1557,6 +1557,7 @@ abstract class AbstractWallet extends EventEmitter {
     publicInputs: PublicInputsRailgun,
     privateInputs: PrivateInputsRailgun,
     boundParams: BoundParamsStruct,
+    progressCallback: (progress: number) => void,
   ): Promise<{ txidLeafHash: string; preTransactionPOI: PreTransactionPOI }> {
     const { commitmentsOut, nullifiers, boundParamsHash } = publicInputs;
     const utxoTreeIn = BigInt(boundParams.treeNumber);
@@ -1662,9 +1663,7 @@ abstract class AbstractWallet extends EventEmitter {
       listKey,
       blindedCommitmentsIn,
       blindedCommitmentsOut,
-      (progress: number) => {
-        // console.log(`pre-transaction proof progress: ${progress}`);
-      },
+      progressCallback,
     );
 
     const preTransactionPOI: PreTransactionPOI = {
