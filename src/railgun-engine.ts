@@ -645,12 +645,14 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     refreshDelayMsec: number,
   ) {
-    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'poller');
-
-    await delay(refreshDelayMsec);
-
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMsec);
+    const poll = async () => {
+      await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'poller');
+      await delay(refreshDelayMsec);
+    }
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      await poll();
+    }
   }
 
   /**
