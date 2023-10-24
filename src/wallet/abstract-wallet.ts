@@ -45,6 +45,7 @@ import {
   arrayify,
   ByteLength,
   combine,
+  fastHexToBytes,
   formatToByteLength,
   fromUTF8String,
   hexlify,
@@ -2856,7 +2857,7 @@ abstract class AbstractWallet extends EventEmitter {
     encryptionKey: string,
   ): Promise<WalletData | ViewOnlyWalletData> {
     return msgpack.decode(
-      arrayify(await db.getEncrypted(AbstractWallet.dbPath(id), encryptionKey)),
+      fastHexToBytes(await db.getEncrypted(AbstractWallet.dbPath(id), encryptionKey)),
     );
   }
 
@@ -2885,7 +2886,7 @@ abstract class AbstractWallet extends EventEmitter {
     id: string,
   ): Promise<WalletData | ViewOnlyWalletData> {
     return msgpack.decode(
-      arrayify(await db.getEncrypted([fromUTF8String('wallet'), id], encryptionKey)),
+      fastHexToBytes(await db.getEncrypted([fromUTF8String('wallet'), id], encryptionKey)),
     );
   }
 

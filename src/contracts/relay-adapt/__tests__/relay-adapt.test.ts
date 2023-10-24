@@ -470,7 +470,7 @@ describe('relay-adapt', function test() {
     const crossContractCalls: ContractTransaction[] = [];
 
     // 4. Create shield inputs.
-    const shieldRandom = '0x10203040506070809000102030405060';
+    const shieldRandom = '10203040506070809000102030405060';
     const relayShieldInputs = await RelayAdaptHelper.generateRelayShieldRequests(
       shieldRandom,
       [],
@@ -546,14 +546,14 @@ describe('relay-adapt', function test() {
     );
 
     // 9: Send relay transaction.
-    const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
+    const txResponse = sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_t, _u, txReceipt] = await Promise.all([
       awaitRailgunSmartWalletTransact(railgunSmartWalletContract),
       awaitRailgunSmartWalletUnshield(railgunSmartWalletContract),
-      txResponse.wait(),
-      promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out waiting for scan'),
+      txResponse.then(x => x.wait()),
+      promiseTimeout(awaitScan(wallet, chain), 30000, 'Timed out waiting for scan'),
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
@@ -695,7 +695,7 @@ describe('relay-adapt', function test() {
     ];
 
     // 4. Create shield inputs.
-    const shieldRandom = '0x10203040506070809000102030405060';
+    const shieldRandom = '10203040506070809000102030405060';
     const shieldERC20Addresses: RelayAdaptShieldERC20Recipient[] = [
       { tokenAddress: WETH_TOKEN_ADDRESS, recipientAddress: wallet.getAddress() },
     ];

@@ -1,6 +1,5 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BytesData } from '../../models/formatted-types';
 import { ByteLength, nToHex, randomHex } from '../bytes';
 import { AES } from '../encryption';
 
@@ -9,7 +8,7 @@ const { expect } = chai;
 
 describe('encryption', () => {
   it('Should test the correctness of encrypt/decrypt with AES-256-GCM', () => {
-    const plaintext: BytesData[] = [];
+    const plaintext: string[] = [];
     for (let i = 0; i < 8; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
     const ciphertext = AES.encryptGCM(plaintext, key);
@@ -28,7 +27,7 @@ describe('encryption', () => {
   });
 
   it('Should reject invalid tag', () => {
-    const plaintext: BytesData[] = [];
+    const plaintext: string[] = [];
     for (let i = 0; i < 8; i += 1) plaintext.push(randomHex(32));
     const key = randomHex(32);
     const ciphertext = AES.encryptGCM(plaintext, key);

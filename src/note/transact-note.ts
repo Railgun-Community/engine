@@ -22,6 +22,7 @@ import {
   nToBytes,
   nToHex,
   randomHex,
+  strip0x,
 } from '../utils/bytes';
 import { ciphertextToEncryptedRandomData, encryptedDataToCiphertext } from '../utils/ciphertext';
 import { AES } from '../utils/encryption';
@@ -317,7 +318,7 @@ export class TransactNote {
     tokenDataGetter: TokenDataGetter,
     blockNumber: Optional<number>,
   ): Promise<TransactNote> {
-    const ciphertextDataWithMemoText = [...noteCiphertext.data, memo];
+    const ciphertextDataWithMemoText = [...noteCiphertext.data, strip0x(memo)];
     const fullCiphertext: Ciphertext = {
       ...noteCiphertext,
       data: ciphertextDataWithMemoText,
