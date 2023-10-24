@@ -371,6 +371,41 @@ export function hexStringToBytes(hex: string): Uint8Array {
 }
 
 /**
+ * Convert hex string to Uint8Array. Does not handle 0x prefixes, and assumes
+ * your string has an even number of characters.
+ * @param {string} str
+ * @returns {Uint8Array}
+ */
+export function fastHexToBytes(str: string) {
+  const bytes = new Uint8Array(str.length / 2);
+  for (let i = 0; i < bytes.length; i += 1) {
+    const c1 = str.charCodeAt(i * 2);
+    const c2 = str.charCodeAt(i * 2 + 1);
+    const n1 = c1 - (c1 < 58 ? 48 : 87);
+    const n2 = c2 - (c2 < 58 ? 48 : 87);
+    bytes[i] = n1 * 16 + n2;
+  }
+  return bytes;
+}
+
+/**
+ * Convert Uint8Array to hex string. Does not output 0x prefixes.
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+export function fastBytesToHex(bytes: Uint8Array) {
+  let hex = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    const n = bytes[i];
+    const c1 = (n / 16) | 0;
+    const c2 = n % 16;
+    hex += String.fromCharCode(c1 + (c1 < 10 ? 48 : 87));
+    hex += String.fromCharCode(c2 + (c2 < 10 ? 48 : 87));
+  }
+  return hex;
+}
+
+/**
  * Generates random bytes
  * @param length - number of bytes to generate
  * @returns random bytes hex string
