@@ -231,9 +231,8 @@ function assertBytesWithinRange(string: string) {
  * @param data - bytes data to convert
  * @param encoding - string encoding to use
  */
-function toUTF8String(data: BytesData): string {
-  // TODO: Remove reliance on Buffer
-  const string = new TextDecoder().decode(Buffer.from(arrayify(data)));
+function toUTF8String(data: string): string {
+  const string = new TextDecoder().decode(fastHexToBytes(data));
   assertBytesWithinRange(string);
   return string;
 }
@@ -368,6 +367,41 @@ export function bytesToN(bytes: Uint8Array): bigint {
  */
 export function hexStringToBytes(hex: string): Uint8Array {
   return hexToBytes(strip0x(hex));
+}
+
+/**
+ * Convert hex string to Uint8Array. Does not handle 0x prefixes, and assumes
+ * your string has an even number of characters.
+ * @param {string} str
+ * @returns {Uint8Array}
+ */
+export function fastHexToBytes(str: string): Uint8Array {
+  const bytes = new Uint8Array(str.length / 2);
+  for (let i = 0; i < bytes.length; i += 1) {
+    const c1 = str.charCodeAt(i * 2);
+    const c2 = str.charCodeAt(i * 2 + 1);
+    const n1 = c1 - (c1 < 58 ? 48 : 87);
+    const n2 = c2 - (c2 < 58 ? 48 : 87);
+    bytes[i] = n1 * 16 + n2;
+  }
+  return bytes;
+}
+
+/**
+ * Convert Uint8Array to hex string. Does not output 0x prefixes.
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+export function fastBytesToHex(bytes: Uint8Array): string {
+  const hex = new Array(bytes.length * 2);
+  for (let i = 0; i < bytes.length; i += 1) {
+    const n = bytes[i];
+    const c1 = (n / 16) | 0;
+    const c2 = n % 16;
+    hex[2 * i] = String.fromCharCode(c1 + (c1 < 10 ? 48 : 87));
+    hex[2 * i + 1] = String.fromCharCode(c2 + (c2 < 10 ? 48 : 87));
+  }
+  return hex.join('');
 }
 
 /**

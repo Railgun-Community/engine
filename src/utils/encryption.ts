@@ -1,4 +1,14 @@
-import { arrayify, ByteLength, formatToByteLength, padToLength, randomHex, trim } from './bytes';
+import {
+  arrayify,
+  ByteLength,
+  fastBytesToHex,
+  fastHexToBytes,
+  formatToByteLength,
+  padToLength,
+  randomHex,
+  strip0x,
+  trim,
+} from './bytes';
 import { BytesData, Ciphertext, CTRCiphertext } from '../models/formatted-types';
 import { isNodejs } from './runtime';
 
@@ -21,10 +31,9 @@ export class AES {
    * @param key - key to encrypt with
    * @returns ciphertext bundle
    */
-  static encryptGCM(plaintext: BytesData[], key: BytesData): Ciphertext {
+  static encryptGCM(plaintext: string[], key: string | Uint8Array): Ciphertext {
     // If types are strings, convert to bytes array
-    const plaintextFormatted = plaintext.map((block) => new Uint8Array(arrayify(block)));
-    const keyFormatted = new Uint8Array(arrayify(key));
+    const keyFormatted = typeof key === 'string' ? fastHexToBytes(key) : key;
     if (keyFormatted.byteLength !== 32) {
       throw new Error(
         `Invalid key length. Expected 32 bytes. Received ${keyFormatted.byteLength} bytes.`,
@@ -32,7 +41,7 @@ export class AES {
     }
 
     const iv = AES.getRandomIV();
-    const ivFormatted = new Uint8Array(arrayify(iv));
+    const ivFormatted = fastHexToBytes(iv);
 
     // Initialize cipher
     const cipher = createCipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
@@ -40,9 +49,10 @@ export class AES {
     });
 
     // Loop through data blocks and encrypt
-    const data = plaintextFormatted
-      .map((block) => cipher.update(block))
-      .map((block) => block.toString('hex'));
+    const data = new Array<string>(plaintext.length);
+    for (let i = 0; i < plaintext.length; i += 1) {
+      data[i] = fastBytesToHex(cipher.update(fastHexToBytes(strip0x(plaintext[i]))));
+    }
     cipher.final();
 
     const tag = cipher.getAuthTag();
@@ -63,13 +73,28 @@ export class AES {
    * @param key - key to decrypt with
    * @returns - plaintext
    */
-  static decryptGCM(ciphertext: Ciphertext, key: BytesData): BytesData[] {
+  static decryptGCM(ciphertext: Ciphertext, key: string | Uint8Array): BytesData[] {
     try {
-      // If types are strings, convert to bytes array
-      const ciphertextFormatted = ciphertext.data.map((block) => new Uint8Array(arrayify(block)));
-      const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
-      const ivFormatted = new Uint8Array(arrayify(trim(ciphertext.iv, 16)));
-      const tagFormatted = new Uint8Array(arrayify(trim(ciphertext.tag, 16)));
+      // Ensure that inputs are Uint8Arrays of the correct length
+      const keyFormatted =
+        typeof key === 'string' ? fastHexToBytes(padToLength(key, 32) as string) : key;
+      if (keyFormatted.byteLength !== 32) {
+        throw new Error(
+          `Invalid key length. Expected 32 bytes. Received ${keyFormatted.byteLength} bytes.`,
+        );
+      }
+      const ivFormatted = fastHexToBytes(trim(ciphertext.iv, 16) as string);
+      const tagFormatted = fastHexToBytes(trim(ciphertext.tag, 16) as string);
+      if (ivFormatted.byteLength !== 16) {
+        throw new Error(
+          `Invalid iv length. Expected 16 bytes. Received ${ivFormatted.byteLength} bytes.`,
+        );
+      }
+      if (tagFormatted.byteLength !== 16) {
+        throw new Error(
+          `Invalid tag length. Expected 16 bytes. Received ${tagFormatted.byteLength} bytes.`,
+        );
+      }
 
       // Initialize decipher
       const decipher = createDecipheriv('aes-256-gcm', keyFormatted, ivFormatted, {
@@ -80,16 +105,15 @@ export class AES {
       decipher.setAuthTag(tagFormatted);
 
       // Loop through ciphertext and decrypt then return
-      const data = ciphertextFormatted
-        .map((block) => decipher.update(block))
-        .map((block) => block.toString('hex'));
+      const data = new Array<string>(ciphertext.data.length);
+      for (let i = 0; i < ciphertext.data.length; i += 1) {
+        data[i] = fastBytesToHex(decipher.update(fastHexToBytes(ciphertext.data[i])));
+      }
       decipher.final();
       return data;
     } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
-      }
-      throw new Error('Unable to decrypt ciphertext.');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      throw new Error('Unable to decrypt ciphertext.', { cause: err });
     }
   }
 
@@ -99,10 +123,9 @@ export class AES {
    * @param key - key to encrypt with
    * @returns ciphertext bundle
    */
-  static encryptCTR(plaintext: string[], key: BytesData): CTRCiphertext {
+  static encryptCTR(plaintext: string[], key: string | Uint8Array): CTRCiphertext {
     // If types are strings, convert to bytes array
-    const plaintextFormatted = plaintext.map((block) => new Uint8Array(arrayify(block)));
-    const keyFormatted = new Uint8Array(arrayify(key));
+    const keyFormatted = typeof key === 'string' ? fastHexToBytes(key) : key;
     if (keyFormatted.byteLength !== 32) {
       throw new Error(
         `Invalid key length. Expected 32 bytes. Received ${keyFormatted.byteLength} bytes.`,
@@ -110,15 +133,16 @@ export class AES {
     }
 
     const iv = AES.getRandomIV();
-    const ivFormatted = new Uint8Array(arrayify(iv));
+    const ivFormatted = fastHexToBytes(iv);
 
     // Initialize cipher
     const cipher = createCipheriv('aes-256-ctr', keyFormatted, ivFormatted);
 
     // Loop through data blocks and encrypt
-    const data = plaintextFormatted
-      .map((block) => cipher.update(block))
-      .map((block) => block.toString('hex'));
+    const data = new Array<string>(plaintext.length);
+    for (let i = 0; i < plaintext.length; i += 1) {
+      data[i] = fastBytesToHex(cipher.update(fastHexToBytes(plaintext[i])));
+    }
     cipher.final();
 
     // Return encrypted data bundle
@@ -135,19 +159,30 @@ export class AES {
    * @param key - key to decrypt with
    * @returns - plaintext
    */
-  static decryptCTR(ciphertext: CTRCiphertext, key: BytesData): string[] {
+  static decryptCTR(ciphertext: CTRCiphertext, key: string | Uint8Array): string[] {
     // If types are strings, convert to bytes array
-    const ciphertextFormatted = ciphertext.data.map((block) => new Uint8Array(arrayify(block)));
-    const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));
-    const ivFormatted = new Uint8Array(arrayify(trim(ciphertext.iv, 16)));
+    const keyFormatted = typeof key === 'string' ? fastHexToBytes(key) : key;
+    if (keyFormatted.byteLength !== 32) {
+      throw new Error(
+        `Invalid key length. Expected 32 bytes. Received ${keyFormatted.byteLength} bytes.`,
+      );
+    }
+
+    const ivFormatted = fastHexToBytes(ciphertext.iv);
+    if (ivFormatted.byteLength !== 16) {
+      throw new Error(
+        `Invalid iv length. Expected 16 bytes. Received ${ivFormatted.byteLength} bytes.`,
+      );
+    }
 
     // Initialize decipher
     const decipher = createDecipheriv('aes-256-ctr', keyFormatted, ivFormatted);
 
     // Loop through ciphertext and decrypt then return
-    const data = ciphertextFormatted
-      .map((block) => decipher.update(block))
-      .map((block) => block.toString('hex'));
+    const data = new Array<string>(ciphertext.data.length);
+    for (let i = 0; i < ciphertext.data.length; i += 1) {
+      data[i] = fastBytesToHex(decipher.update(fastHexToBytes(ciphertext.data[i])));
+    }
     decipher.final();
     return data;
   }

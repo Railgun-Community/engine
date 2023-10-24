@@ -137,7 +137,7 @@ export const awaitRailgunSmartWalletEvent = async (
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       railgunSmartWallet.contractForListeners.once(event, () => resolve());
     }),
-    15000,
+    30000,
     `Timed out waiting for RailgunSmartWallet event: ${event.fragment.name}`,
   );
 };
