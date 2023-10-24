@@ -231,9 +231,8 @@ function assertBytesWithinRange(string: string) {
  * @param data - bytes data to convert
  * @param encoding - string encoding to use
  */
-function toUTF8String(data: BytesData): string {
-  // TODO: Remove reliance on Buffer
-  const string = new TextDecoder().decode(Buffer.from(arrayify(data)));
+function toUTF8String(data: string): string {
+  const string = new TextDecoder().decode(fastHexToBytes(data));
   assertBytesWithinRange(string);
   return string;
 }

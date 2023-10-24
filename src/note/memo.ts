@@ -5,7 +5,7 @@ import {
   OutputType,
 } from '../models/formatted-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
-import { arrayify, ByteLength, hexlify, nToHex } from '../utils/bytes';
+import { ByteLength, fastHexToBytes, hexlify, nToHex } from '../utils/bytes';
 import { AES } from '../utils/encryption';
 import { isDefined } from '../utils/is-defined';
 import { isReactNative } from '../utils/runtime';
@@ -115,6 +115,6 @@ export class Memo {
     if (!encoded.length) {
       return undefined;
     }
-    return new TextDecoder().decode(Buffer.from(arrayify(encoded)));
+    return new TextDecoder().decode(fastHexToBytes(encoded));
   }
 }
