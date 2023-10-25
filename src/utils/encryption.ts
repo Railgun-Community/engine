@@ -86,10 +86,8 @@ export class AES {
       decipher.final();
       return data;
     } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
-      }
-      throw new Error('Unable to decrypt ciphertext.');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      throw new Error('Unable to decrypt ciphertext.', { cause: err });
     }
   }
 
