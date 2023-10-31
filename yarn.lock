@@ -542,6 +542,11 @@
     lodash "^4.17.16"
     uuid "^7.0.3"
 
+"@noble/ciphers@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-0.4.0.tgz#e3f69e3ce935683dd8dadb636652a5cb5cd5958c"
+  integrity sha512-xaUaUUDWbHIFSxaQ/pIe+33VG2mfJp6N/KxKLmZr5biWdNznCAmfu24QRhX10BbVAuqOahAoyp0S4M9md6GPDw==
+
 "@noble/curves@1.0.0", "@noble/curves@~1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.0.0.tgz#e40be8c7daf088aaf291887cbc73f43464a92932"

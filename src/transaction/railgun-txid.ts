@@ -1,5 +1,5 @@
 import { poseidon } from 'circomlibjs';
-import { RailgunTransaction, RailgunTransactionWithHash, TXIDVersion } from '../models';
+import { RailgunTransaction, RailgunTransactionWithHash } from '../models/formatted-types';
 import {
   ByteLength,
   combine,
@@ -10,7 +10,7 @@ import {
 } from '../utils/bytes';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { getGlobalTreePosition } from '../poi/global-tree-position';
-import { ZERO_32_BYTE_VALUE, keccak256 } from '../utils';
+import { keccak256 } from '../utils';
 
 const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
   const padded = [...array];
@@ -64,22 +64,12 @@ export const getRailgunTxidLeafHash = (
   railgunTxidBigInt: bigint,
   utxoTreeIn: bigint,
   globalTreePosition: bigint,
-  txidVersion: TXIDVersion,
 ): string => {
-  switch (txidVersion) {
-    case TXIDVersion.V2_PoseidonMerkle: {
-      return nToHex(
-        poseidon([railgunTxidBigInt, utxoTreeIn, globalTreePosition]),
-        ByteLength.UINT_256,
-      );
-    }
-  }
-  throw new Error('TXID Version not recognized');
+  return nToHex(poseidon([railgunTxidBigInt, utxoTreeIn, globalTreePosition]), ByteLength.UINT_256);
 };
 
 export const createRailgunTransactionWithHash = (
   railgunTransaction: RailgunTransaction,
-  txidVersion: TXIDVersion,
 ): RailgunTransactionWithHash => {
   const railgunTxidBigInt = getRailgunTransactionID(railgunTransaction);
   const { utxoTreeIn, utxoTreeOut, utxoBatchStartPositionOut } = railgunTransaction;
@@ -87,12 +77,7 @@ export const createRailgunTransactionWithHash = (
   return {
     ...railgunTransaction,
     railgunTxid: nToHex(railgunTxidBigInt, ByteLength.UINT_256),
-    hash: getRailgunTxidLeafHash(
-      railgunTxidBigInt,
-      BigInt(utxoTreeIn),
-      globalTreePosition,
-      txidVersion,
-    ),
+    hash: getRailgunTxidLeafHash(railgunTxidBigInt, BigInt(utxoTreeIn), globalTreePosition),
   };
 };
 

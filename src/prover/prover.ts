@@ -16,7 +16,7 @@ import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
 import { ProofCachePOI } from './proof-cache-poi';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
-import { POIEngineProofInputs } from '../models';
+import { POIEngineProofInputs, TXIDVersion } from '../models';
 import { isDefined } from '../utils/is-defined';
 import { ProgressService } from './progress-service';
 
@@ -371,6 +371,7 @@ export class Prover {
   }
 
   async proveRailgun(
+    txidVersion: TXIDVersion,
     unprovedTransactionInputs: UnprovedTransactionInputs,
     progressCallback: ProverProgressCallback,
   ): Promise<{ proof: Proof; publicInputs: PublicInputsRailgun }> {

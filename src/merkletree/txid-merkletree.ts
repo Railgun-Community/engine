@@ -282,6 +282,10 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     railgunTransactionsWithTxids: RailgunTransactionWithHash[],
     maxTxidIndex: Optional<number>,
   ): Promise<void> {
+    if (!railgunTransactionsWithTxids.length) {
+      return;
+    }
+
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
     let nextTree = latestTree;
     let nextIndex = latestIndex;

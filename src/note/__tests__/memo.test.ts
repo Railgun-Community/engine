@@ -41,9 +41,10 @@ describe('memo', function run() {
       senderRandom: '1234567890abcde1234567890abcde', // 15 bytes
       walletSource: 'memo wallet',
     };
-    const encryptedNoteAnnotationData = Memo.createEncryptedNoteAnnotationData(
+    const encryptedNoteAnnotationData = Memo.createEncryptedNoteAnnotationDataV2(
       noteAnnotationData.outputType,
       noteAnnotationData.senderRandom,
+      'memo wallet',
       sender.privateKey,
     );
     expect(

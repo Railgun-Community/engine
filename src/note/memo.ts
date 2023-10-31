@@ -1,12 +1,15 @@
+import EngineDebug from '../debugger/debugger';
 import {
-  CTRCiphertext,
+  CiphertextIVData,
   EncryptedNoteAnnotationData,
   NoteAnnotationData,
   OutputType,
+  SenderAnnotationDecrypted,
 } from '../models/formatted-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
-import { arrayify, ByteLength, hexlify, nToHex } from '../utils/bytes';
-import { AES } from '../utils/encryption';
+import { ByteLength, arrayify, chunk, hexlify, nToHex, prefix0x, strip0x } from '../utils/bytes';
+import { AES } from '../utils/encryption/aes';
+import { XChaCha20 } from '../utils/encryption/x-cha-cha-20';
 import { isDefined } from '../utils/is-defined';
 import { isReactNative } from '../utils/runtime';
 import WalletInfo from '../wallet/wallet-info';
@@ -52,8 +55,55 @@ export class Memo {
         senderRandom: decrypted[0].substring(2, 32),
         walletSource,
       };
+
+      if (!Object.values(OutputType).includes(noteAnnotationData.outputType)) {
+        throw new Error('Error decrypting note annotation data.');
+      }
+
       return noteAnnotationData;
     } catch (err) {
+      EngineDebug.error(err as Error);
+      return undefined;
+    }
+  }
+
+  static decryptSenderCiphertextV3(
+    senderCiphertext: string,
+    viewingPrivateKey: Uint8Array,
+    transactCommitmentBatchIndex: number,
+  ): Optional<SenderAnnotationDecrypted> {
+    if (!senderCiphertext || !senderCiphertext.length) {
+      return undefined;
+    }
+
+    try {
+      const stripped = strip0x(senderCiphertext);
+
+      const metadataCiphertext = {
+        iv: stripped.substring(0, 32),
+        data: [stripped.substring(32)],
+      };
+      const decrypted = XChaCha20.decryptChaCha20(metadataCiphertext, viewingPrivateKey);
+
+      const walletSource: Optional<string> = this.decodeWalletSource(decrypted[0].substring(0, 32));
+
+      const outputTypeByteOffset = 32 + transactCommitmentBatchIndex * 2;
+
+      const outputType = parseInt(
+        decrypted[0].substring(outputTypeByteOffset, outputTypeByteOffset + 2),
+        16,
+      );
+      if (Number.isNaN(outputType)) {
+        throw new Error('Invalid outputType for senderCiphertextData');
+      }
+
+      const senderAnnotation: SenderAnnotationDecrypted = {
+        walletSource,
+        outputType,
+      };
+      return senderAnnotation;
+    } catch (err) {
+      EngineDebug.error(err as Error);
       return undefined;
     }
   }
@@ -62,6 +112,19 @@ export class Memo {
     const noteAnnotationData = Memo.decryptNoteAnnotationData(annotationData, viewingPrivateKey);
     return noteAnnotationData ? noteAnnotationData.senderRandom : MEMO_SENDER_RANDOM_NULL;
   };
+
+  // static decryptSenderRandomV3 = (
+  //   senderCiphertext: string,
+  //   viewingPrivateKey: Uint8Array,
+  //   transactCommitmentBatchIndex: number,
+  // ): string => {
+  //   const noteAnnotationData = Memo.decryptSenderCiphertextV3(
+  //     senderCiphertext,
+  //     viewingPrivateKey,
+  //     transactCommitmentBatchIndex,
+  //   );
+  //   return noteAnnotationData ? noteAnnotationData.senderRandom : MEMO_SENDER_RANDOM_NULL;
+  // };
 
   private static decodeWalletSource(decryptedBytes: string): Optional<string> {
     try {
@@ -72,9 +135,10 @@ export class Memo {
     }
   }
 
-  static createEncryptedNoteAnnotationData(
+  static createEncryptedNoteAnnotationDataV2(
     outputType: OutputType,
     senderRandom: string,
+    walletSource: string,
     viewingPrivateKey: Uint8Array,
   ): EncryptedNoteAnnotationData {
     const outputTypeFormatted = nToHex(BigInt(outputType), ByteLength.UINT_8); // 1 byte
@@ -86,20 +150,50 @@ export class Memo {
 
     const metadataField1 = new Array<string>(30).fill('0').join(''); // 32 zeroes
 
-    let metadataField2 = WalletInfo.getEncodedWalletSource();
+    let metadataField2 = WalletInfo.getEncodedWalletSource(walletSource);
     while (metadataField2.length < 30) {
       metadataField2 = `0${metadataField2}`;
     }
 
     const toEncrypt = [metadataField0, metadataField1, metadataField2];
 
-    const metadataCiphertext: CTRCiphertext = AES.encryptCTR(toEncrypt, viewingPrivateKey);
+    const metadataCiphertext: CiphertextIVData = AES.encryptCTR(toEncrypt, viewingPrivateKey);
 
     return (
       metadataCiphertext.iv + // ciphertext IV
       metadataCiphertext.data[0] + // outputType/senderRandom
       metadataCiphertext.data[1] + // 32 zeroes
       metadataCiphertext.data[2] // Wallet source, prepended with 0s
+    );
+  }
+
+  static createSenderAnnotationEncryptedV3(
+    walletSource: string,
+    orderedOutputTypes: OutputType[],
+    viewingPrivateKey: Uint8Array,
+  ): EncryptedNoteAnnotationData {
+    let metadataField0 = WalletInfo.getEncodedWalletSource(walletSource);
+    while (metadataField0.length < 32) {
+      metadataField0 = `0${metadataField0}`;
+    }
+
+    const outputTypesFormatted = orderedOutputTypes.map((outputType) =>
+      // 1 byte each
+      nToHex(BigInt(outputType), ByteLength.UINT_8),
+    );
+    const metadataField1 = outputTypesFormatted.join('');
+
+    const toEncrypt = [metadataField0, metadataField1];
+
+    const metadataCiphertext: CiphertextIVData = XChaCha20.encryptChaCha20(
+      toEncrypt,
+      viewingPrivateKey,
+    );
+
+    return prefix0x(
+      metadataCiphertext.iv + // ciphertext IV
+        metadataCiphertext.data[0].substring(0, 32) + // wallet source
+        metadataCiphertext.data[0].substring(32), // outputTypes (1 byte each, ordered by transact commitment)
     );
   }
 

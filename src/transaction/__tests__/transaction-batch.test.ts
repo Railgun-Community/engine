@@ -9,9 +9,11 @@ import { config } from '../../test/config.test';
 import {
   DECIMALS_18,
   getEthersWallet,
+  getTestTXIDVersion,
+  isV2Test,
   mockGetLatestValidatedRailgunTxid,
   mockQuickSyncEvents,
-  mockQuickSyncRailgunTransactions,
+  mockQuickSyncRailgunTransactionsV2,
   mockRailgunTxidMerklerootValidator,
   testArtifactsGetter,
 } from '../../test/helper.test';
@@ -32,7 +34,7 @@ import { TXIDVersion } from '../../models/poi-types';
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+const txidVersion = getTestTXIDVersion();
 
 let db: Database;
 let utxoMerkletree: UTXOMerkletree;
@@ -100,7 +102,7 @@ describe('transaction-batch', function run() {
       memdown(),
       testArtifactsGetter,
       mockQuickSyncEvents,
-      mockQuickSyncRailgunTransactions,
+      mockQuickSyncRailgunTransactionsV2,
       mockRailgunTxidMerklerootValidator,
       mockGetLatestValidatedRailgunTxid,
       undefined, // engineDebugger
@@ -114,10 +116,14 @@ describe('transaction-batch', function run() {
       chain,
       config.contracts.proxy,
       config.contracts.relayAdapt,
+      config.contracts.poseidonMerkleAccumulatorV3,
+      config.contracts.poseidonMerkleVerifierV3,
+      config.contracts.tokenVaultV3,
       provider,
       pollingProvider,
-      { [TXIDVersion.V2_PoseidonMerkle]: 0 },
+      { [TXIDVersion.V2_PoseidonMerkle]: 0, [TXIDVersion.V3_PoseidonMerkle]: 0 },
       1,
+      !isV2Test(), // supportsV3
     );
 
     prover = engine.prover;
@@ -131,7 +137,6 @@ describe('transaction-batch', function run() {
         undefined,
         value,
         tokenData,
-        wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.Transfer,
         undefined, // memoText
@@ -148,7 +153,7 @@ describe('transaction-batch', function run() {
     ]);
     await utxoMerkletree.updateTreesFromWriteQueue();
     await wallet.scanBalances(txidVersion, chain, undefined);
-    await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+    await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     expect((await wallet.getWalletDetails(txidVersion, chain)).treeScannedHeights).to.deep.equal([
       1, 5,
     ]);

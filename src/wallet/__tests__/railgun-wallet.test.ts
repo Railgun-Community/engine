@@ -13,14 +13,14 @@ import { combine } from '../../utils/bytes';
 import { RailgunEngine } from '../../railgun-engine';
 import { mnemonicToSeed } from '../../key-derivation/bip39';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
-import { TXIDVersion } from '../../models';
 import { Prover } from '../../prover/prover';
-import { testArtifactsGetter } from '../../test/helper.test';
+import { getTestTXIDVersion, testArtifactsGetter } from '../../test/helper.test';
+import { addChainSupportsV3 } from '../../chain/chain';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+const txidVersion = getTestTXIDVersion();
 
 let db: Database;
 let utxoMerkletree: UTXOMerkletree;
@@ -46,15 +46,18 @@ describe('railgun-wallet', () => {
       undefined, // creationBlockNumbers
       new Prover(testArtifactsGetter),
     );
+    addChainSupportsV3(chain);
     await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
     viewOnlyWallet = await ViewOnlyWallet.fromShareableViewingKey(
       db,
       testEncryptionKey,
       wallet.generateShareableViewingKey(),
-      undefined, // creationBlockNumbers\
+      undefined, // creationBlockNumbers
       new Prover(testArtifactsGetter),
     );
     await viewOnlyWallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+    await wallet.clearScannedBalancesAllTXIDVersions(chain);
+    await viewOnlyWallet.clearScannedBalancesAllTXIDVersions(chain);
   });
 
   it('Should load existing wallet', async () => {
@@ -93,6 +96,7 @@ describe('railgun-wallet', () => {
       '000000000000000000000000000000000000000000000000000077616c6c6574',
       'bee63912e0e4cfa6830ebc8342d3efa9aa1336548c77bf4336c54c17409f2990',
       '0000000000000000000000000000000000000000000000000000000000000001',
+      '64657461696c73',
     ]);
   });
 
@@ -195,13 +199,13 @@ describe('railgun-wallet', () => {
   it('Should get empty wallet details', async () => {
     const walletDetails = await wallet.getWalletDetails(txidVersion, chain);
     expect(walletDetails).to.deep.equal({
-      treeScannedHeights: [0],
+      treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,
     });
     const viewOnlyWalletDetails = await viewOnlyWallet.getWalletDetails(txidVersion, chain);
     expect(viewOnlyWalletDetails).to.deep.equal({
-      treeScannedHeights: [0],
+      treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,
     });

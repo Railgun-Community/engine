@@ -15,6 +15,8 @@ import {
   trim,
 } from '../utils/bytes';
 import { keccak256 } from '../utils/hash';
+import { CommitmentPreimageStructOutput } from '../abi/typechain/PoseidonMerkleAccumulator';
+import { isDefined } from '../utils/is-defined';
 
 export const ERC721_NOTE_VALUE = BigInt(1);
 
@@ -88,6 +90,21 @@ export const serializePreImage = (
   };
 };
 
+export const extractTokenHashFromCommitmentPreImageV3 = (
+  preimage: CommitmentPreimageStructOutput,
+): string => {
+  if (!isDefined(preimage)) {
+    throw new Error('Invalid preimage.');
+  }
+  const tokenData = serializeTokenData(
+    preimage.token.tokenAddress,
+    preimage.token.tokenType,
+    preimage.token.tokenSubID.toString(),
+  );
+  const tokenHash = getTokenDataHash(tokenData);
+  return tokenHash;
+};
+
 export const serializeTokenData = (
   tokenAddress: string,
   tokenType: bigint | TokenType,
@@ -114,6 +131,20 @@ export const getUnshieldEventNoteHash = (unshieldEvent: UnshieldStoredEvent): bi
     unshieldEvent.toAddress,
     getUnshieldTokenData(unshieldEvent),
     BigInt(unshieldEvent.amount) + BigInt(unshieldEvent.fee),
+  );
+};
+
+export const getUnshieldPreImageNoteHash = (
+  unshieldPreimage: CommitmentPreimageStructOutput,
+): bigint => {
+  return getNoteHash(
+    unshieldPreimage.npk,
+    serializeTokenData(
+      unshieldPreimage.token.tokenAddress,
+      unshieldPreimage.token.tokenType,
+      unshieldPreimage.token.tokenSubID.toString(),
+    ),
+    unshieldPreimage.value,
   );
 };
 

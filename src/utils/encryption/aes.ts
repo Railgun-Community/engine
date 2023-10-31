@@ -1,6 +1,6 @@
-import { arrayify, ByteLength, formatToByteLength, padToLength, randomHex, trim } from './bytes';
-import { BytesData, Ciphertext, CTRCiphertext } from '../models/formatted-types';
-import { isNodejs } from './runtime';
+import { arrayify, ByteLength, formatToByteLength, padToLength, randomHex, trim } from '../bytes';
+import { BytesData, Ciphertext, CiphertextIVData } from '../../models/formatted-types';
+import { isNodejs } from '../runtime';
 
 type Ciphers = Pick<typeof import('crypto'), 'createCipheriv' | 'createDecipheriv'>;
 
@@ -99,7 +99,7 @@ export class AES {
    * @param key - key to encrypt with
    * @returns ciphertext bundle
    */
-  static encryptCTR(plaintext: string[], key: BytesData): CTRCiphertext {
+  static encryptCTR(plaintext: string[], key: BytesData): CiphertextIVData {
     // If types are strings, convert to bytes array
     const plaintextFormatted = plaintext.map((block) => new Uint8Array(arrayify(block)));
     const keyFormatted = new Uint8Array(arrayify(key));
@@ -135,7 +135,7 @@ export class AES {
    * @param key - key to decrypt with
    * @returns - plaintext
    */
-  static decryptCTR(ciphertext: CTRCiphertext, key: BytesData): string[] {
+  static decryptCTR(ciphertext: CiphertextIVData, key: BytesData): string[] {
     // If types are strings, convert to bytes array
     const ciphertextFormatted = ciphertext.data.map((block) => new Uint8Array(arrayify(block)));
     const keyFormatted = new Uint8Array(arrayify(padToLength(key, 32)));

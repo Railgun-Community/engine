@@ -1,12 +1,18 @@
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover, ProverProgressCallback } from '../prover/prover';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
-import { AdaptID, NFTTokenData, OutputType, TokenData, TokenType } from '../models/formatted-types';
+import {
+  ByteLength,
+  combine,
+  formatToByteLength,
+  hexlify,
+  hexToBigInt,
+  nToHex,
+} from '../utils/bytes';
+import { AdaptID, NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
 import { UnshieldNote } from '../note/unshield-note';
 import { TXO, UnshieldData } from '../models/txo-types';
-import { Memo } from '../note/memo';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import {
@@ -15,21 +21,23 @@ import {
   PublicInputsRailgun,
   RailgunTransactionRequest,
   PrivateInputsRailgun,
+  RailgunTransactionRequestV2,
+  RailgunTransactionRequestV3,
 } from '../models/prover-types';
 import {
   BoundParamsStruct,
-  CommitmentCiphertextStruct,
+  CommitmentCiphertextStruct as CommitmentCiphertextStructV2,
   CommitmentPreimageStruct,
-  TransactionStruct,
 } from '../abi/typechain/RailgunSmartWallet';
-import { hashBoundParams } from './bound-params';
+import { hashBoundParamsV2, hashBoundParamsV3 } from './bound-params';
 import { getChainFullNetworkID } from '../chain/chain';
 import { UnshieldNoteERC20 } from '../note/erc20/unshield-note-erc20';
 import { UnshieldNoteNFT } from '../note/nft/unshield-note-nft';
 import { getTokenDataHash } from '../note';
-import { calculateTotalSpend } from '../solutions/utxos';
 import { isDefined } from '../utils/is-defined';
-import { TXIDVersion } from '../models';
+import { TXIDVersion } from '../models/poi-types';
+import { PoseidonMerkleAccumulator, PoseidonMerkleVerifier } from '../abi/typechain';
+import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 
 class Transaction {
   private readonly adaptID: AdaptID;
@@ -66,9 +74,8 @@ class Transaction {
     tokenOutputs: TransactNote[],
     adaptID: AdaptID,
   ) {
-    if (tokenOutputs.length > 4) {
-      // Leave room for optional 5th change output.
-      throw new Error('Can not add more than 4 outputs.');
+    if (tokenOutputs.length > 5) {
+      throw new Error('Can not add more than 5 outputs.');
     }
 
     this.chain = chain;
@@ -134,19 +141,13 @@ class Transaction {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     encryptionKey: string,
-    overallBatchMinGasPrice = 0n,
+    globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct,
   ): Promise<RailgunTransactionRequest> {
     const merkletree = wallet.getUTXOMerkletree(txidVersion, this.chain);
     const merkleRoot = await merkletree.getRoot(this.spendingTree);
     const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
     const nullifyingKey = wallet.getNullifyingKey();
     const senderViewingKeys = wallet.getViewingKeyPair();
-
-    if (this.tokenOutputs.length > 4) {
-      // Leave room for optional 5th change output.
-      // TODO: Support circuits 1x10 and 1x13.
-      throw new Error('Cannot create a transaction with >4 non-change outputs.');
-    }
 
     // Get values
     const nullifiers: bigint[] = [];
@@ -173,32 +174,6 @@ class Transaction {
 
     const allOutputs: (TransactNote | UnshieldNote)[] = [...this.tokenOutputs];
 
-    const totalIn = calculateTotalSpend(utxos);
-    const totalOutputNoteValues = TransactNote.calculateTotalNoteValues(this.tokenOutputs);
-    const totalOut = totalOutputNoteValues + this.unshieldValue;
-
-    const change = totalIn - totalOut;
-    if (change < 0n) {
-      throw new Error('Negative change value - transaction not possible.');
-    }
-
-    const requiresChangeOutput = change > 0n;
-    if (requiresChangeOutput) {
-      // Add change output
-      allOutputs.push(
-        TransactNote.createTransfer(
-          wallet.addressKeys, // Receiver
-          wallet.addressKeys, // Sender
-          change,
-          this.tokenData,
-          senderViewingKeys,
-          true, // showSenderAddressToRecipient
-          OutputType.Change,
-          undefined, // memoText
-        ),
-      );
-    }
-
     // Push unshield output if unshield is requested
     const hasUnshield =
       this.unshieldFlag !== UnshieldFlag.NO_UNSHIELD && isDefined(this.unshieldNote);
@@ -206,20 +181,25 @@ class Transaction {
       allOutputs.push(this.unshieldNote);
     }
 
+    if (allOutputs.length > 5) {
+      // TODO: Support circuits 1x10 and 1x13.
+      throw new Error('Cannot create a transaction with >5 outputs.');
+    }
+
     const onlyInternalOutputs = allOutputs.filter(
       (note) => note instanceof TransactNote,
     ) as TransactNote[];
 
-    const viewingPrivateKey = wallet.getViewingKeyPair().privateKey;
-
     const noteBlindedKeys = await Promise.all(
       onlyInternalOutputs.map((note) => {
-        const senderRandom = Memo.decryptSenderRandom(note.annotationData, viewingPrivateKey);
+        if (!isDefined(note.senderRandom)) {
+          throw new Error('Sender random is not defined for transact note.');
+        }
         return getNoteBlindingKeys(
           senderViewingKeys.pubkey,
           note.receiverAddressData.viewingPublicKey,
           note.random,
-          senderRandom,
+          note.senderRandom,
         );
       }),
     );
@@ -230,58 +210,6 @@ class Transaction {
         getSharedSymmetricKey(senderViewingKeys.privateKey, blindedReceiverViewingKey),
       ),
     );
-
-    const commitmentCiphertext: CommitmentCiphertextStruct[] = onlyInternalOutputs.map(
-      (note, index) => {
-        const sharedKey = sharedKeys[index];
-        if (!sharedKey) {
-          throw new Error('Shared symmetric key is not defined.');
-        }
-
-        const senderRandom = Memo.decryptSenderRandom(note.annotationData, viewingPrivateKey);
-        const { noteCiphertext, noteMemo } = note.encrypt(
-          sharedKey,
-          wallet.addressKeys.masterPublicKey,
-          senderRandom,
-        );
-        if (noteCiphertext.data.length !== 3) {
-          throw new Error('Note ciphertext data must have length 3.');
-        }
-        const ciphertext: [string, string, string, string] = [
-          hexlify(`${noteCiphertext.iv}${noteCiphertext.tag}`, true),
-          hexlify(noteCiphertext.data[0], true),
-          hexlify(noteCiphertext.data[1], true),
-          hexlify(noteCiphertext.data[2], true),
-        ];
-        return {
-          ciphertext,
-          blindedSenderViewingKey: hexlify(noteBlindedKeys[index].blindedSenderViewingKey, true),
-          blindedReceiverViewingKey: hexlify(
-            noteBlindedKeys[index].blindedReceiverViewingKey,
-            true,
-          ),
-          memo: hexlify(noteMemo, true),
-          annotationData: hexlify(note.annotationData, true),
-        };
-      },
-    );
-
-    const boundParams: BoundParamsStruct = {
-      treeNumber: this.spendingTree,
-      minGasPrice: overallBatchMinGasPrice,
-      unshield: this.unshieldFlag,
-      chainID: hexlify(getChainFullNetworkID(this.chain), true),
-      adaptContract: this.adaptID.contract,
-      adaptParams: this.adaptID.parameters,
-      commitmentCiphertext,
-    };
-
-    const publicInputs: PublicInputsRailgun = {
-      merkleRoot: hexToBigInt(merkleRoot),
-      boundParamsHash: hashBoundParams(boundParams),
-      nullifiers,
-      commitmentsOut: allOutputs.map((note) => note.hash),
-    };
 
     const privateInputs: PrivateInputsRailgun = {
       tokenAddress: hexToBigInt(this.tokenHash),
@@ -295,13 +223,130 @@ class Transaction {
       nullifyingKey,
     };
 
-    const railgunTransactionRequest: RailgunTransactionRequest = {
-      privateInputs,
-      publicInputs,
-      boundParams,
-    };
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        const commitmentCiphertext: CommitmentCiphertextStructV2[] = onlyInternalOutputs.map(
+          (note, index) => {
+            const sharedKey = sharedKeys[index];
+            if (!sharedKey) {
+              throw new Error('Shared symmetric key is not defined.');
+            }
 
-    return railgunTransactionRequest;
+            const { noteCiphertext, noteMemo, annotationData } = note.encryptV2(
+              txidVersion,
+              sharedKey,
+              wallet.addressKeys.masterPublicKey,
+              note.senderRandom,
+              wallet.viewingKeyPair.privateKey,
+            );
+            if (noteCiphertext.data.length !== 3) {
+              throw new Error('Note ciphertext data must have length 3.');
+            }
+            const ciphertext: [string, string, string, string] = [
+              hexlify(`${noteCiphertext.iv}${noteCiphertext.tag}`, true),
+              hexlify(noteCiphertext.data[0], true),
+              hexlify(noteCiphertext.data[1], true),
+              hexlify(noteCiphertext.data[2], true),
+            ];
+            return {
+              ciphertext,
+              blindedSenderViewingKey: hexlify(
+                noteBlindedKeys[index].blindedSenderViewingKey,
+                true,
+              ),
+              blindedReceiverViewingKey: hexlify(
+                noteBlindedKeys[index].blindedReceiverViewingKey,
+                true,
+              ),
+              memo: hexlify(noteMemo, true),
+              annotationData: hexlify(annotationData, true),
+            };
+          },
+        );
+
+        const boundParams: BoundParamsStruct = {
+          treeNumber: this.spendingTree,
+          minGasPrice: globalBoundParams.minGasPrice,
+          unshield: this.unshieldFlag,
+          chainID: hexlify(getChainFullNetworkID(this.chain), true),
+          adaptContract: this.adaptID.contract,
+          adaptParams: this.adaptID.parameters,
+          commitmentCiphertext,
+        };
+
+        const publicInputs: PublicInputsRailgun = {
+          merkleRoot: hexToBigInt(merkleRoot),
+          boundParamsHash: hashBoundParamsV2(boundParams),
+          nullifiers,
+          commitmentsOut: allOutputs.map((note) => note.hash),
+        };
+
+        const railgunTransactionRequest: RailgunTransactionRequestV2 = {
+          txidVersion,
+          privateInputs,
+          publicInputs,
+          boundParams,
+        };
+        return railgunTransactionRequest;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        const commitmentCiphertext: PoseidonMerkleAccumulator.CommitmentCiphertextStruct[] =
+          onlyInternalOutputs.map((note, index) => {
+            const sharedKey = sharedKeys[index];
+            if (!sharedKey) {
+              throw new Error('Shared symmetric key is not defined.');
+            }
+            if (!isDefined(note.senderRandom)) {
+              throw new Error('Note must have senderRandom for V3 encryption');
+            }
+
+            const noteCiphertext = note.encryptV3(
+              txidVersion,
+              sharedKey,
+              wallet.addressKeys.masterPublicKey,
+            );
+            if (noteCiphertext.data.length < 5) {
+              throw new Error('Note ciphertext data must have length >= 5.');
+            }
+            const ciphertext: string = `0x${combine([noteCiphertext.iv, ...noteCiphertext.data])}`;
+            return {
+              ciphertext,
+              blindedSenderViewingKey: hexlify(
+                noteBlindedKeys[index].blindedSenderViewingKey,
+                true,
+              ),
+              blindedReceiverViewingKey: hexlify(
+                noteBlindedKeys[index].blindedReceiverViewingKey,
+                true,
+              ),
+            };
+          });
+
+        const boundParams: PoseidonMerkleVerifier.BoundParamsStruct = {
+          local: {
+            treeNumber: this.spendingTree,
+            commitmentCiphertext,
+          },
+          global: globalBoundParams,
+        };
+
+        const publicInputs: PublicInputsRailgun = {
+          merkleRoot: hexToBigInt(merkleRoot),
+          boundParamsHash: hashBoundParamsV3(boundParams),
+          nullifiers,
+          commitmentsOut: allOutputs.map((note) => note.hash),
+        };
+
+        const railgunTransactionRequest: RailgunTransactionRequestV3 = {
+          txidVersion,
+          privateInputs,
+          publicInputs,
+          boundParams,
+        };
+        return railgunTransactionRequest;
+      }
+    }
+    throw new Error('Invalid txidVersion.');
   }
 
   /**
@@ -312,22 +357,42 @@ class Transaction {
    * @returns serialized transaction
    */
   async generateProvedTransaction(
+    txidVersion: TXIDVersion,
     prover: Prover,
     unprovedTransactionInputs: UnprovedTransactionInputs,
     progressCallback: ProverProgressCallback,
-  ): Promise<TransactionStruct> {
+  ): Promise<TransactionStructV2 | TransactionStructV3> {
     const { publicInputs, privateInputs, boundParams } = unprovedTransactionInputs;
 
     Transaction.assertCanProve(privateInputs);
 
-    const { proof } = await prover.proveRailgun(unprovedTransactionInputs, progressCallback);
-
-    return Transaction.createTransactionStruct(
-      proof,
-      publicInputs,
-      boundParams,
-      this.unshieldNote.preImage,
+    const { proof } = await prover.proveRailgun(
+      txidVersion,
+      unprovedTransactionInputs,
+      progressCallback,
     );
+
+    switch (unprovedTransactionInputs.txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        return Transaction.createTransactionStructV2(
+          unprovedTransactionInputs.txidVersion,
+          proof,
+          publicInputs,
+          boundParams as BoundParamsStruct,
+          this.unshieldNote.preImage,
+        );
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        return Transaction.createTransactionStructV3(
+          unprovedTransactionInputs.txidVersion,
+          proof,
+          publicInputs,
+          boundParams as PoseidonMerkleVerifier.BoundParamsStruct,
+          this.unshieldNote.preImage,
+        );
+      }
+    }
+    throw new Error('Invalid txidVersion.');
   }
 
   /**
@@ -339,17 +404,32 @@ class Transaction {
   async generateDummyProvedTransaction(
     prover: Prover,
     transactionRequest: RailgunTransactionRequest,
-  ): Promise<TransactionStruct> {
+  ): Promise<TransactionStructV2 | TransactionStructV3> {
     const { publicInputs, boundParams } = transactionRequest;
 
     const dummyProof: Proof = prover.dummyProveRailgun(publicInputs);
 
-    return Transaction.createTransactionStruct(
-      dummyProof,
-      publicInputs,
-      boundParams,
-      this.unshieldNote.preImage,
-    );
+    switch (transactionRequest.txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        return Transaction.createTransactionStructV2(
+          transactionRequest.txidVersion,
+          dummyProof,
+          publicInputs,
+          boundParams as BoundParamsStruct,
+          this.unshieldNote.preImage,
+        );
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        return Transaction.createTransactionStructV3(
+          transactionRequest.txidVersion,
+          dummyProof,
+          publicInputs,
+          boundParams as PoseidonMerkleVerifier.BoundParamsStruct,
+          this.unshieldNote.preImage,
+        );
+      }
+    }
+    throw new Error('Invalid txidVersion.');
   }
 
   private static assertCanProve(privateInputs: PrivateInputsRailgun) {
@@ -363,13 +443,15 @@ class Transaction {
     }
   }
 
-  private static createTransactionStruct(
+  private static createTransactionStructV2(
+    txidVersion: TXIDVersion.V2_PoseidonMerkle,
     proof: Proof,
     publicInputs: PublicInputsRailgun,
     boundParams: BoundParamsStruct,
     unshieldPreimage: CommitmentPreimageStruct,
-  ): TransactionStruct {
+  ): TransactionStructV2 {
     return {
+      txidVersion,
       proof: Prover.formatProof(proof),
       merkleRoot: nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
       nullifiers: publicInputs.nullifiers.map((n) => nToHex(n, ByteLength.UINT_256, true)),
@@ -381,6 +463,38 @@ class Transaction {
         value: unshieldPreimage.value,
       },
     };
+  }
+
+  private static createTransactionStructV3(
+    txidVersion: TXIDVersion.V3_PoseidonMerkle,
+    proof: Proof,
+    publicInputs: PublicInputsRailgun,
+    boundParams: PoseidonMerkleVerifier.BoundParamsStruct,
+    unshieldPreimage: CommitmentPreimageStruct,
+  ): TransactionStructV3 {
+    return {
+      txidVersion,
+      proof: Prover.formatProof(proof),
+      merkleRoot: nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
+      nullifiers: publicInputs.nullifiers.map((n) => nToHex(n, ByteLength.UINT_256, true)),
+      boundParams,
+      commitments: publicInputs.commitmentsOut.map((n) => nToHex(n, ByteLength.UINT_256, true)),
+      unshieldPreimage: {
+        npk: formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
+        token: unshieldPreimage.token,
+        value: unshieldPreimage.value,
+      },
+    };
+  }
+
+  static getLocalBoundParams(transaction: TransactionStructV2 | TransactionStructV3) {
+    switch (transaction.txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle:
+        return transaction.boundParams;
+      case TXIDVersion.V3_PoseidonMerkle:
+        return transaction.boundParams.local;
+    }
+    throw new Error('Invalid txidVersion.');
   }
 }
 

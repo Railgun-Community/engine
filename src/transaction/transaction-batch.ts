@@ -1,10 +1,12 @@
+import { BigNumberish } from 'ethers';
 import { RailgunWallet } from '../wallet/railgun-wallet';
-import { Prover, ProverProgressCallback } from '../prover/prover';
+import { Prover } from '../prover/prover';
 import { HashZero } from '../utils/bytes';
 import { findExactSolutionsOverTargetValue } from '../solutions/simple-solutions';
 import { Transaction } from './transaction';
 import { SpendingSolutionGroup, TXO, UnshieldData } from '../models/txo-types';
 import { AdaptID, OutputType, TokenData, TokenType } from '../models/formatted-types';
+import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 import { createSpendingSolutionsForValue } from '../solutions/complex-solutions';
 import { calculateTotalSpend } from '../solutions/utxos';
 import EngineDebug from '../debugger/debugger';
@@ -13,7 +15,6 @@ import {
   serializeExtractedSpendingSolutionGroupsData,
 } from '../solutions/spending-group-extractor';
 import { stringifySafe } from '../utils/stringify';
-import { averageNumber } from '../utils/average';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import {
@@ -24,11 +25,14 @@ import {
 } from '../models';
 import { getTokenDataHash } from '../note/note-util';
 import { AbstractWallet } from '../wallet';
-import { TransactionStruct } from '../abi/typechain/RailgunSmartWallet';
+import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 import { isDefined } from '../utils/is-defined';
 import { POI } from '../poi';
+import { PoseidonMerkleVerifier } from '../abi/typechain';
+import { Memo } from '../note';
+import WalletInfo from '../wallet/wallet-info';
 
-export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 7500;
+export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 9000;
 
 export class TransactionBatch {
   private adaptID: AdaptID = {
@@ -320,6 +324,36 @@ export class TransactionBatch {
     return spendingSolutionGroups;
   }
 
+  static getChangeOutput(
+    wallet: RailgunWallet,
+    spendingSolutionGroup: SpendingSolutionGroup,
+  ): Optional<TransactNote> {
+    const totalIn = calculateTotalSpend(spendingSolutionGroup.utxos);
+    const totalOutputNoteValues = TransactNote.calculateTotalNoteValues(
+      spendingSolutionGroup.tokenOutputs,
+    );
+    const totalOut = totalOutputNoteValues + spendingSolutionGroup.unshieldValue;
+
+    const change = totalIn - totalOut;
+    if (change < 0n) {
+      throw new Error('Negative change value - transaction not possible.');
+    }
+
+    const requiresChangeOutput = change > 0n;
+    const changeOutput = requiresChangeOutput
+      ? TransactNote.createTransfer(
+          wallet.addressKeys, // Receiver
+          wallet.addressKeys, // Sender
+          change,
+          spendingSolutionGroup.tokenData,
+          true, // showSenderAddressToRecipient
+          OutputType.Change,
+          undefined, // memoText
+        )
+      : undefined;
+    return changeOutput;
+  }
+
   /**
    * Generate proofs and return serialized transactions
    * @param prover - prover to use
@@ -336,7 +370,7 @@ export class TransactionBatch {
     shouldGeneratePreTransactionPOIs: boolean,
     originShieldTxidForSpendabilityOverride?: string,
   ): Promise<{
-    provedTransactions: TransactionStruct[];
+    provedTransactions: (TransactionStructV2 | TransactionStructV3)[];
     preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList;
   }> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
@@ -353,23 +387,88 @@ export class TransactionBatch {
       ),
     );
 
-    const provedTransactions: TransactionStruct[] = [];
+    const provedTransactions: (TransactionStructV2 | TransactionStructV3)[] = [];
 
     const preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList = {};
     const activeListKeys = POI.getActiveListKeys();
 
-    for (let index = 0; index < spendingSolutionGroups.length; index += 1) {
-      const spendingSolutionGroup = spendingSolutionGroups[index];
+    const transactionDatas = spendingSolutionGroups.map((spendingSolutionGroup) => {
+      const changeOutput = TransactionBatch.getChangeOutput(wallet, spendingSolutionGroup);
+      const transaction = this.generateTransactionForSpendingSolutionGroup(
+        spendingSolutionGroup,
+        changeOutput,
+      );
+      const outputTypes = spendingSolutionGroup.tokenOutputs.map(
+        (output) => output.outputType as OutputType,
+      );
+      if (changeOutput) {
+        outputTypes.push(OutputType.Change);
+      }
+      return {
+        transaction,
+        outputTypes,
+        utxos: spendingSolutionGroup.utxos,
+        hasUnshield: spendingSolutionGroup.unshieldValue > 0n,
+      };
+    });
 
-      const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
+    const { walletSource } = WalletInfo;
+    const orderedOutputTypes = transactionDatas.map(({ outputTypes }) => outputTypes).flat();
+
+    const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
+      minGasPrice: this.overallBatchMinGasPrice,
+      chainID: this.chain.id,
+      senderCiphertext: Memo.createSenderAnnotationEncryptedV3(
+        walletSource,
+        orderedOutputTypes,
+        wallet.viewingKeyPair.privateKey,
+      ),
+    };
+
+    for (let index = 0; index < transactionDatas.length; index += 1) {
+      const { transaction, utxos, hasUnshield } = transactionDatas[index];
+
       const { publicInputs, privateInputs, boundParams } =
         // eslint-disable-next-line no-await-in-loop
         await transaction.generateTransactionRequest(
           wallet,
           txidVersion,
           encryptionKey,
-          this.overallBatchMinGasPrice,
+          globalBoundParams,
         );
+
+      // eslint-disable-next-line no-await-in-loop
+      const signature = await wallet.sign(publicInputs, encryptionKey);
+
+      // Specific types per TXIDVersion
+      let treeNumber: BigNumberish;
+      let unprovedTransactionInputs: UnprovedTransactionInputs;
+      switch (txidVersion) {
+        case TXIDVersion.V2_PoseidonMerkle: {
+          const boundParamsVersioned = boundParams as BoundParamsStruct;
+          treeNumber = boundParamsVersioned.treeNumber;
+          unprovedTransactionInputs = {
+            txidVersion,
+            privateInputs,
+            publicInputs,
+            boundParams: boundParamsVersioned,
+            signature: [...signature.R8, signature.S],
+          };
+          break;
+        }
+        case TXIDVersion.V3_PoseidonMerkle: {
+          const boundParamsVersioned = boundParams as PoseidonMerkleVerifier.BoundParamsStruct;
+          treeNumber = boundParamsVersioned.local.treeNumber;
+          unprovedTransactionInputs = {
+            txidVersion,
+            privateInputs,
+            publicInputs,
+            boundParams: boundParamsVersioned,
+            signature: [...signature.R8, signature.S],
+          };
+          break;
+        }
+      }
 
       if (shouldGeneratePreTransactionPOIs) {
         // eslint-disable-next-line no-restricted-syntax
@@ -386,10 +485,11 @@ export class TransactionBatch {
             txidVersion,
             this.chain,
             listKey,
-            spendingSolutionGroup.utxos,
+            utxos,
             publicInputs,
             privateInputs,
-            boundParams,
+            treeNumber,
+            hasUnshield,
             (progress: number) => progressCallback(progress, preTransactionProofProgressStatus),
           );
 
@@ -397,14 +497,6 @@ export class TransactionBatch {
         }
       }
 
-      // eslint-disable-next-line no-await-in-loop
-      const signature = await wallet.sign(publicInputs, encryptionKey);
-      const unprovedTransactionInputs: UnprovedTransactionInputs = {
-        privateInputs,
-        publicInputs,
-        boundParams,
-        signature: [...signature.R8, signature.S],
-      };
       // NOTE: For multisig, at this point the UnprovedTransactionInputs are
       // forwarded to the next participant, along with an array of signatures.
 
@@ -414,6 +506,7 @@ export class TransactionBatch {
 
       // eslint-disable-next-line no-await-in-loop
       const provedTransaction = await transaction.generateProvedTransaction(
+        txidVersion,
         prover,
         unprovedTransactionInputs,
         (progress: number) => progressCallback(progress, preTransactionProofProgressStatus),
@@ -459,7 +552,7 @@ export class TransactionBatch {
     txidVersion: TXIDVersion,
     encryptionKey: string,
     originShieldTxidForSpendabilityOverride?: string,
-  ): Promise<TransactionStruct[]> {
+  ): Promise<(TransactionStructV2 | TransactionStructV3)[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
       txidVersion,
@@ -467,31 +560,42 @@ export class TransactionBatch {
     );
     TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 
-    const dummyProvedTransactionPromises: Promise<TransactionStruct>[] = spendingSolutionGroups.map(
-      async (spendingSolutionGroup) => {
-        const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
+    const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
+      minGasPrice: this.overallBatchMinGasPrice,
+      chainID: this.chain.id,
+      senderCiphertext: '0x',
+    };
+
+    const dummyProvedTransactionPromises: Promise<TransactionStructV2 | TransactionStructV3>[] =
+      spendingSolutionGroups.map(async (spendingSolutionGroup) => {
+        const changeOutput = TransactionBatch.getChangeOutput(wallet, spendingSolutionGroup);
+        const transaction = this.generateTransactionForSpendingSolutionGroup(
+          spendingSolutionGroup,
+          changeOutput,
+        );
         const transactionRequest = await transaction.generateTransactionRequest(
           wallet,
           txidVersion,
           encryptionKey,
-          this.overallBatchMinGasPrice,
+          globalBoundParams,
         );
         return transaction.generateDummyProvedTransaction(prover, transactionRequest);
-      },
-    );
+      });
     return Promise.all(dummyProvedTransactionPromises);
   }
 
   generateTransactionForSpendingSolutionGroup(
     spendingSolutionGroup: SpendingSolutionGroup,
+    changeOutput: Optional<TransactNote>,
   ): Transaction {
     const { spendingTree, utxos, tokenOutputs, unshieldValue, tokenData } = spendingSolutionGroup;
+    const allOutputs = changeOutput ? [...tokenOutputs, changeOutput] : tokenOutputs;
     const transaction = new Transaction(
       this.chain,
       tokenData,
       spendingTree,
       utxos,
-      tokenOutputs,
+      allOutputs,
       this.adaptID,
     );
     const tokenHash = getTokenDataHash(tokenData);

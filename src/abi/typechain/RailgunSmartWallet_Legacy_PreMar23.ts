@@ -13,7 +13,7 @@ import type {
   ContractRunner,
   ContractMethod,
   Listener,
-} from 'ethers';
+} from "ethers";
 import type {
   TypedContractEvent,
   TypedDeferredTopicFilter,
@@ -21,7 +21,7 @@ import type {
   TypedLogDescription,
   TypedListener,
   TypedContractMethod,
-} from './common';
+} from "./common";
 
 export type TokenDataStruct = {
   tokenType: BigNumberish;
@@ -32,7 +32,7 @@ export type TokenDataStruct = {
 export type TokenDataStructOutput = [
   tokenType: bigint,
   tokenAddress: string,
-  tokenSubID: bigint,
+  tokenSubID: bigint
 ] & { tokenType: bigint; tokenAddress: string; tokenSubID: bigint };
 
 export type CommitmentPreimageStruct = {
@@ -44,7 +44,7 @@ export type CommitmentPreimageStruct = {
 export type CommitmentPreimageStructOutput = [
   npk: string,
   token: TokenDataStructOutput,
-  value: bigint,
+  value: bigint
 ] & { npk: string; token: TokenDataStructOutput; value: bigint };
 
 export type ShieldCiphertextStruct = {
@@ -54,7 +54,7 @@ export type ShieldCiphertextStruct = {
 
 export type ShieldCiphertextStructOutput = [
   encryptedBundle: [string, string, string],
-  shieldKey: string,
+  shieldKey: string
 ] & { encryptedBundle: [string, string, string]; shieldKey: string };
 
 export type CommitmentCiphertextStruct = {
@@ -70,7 +70,7 @@ export type CommitmentCiphertextStructOutput = [
   blindedSenderViewingKey: string,
   blindedReceiverViewingKey: string,
   annotationData: string,
-  memo: string,
+  memo: string
 ] & {
   ciphertext: [string, string, string, string];
   blindedSenderViewingKey: string;
@@ -111,7 +111,7 @@ export type VerifyingKeyStructOutput = [
   beta2: G2PointStructOutput,
   gamma2: G2PointStructOutput,
   delta2: G2PointStructOutput,
-  ic: G1PointStructOutput[],
+  ic: G1PointStructOutput[]
 ] & {
   artifactsIPFSHash: string;
   alpha1: G1PointStructOutput;
@@ -138,7 +138,7 @@ export type BoundParamsStructOutput = [
   chainID: bigint,
   adaptContract: string,
   adaptParams: string,
-  commitmentCiphertext: CommitmentCiphertextStructOutput[],
+  commitmentCiphertext: CommitmentCiphertextStructOutput[]
 ] & {
   treeNumber: bigint;
   minGasPrice: bigint;
@@ -156,7 +156,7 @@ export type ShieldRequestStruct = {
 
 export type ShieldRequestStructOutput = [
   preimage: CommitmentPreimageStructOutput,
-  ciphertext: ShieldCiphertextStructOutput,
+  ciphertext: ShieldCiphertextStructOutput
 ] & {
   preimage: CommitmentPreimageStructOutput;
   ciphertext: ShieldCiphertextStructOutput;
@@ -171,7 +171,7 @@ export type SnarkProofStruct = {
 export type SnarkProofStructOutput = [
   a: G1PointStructOutput,
   b: G2PointStructOutput,
-  c: G1PointStructOutput,
+  c: G1PointStructOutput
 ] & { a: G1PointStructOutput; b: G2PointStructOutput; c: G1PointStructOutput };
 
 export type TransactionStruct = {
@@ -189,7 +189,7 @@ export type TransactionStructOutput = [
   nullifiers: string[],
   commitments: string[],
   boundParams: BoundParamsStructOutput,
-  unshieldPreimage: CommitmentPreimageStructOutput,
+  unshieldPreimage: CommitmentPreimageStructOutput
 ] & {
   proof: SnarkProofStructOutput;
   merkleRoot: string;
@@ -208,7 +208,7 @@ export type TokenDataLegacyStruct = {
 export type TokenDataLegacyStructOutput = [
   tokenType: bigint,
   tokenAddress: string,
-  tokenSubID: bigint,
+  tokenSubID: bigint
 ] & { tokenType: bigint; tokenAddress: string; tokenSubID: bigint };
 
 export type CommitmentPreimageLegacyStruct = {
@@ -220,7 +220,7 @@ export type CommitmentPreimageLegacyStruct = {
 export type CommitmentPreimageLegacyStructOutput = [
   npk: bigint,
   token: TokenDataLegacyStructOutput,
-  value: bigint,
+  value: bigint
 ] & { npk: bigint; token: TokenDataLegacyStructOutput; value: bigint };
 
 export declare namespace RailgunLogic {
@@ -233,7 +233,7 @@ export declare namespace RailgunLogic {
   export type CommitmentCiphertextLegacyStructOutput = [
     ciphertext: [bigint, bigint, bigint, bigint],
     ephemeralKeys: [bigint, bigint],
-    memo: bigint[],
+    memo: bigint[]
   ] & {
     ciphertext: [bigint, bigint, bigint, bigint];
     ephemeralKeys: [bigint, bigint];
@@ -244,180 +244,333 @@ export declare namespace RailgunLogic {
 export interface RailgunSmartWallet_Legacy_PreMar23Interface extends Interface {
   getFunction(
     nameOrSignature:
-      | 'ZERO_VALUE'
-      | 'addToBlocklist'
-      | 'addVector'
-      | 'changeFee'
-      | 'changeTreasury'
-      | 'checkSafetyVectors'
-      | 'getFee'
-      | 'getInsertionTreeNumberAndStartingIndex'
-      | 'getTokenID'
-      | 'getVerificationKey'
-      | 'hashBoundParams'
-      | 'hashCommitment'
-      | 'hashLeftRight'
-      | 'initializeRailgunLogic'
-      | 'lastEventBlock'
-      | 'merkleRoot'
-      | 'nextLeafIndex'
-      | 'nftFee'
-      | 'nullifiers'
-      | 'owner'
-      | 'removeFromBlocklist'
-      | 'removeVector'
-      | 'renounceOwnership'
-      | 'rootHistory'
-      | 'setVerificationKey'
-      | 'shield'
-      | 'shieldFee'
-      | 'snarkSafetyVector'
-      | 'sumCommitments'
-      | 'tokenBlocklist'
-      | 'tokenIDMapping'
-      | 'transact'
-      | 'transferOwnership'
-      | 'treasury'
-      | 'treeNumber'
-      | 'unshieldFee'
-      | 'validateCommitmentPreimage'
-      | 'validateTransaction'
-      | 'verify'
-      | 'verifyProof'
-      | 'zeros',
+      | "ZERO_VALUE"
+      | "addToBlocklist"
+      | "addVector"
+      | "changeFee"
+      | "changeTreasury"
+      | "checkSafetyVectors"
+      | "getFee"
+      | "getInsertionTreeNumberAndStartingIndex"
+      | "getTokenID"
+      | "getVerificationKey"
+      | "hashBoundParams"
+      | "hashCommitment"
+      | "hashLeftRight"
+      | "initializeRailgunLogic"
+      | "lastEventBlock"
+      | "merkleRoot"
+      | "nextLeafIndex"
+      | "nftFee"
+      | "nullifiers"
+      | "owner"
+      | "removeFromBlocklist"
+      | "removeVector"
+      | "renounceOwnership"
+      | "rootHistory"
+      | "setVerificationKey"
+      | "shield"
+      | "shieldFee"
+      | "snarkSafetyVector"
+      | "sumCommitments"
+      | "tokenBlocklist"
+      | "tokenIDMapping"
+      | "transact"
+      | "transferOwnership"
+      | "treasury"
+      | "treeNumber"
+      | "unshieldFee"
+      | "validateCommitmentPreimage"
+      | "validateTransaction"
+      | "verify"
+      | "verifyProof"
+      | "zeros"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
-      | 'AddToBlocklist'
-      | 'FeeChange'
-      | 'Initialized'
-      | 'Nullified'
-      | 'OwnershipTransferred'
-      | 'RemoveFromBlocklist'
-      | 'Shield'
-      | 'Transact'
-      | 'TreasuryChange'
-      | 'Unshield'
-      | 'VerifyingKeySet'
-      | 'CommitmentBatch'
-      | 'GeneratedCommitmentBatch'
-      | 'Nullifiers',
+      | "AddToBlocklist"
+      | "FeeChange"
+      | "Initialized"
+      | "Nullified"
+      | "OwnershipTransferred"
+      | "RemoveFromBlocklist"
+      | "Shield"
+      | "Transact"
+      | "TreasuryChange"
+      | "Unshield"
+      | "VerifyingKeySet"
+      | "CommitmentBatch"
+      | "GeneratedCommitmentBatch"
+      | "Nullifiers"
   ): EventFragment;
 
-  encodeFunctionData(functionFragment: 'ZERO_VALUE', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'addToBlocklist', values: [AddressLike[]]): string;
-  encodeFunctionData(functionFragment: 'addVector', values: [BigNumberish]): string;
   encodeFunctionData(
-    functionFragment: 'changeFee',
-    values: [BigNumberish, BigNumberish, BigNumberish],
-  ): string;
-  encodeFunctionData(functionFragment: 'changeTreasury', values: [AddressLike]): string;
-  encodeFunctionData(functionFragment: 'checkSafetyVectors', values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: 'getFee',
-    values: [BigNumberish, boolean, BigNumberish],
+    functionFragment: "ZERO_VALUE",
+    values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: 'getInsertionTreeNumberAndStartingIndex',
-    values: [BigNumberish],
+    functionFragment: "addToBlocklist",
+    values: [AddressLike[]]
   ): string;
-  encodeFunctionData(functionFragment: 'getTokenID', values: [TokenDataStruct]): string;
   encodeFunctionData(
-    functionFragment: 'getVerificationKey',
-    values: [BigNumberish, BigNumberish],
+    functionFragment: "addVector",
+    values: [BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: 'hashBoundParams', values: [BoundParamsStruct]): string;
   encodeFunctionData(
-    functionFragment: 'hashCommitment',
-    values: [CommitmentPreimageStruct],
+    functionFragment: "changeFee",
+    values: [BigNumberish, BigNumberish, BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: 'hashLeftRight', values: [BytesLike, BytesLike]): string;
   encodeFunctionData(
-    functionFragment: 'initializeRailgunLogic',
-    values: [AddressLike, BigNumberish, BigNumberish, BigNumberish, AddressLike],
+    functionFragment: "changeTreasury",
+    values: [AddressLike]
   ): string;
-  encodeFunctionData(functionFragment: 'lastEventBlock', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'merkleRoot', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'nextLeafIndex', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'nftFee', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'nullifiers', values: [BigNumberish, BytesLike]): string;
-  encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'removeFromBlocklist', values: [AddressLike[]]): string;
-  encodeFunctionData(functionFragment: 'removeVector', values: [BigNumberish]): string;
-  encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'rootHistory', values: [BigNumberish, BytesLike]): string;
   encodeFunctionData(
-    functionFragment: 'setVerificationKey',
-    values: [BigNumberish, BigNumberish, VerifyingKeyStruct],
+    functionFragment: "checkSafetyVectors",
+    values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: 'shield', values: [ShieldRequestStruct[]]): string;
-  encodeFunctionData(functionFragment: 'shieldFee', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'snarkSafetyVector', values: [BigNumberish]): string;
-  encodeFunctionData(functionFragment: 'sumCommitments', values: [TransactionStruct[]]): string;
-  encodeFunctionData(functionFragment: 'tokenBlocklist', values: [AddressLike]): string;
-  encodeFunctionData(functionFragment: 'tokenIDMapping', values: [BytesLike]): string;
-  encodeFunctionData(functionFragment: 'transact', values: [TransactionStruct[]]): string;
-  encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
-  encodeFunctionData(functionFragment: 'treasury', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'treeNumber', values?: undefined): string;
-  encodeFunctionData(functionFragment: 'unshieldFee', values?: undefined): string;
   encodeFunctionData(
-    functionFragment: 'validateCommitmentPreimage',
-    values: [CommitmentPreimageStruct],
+    functionFragment: "getFee",
+    values: [BigNumberish, boolean, BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: 'validateTransaction', values: [TransactionStruct]): string;
-  encodeFunctionData(functionFragment: 'verify', values: [TransactionStruct]): string;
   encodeFunctionData(
-    functionFragment: 'verifyProof',
-    values: [VerifyingKeyStruct, SnarkProofStruct, BigNumberish[]],
+    functionFragment: "getInsertionTreeNumberAndStartingIndex",
+    values: [BigNumberish]
   ): string;
-  encodeFunctionData(functionFragment: 'zeros', values: [BigNumberish]): string;
+  encodeFunctionData(
+    functionFragment: "getTokenID",
+    values: [TokenDataStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getVerificationKey",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "hashBoundParams",
+    values: [BoundParamsStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "hashCommitment",
+    values: [CommitmentPreimageStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "hashLeftRight",
+    values: [BytesLike, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "initializeRailgunLogic",
+    values: [AddressLike, BigNumberish, BigNumberish, BigNumberish, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "lastEventBlock",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "merkleRoot",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nextLeafIndex",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "nftFee", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "nullifiers",
+    values: [BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "removeFromBlocklist",
+    values: [AddressLike[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "removeVector",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "renounceOwnership",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "rootHistory",
+    values: [BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setVerificationKey",
+    values: [BigNumberish, BigNumberish, VerifyingKeyStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "shield",
+    values: [ShieldRequestStruct[]]
+  ): string;
+  encodeFunctionData(functionFragment: "shieldFee", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "snarkSafetyVector",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "sumCommitments",
+    values: [TransactionStruct[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "tokenBlocklist",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "tokenIDMapping",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "transact",
+    values: [TransactionStruct[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(functionFragment: "treasury", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "treeNumber",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "unshieldFee",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "validateCommitmentPreimage",
+    values: [CommitmentPreimageStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "validateTransaction",
+    values: [TransactionStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verify",
+    values: [TransactionStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verifyProof",
+    values: [VerifyingKeyStruct, SnarkProofStruct, BigNumberish[]]
+  ): string;
+  encodeFunctionData(functionFragment: "zeros", values: [BigNumberish]): string;
 
-  decodeFunctionResult(functionFragment: 'ZERO_VALUE', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'addToBlocklist', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'addVector', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'changeFee', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'changeTreasury', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'checkSafetyVectors', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'getFee', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "ZERO_VALUE", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: 'getInsertionTreeNumberAndStartingIndex',
-    data: BytesLike,
+    functionFragment: "addToBlocklist",
+    data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: 'getTokenID', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'getVerificationKey', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'hashBoundParams', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'hashCommitment', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'hashLeftRight', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'initializeRailgunLogic', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'lastEventBlock', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'merkleRoot', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'nextLeafIndex', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'nftFee', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'nullifiers', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'removeFromBlocklist', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'removeVector', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'rootHistory', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'setVerificationKey', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'shield', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'shieldFee', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'snarkSafetyVector', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'sumCommitments', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'tokenBlocklist', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'tokenIDMapping', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'transact', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'treeNumber', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'unshieldFee', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'validateCommitmentPreimage', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'validateTransaction', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'verify', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'verifyProof', data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: 'zeros', data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "addVector", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "changeFee", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "changeTreasury",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "checkSafetyVectors",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "getFee", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getInsertionTreeNumberAndStartingIndex",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "getTokenID", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getVerificationKey",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "hashBoundParams",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "hashCommitment",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "hashLeftRight",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "initializeRailgunLogic",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "lastEventBlock",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "nextLeafIndex",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "nftFee", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "nullifiers", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "removeFromBlocklist",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "removeVector",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "rootHistory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setVerificationKey",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "shield", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "shieldFee", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "snarkSafetyVector",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "sumCommitments",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "tokenBlocklist",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "tokenIDMapping",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "transact", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "treasury", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "treeNumber", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "unshieldFee",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "validateCommitmentPreimage",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "validateTransaction",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "verifyProof",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "zeros", data: BytesLike): Result;
 }
 
 export namespace AddToBlocklistEvent {
@@ -436,9 +589,13 @@ export namespace FeeChangeEvent {
   export type InputTuple = [
     shieldFee: BigNumberish,
     unshieldFee: BigNumberish,
-    nftFee: BigNumberish,
+    nftFee: BigNumberish
   ];
-  export type OutputTuple = [shieldFee: bigint, unshieldFee: bigint, nftFee: bigint];
+  export type OutputTuple = [
+    shieldFee: bigint,
+    unshieldFee: bigint,
+    nftFee: bigint
+  ];
   export interface OutputObject {
     shieldFee: bigint;
     unshieldFee: bigint;
@@ -505,13 +662,13 @@ export namespace ShieldEvent {
     treeNumber: BigNumberish,
     startPosition: BigNumberish,
     commitments: CommitmentPreimageStruct[],
-    shieldCiphertext: ShieldCiphertextStruct[],
+    shieldCiphertext: ShieldCiphertextStruct[]
   ];
   export type OutputTuple = [
     treeNumber: bigint,
     startPosition: bigint,
     commitments: CommitmentPreimageStructOutput[],
-    shieldCiphertext: ShieldCiphertextStructOutput[],
+    shieldCiphertext: ShieldCiphertextStructOutput[]
   ];
   export interface OutputObject {
     treeNumber: bigint;
@@ -530,13 +687,13 @@ export namespace TransactEvent {
     treeNumber: BigNumberish,
     startPosition: BigNumberish,
     hash: BytesLike[],
-    ciphertext: CommitmentCiphertextStruct[],
+    ciphertext: CommitmentCiphertextStruct[]
   ];
   export type OutputTuple = [
     treeNumber: bigint,
     startPosition: bigint,
     hash: string[],
-    ciphertext: CommitmentCiphertextStructOutput[],
+    ciphertext: CommitmentCiphertextStructOutput[]
   ];
   export interface OutputObject {
     treeNumber: bigint;
@@ -567,9 +724,14 @@ export namespace UnshieldEvent {
     to: AddressLike,
     token: TokenDataStruct,
     amount: BigNumberish,
-    fee: BigNumberish,
+    fee: BigNumberish
   ];
-  export type OutputTuple = [to: string, token: TokenDataStructOutput, amount: bigint, fee: bigint];
+  export type OutputTuple = [
+    to: string,
+    token: TokenDataStructOutput,
+    amount: bigint,
+    fee: bigint
+  ];
   export interface OutputObject {
     to: string;
     token: TokenDataStructOutput;
@@ -586,12 +748,12 @@ export namespace VerifyingKeySetEvent {
   export type InputTuple = [
     nullifiers: BigNumberish,
     commitments: BigNumberish,
-    verifyingKey: VerifyingKeyStruct,
+    verifyingKey: VerifyingKeyStruct
   ];
   export type OutputTuple = [
     nullifiers: bigint,
     commitments: bigint,
-    verifyingKey: VerifyingKeyStructOutput,
+    verifyingKey: VerifyingKeyStructOutput
   ];
   export interface OutputObject {
     nullifiers: bigint;
@@ -609,13 +771,13 @@ export namespace CommitmentBatchEvent {
     treeNumber: BigNumberish,
     startPosition: BigNumberish,
     hash: BigNumberish[],
-    ciphertext: RailgunLogic.CommitmentCiphertextLegacyStruct[],
+    ciphertext: RailgunLogic.CommitmentCiphertextLegacyStruct[]
   ];
   export type OutputTuple = [
     treeNumber: bigint,
     startPosition: bigint,
     hash: bigint[],
-    ciphertext: RailgunLogic.CommitmentCiphertextLegacyStructOutput[],
+    ciphertext: RailgunLogic.CommitmentCiphertextLegacyStructOutput[]
   ];
   export interface OutputObject {
     treeNumber: bigint;
@@ -634,13 +796,13 @@ export namespace GeneratedCommitmentBatchEvent {
     treeNumber: BigNumberish,
     startPosition: BigNumberish,
     commitments: CommitmentPreimageLegacyStruct[],
-    encryptedRandom: [BigNumberish, BigNumberish][],
+    encryptedRandom: [BigNumberish, BigNumberish][]
   ];
   export type OutputTuple = [
     treeNumber: bigint,
     startPosition: bigint,
     commitments: CommitmentPreimageLegacyStructOutput[],
-    encryptedRandom: [bigint, bigint][],
+    encryptedRandom: [bigint, bigint][]
   ];
   export interface OutputObject {
     treeNumber: bigint;
@@ -655,7 +817,10 @@ export namespace GeneratedCommitmentBatchEvent {
 }
 
 export namespace NullifiersEvent {
-  export type InputTuple = [treeNumber: BigNumberish, nullifier: BigNumberish[]];
+  export type InputTuple = [
+    treeNumber: BigNumberish,
+    nullifier: BigNumberish[]
+  ];
   export type OutputTuple = [treeNumber: bigint, nullifier: bigint[]];
   export interface OutputObject {
     treeNumber: bigint;
@@ -677,83 +842,109 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
     fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined,
+    toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
   queryFilter<TCEvent extends TypedContractEvent>(
     filter: TypedDeferredTopicFilter<TCEvent>,
     fromBlockOrBlockhash?: string | number | undefined,
-    toBlock?: string | number | undefined,
+    toBlock?: string | number | undefined
   ): Promise<Array<TypedEventLog<TCEvent>>>;
 
   on<TCEvent extends TypedContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>,
+    listener: TypedListener<TCEvent>
   ): Promise<this>;
   on<TCEvent extends TypedContractEvent>(
     filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>,
+    listener: TypedListener<TCEvent>
   ): Promise<this>;
 
   once<TCEvent extends TypedContractEvent>(
     event: TCEvent,
-    listener: TypedListener<TCEvent>,
+    listener: TypedListener<TCEvent>
   ): Promise<this>;
   once<TCEvent extends TypedContractEvent>(
     filter: TypedDeferredTopicFilter<TCEvent>,
-    listener: TypedListener<TCEvent>,
+    listener: TypedListener<TCEvent>
   ): Promise<this>;
 
   listeners<TCEvent extends TypedContractEvent>(
-    event: TCEvent,
+    event: TCEvent
   ): Promise<Array<TypedListener<TCEvent>>>;
   listeners(eventName?: string): Promise<Array<Listener>>;
-  removeAllListeners<TCEvent extends TypedContractEvent>(event?: TCEvent): Promise<this>;
+  removeAllListeners<TCEvent extends TypedContractEvent>(
+    event?: TCEvent
+  ): Promise<this>;
 
-  ZERO_VALUE: TypedContractMethod<[], [string], 'view'>;
+  ZERO_VALUE: TypedContractMethod<[], [string], "view">;
 
-  addToBlocklist: TypedContractMethod<[_tokens: AddressLike[]], [void], 'nonpayable'>;
-
-  addVector: TypedContractMethod<[vector: BigNumberish], [void], 'nonpayable'>;
-
-  changeFee: TypedContractMethod<
-    [_shieldFee: BigNumberish, _unshieldFee: BigNumberish, _nftFee: BigNumberish],
+  addToBlocklist: TypedContractMethod<
+    [_tokens: AddressLike[]],
     [void],
-    'nonpayable'
+    "nonpayable"
   >;
 
-  changeTreasury: TypedContractMethod<[_treasury: AddressLike], [void], 'nonpayable'>;
+  addVector: TypedContractMethod<[vector: BigNumberish], [void], "nonpayable">;
 
-  checkSafetyVectors: TypedContractMethod<[], [void], 'nonpayable'>;
+  changeFee: TypedContractMethod<
+    [
+      _shieldFee: BigNumberish,
+      _unshieldFee: BigNumberish,
+      _nftFee: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
+
+  changeTreasury: TypedContractMethod<
+    [_treasury: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  checkSafetyVectors: TypedContractMethod<[], [void], "nonpayable">;
 
   getFee: TypedContractMethod<
     [_amount: BigNumberish, _isInclusive: boolean, _feeBP: BigNumberish],
     [[bigint, bigint]],
-    'view'
+    "view"
   >;
 
   getInsertionTreeNumberAndStartingIndex: TypedContractMethod<
     [_newCommitments: BigNumberish],
     [[bigint, bigint]],
-    'view'
+    "view"
   >;
 
-  getTokenID: TypedContractMethod<[_tokenData: TokenDataStruct], [string], 'view'>;
+  getTokenID: TypedContractMethod<
+    [_tokenData: TokenDataStruct],
+    [string],
+    "view"
+  >;
 
   getVerificationKey: TypedContractMethod<
     [_nullifiers: BigNumberish, _commitments: BigNumberish],
     [VerifyingKeyStructOutput],
-    'view'
+    "view"
   >;
 
-  hashBoundParams: TypedContractMethod<[_boundParams: BoundParamsStruct], [bigint], 'view'>;
+  hashBoundParams: TypedContractMethod<
+    [_boundParams: BoundParamsStruct],
+    [bigint],
+    "view"
+  >;
 
   hashCommitment: TypedContractMethod<
     [_commitmentPreimage: CommitmentPreimageStruct],
     [string],
-    'view'
+    "view"
   >;
 
-  hashLeftRight: TypedContractMethod<[_left: BytesLike, _right: BytesLike], [string], 'view'>;
+  hashLeftRight: TypedContractMethod<
+    [_left: BytesLike, _right: BytesLike],
+    [string],
+    "view"
+  >;
 
   initializeRailgunLogic: TypedContractMethod<
     [
@@ -761,47 +952,79 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       _shieldFee: BigNumberish,
       _unshieldFee: BigNumberish,
       _nftFee: BigNumberish,
-      _owner: AddressLike,
+      _owner: AddressLike
     ],
     [void],
-    'nonpayable'
+    "nonpayable"
   >;
 
-  lastEventBlock: TypedContractMethod<[], [bigint], 'view'>;
+  lastEventBlock: TypedContractMethod<[], [bigint], "view">;
 
-  merkleRoot: TypedContractMethod<[], [string], 'view'>;
+  merkleRoot: TypedContractMethod<[], [string], "view">;
 
-  nextLeafIndex: TypedContractMethod<[], [bigint], 'view'>;
+  nextLeafIndex: TypedContractMethod<[], [bigint], "view">;
 
-  nftFee: TypedContractMethod<[], [bigint], 'view'>;
+  nftFee: TypedContractMethod<[], [bigint], "view">;
 
-  nullifiers: TypedContractMethod<[arg0: BigNumberish, arg1: BytesLike], [boolean], 'view'>;
+  nullifiers: TypedContractMethod<
+    [arg0: BigNumberish, arg1: BytesLike],
+    [boolean],
+    "view"
+  >;
 
-  owner: TypedContractMethod<[], [string], 'view'>;
+  owner: TypedContractMethod<[], [string], "view">;
 
-  removeFromBlocklist: TypedContractMethod<[_tokens: AddressLike[]], [void], 'nonpayable'>;
+  removeFromBlocklist: TypedContractMethod<
+    [_tokens: AddressLike[]],
+    [void],
+    "nonpayable"
+  >;
 
-  removeVector: TypedContractMethod<[vector: BigNumberish], [void], 'nonpayable'>;
+  removeVector: TypedContractMethod<
+    [vector: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
-  renounceOwnership: TypedContractMethod<[], [void], 'nonpayable'>;
+  renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
 
-  rootHistory: TypedContractMethod<[arg0: BigNumberish, arg1: BytesLike], [boolean], 'view'>;
+  rootHistory: TypedContractMethod<
+    [arg0: BigNumberish, arg1: BytesLike],
+    [boolean],
+    "view"
+  >;
 
   setVerificationKey: TypedContractMethod<
-    [_nullifiers: BigNumberish, _commitments: BigNumberish, _verifyingKey: VerifyingKeyStruct],
+    [
+      _nullifiers: BigNumberish,
+      _commitments: BigNumberish,
+      _verifyingKey: VerifyingKeyStruct
+    ],
     [void],
-    'nonpayable'
+    "nonpayable"
   >;
 
-  shield: TypedContractMethod<[_shieldRequests: ShieldRequestStruct[]], [void], 'payable'>;
+  shield: TypedContractMethod<
+    [_shieldRequests: ShieldRequestStruct[]],
+    [void],
+    "payable"
+  >;
 
-  shieldFee: TypedContractMethod<[], [bigint], 'view'>;
+  shieldFee: TypedContractMethod<[], [bigint], "view">;
 
-  snarkSafetyVector: TypedContractMethod<[arg0: BigNumberish], [boolean], 'view'>;
+  snarkSafetyVector: TypedContractMethod<
+    [arg0: BigNumberish],
+    [boolean],
+    "view"
+  >;
 
-  sumCommitments: TypedContractMethod<[_transactions: TransactionStruct[]], [bigint], 'view'>;
+  sumCommitments: TypedContractMethod<
+    [_transactions: TransactionStruct[]],
+    [bigint],
+    "view"
+  >;
 
-  tokenBlocklist: TypedContractMethod<[arg0: AddressLike], [boolean], 'view'>;
+  tokenBlocklist: TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
 
   tokenIDMapping: TypedContractMethod<
     [arg0: BytesLike],
@@ -810,268 +1033,364 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
         tokenType: bigint;
         tokenAddress: string;
         tokenSubID: bigint;
-      },
+      }
     ],
-    'view'
+    "view"
   >;
 
-  transact: TypedContractMethod<[_transactions: TransactionStruct[]], [void], 'payable'>;
+  transact: TypedContractMethod<
+    [_transactions: TransactionStruct[]],
+    [void],
+    "payable"
+  >;
 
-  transferOwnership: TypedContractMethod<[newOwner: AddressLike], [void], 'nonpayable'>;
+  transferOwnership: TypedContractMethod<
+    [newOwner: AddressLike],
+    [void],
+    "nonpayable"
+  >;
 
-  treasury: TypedContractMethod<[], [string], 'view'>;
+  treasury: TypedContractMethod<[], [string], "view">;
 
-  treeNumber: TypedContractMethod<[], [bigint], 'view'>;
+  treeNumber: TypedContractMethod<[], [bigint], "view">;
 
-  unshieldFee: TypedContractMethod<[], [bigint], 'view'>;
+  unshieldFee: TypedContractMethod<[], [bigint], "view">;
 
   validateCommitmentPreimage: TypedContractMethod<
     [_note: CommitmentPreimageStruct],
     [boolean],
-    'view'
+    "view"
   >;
 
-  validateTransaction: TypedContractMethod<[_transaction: TransactionStruct], [boolean], 'view'>;
+  validateTransaction: TypedContractMethod<
+    [_transaction: TransactionStruct],
+    [boolean],
+    "view"
+  >;
 
-  verify: TypedContractMethod<[_transaction: TransactionStruct], [boolean], 'view'>;
+  verify: TypedContractMethod<
+    [_transaction: TransactionStruct],
+    [boolean],
+    "view"
+  >;
 
   verifyProof: TypedContractMethod<
-    [_verifyingKey: VerifyingKeyStruct, _proof: SnarkProofStruct, _inputs: BigNumberish[]],
+    [
+      _verifyingKey: VerifyingKeyStruct,
+      _proof: SnarkProofStruct,
+      _inputs: BigNumberish[]
+    ],
     [boolean],
-    'view'
+    "view"
   >;
 
-  zeros: TypedContractMethod<[arg0: BigNumberish], [string], 'view'>;
+  zeros: TypedContractMethod<[arg0: BigNumberish], [string], "view">;
 
-  getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
+  getFunction<T extends ContractMethod = ContractMethod>(
+    key: string | FunctionFragment
+  ): T;
 
-  getFunction(nameOrSignature: 'ZERO_VALUE'): TypedContractMethod<[], [string], 'view'>;
   getFunction(
-    nameOrSignature: 'addToBlocklist',
-  ): TypedContractMethod<[_tokens: AddressLike[]], [void], 'nonpayable'>;
+    nameOrSignature: "ZERO_VALUE"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: 'addVector',
-  ): TypedContractMethod<[vector: BigNumberish], [void], 'nonpayable'>;
+    nameOrSignature: "addToBlocklist"
+  ): TypedContractMethod<[_tokens: AddressLike[]], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: 'changeFee',
+    nameOrSignature: "addVector"
+  ): TypedContractMethod<[vector: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "changeFee"
   ): TypedContractMethod<
-    [_shieldFee: BigNumberish, _unshieldFee: BigNumberish, _nftFee: BigNumberish],
+    [
+      _shieldFee: BigNumberish,
+      _unshieldFee: BigNumberish,
+      _nftFee: BigNumberish
+    ],
     [void],
-    'nonpayable'
+    "nonpayable"
   >;
   getFunction(
-    nameOrSignature: 'changeTreasury',
-  ): TypedContractMethod<[_treasury: AddressLike], [void], 'nonpayable'>;
-  getFunction(nameOrSignature: 'checkSafetyVectors'): TypedContractMethod<[], [void], 'nonpayable'>;
+    nameOrSignature: "changeTreasury"
+  ): TypedContractMethod<[_treasury: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: 'getFee',
+    nameOrSignature: "checkSafetyVectors"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "getFee"
   ): TypedContractMethod<
     [_amount: BigNumberish, _isInclusive: boolean, _feeBP: BigNumberish],
     [[bigint, bigint]],
-    'view'
+    "view"
   >;
   getFunction(
-    nameOrSignature: 'getInsertionTreeNumberAndStartingIndex',
-  ): TypedContractMethod<[_newCommitments: BigNumberish], [[bigint, bigint]], 'view'>;
+    nameOrSignature: "getInsertionTreeNumberAndStartingIndex"
+  ): TypedContractMethod<
+    [_newCommitments: BigNumberish],
+    [[bigint, bigint]],
+    "view"
+  >;
   getFunction(
-    nameOrSignature: 'getTokenID',
-  ): TypedContractMethod<[_tokenData: TokenDataStruct], [string], 'view'>;
+    nameOrSignature: "getTokenID"
+  ): TypedContractMethod<[_tokenData: TokenDataStruct], [string], "view">;
   getFunction(
-    nameOrSignature: 'getVerificationKey',
+    nameOrSignature: "getVerificationKey"
   ): TypedContractMethod<
     [_nullifiers: BigNumberish, _commitments: BigNumberish],
     [VerifyingKeyStructOutput],
-    'view'
+    "view"
   >;
   getFunction(
-    nameOrSignature: 'hashBoundParams',
-  ): TypedContractMethod<[_boundParams: BoundParamsStruct], [bigint], 'view'>;
+    nameOrSignature: "hashBoundParams"
+  ): TypedContractMethod<[_boundParams: BoundParamsStruct], [bigint], "view">;
   getFunction(
-    nameOrSignature: 'hashCommitment',
-  ): TypedContractMethod<[_commitmentPreimage: CommitmentPreimageStruct], [string], 'view'>;
+    nameOrSignature: "hashCommitment"
+  ): TypedContractMethod<
+    [_commitmentPreimage: CommitmentPreimageStruct],
+    [string],
+    "view"
+  >;
   getFunction(
-    nameOrSignature: 'hashLeftRight',
-  ): TypedContractMethod<[_left: BytesLike, _right: BytesLike], [string], 'view'>;
+    nameOrSignature: "hashLeftRight"
+  ): TypedContractMethod<
+    [_left: BytesLike, _right: BytesLike],
+    [string],
+    "view"
+  >;
   getFunction(
-    nameOrSignature: 'initializeRailgunLogic',
+    nameOrSignature: "initializeRailgunLogic"
   ): TypedContractMethod<
     [
       _treasury: AddressLike,
       _shieldFee: BigNumberish,
       _unshieldFee: BigNumberish,
       _nftFee: BigNumberish,
-      _owner: AddressLike,
+      _owner: AddressLike
     ],
     [void],
-    'nonpayable'
+    "nonpayable"
   >;
-  getFunction(nameOrSignature: 'lastEventBlock'): TypedContractMethod<[], [bigint], 'view'>;
-  getFunction(nameOrSignature: 'merkleRoot'): TypedContractMethod<[], [string], 'view'>;
-  getFunction(nameOrSignature: 'nextLeafIndex'): TypedContractMethod<[], [bigint], 'view'>;
-  getFunction(nameOrSignature: 'nftFee'): TypedContractMethod<[], [bigint], 'view'>;
   getFunction(
-    nameOrSignature: 'nullifiers',
-  ): TypedContractMethod<[arg0: BigNumberish, arg1: BytesLike], [boolean], 'view'>;
-  getFunction(nameOrSignature: 'owner'): TypedContractMethod<[], [string], 'view'>;
+    nameOrSignature: "lastEventBlock"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: 'removeFromBlocklist',
-  ): TypedContractMethod<[_tokens: AddressLike[]], [void], 'nonpayable'>;
+    nameOrSignature: "merkleRoot"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: 'removeVector',
-  ): TypedContractMethod<[vector: BigNumberish], [void], 'nonpayable'>;
-  getFunction(nameOrSignature: 'renounceOwnership'): TypedContractMethod<[], [void], 'nonpayable'>;
+    nameOrSignature: "nextLeafIndex"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: 'rootHistory',
-  ): TypedContractMethod<[arg0: BigNumberish, arg1: BytesLike], [boolean], 'view'>;
+    nameOrSignature: "nftFee"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: 'setVerificationKey',
+    nameOrSignature: "nullifiers"
   ): TypedContractMethod<
-    [_nullifiers: BigNumberish, _commitments: BigNumberish, _verifyingKey: VerifyingKeyStruct],
-    [void],
-    'nonpayable'
+    [arg0: BigNumberish, arg1: BytesLike],
+    [boolean],
+    "view"
   >;
   getFunction(
-    nameOrSignature: 'shield',
-  ): TypedContractMethod<[_shieldRequests: ShieldRequestStruct[]], [void], 'payable'>;
-  getFunction(nameOrSignature: 'shieldFee'): TypedContractMethod<[], [bigint], 'view'>;
+    nameOrSignature: "owner"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: 'snarkSafetyVector',
-  ): TypedContractMethod<[arg0: BigNumberish], [boolean], 'view'>;
+    nameOrSignature: "removeFromBlocklist"
+  ): TypedContractMethod<[_tokens: AddressLike[]], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: 'sumCommitments',
-  ): TypedContractMethod<[_transactions: TransactionStruct[]], [bigint], 'view'>;
+    nameOrSignature: "removeVector"
+  ): TypedContractMethod<[vector: BigNumberish], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: 'tokenBlocklist',
-  ): TypedContractMethod<[arg0: AddressLike], [boolean], 'view'>;
-  getFunction(nameOrSignature: 'tokenIDMapping'): TypedContractMethod<
+    nameOrSignature: "renounceOwnership"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "rootHistory"
+  ): TypedContractMethod<
+    [arg0: BigNumberish, arg1: BytesLike],
+    [boolean],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "setVerificationKey"
+  ): TypedContractMethod<
+    [
+      _nullifiers: BigNumberish,
+      _commitments: BigNumberish,
+      _verifyingKey: VerifyingKeyStruct
+    ],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "shield"
+  ): TypedContractMethod<
+    [_shieldRequests: ShieldRequestStruct[]],
+    [void],
+    "payable"
+  >;
+  getFunction(
+    nameOrSignature: "shieldFee"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "snarkSafetyVector"
+  ): TypedContractMethod<[arg0: BigNumberish], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "sumCommitments"
+  ): TypedContractMethod<
+    [_transactions: TransactionStruct[]],
+    [bigint],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "tokenBlocklist"
+  ): TypedContractMethod<[arg0: AddressLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "tokenIDMapping"
+  ): TypedContractMethod<
     [arg0: BytesLike],
     [
       [bigint, string, bigint] & {
         tokenType: bigint;
         tokenAddress: string;
         tokenSubID: bigint;
-      },
+      }
     ],
-    'view'
+    "view"
   >;
   getFunction(
-    nameOrSignature: 'transact',
-  ): TypedContractMethod<[_transactions: TransactionStruct[]], [void], 'payable'>;
-  getFunction(
-    nameOrSignature: 'transferOwnership',
-  ): TypedContractMethod<[newOwner: AddressLike], [void], 'nonpayable'>;
-  getFunction(nameOrSignature: 'treasury'): TypedContractMethod<[], [string], 'view'>;
-  getFunction(nameOrSignature: 'treeNumber'): TypedContractMethod<[], [bigint], 'view'>;
-  getFunction(nameOrSignature: 'unshieldFee'): TypedContractMethod<[], [bigint], 'view'>;
-  getFunction(
-    nameOrSignature: 'validateCommitmentPreimage',
-  ): TypedContractMethod<[_note: CommitmentPreimageStruct], [boolean], 'view'>;
-  getFunction(
-    nameOrSignature: 'validateTransaction',
-  ): TypedContractMethod<[_transaction: TransactionStruct], [boolean], 'view'>;
-  getFunction(
-    nameOrSignature: 'verify',
-  ): TypedContractMethod<[_transaction: TransactionStruct], [boolean], 'view'>;
-  getFunction(
-    nameOrSignature: 'verifyProof',
+    nameOrSignature: "transact"
   ): TypedContractMethod<
-    [_verifyingKey: VerifyingKeyStruct, _proof: SnarkProofStruct, _inputs: BigNumberish[]],
-    [boolean],
-    'view'
+    [_transactions: TransactionStruct[]],
+    [void],
+    "payable"
   >;
   getFunction(
-    nameOrSignature: 'zeros',
-  ): TypedContractMethod<[arg0: BigNumberish], [string], 'view'>;
+    nameOrSignature: "transferOwnership"
+  ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "treasury"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "treeNumber"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "unshieldFee"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "validateCommitmentPreimage"
+  ): TypedContractMethod<[_note: CommitmentPreimageStruct], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "validateTransaction"
+  ): TypedContractMethod<[_transaction: TransactionStruct], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "verify"
+  ): TypedContractMethod<[_transaction: TransactionStruct], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "verifyProof"
+  ): TypedContractMethod<
+    [
+      _verifyingKey: VerifyingKeyStruct,
+      _proof: SnarkProofStruct,
+      _inputs: BigNumberish[]
+    ],
+    [boolean],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "zeros"
+  ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
 
   getEvent(
-    key: 'AddToBlocklist',
+    key: "AddToBlocklist"
   ): TypedContractEvent<
     AddToBlocklistEvent.InputTuple,
     AddToBlocklistEvent.OutputTuple,
     AddToBlocklistEvent.OutputObject
   >;
   getEvent(
-    key: 'FeeChange',
+    key: "FeeChange"
   ): TypedContractEvent<
     FeeChangeEvent.InputTuple,
     FeeChangeEvent.OutputTuple,
     FeeChangeEvent.OutputObject
   >;
   getEvent(
-    key: 'Initialized',
+    key: "Initialized"
   ): TypedContractEvent<
     InitializedEvent.InputTuple,
     InitializedEvent.OutputTuple,
     InitializedEvent.OutputObject
   >;
   getEvent(
-    key: 'Nullified',
+    key: "Nullified"
   ): TypedContractEvent<
     NullifiedEvent.InputTuple,
     NullifiedEvent.OutputTuple,
     NullifiedEvent.OutputObject
   >;
   getEvent(
-    key: 'OwnershipTransferred',
+    key: "OwnershipTransferred"
   ): TypedContractEvent<
     OwnershipTransferredEvent.InputTuple,
     OwnershipTransferredEvent.OutputTuple,
     OwnershipTransferredEvent.OutputObject
   >;
   getEvent(
-    key: 'RemoveFromBlocklist',
+    key: "RemoveFromBlocklist"
   ): TypedContractEvent<
     RemoveFromBlocklistEvent.InputTuple,
     RemoveFromBlocklistEvent.OutputTuple,
     RemoveFromBlocklistEvent.OutputObject
   >;
   getEvent(
-    key: 'Shield',
-  ): TypedContractEvent<ShieldEvent.InputTuple, ShieldEvent.OutputTuple, ShieldEvent.OutputObject>;
+    key: "Shield"
+  ): TypedContractEvent<
+    ShieldEvent.InputTuple,
+    ShieldEvent.OutputTuple,
+    ShieldEvent.OutputObject
+  >;
   getEvent(
-    key: 'Transact',
+    key: "Transact"
   ): TypedContractEvent<
     TransactEvent.InputTuple,
     TransactEvent.OutputTuple,
     TransactEvent.OutputObject
   >;
   getEvent(
-    key: 'TreasuryChange',
+    key: "TreasuryChange"
   ): TypedContractEvent<
     TreasuryChangeEvent.InputTuple,
     TreasuryChangeEvent.OutputTuple,
     TreasuryChangeEvent.OutputObject
   >;
   getEvent(
-    key: 'Unshield',
+    key: "Unshield"
   ): TypedContractEvent<
     UnshieldEvent.InputTuple,
     UnshieldEvent.OutputTuple,
     UnshieldEvent.OutputObject
   >;
   getEvent(
-    key: 'VerifyingKeySet',
+    key: "VerifyingKeySet"
   ): TypedContractEvent<
     VerifyingKeySetEvent.InputTuple,
     VerifyingKeySetEvent.OutputTuple,
     VerifyingKeySetEvent.OutputObject
   >;
   getEvent(
-    key: 'CommitmentBatch',
+    key: "CommitmentBatch"
   ): TypedContractEvent<
     CommitmentBatchEvent.InputTuple,
     CommitmentBatchEvent.OutputTuple,
     CommitmentBatchEvent.OutputObject
   >;
   getEvent(
-    key: 'GeneratedCommitmentBatch',
+    key: "GeneratedCommitmentBatch"
   ): TypedContractEvent<
     GeneratedCommitmentBatchEvent.InputTuple,
     GeneratedCommitmentBatchEvent.OutputTuple,
     GeneratedCommitmentBatchEvent.OutputObject
   >;
   getEvent(
-    key: 'Nullifiers',
+    key: "Nullifiers"
   ): TypedContractEvent<
     NullifiersEvent.InputTuple,
     NullifiersEvent.OutputTuple,
@@ -1079,7 +1398,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
   >;
 
   filters: {
-    'AddToBlocklist(address)': TypedContractEvent<
+    "AddToBlocklist(address)": TypedContractEvent<
       AddToBlocklistEvent.InputTuple,
       AddToBlocklistEvent.OutputTuple,
       AddToBlocklistEvent.OutputObject
@@ -1090,7 +1409,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       AddToBlocklistEvent.OutputObject
     >;
 
-    'FeeChange(uint256,uint256,uint256)': TypedContractEvent<
+    "FeeChange(uint256,uint256,uint256)": TypedContractEvent<
       FeeChangeEvent.InputTuple,
       FeeChangeEvent.OutputTuple,
       FeeChangeEvent.OutputObject
@@ -1101,7 +1420,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       FeeChangeEvent.OutputObject
     >;
 
-    'Initialized(uint8)': TypedContractEvent<
+    "Initialized(uint8)": TypedContractEvent<
       InitializedEvent.InputTuple,
       InitializedEvent.OutputTuple,
       InitializedEvent.OutputObject
@@ -1112,7 +1431,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       InitializedEvent.OutputObject
     >;
 
-    'Nullified(uint16,bytes32[])': TypedContractEvent<
+    "Nullified(uint16,bytes32[])": TypedContractEvent<
       NullifiedEvent.InputTuple,
       NullifiedEvent.OutputTuple,
       NullifiedEvent.OutputObject
@@ -1123,7 +1442,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       NullifiedEvent.OutputObject
     >;
 
-    'OwnershipTransferred(address,address)': TypedContractEvent<
+    "OwnershipTransferred(address,address)": TypedContractEvent<
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
       OwnershipTransferredEvent.OutputObject
@@ -1134,7 +1453,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       OwnershipTransferredEvent.OutputObject
     >;
 
-    'RemoveFromBlocklist(address)': TypedContractEvent<
+    "RemoveFromBlocklist(address)": TypedContractEvent<
       RemoveFromBlocklistEvent.InputTuple,
       RemoveFromBlocklistEvent.OutputTuple,
       RemoveFromBlocklistEvent.OutputObject
@@ -1145,7 +1464,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       RemoveFromBlocklistEvent.OutputObject
     >;
 
-    'Shield(uint256,uint256,tuple[],tuple[])': TypedContractEvent<
+    "Shield(uint256,uint256,tuple[],tuple[])": TypedContractEvent<
       ShieldEvent.InputTuple,
       ShieldEvent.OutputTuple,
       ShieldEvent.OutputObject
@@ -1156,7 +1475,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       ShieldEvent.OutputObject
     >;
 
-    'Transact(uint256,uint256,bytes32[],tuple[])': TypedContractEvent<
+    "Transact(uint256,uint256,bytes32[],tuple[])": TypedContractEvent<
       TransactEvent.InputTuple,
       TransactEvent.OutputTuple,
       TransactEvent.OutputObject
@@ -1167,7 +1486,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       TransactEvent.OutputObject
     >;
 
-    'TreasuryChange(address)': TypedContractEvent<
+    "TreasuryChange(address)": TypedContractEvent<
       TreasuryChangeEvent.InputTuple,
       TreasuryChangeEvent.OutputTuple,
       TreasuryChangeEvent.OutputObject
@@ -1178,7 +1497,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       TreasuryChangeEvent.OutputObject
     >;
 
-    'Unshield(address,tuple,uint256,uint256)': TypedContractEvent<
+    "Unshield(address,tuple,uint256,uint256)": TypedContractEvent<
       UnshieldEvent.InputTuple,
       UnshieldEvent.OutputTuple,
       UnshieldEvent.OutputObject
@@ -1189,7 +1508,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       UnshieldEvent.OutputObject
     >;
 
-    'VerifyingKeySet(uint256,uint256,tuple)': TypedContractEvent<
+    "VerifyingKeySet(uint256,uint256,tuple)": TypedContractEvent<
       VerifyingKeySetEvent.InputTuple,
       VerifyingKeySetEvent.OutputTuple,
       VerifyingKeySetEvent.OutputObject
@@ -1200,7 +1519,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       VerifyingKeySetEvent.OutputObject
     >;
 
-    'CommitmentBatch(uint256,uint256,uint256[],tuple[])': TypedContractEvent<
+    "CommitmentBatch(uint256,uint256,uint256[],tuple[])": TypedContractEvent<
       CommitmentBatchEvent.InputTuple,
       CommitmentBatchEvent.OutputTuple,
       CommitmentBatchEvent.OutputObject
@@ -1211,7 +1530,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       CommitmentBatchEvent.OutputObject
     >;
 
-    'GeneratedCommitmentBatch(uint256,uint256,tuple[],uint256[2][])': TypedContractEvent<
+    "GeneratedCommitmentBatch(uint256,uint256,tuple[],uint256[2][])": TypedContractEvent<
       GeneratedCommitmentBatchEvent.InputTuple,
       GeneratedCommitmentBatchEvent.OutputTuple,
       GeneratedCommitmentBatchEvent.OutputObject
@@ -1222,7 +1541,7 @@ export interface RailgunSmartWallet_Legacy_PreMar23 extends BaseContract {
       GeneratedCommitmentBatchEvent.OutputObject
     >;
 
-    'Nullifiers(uint256,uint256[])': TypedContractEvent<
+    "Nullifiers(uint256,uint256[])": TypedContractEvent<
       NullifiersEvent.InputTuple,
       NullifiersEvent.OutputTuple,
       NullifiersEvent.OutputObject

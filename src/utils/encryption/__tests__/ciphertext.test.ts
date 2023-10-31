@@ -1,13 +1,13 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { BytesData } from '../../models/formatted-types';
-import { randomHex } from '../bytes';
+import { BytesData } from '../../../models/formatted-types';
+import { randomHex } from '../../bytes';
 import {
   ciphertextToEncryptedJSONData,
   ciphertextToEncryptedRandomData,
   encryptedDataToCiphertext,
 } from '../ciphertext';
-import { AES } from '../encryption';
+import { AES } from '../aes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

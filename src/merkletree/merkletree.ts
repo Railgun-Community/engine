@@ -145,10 +145,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     switch (this.txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle:
         return 'V2';
-      // case TXIDVersion.V3_PoseidonMerkle:
-      // return 'V3';
-      // case TXIDVersion.V3_KZG:
-      // throw new Error('KZG txid version not supported for merkletrees.');
+      case TXIDVersion.V3_PoseidonMerkle:
+        return 'V3';
     }
     throw new Error('Unrecognized txid version for merkletree');
   }

@@ -10,6 +10,7 @@ import {
   LegacyGeneratedCommitment,
   NoteAnnotationData,
   OutputType,
+  SenderAnnotationDecrypted,
 } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Memo } from '../../note/memo';
@@ -20,31 +21,40 @@ import {
   signEDDSA,
   verifyEDDSA,
 } from '../../utils/keys-utils';
-import { DECIMALS_18, getEthersWallet, testArtifactsGetter } from '../../test/helper.test';
+import {
+  DECIMALS_18,
+  getEthersWallet,
+  getTestTXIDVersion,
+  isV2Test,
+  testArtifactsGetter,
+} from '../../test/helper.test';
 import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { TransactNote } from '../../note/transact-note';
 import { Prover, SnarkJSGroth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
-import { hashBoundParams } from '../bound-params';
+import { hashBoundParamsV2, hashBoundParamsV3 } from '../bound-params';
 import { MEMO_SENDER_RANDOM_NULL, TXIDVersion } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20, getTokenDataHashERC20 } from '../../note/note-util';
 import { TokenDataGetter } from '../../token/token-data-getter';
 import { ContractStore } from '../../contracts/contract-store';
-import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
+import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 import { AES, ZERO_32_BYTE_VALUE } from '../../utils';
 import { POI } from '../../poi/poi';
+import { PoseidonMerkleVerifier } from '../../abi/typechain';
+import { addChainSupportsV3 } from '../../chain/chain';
+import { XChaCha20 } from '../../utils/encryption/x-cha-cha-20';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
-const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+const txidVersion = getTestTXIDVersion();
 
 let db: Database;
 let utxoMerkletree: UTXOMerkletree;
@@ -105,6 +115,9 @@ describe('transaction-erc20', function test() {
     prover = new Prover(testArtifactsGetter);
     prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
     address = wallet.addressKeys;
+
+    addChainSupportsV3(chain);
+
     await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
 
     POI.setLaunchBlock(chain, 0);
@@ -119,7 +132,7 @@ describe('transaction-erc20', function test() {
         chain,
       );
 
-    tokenDataGetter = new TokenDataGetter(db, chain);
+    tokenDataGetter = new TokenDataGetter(db);
 
     makeNote = async (
       value: bigint = 65n * DECIMALS_18,
@@ -130,7 +143,6 @@ describe('transaction-erc20', function test() {
         undefined,
         value,
         tokenData,
-        wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         outputType,
         undefined, // memoText
@@ -145,13 +157,15 @@ describe('transaction-erc20', function test() {
       scanProgress = progress;
     });
     expect(scanProgress).to.equal(1);
+
+    await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
   });
 
   beforeEach(async () => {
     transactionBatch = new TransactionBatch(chain);
   });
 
-  it('Should hash bound parameters', async () => {
+  it('Should hash bound parameters for V2', async () => {
     const params: BoundParamsStruct = {
       treeNumber: BigInt(0),
       unshield: BigInt(0),
@@ -174,10 +188,36 @@ describe('transaction-erc20', function test() {
       ],
       minGasPrice: BigInt(3000),
     };
-    const hashed = hashBoundParams(params);
+    const hashed = hashBoundParamsV2(params);
     assert.typeOf(hashed, 'bigint');
     expect(hashed).to.equal(
       7297316625290769368067090402207718021912518614094704642142032948132837136470n,
+    );
+  });
+
+  it('Should hash bound parameters for V3', async () => {
+    const boundParams: PoseidonMerkleVerifier.BoundParamsStruct = {
+      local: {
+        treeNumber: BigInt(0),
+        commitmentCiphertext: [
+          {
+            ciphertext: `0x${[
+              formatToByteLength('00', ByteLength.UINT_256),
+              formatToByteLength('00', ByteLength.UINT_256),
+              formatToByteLength('00', ByteLength.UINT_256),
+              formatToByteLength('00', ByteLength.UINT_256),
+            ].join('')}`,
+            blindedReceiverViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
+            blindedSenderViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
+          },
+        ],
+      },
+      global: { minGasPrice: 1n, chainID: chain.id, senderCiphertext: '0x' },
+    };
+    const hashed = hashBoundParamsV3(boundParams);
+    assert.typeOf(hashed, 'bigint');
+    expect(hashed).to.equal(
+      18183143013686574484742877434820114997757057658386650634377896989495534579614n,
     );
   });
 
@@ -250,6 +290,10 @@ describe('transaction-erc20', function test() {
       senderRandom,
       walletSource: 'erc20 wallet',
     };
+    const senderCiphertext: SenderAnnotationDecrypted = {
+      outputType: OutputType.RelayerFee,
+      walletSource: 'erc20 wallet',
+    };
 
     const memoText = 'Some Memo Text';
 
@@ -260,18 +304,14 @@ describe('transaction-erc20', function test() {
       wallet.addressKeys,
       100n,
       tokenData,
-      wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
       memoText,
     );
+
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore - required to set senderRandom outside this function
-    note.annotationData = Memo.createEncryptedNoteAnnotationData(
-      noteAnnotationData.outputType,
-      senderRandom,
-      wallet.getViewingKeyPair().privateKey,
-    );
+    // @ts-expect-error
+    note.senderRandom = senderRandom;
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - required to set readonly blockNumber
@@ -297,60 +337,118 @@ describe('transaction-erc20', function test() {
     assert(receiverShared != null);
     expect(senderShared).to.deep.equal(receiverShared);
 
-    const { noteCiphertext, noteMemo } = note.encrypt(
-      senderShared,
-      wallet.addressKeys.masterPublicKey,
-      senderRandom,
-    );
+    let noteCiphertext;
+    let noteMemo;
+    let annotationData;
+    let encodedMasterPublicKey;
 
-    // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
-    const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
-    const fullCiphertext: Ciphertext = {
-      ...noteCiphertext,
-      data: ciphertextDataWithMemoText,
-    };
-    const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
-      hexlify(value),
-    );
-    const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        const encryptedValues = note.encryptV2(
+          txidVersion,
+          senderShared,
+          wallet.addressKeys.masterPublicKey,
+          senderRandom,
+          sender.privateKey,
+        );
+        noteCiphertext = encryptedValues.noteCiphertext;
+        noteMemo = encryptedValues.noteMemo;
+        annotationData = encryptedValues.annotationData;
+
+        // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+        const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
+        const fullCiphertext: Ciphertext = {
+          ...noteCiphertext,
+          data: ciphertextDataWithMemoText,
+        };
+        const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
+          hexlify(value),
+        );
+        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        break;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        noteCiphertext = note.encryptV3(
+          txidVersion,
+          senderShared,
+          wallet.addressKeys.masterPublicKey,
+        );
+        noteMemo = '';
+        annotationData = Memo.createSenderAnnotationEncryptedV3(
+          WalletInfo.walletSource,
+          [noteAnnotationData.outputType],
+          sender.privateKey,
+        );
+
+        // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+        const decryptedValues = XChaCha20.decryptChaCha20Poly1305(noteCiphertext, senderShared).map(
+          (value) => hexlify(value),
+        );
+        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        break;
+      }
+    }
+
     expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
 
     const senderDecrypted = await TransactNote.decrypt(
+      txidVersion,
+      chain,
       wallet.addressKeys,
       noteCiphertext,
       senderShared,
       noteMemo,
-      note.annotationData,
+      annotationData,
+      sender.privateKey,
       blindingKeys.blindedReceiverViewingKey,
       blindingKeys.blindedSenderViewingKey,
-      senderRandom,
       true, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
       blockNumber,
+      isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
     expect(senderDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
-    expect(
-      Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
-    ).to.deep.equal(noteAnnotationData);
+
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        expect(Memo.decryptNoteAnnotationData(annotationData, sender.privateKey)).to.deep.equal(
+          noteAnnotationData,
+        );
+        break;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        const decryptedSenderCiphertext = Memo.decryptSenderCiphertextV3(
+          annotationData,
+          sender.privateKey,
+          0,
+        );
+        expect(decryptedSenderCiphertext).to.deep.equal(senderCiphertext);
+        break;
+      }
+    }
+
     expect(senderDecrypted.memoText).to.equal(memoText);
     expect(senderDecrypted.blockNumber).to.equal(blockNumber);
 
     const receiverDecrypted = await TransactNote.decrypt(
+      txidVersion,
+      chain,
       wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
       noteMemo,
-      note.annotationData,
+      annotationData,
+      wallet.getViewingKeyPair().privateKey,
       blindingKeys.blindedReceiverViewingKey,
       blindingKeys.blindedSenderViewingKey,
-      undefined, // senderRandom
       false, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
       blockNumber,
+      isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.equal(undefined);
@@ -378,6 +476,10 @@ describe('transaction-erc20', function test() {
       senderRandom,
       walletSource: 'erc20 wallet',
     };
+    const senderCiphertext: SenderAnnotationDecrypted = {
+      outputType: OutputType.RelayerFee,
+      walletSource: 'erc20 wallet',
+    };
 
     const memoText = undefined;
 
@@ -386,18 +488,14 @@ describe('transaction-erc20', function test() {
       wallet.addressKeys,
       100n,
       tokenData,
-      wallet.getViewingKeyPair(),
       false, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
       memoText,
     );
+
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore - required to set senderRandom outside this function
-    note.annotationData = Memo.createEncryptedNoteAnnotationData(
-      noteAnnotationData.outputType,
-      senderRandom,
-      wallet.getViewingKeyPair().privateKey,
-    );
+    // @ts-expect-error
+    note.senderRandom = senderRandom;
 
     assert.isTrue(note.receiverAddressData.viewingPublicKey === receiver.pubkey);
     const blindingKeys = getNoteBlindingKeys(
@@ -419,59 +517,114 @@ describe('transaction-erc20', function test() {
     assert(receiverShared != null);
     expect(senderShared).to.deep.equal(receiverShared);
 
-    const { noteCiphertext, noteMemo } = note.encrypt(
-      senderShared,
-      address.masterPublicKey,
-      senderRandom,
-    );
+    let noteCiphertext;
+    let noteMemo;
+    let annotationData;
+    let encodedMasterPublicKey;
 
-    // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
-    const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
-    const fullCiphertext: Ciphertext = {
-      ...noteCiphertext,
-      data: ciphertextDataWithMemoText,
-    };
-    const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
-      hexlify(value),
-    );
-    const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        const encryptedValues = note.encryptV2(
+          txidVersion,
+          senderShared,
+          wallet.addressKeys.masterPublicKey,
+          senderRandom,
+          sender.privateKey,
+        );
+        noteCiphertext = encryptedValues.noteCiphertext;
+        noteMemo = encryptedValues.noteMemo;
+        annotationData = encryptedValues.annotationData;
+
+        // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+        const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
+        const fullCiphertext: Ciphertext = {
+          ...noteCiphertext,
+          data: ciphertextDataWithMemoText,
+        };
+        const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
+          hexlify(value),
+        );
+        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        break;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        noteCiphertext = note.encryptV3(
+          txidVersion,
+          senderShared,
+          wallet.addressKeys.masterPublicKey,
+        );
+        noteMemo = '';
+        annotationData = Memo.createSenderAnnotationEncryptedV3(
+          WalletInfo.walletSource,
+          [noteAnnotationData.outputType],
+          sender.privateKey,
+        );
+
+        // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+        const decryptedValues = XChaCha20.decryptChaCha20Poly1305(noteCiphertext, senderShared).map(
+          (value) => hexlify(value),
+        );
+        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        break;
+      }
+    }
+
     expect(note.receiverAddressData.masterPublicKey).to.equal(encodedMasterPublicKey);
 
     const senderDecrypted = await TransactNote.decrypt(
+      txidVersion,
+      chain,
       wallet.addressKeys,
       noteCiphertext,
       senderShared,
       noteMemo,
-      note.annotationData,
+      annotationData,
+      sender.privateKey,
       blindingKeys.blindedReceiverViewingKey,
       blindingKeys.blindedSenderViewingKey,
-      senderRandom,
       true, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
       100, // blockNumber
+      isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
     expect(senderDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
-    expect(
-      Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
-    ).to.deep.equal(noteAnnotationData);
+
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        expect(Memo.decryptNoteAnnotationData(annotationData, sender.privateKey)).to.deep.equal(
+          noteAnnotationData,
+        );
+        break;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        expect(Memo.decryptSenderCiphertextV3(annotationData, sender.privateKey, 0)).to.deep.equal(
+          senderCiphertext,
+        );
+        break;
+      }
+    }
+
     expect(senderDecrypted.memoText).to.equal(memoText);
 
     const receiverDecrypted = await TransactNote.decrypt(
+      txidVersion,
+      chain,
       wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
       noteMemo,
-      note.annotationData,
+      annotationData,
+      sender.privateKey,
       blindingKeys.blindedReceiverViewingKey,
       blindingKeys.blindedSenderViewingKey,
-      undefined, // senderRandom
       false, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
       100, // blockNumber
+      isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.equal(undefined);
@@ -498,6 +651,10 @@ describe('transaction-erc20', function test() {
       senderRandom: MEMO_SENDER_RANDOM_NULL,
       walletSource: 'erc20 wallet',
     };
+    const senderCiphertext: SenderAnnotationDecrypted = {
+      outputType: OutputType.RelayerFee,
+      walletSource: 'erc20 wallet',
+    };
 
     const memoText = undefined;
 
@@ -506,7 +663,6 @@ describe('transaction-erc20', function test() {
       wallet.addressKeys,
       100n,
       tokenData,
-      wallet.getViewingKeyPair(),
       true, // showSenderAddressToRecipient
       noteAnnotationData.outputType,
       memoText,
@@ -532,59 +688,114 @@ describe('transaction-erc20', function test() {
     assert(receiverShared != null);
     expect(senderShared).to.deep.equal(receiverShared);
 
-    const { noteCiphertext, noteMemo } = note.encrypt(
-      senderShared,
-      address.masterPublicKey,
-      senderRandom,
-    );
+    let noteCiphertext;
+    let noteMemo;
+    let annotationData;
+    let encodedMasterPublicKey;
 
-    // Make sure masterPublicKey is encoded as encodedMasterPublicKey.
-    const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
-    const fullCiphertext: Ciphertext = {
-      ...noteCiphertext,
-      data: ciphertextDataWithMemoText,
-    };
-    const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
-      hexlify(value),
-    );
-    const encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        const encryptedValues = note.encryptV2(
+          txidVersion,
+          senderShared,
+          wallet.addressKeys.masterPublicKey,
+          senderRandom,
+          sender.privateKey,
+        );
+        noteCiphertext = encryptedValues.noteCiphertext;
+        noteMemo = encryptedValues.noteMemo;
+        annotationData = encryptedValues.annotationData;
+
+        // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+        const ciphertextDataWithMemoText = [...noteCiphertext.data, noteMemo];
+        const fullCiphertext: Ciphertext = {
+          ...noteCiphertext,
+          data: ciphertextDataWithMemoText,
+        };
+        const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
+          hexlify(value),
+        );
+        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        break;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        noteCiphertext = note.encryptV3(
+          txidVersion,
+          senderShared,
+          wallet.addressKeys.masterPublicKey,
+        );
+        noteMemo = '';
+        annotationData = Memo.createSenderAnnotationEncryptedV3(
+          WalletInfo.walletSource,
+          [noteAnnotationData.outputType],
+          sender.privateKey,
+        );
+
+        // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
+        const decryptedValues = XChaCha20.decryptChaCha20Poly1305(noteCiphertext, senderShared).map(
+          (value) => hexlify(value),
+        );
+        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        break;
+      }
+    }
+
     expect(note.receiverAddressData.masterPublicKey).to.not.equal(encodedMasterPublicKey);
 
     const senderDecrypted = await TransactNote.decrypt(
+      txidVersion,
+      chain,
       wallet.addressKeys,
       noteCiphertext,
       senderShared,
       noteMemo,
-      note.annotationData,
+      annotationData,
+      wallet.getViewingKeyPair().privateKey,
       blindingKeys.blindedReceiverViewingKey,
       blindingKeys.blindedSenderViewingKey,
-      senderRandom,
       true, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
       100, // blockNumber
+      isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
     );
     expect(senderDecrypted.hash).to.equal(note.hash);
     expect(senderDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
     expect(senderDecrypted.receiverAddressData).to.deep.equal(wallet2.addressKeys);
-    expect(
-      Memo.decryptNoteAnnotationData(senderDecrypted.annotationData, sender.privateKey),
-    ).to.deep.equal(noteAnnotationData);
+
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        expect(Memo.decryptNoteAnnotationData(annotationData, sender.privateKey)).to.deep.equal(
+          noteAnnotationData,
+        );
+        break;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        expect(Memo.decryptSenderCiphertextV3(annotationData, sender.privateKey, 0)).to.deep.equal(
+          senderCiphertext,
+        );
+        break;
+      }
+    }
+
     expect(senderDecrypted.memoText).to.equal(memoText);
 
     const receiverDecrypted = await TransactNote.decrypt(
+      txidVersion,
+      chain,
       wallet2.addressKeys,
       noteCiphertext,
       receiverShared,
       noteMemo,
-      note.annotationData,
+      annotationData,
+      wallet.getViewingKeyPair().privateKey,
       blindingKeys.blindedReceiverViewingKey,
       blindingKeys.blindedSenderViewingKey,
-      undefined, // senderRandom
       false, // isSentNote
       false, // isLegacyDecryption
       tokenDataGetter,
       100, // blockNumber
+      isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
     );
     expect(receiverDecrypted.hash).to.equal(note.hash);
     expect(receiverDecrypted.senderAddressData).to.deep.equal(wallet.addressKeys);
@@ -600,11 +811,20 @@ describe('transaction-erc20', function test() {
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
+      TransactionBatch.getChangeOutput(wallet, spendingSolutionGroups[0]),
     );
+
+    const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
+      minGasPrice: 0n,
+      chainID: chain.id,
+      senderCiphertext: '0x',
+    };
+
     const { publicInputs } = await transaction.generateTransactionRequest(
       wallet,
       txidVersion,
       testEncryptionKey,
+      globalBoundParams,
     );
     const signature = await wallet.sign(publicInputs, testEncryptionKey);
     const { privateKey, pubkey } = await wallet.getSpendingKeyPair(testEncryptionKey);
@@ -623,11 +843,20 @@ describe('transaction-erc20', function test() {
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
+      TransactionBatch.getChangeOutput(wallet, spendingSolutionGroups[0]),
     );
+
+    const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
+      minGasPrice: 0n,
+      chainID: chain.id,
+      senderCiphertext: '0x',
+    };
+
     const { publicInputs } = await transaction.generateTransactionRequest(
       wallet,
       txidVersion,
       testEncryptionKey,
+      globalBoundParams,
     );
     const { nullifiers, commitmentsOut } = publicInputs;
     expect(nullifiers.length).to.equal(1);
@@ -647,7 +876,7 @@ describe('transaction-erc20', function test() {
         () => {},
         false, // shouldGeneratePreTransactionPOIs
       ),
-    ).to.eventually.be.rejectedWith('Can not add more than 4 outputs.');
+    ).to.eventually.be.rejectedWith('Can not add more than 5 outputs.');
 
     transactionBatch.resetOutputs();
     transactionBatch.addOutput(
@@ -656,7 +885,6 @@ describe('transaction-erc20', function test() {
         undefined,
         6500000000000n,
         getTokenDataERC20('000925cdf66ddf5b88016df1fe915e68eff8f192'),
-        wallet.getViewingKeyPair(),
         false, // showSenderAddressToRecipient
         OutputType.RelayerFee,
         undefined, // memoText
@@ -715,12 +943,18 @@ describe('transaction-erc20', function test() {
 
     const transaction = transactionBatch.generateTransactionForSpendingSolutionGroup(
       spendingSolutionGroups[0],
+      TransactionBatch.getChangeOutput(wallet, spendingSolutionGroups[0]),
     );
+    const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
+      minGasPrice: 0n,
+      chainID: chain.id,
+      senderCiphertext: '0x',
+    };
     const { publicInputs } = await transaction.generateTransactionRequest(
       wallet,
       txidVersion,
       testEncryptionKey,
-      0n, // overallBatchMinGasPrice
+      globalBoundParams,
     );
     const { nullifiers, commitmentsOut } = publicInputs;
     expect(nullifiers.length).to.equal(1);

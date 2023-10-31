@@ -9,15 +9,16 @@ import {
   Log,
   toUtf8String,
 } from 'ethers';
-import { ABIRelayAdapt } from '../../abi/abi';
-import { TransactionReceiptLog } from '../../models/formatted-types';
-import { getTokenDataERC20 } from '../../note/note-util';
-import { ZERO_ADDRESS } from '../../utils/constants';
-import { RelayAdaptHelper } from './relay-adapt-helper';
-import EngineDebug from '../../debugger/debugger';
-import { ShieldRequestStruct } from '../../abi/typechain/RailgunSmartWallet';
-import { RelayAdapt, TransactionStruct } from '../../abi/typechain/RelayAdapt';
-import { PayableOverrides } from '../../abi/typechain/common';
+import { ABIRelayAdapt } from '../../../abi/abi';
+import { TransactionReceiptLog } from '../../../models/formatted-types';
+import { getTokenDataERC20 } from '../../../note/note-util';
+import { ZERO_ADDRESS } from '../../../utils/constants';
+import { RelayAdaptHelper } from '../relay-adapt-helper';
+import EngineDebug from '../../../debugger/debugger';
+import { ShieldRequestStruct } from '../../../abi/typechain/RailgunSmartWallet';
+import { RelayAdapt } from '../../../abi/typechain/RelayAdapt';
+import { PayableOverrides } from '../../../abi/typechain/common';
+import { TransactionStructV2 } from '../../../models/transaction-types';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -30,26 +31,27 @@ export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 // Set a high default that can be overridden by a developer.
 export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigInt(3_200_000);
 
-export class RelayAdaptContract {
+export class RelayAdaptV3Contract {
   private readonly contract: RelayAdapt;
 
   readonly address: string;
 
   /**
    * Connect to Railgun instance on network
-   * @param relayAdaptContractAddress - address of Railgun relay adapt contract
+   * @param relayAdaptV3ContractAddress - address of Railgun relay adapt contract
    * @param provider - Network provider
    */
-  constructor(relayAdaptContractAddress: string, provider: Provider) {
-    this.address = relayAdaptContractAddress;
+  constructor(relayAdaptV3ContractAddress: string, provider: Provider) {
+    this.address = relayAdaptV3ContractAddress;
     this.contract = new Contract(
-      relayAdaptContractAddress,
-      ABIRelayAdapt,
+      relayAdaptV3ContractAddress,
+      ABIRelayAdapt, // TODO-V3
       provider,
     ) as unknown as RelayAdapt;
   }
 
   async populateShieldBaseToken(shieldRequest: ShieldRequestStruct): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     const orderedCalls: ContractTransaction[] = await Promise.all([
       this.contract.wrapBase.populateTransaction(shieldRequest.preimage.value),
       this.populateRelayShields([shieldRequest]),
@@ -63,6 +65,7 @@ export class RelayAdaptContract {
     calls: ContractTransaction[],
     shieldRequests: ShieldRequestStruct[],
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     const orderedCalls = await this.getOrderedCallsForCrossContractCalls(calls, shieldRequests);
     return this.populateRelayMulticall(orderedCalls, {});
   }
@@ -73,12 +76,14 @@ export class RelayAdaptContract {
   private populateRelayShields(
     shieldRequests: ShieldRequestStruct[],
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     return this.contract.shield.populateTransaction(shieldRequests);
   }
 
   private async getOrderedCallsForUnshieldBaseToken(
     unshieldAddress: string,
   ): Promise<ContractTransaction[]> {
+    throw new Error('Not implemented.');
     // Use 0x00 address ERC20 to represent base token.
     const baseTokenData = getTokenDataERC20(ZERO_ADDRESS);
 
@@ -98,10 +103,11 @@ export class RelayAdaptContract {
   }
 
   async getRelayAdaptParamsUnshieldBaseToken(
-    dummyTransactions: TransactionStruct[],
+    dummyTransactions: TransactionStructV2[],
     unshieldAddress: string,
     random: string,
   ): Promise<string> {
+    throw new Error('Not implemented.');
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
     );
@@ -116,10 +122,11 @@ export class RelayAdaptContract {
   }
 
   async populateUnshieldBaseToken(
-    transactions: TransactionStruct[],
+    transactions: TransactionStructV2[],
     unshieldAddress: string,
     random31Bytes: string,
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
     );
@@ -134,6 +141,7 @@ export class RelayAdaptContract {
   private populateRelayTransfers(
     transfersData: RelayAdapt.TokenTransferStruct[],
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     return this.contract.transfer.populateTransaction(transfersData);
   }
 
@@ -141,6 +149,7 @@ export class RelayAdaptContract {
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
   ): Promise<ContractTransaction[]> {
+    throw new Error('Not implemented.');
     const orderedCallPromises: ContractTransaction[] = [...crossContractCalls];
     if (relayShieldRequests.length) {
       orderedCallPromises.push(await this.populateRelayShields(relayShieldRequests));
@@ -152,6 +161,7 @@ export class RelayAdaptContract {
     isGasEstimate: boolean,
     isRelayerTransaction: boolean,
   ): boolean {
+    throw new Error('Not implemented.');
     // If the cross contract calls (multicalls) fail, the Relayer Fee and Shields should continue to process.
     // We should only !requireSuccess for production relayer transactions (not gas estimates).
     const continueAfterMulticallFailure = isRelayerTransaction && !isGasEstimate;
@@ -159,13 +169,14 @@ export class RelayAdaptContract {
   }
 
   async getRelayAdaptParamsCrossContractCalls(
-    dummyUnshieldTransactions: TransactionStruct[],
+    dummyUnshieldTransactions: TransactionStructV2[],
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random: string,
     isRelayerTransaction: boolean,
     minGasLimit?: bigint,
   ): Promise<string> {
+    throw new Error('Not implemented.');
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
       relayShieldRequests,
@@ -174,14 +185,14 @@ export class RelayAdaptContract {
     // Adapt params not required for gas estimates.
     const isGasEstimate = false;
 
-    const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
+    const requireSuccess = RelayAdaptV3Contract.shouldRequireSuccessForCrossContractCalls(
       isGasEstimate,
       isRelayerTransaction,
     );
 
     const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
     const minGasLimitForContract =
-      RelayAdaptContract.getMinimumGasLimitForContract(minimumGasLimit);
+      RelayAdaptV3Contract.getMinimumGasLimitForContract(minimumGasLimit);
 
     return RelayAdaptHelper.getRelayAdaptParams(
       dummyUnshieldTransactions,
@@ -193,7 +204,7 @@ export class RelayAdaptContract {
   }
 
   async populateCrossContractCalls(
-    unshieldTransactions: TransactionStruct[],
+    unshieldTransactions: TransactionStructV2[],
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random31Bytes: string,
@@ -201,19 +212,20 @@ export class RelayAdaptContract {
     isRelayerTransaction: boolean,
     minGasLimit?: bigint,
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
       relayShieldRequests,
     );
 
-    const requireSuccess = RelayAdaptContract.shouldRequireSuccessForCrossContractCalls(
+    const requireSuccess = RelayAdaptV3Contract.shouldRequireSuccessForCrossContractCalls(
       isGasEstimate,
       isRelayerTransaction,
     );
 
     const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
     const minGasLimitForContract =
-      RelayAdaptContract.getMinimumGasLimitForContract(minimumGasLimit);
+      RelayAdaptV3Contract.getMinimumGasLimitForContract(minimumGasLimit);
 
     const populatedTransaction = await this.populateRelay(
       unshieldTransactions,
@@ -231,6 +243,7 @@ export class RelayAdaptContract {
   }
 
   static getMinimumGasLimitForContract(minimumGasLimit: bigint) {
+    throw new Error('Not implemented.');
     // Contract call needs ~50,000-150,000 less gas than the gasLimit setting.
     // This can be more if there are complex UTXO sets for the unshield.
     return minimumGasLimit - 150_000n;
@@ -240,6 +253,7 @@ export class RelayAdaptContract {
     provider: Provider,
     transaction: ContractTransaction | TransactionRequest,
   ): Promise<bigint> {
+    throw new Error('Not implemented.');
     try {
       const gasEstimate = await provider.estimateGas(transaction);
       return gasEstimate;
@@ -248,7 +262,7 @@ export class RelayAdaptContract {
         throw err;
       }
       const { callFailedIndexString, errorMessage } =
-        RelayAdaptContract.extractGasEstimateCallFailedIndexAndErrorText(err.message);
+        RelayAdaptV3Contract.extractGasEstimateCallFailedIndexAndErrorText(err.message);
       throw new Error(
         `RelayAdapt multicall failed at index ${callFailedIndexString} with ${errorMessage}`,
       );
@@ -256,6 +270,7 @@ export class RelayAdaptContract {
   }
 
   static extractGasEstimateCallFailedIndexAndErrorText(errMessage: string) {
+    throw new Error('Not implemented.');
     try {
       // Sample error text from ethers v6.4.0: 'execution reverted (unknown custom error) (action="estimateGas", data="0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000", reason=null, transaction={ "data": "0x28223a77000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000007a00000000000000000000000000000000000000000000000000…00000000004640cd6086ade3e984b011b4e8c7cab9369b90499ab88222e673ec1ae4d2c3bf78ae96e95f9171653e5b1410273269edd64a0ab792a5d355093caa9cb92406125c7803a48028503783f2ab5e84f0ea270ce770860e436b77c942ed904a5d577d021cf0fd936183e0298175679d63d73902e116484e10c7b558d4dc84e113380500000000000000000000000000000000000000000000000000000000", "from": "0x000000000000000000000000000000000000dEaD", "to": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726" }, invocation=null, revert=null, code=CALL_EXCEPTION, version=6.4.0)'
       const prefixSplit = ` (action="estimateGas", data="`;
@@ -284,6 +299,7 @@ export class RelayAdaptContract {
     calls: ContractTransaction[],
     overrides: PayableOverrides,
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     // Always requireSuccess when there is no Relayer payment.
     const requireSuccess = true;
     const populatedTransaction = await this.contract.multicall.populateTransaction(
@@ -299,13 +315,14 @@ export class RelayAdaptContract {
    * @returns populated transaction
    */
   private async populateRelay(
-    transactions: TransactionStruct[],
+    transactions: TransactionStructV2[],
     random31Bytes: string,
     requireSuccess: boolean,
     calls: ContractTransaction[],
     overrides: PayableOverrides,
     minimumGasLimit = BigInt(0),
   ): Promise<ContractTransaction> {
+    throw new Error('Not implemented.');
     const actionData: RelayAdapt.ActionDataStruct = RelayAdaptHelper.getActionData(
       random31Bytes,
       requireSuccess,
@@ -313,7 +330,7 @@ export class RelayAdaptContract {
       minimumGasLimit,
     );
     const populatedTransaction = await this.contract.relay.populateTransaction(
-      transactions,
+      transactions as any, // TODO-V3: Fix type
       actionData,
       overrides,
     );
@@ -321,6 +338,7 @@ export class RelayAdaptContract {
   }
 
   private static getCallErrorTopic() {
+    throw new Error('Not implemented.');
     const iface = new Interface(ABIRelayAdapt);
     return iface.encodeFilterTopics(RelayAdaptEvent.CallError, [])[0];
   }

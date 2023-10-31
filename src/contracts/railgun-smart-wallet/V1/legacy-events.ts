@@ -185,10 +185,9 @@ export async function processGeneratedCommitmentEvents(
   await Promise.all(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
-      return eventsListener(
-        txidVersion,
+      return eventsListener(txidVersion, [
         formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
-      );
+      ]);
     }),
   );
 }
@@ -202,10 +201,9 @@ export async function processCommitmentBatchEvents(
   await Promise.all(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
-      return eventsListener(
-        txidVersion,
+      return eventsListener(txidVersion, [
         formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
-      );
+      ]);
     }),
   );
 }
@@ -238,10 +236,9 @@ export async function processLegacyGeneratedCommitmentEvents(
   await Promise.all(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
-      return eventsListener(
-        txidVersion,
+      return eventsListener(txidVersion, [
         formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
-      );
+      ]);
     }),
   );
 }
@@ -255,10 +252,9 @@ export async function processLegacyCommitmentBatchEvents(
   await Promise.all(
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
-      return eventsListener(
-        txidVersion,
+      return eventsListener(txidVersion, [
         formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
-      );
+      ]);
     }),
   );
 }

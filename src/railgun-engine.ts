@@ -1,8 +1,8 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import EventEmitter from 'events';
 import { FallbackProvider } from 'ethers';
-import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/railgun-smart-wallet';
-import { RelayAdaptContract } from './contracts/relay-adapt/relay-adapt';
+import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
+import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
 import { Database, DatabaseNamespace } from './database/database';
 import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
@@ -15,7 +15,9 @@ import {
   CommitmentType,
   LegacyGeneratedCommitment,
   Nullifier,
-  RailgunTransaction,
+  RailgunTransactionV2,
+  RailgunTransactionV3,
+  RailgunTransactionVersion,
   RailgunTransactionWithHash,
   ShieldCommitment,
 } from './models/formatted-types';
@@ -26,13 +28,18 @@ import {
   MerkletreeHistoryScanEventData,
   MerkletreeScanStatus,
   QuickSyncEvents,
-  QuickSyncRailgunTransactions,
+  QuickSyncRailgunTransactionsV2,
   UnshieldStoredEvent,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
-import { getChainFullNetworkID } from './chain/chain';
+import {
+  addChainSupportsV3,
+  assertChainSupportsV3,
+  getChainFullNetworkID,
+  getChainSupportsV3,
+} from './chain/chain';
 import { ArtifactGetter } from './models/prover-types';
 import { ContractStore } from './contracts/contract-store';
 import {
@@ -58,6 +65,9 @@ import {
 import { getTokenDataHash, getUnshieldTokenHash } from './note/note-util';
 import { UnshieldNote } from './note';
 import { POI } from './poi';
+import { PoseidonMerkleAccumulatorContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-accumulator';
+import { PoseidonMerkleVerifierContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-verifier';
+import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-vault-contract';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -74,7 +84,7 @@ class RailgunEngine extends EventEmitter {
 
   readonly quickSyncEvents: QuickSyncEvents;
 
-  readonly quickSyncRailgunTransactions: QuickSyncRailgunTransactions;
+  readonly quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2;
 
   readonly validateRailgunTxidMerkleroot: MerklerootValidator;
 
@@ -84,7 +94,7 @@ class RailgunEngine extends EventEmitter {
 
   private readonly skipMerkletreeScans: boolean;
 
-  private readonly pollingRailgunTransactions: boolean[][] = [];
+  private readonly pollingRailgunTransactionsV2: boolean[][] = [];
 
   readonly isPOINode: boolean;
 
@@ -93,7 +103,7 @@ class RailgunEngine extends EventEmitter {
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
     quickSyncEvents: QuickSyncEvents,
-    quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
+    quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2,
     validateRailgunTxidMerkleroot: Optional<MerklerootValidator>,
     getLatestValidatedRailgunTxid: Optional<GetLatestValidatedRailgunTxid>,
     engineDebugger: Optional<EngineDebugger>,
@@ -107,7 +117,7 @@ class RailgunEngine extends EventEmitter {
     this.prover = new Prover(artifactGetter);
 
     this.quickSyncEvents = quickSyncEvents;
-    this.quickSyncRailgunTransactions = quickSyncRailgunTransactions;
+    this.quickSyncRailgunTransactionsV2 = quickSyncRailgunTransactionsV2;
     this.validateRailgunTxidMerkleroot = validateRailgunTxidMerkleroot ?? (async () => true);
     this.getLatestValidatedRailgunTxid =
       getLatestValidatedRailgunTxid ??
@@ -136,7 +146,7 @@ class RailgunEngine extends EventEmitter {
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
     quickSyncEvents: QuickSyncEvents,
-    quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
+    quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2,
     validateRailgunTxidMerkleroot: MerklerootValidator,
     getLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid,
     engineDebugger: Optional<EngineDebugger>,
@@ -147,7 +157,7 @@ class RailgunEngine extends EventEmitter {
       leveldown,
       artifactGetter,
       quickSyncEvents,
-      quickSyncRailgunTransactions,
+      quickSyncRailgunTransactionsV2,
       validateRailgunTxidMerkleroot,
       getLatestValidatedRailgunTxid,
       engineDebugger,
@@ -160,7 +170,7 @@ class RailgunEngine extends EventEmitter {
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
     quickSyncEvents: QuickSyncEvents,
-    quickSyncRailgunTransactions: QuickSyncRailgunTransactions,
+    quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2,
     engineDebugger: Optional<EngineDebugger>,
   ) {
     return new RailgunEngine(
@@ -168,7 +178,7 @@ class RailgunEngine extends EventEmitter {
       leveldown,
       artifactGetter,
       quickSyncEvents,
-      quickSyncRailgunTransactions,
+      quickSyncRailgunTransactionsV2,
       undefined, // validateRailgunTxidMerkleroot
       undefined, // getLatestValidatedRailgunTxid
       engineDebugger,
@@ -191,54 +201,52 @@ class RailgunEngine extends EventEmitter {
   async commitmentListener(
     txidVersion: TXIDVersion,
     chain: Chain,
-    treeNumber: number,
-    startingIndex: number,
-    leaves: Commitment[],
+    events: CommitmentEvent[],
     shouldUpdateTrees: boolean,
-    shouldTriggerTxidSync: boolean,
+    shouldTriggerV2TxidSync: boolean,
   ): Promise<void> {
     if (this.db.isClosed()) {
       return;
     }
-    if (!leaves.length) {
+    if (!events.length) {
       return;
     }
-    EngineDebug.log(
-      `[commitmentListener: ${chain.type}:${chain.id}]: ${leaves.length} leaves at ${startingIndex}`,
-    );
-    leaves.forEach((leaf) => {
-      // eslint-disable-next-line no-param-reassign
-      leaf.txid = formatToByteLength(leaf.txid, ByteLength.UINT_256, false);
-    });
 
-    // Queue leaves to merkle tree
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
-    await utxoMerkletree.queueLeaves(treeNumber, startingIndex, leaves);
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const event of events) {
+      const { treeNumber, startPosition, commitments } = event;
+      EngineDebug.log(
+        `[commitmentListener: ${chain.type}:${chain.id}]: ${commitments.length} leaves at ${startPosition}`,
+      );
+      commitments.forEach((commitment) => {
+        // eslint-disable-next-line no-param-reassign
+        commitment.txid = formatToByteLength(commitment.txid, ByteLength.UINT_256, false);
+      });
+
+      // Queue leaves to merkle tree
+      // eslint-disable-next-line no-await-in-loop
+      await utxoMerkletree.queueLeaves(treeNumber, startPosition, commitments);
+    }
+
     if (shouldUpdateTrees) {
       await utxoMerkletree.updateTreesFromWriteQueue();
     }
 
-    if (shouldTriggerTxidSync) {
+    if (shouldTriggerV2TxidSync) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.triggerDelayedTXIDMerkletreeSync(txidVersion, chain);
+      this.triggerDelayedTXIDMerkletreeSyncV2(chain);
     }
   }
 
-  async triggerDelayedTXIDMerkletreeSync(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    rescanCount: number = 2,
-  ): Promise<void> {
+  async triggerDelayedTXIDMerkletreeSyncV2(chain: Chain, rescanCount: number = 2): Promise<void> {
     // Delay 10 seconds, and then trigger a Railgun Txid Merkletree sync.
     await delay(10000);
-    await this.syncRailgunTransactionsForTXIDVersion(
-      txidVersion,
-      chain,
-      'delayed sync after new utxo',
-    );
+    await this.syncRailgunTransactionsV2(chain, 'delayed sync after new utxo');
     if (rescanCount > 0) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.triggerDelayedTXIDMerkletreeSync(txidVersion, chain, rescanCount - 1);
+      this.triggerDelayedTXIDMerkletreeSyncV2(chain, rescanCount - 1);
     }
   }
 
@@ -293,6 +301,33 @@ class RailgunEngine extends EventEmitter {
     });
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.addUnshieldEvents(unshields);
+  }
+
+  /**
+   * Handle new railgun transaction events for V3
+   * @param chain - chain type/id
+   * @param railgunTransactions - railgun transaction events
+   */
+  async railgunTransactionsV3Listener(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    railgunTransactions: RailgunTransactionV3[],
+  ): Promise<void> {
+    if (this.db.isClosed()) {
+      return;
+    }
+    if (!railgunTransactions.length) {
+      return;
+    }
+    if (txidVersion !== TXIDVersion.V3_PoseidonMerkle) {
+      throw new Error('Railgun transactions listener only supported for V3 Poseidon Merkle');
+    }
+    EngineDebug.log(
+      `engine.railgunTransactions[${chain.type}:${chain.id}] ${railgunTransactions.length}`,
+    );
+
+    // TODO-V3: These may not be in order
+    await this.handleNewRailgunTransactionsV3(txidVersion, chain, railgunTransactions);
   }
 
   async getMostRecentValidCommitmentBlock(
@@ -359,19 +394,13 @@ class RailgunEngine extends EventEmitter {
     return startScanningBlock;
   }
 
-  private async performQuickSync(
+  private async performQuickSyncV2(
     txidVersion: TXIDVersion,
     chain: Chain,
     endProgress: number,
     retryCount = 0,
   ) {
     try {
-      if (txidVersion !== TXIDVersion.V2_PoseidonMerkle) {
-        throw new Error(
-          'Quick sync only supported for V2 Poseidon Merkle - also needs migration of progress indicator for multiple txid versions.',
-        );
-      }
-
       EngineDebug.log(`quickSync: chain ${chain.type}:${chain.id}`);
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
@@ -395,19 +424,12 @@ class RailgunEngine extends EventEmitter {
       this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.24); // 12% / 50%
 
       // Make sure commitments are scanned after Unshields and Nullifiers.
-      await Promise.all(
-        commitmentEvents.map(async (commitmentEvent) => {
-          const { treeNumber, startPosition, commitments } = commitmentEvent;
-          await this.commitmentListener(
-            txidVersion,
-            chain,
-            treeNumber,
-            startPosition,
-            commitments,
-            false, // shouldUpdateTrees - wait until after all commitments added
-            false, // shouldTriggerTxidSync - not during quick sync
-          );
-        }),
+      await this.commitmentListener(
+        txidVersion,
+        chain,
+        commitmentEvents,
+        false, // shouldUpdateTrees - wait until after all commitments added
+        false, // shouldTriggerV2TxidSync - not during quick sync
       );
 
       // Scan after all leaves added.
@@ -431,7 +453,74 @@ class RailgunEngine extends EventEmitter {
         throw err;
       }
       if (retryCount < 1) {
-        await this.performQuickSync(txidVersion, chain, endProgress, retryCount + 1);
+        await this.performQuickSyncV2(txidVersion, chain, endProgress, retryCount + 1);
+        return;
+      }
+      EngineDebug.error(err);
+    }
+  }
+
+  private async performQuickSyncV3(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    endProgress: number,
+    retryCount = 0,
+  ) {
+    try {
+      // TODO-V3: Quick Sync
+      // throw new Error('Quick sync only supported for V2 Poseidon Merkle');
+      // EngineDebug.log(`quickSync V3: chain ${chain.type}:${chain.id}`);
+      // const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
+      // const startScanningBlockQuickSync = await this.getStartScanningBlock(txidVersion, chain);
+      // EngineDebug.log(`Start scanning block for QuickSync V3: ${startScanningBlockQuickSync}`);
+      // this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.1); // 5% / 50%
+      // // Fetch events
+      // const { commitmentEvents, unshieldEvents, nullifierEvents } = await this.quickSyncEvents(
+      //   txidVersion,
+      //   chain,
+      //   startScanningBlockQuickSync,
+      // );
+      // this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.2); // 10% / 50%
+      // await this.unshieldListener(txidVersion, chain, unshieldEvents);
+      // await this.nullifierListener(txidVersion, chain, nullifierEvents);
+      // this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.24); // 12% / 50%
+      // // Make sure commitments are scanned after Unshields and Nullifiers.
+      // await Promise.all(
+      //   commitmentEvents.map(async (commitmentEvent) => {
+      //     const { treeNumber, startPosition, commitments } = commitmentEvent;
+      //     await this.commitmentListener(
+      //       txidVersion,
+      //       chain,
+      //       treeNumber,
+      //       startPosition,
+      //       commitments,
+      //       false, // shouldUpdateTrees - wait until after all commitments added
+      //       false, // shouldTriggerV2TxidSync - not during quick sync
+      //     );
+      //   }),
+      // );
+      // // Scan after all leaves added.
+      // if (commitmentEvents.length) {
+      //   this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.3); // 15% / 50%
+      //   await utxoMerkletree.updateTreesFromWriteQueue();
+      //   const preScanProgressMultiplier = 0.4;
+      //   this.emitUTXOMerkletreeScanUpdateEvent(
+      //     txidVersion,
+      //     chain,
+      //     endProgress * preScanProgressMultiplier,
+      //   ); // 20% / 50%
+      //   await this.scanAllWallets(txidVersion, chain, (progress: number) => {
+      //     const overallProgress =
+      //       progress * (endProgress - preScanProgressMultiplier) + preScanProgressMultiplier;
+      //     this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 20 - 50% / 50%
+      //   });
+      // }
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+      if (retryCount < 1) {
+        await this.performQuickSyncV3(txidVersion, chain, endProgress, retryCount + 1);
         return;
       }
       EngineDebug.error(err);
@@ -484,12 +573,16 @@ class RailgunEngine extends EventEmitter {
   async scanHistory(chain: Chain) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
       // eslint-disable-next-line no-await-in-loop
       await this.scanEventHistory(txidVersion, chain);
     }
 
-    if (this.pollingRailgunTransactions[chain.type]?.[chain.id] !== true) {
-      await this.startSyncRailgunTransactionsPoller(chain);
+    if (this.pollingRailgunTransactionsV2[chain.type]?.[chain.id] !== true) {
+      await this.startSyncRailgunTransactionsPollerV2(chain);
     }
   }
 
@@ -516,13 +609,12 @@ class RailgunEngine extends EventEmitter {
       !isDefined(utxoMerkletreeHistoryVersion) ||
       utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
-      await this.clearUTXOMerkletreeAndLoadedWallets(txidVersion, chain);
+      await this.clearUTXOMerkletreeAndLoadedWalletsAllTXIDVersions(chain);
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
-    const railgunSmartWalletContract =
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+
     if (utxoMerkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
       EngineDebug.log('Already scanning. Stopping additional re-scan.');
@@ -533,7 +625,16 @@ class RailgunEngine extends EventEmitter {
     this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 0.03); // 3%
 
     const postQuickSyncProgress = 0.5;
-    await this.performQuickSync(txidVersion, chain, postQuickSyncProgress);
+
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle:
+        await this.performQuickSyncV2(txidVersion, chain, postQuickSyncProgress);
+        break;
+
+      case TXIDVersion.V3_PoseidonMerkle:
+        await this.performQuickSyncV3(txidVersion, chain, postQuickSyncProgress);
+        break;
+    }
 
     this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, postQuickSyncProgress); // 50%
 
@@ -543,55 +644,34 @@ class RailgunEngine extends EventEmitter {
       `startScanningBlockSlowScan: ${startScanningBlockSlowScan} (note: continously updated during scan)`,
     );
 
+    const railgunSmartWalletContract =
+      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
     if (!railgunSmartWalletContract.contract.runner?.provider) {
       throw new Error('Requires provider for RailgunSmartWallet contract');
     }
     const latestBlock = await railgunSmartWalletContract.contract.runner.provider.getBlockNumber();
-    const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
-    EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
 
     try {
-      // Run slow scan
-      await railgunSmartWalletContract.getHistoricalEvents(
-        chain,
-        startScanningBlockSlowScan,
-        latestBlock,
-        () => this.getNextStartingBlockSlowScan(txidVersion, chain),
-        async (
-          _txidVersion: TXIDVersion,
-          { startPosition, treeNumber, commitments }: CommitmentEvent,
-        ) => {
-          await this.commitmentListener(
-            txidVersion,
+      switch (txidVersion) {
+        case TXIDVersion.V2_PoseidonMerkle:
+          await this.slowSyncV2(
             chain,
-            treeNumber,
-            startPosition,
-            commitments,
-            true, // shouldUpdateTrees
-            false, // shouldTriggerTxidSync - not during slow sync
+            utxoMerkletree,
+            startScanningBlockSlowScan,
+            latestBlock,
+            postQuickSyncProgress,
           );
-        },
-        async (_txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
-          await this.nullifierListener(txidVersion, chain, nullifiers);
-        },
-        async (_txidVersion: TXIDVersion, unshields: UnshieldStoredEvent[]) => {
-          await this.unshieldListener(txidVersion, chain, unshields);
-        },
-        async (syncedBlock: number) => {
-          const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
-          const progress =
-            postQuickSyncProgress +
-            ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan;
-          this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, progress);
-
-          if (utxoMerkletree.getFirstInvalidMerklerootTree() != null) {
-            // Do not save lastSyncedBlock in case of merkleroot error.
-            // This will force a scan from the last valid commitment on next run.
-            return;
-          }
-          await this.setLastSyncedBlock(chain, syncedBlock);
-        },
-      );
+          break;
+        case TXIDVersion.V3_PoseidonMerkle:
+          await this.slowSyncV3(
+            chain,
+            utxoMerkletree,
+            startScanningBlockSlowScan,
+            latestBlock,
+            postQuickSyncProgress,
+          );
+          break;
+      }
 
       // Final scan after all leaves added.
       await this.scanAllWallets(txidVersion, chain, undefined);
@@ -622,44 +702,142 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async startSyncRailgunTransactionsPoller(chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
-    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      if (!this.hasTXIDMerkletree(txidVersion, chain)) {
-        EngineDebug.log(
-          `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
-        );
-        return;
-      }
+  async slowSyncV2(
+    chain: Chain,
+    utxoMerkletree: UTXOMerkletree,
+    startScanningBlockSlowScan: number,
+    latestBlock: number,
+    postQuickSyncProgress: number,
+  ) {
+    const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
-      switch (txidVersion) {
-        case TXIDVersion.V2_PoseidonMerkle: {
-          // Every 1 min for POI nodes, 2 min for wallets
-          const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 2 * 60 * 1000;
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMsec);
-          break;
-        }
-        // case TXIDVersion.V3_PoseidonMerkle:
-        //   throw new Error('Railgun transaction sync not implemented for V3 Poseidon Merkle');
-        // case TXIDVersion.V3_KZG:
-        //   throw new Error('Railgun transaction sync not implemented for V3 KZG');
-      }
+    const railgunSmartWalletContract =
+      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+    if (!isDefined(railgunSmartWalletContract)) {
+      throw new Error('Requires RailgunSmartWallet contract');
     }
 
-    this.pollingRailgunTransactions[chain.type] ??= [];
-    this.pollingRailgunTransactions[chain.type][chain.id] = true;
+    const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
+    EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
+
+    await railgunSmartWalletContract.getHistoricalEvents(
+      startScanningBlockSlowScan,
+      latestBlock,
+      () => this.getNextStartingBlockSlowScan(txidVersion, chain),
+      async (_txidVersion: TXIDVersion, commitmentEvents: CommitmentEvent[]) => {
+        await this.commitmentListener(
+          txidVersion,
+          chain,
+          commitmentEvents,
+          true, // shouldUpdateTrees
+          false, // shouldTriggerV2TxidSync - not during slow sync
+        );
+      },
+      async (_txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
+        await this.nullifierListener(txidVersion, chain, nullifiers);
+      },
+      async (_txidVersion: TXIDVersion, unshields: UnshieldStoredEvent[]) => {
+        await this.unshieldListener(txidVersion, chain, unshields);
+      },
+      async (syncedBlock: number) => {
+        const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
+        const progress =
+          postQuickSyncProgress +
+          ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan;
+        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, progress);
+
+        if (utxoMerkletree.getFirstInvalidMerklerootTree() != null) {
+          // Do not save lastSyncedBlock in case of merkleroot error.
+          // This will force a scan from the last valid commitment on next run.
+          return;
+        }
+        await this.setLastSyncedBlock(chain, syncedBlock);
+      },
+    );
   }
 
-  async syncRailgunTransactionsPoller(
-    txidVersion: TXIDVersion,
+  async slowSyncV3(
     chain: Chain,
-    refreshDelayMsec: number,
+    utxoMerkletree: UTXOMerkletree,
+    startScanningBlockSlowScan: number,
+    latestBlock: number,
+    postQuickSyncProgress: number,
   ) {
+    const txidVersion = TXIDVersion.V3_PoseidonMerkle;
+
+    const poseidonMerkleAccumulatorV3Contract =
+      ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id];
+    if (!isDefined(poseidonMerkleAccumulatorV3Contract)) {
+      throw new Error('Requires V3PoseidonMerkleAccumulator contract');
+    }
+
+    const totalBlocksToScan = latestBlock - startScanningBlockSlowScan;
+    EngineDebug.log(`Total blocks to SlowScan: ${totalBlocksToScan}`);
+
+    await poseidonMerkleAccumulatorV3Contract.getHistoricalEvents(
+      startScanningBlockSlowScan,
+      latestBlock,
+      () => this.getNextStartingBlockSlowScan(txidVersion, chain),
+      async (_txidVersion: TXIDVersion, commitmentEvents: CommitmentEvent[]) => {
+        await this.commitmentListener(
+          txidVersion,
+          chain,
+          commitmentEvents,
+          true, // shouldUpdateTrees
+          false, // shouldTriggerV2TxidSync - not during slow sync (or V3)
+        );
+      },
+      async (_txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
+        await this.nullifierListener(txidVersion, chain, nullifiers);
+      },
+      async (_txidVersion: TXIDVersion, unshields: UnshieldStoredEvent[]) => {
+        await this.unshieldListener(txidVersion, chain, unshields);
+      },
+      async (_txidVersion: TXIDVersion, railgunTransactions: RailgunTransactionV3[]) => {
+        await this.railgunTransactionsV3Listener(txidVersion, chain, railgunTransactions);
+      },
+      async (syncedBlock: number) => {
+        const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
+        const progress =
+          postQuickSyncProgress +
+          ((1 - postQuickSyncProgress - 0.05) * scannedBlocks) / totalBlocksToScan;
+        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, progress);
+
+        if (utxoMerkletree.getFirstInvalidMerklerootTree() != null) {
+          // Do not save lastSyncedBlock in case of merkleroot error.
+          // This will force a scan from the last valid commitment on next run.
+          return;
+        }
+        await this.setLastSyncedBlock(chain, syncedBlock);
+      },
+    );
+  }
+
+  async startSyncRailgunTransactionsPollerV2(chain: Chain) {
+    const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+
+    if (!this.hasTXIDMerkletree(txidVersion, chain)) {
+      EngineDebug.log(
+        `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
+      );
+      return;
+    }
+    // Every 1 min for POI nodes, 2 min for wallets
+    const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 2 * 60 * 1000;
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.syncRailgunTransactionsPollerV2(chain, refreshDelayMsec);
+
+    this.pollingRailgunTransactionsV2[chain.type] ??= [];
+    this.pollingRailgunTransactionsV2[chain.type][chain.id] = true;
+  }
+
+  private async syncRailgunTransactionsPollerV2(chain: Chain, refreshDelayMsec: number) {
     const poll = async () => {
-      await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'poller');
+      await this.syncRailgunTransactionsV2(chain, 'poller');
       await delay(refreshDelayMsec);
     };
+
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       // eslint-disable-next-line no-await-in-loop
       await poll();
@@ -670,11 +848,9 @@ class RailgunEngine extends EventEmitter {
    * Sync Railgun txid merkletree.
    * @param chain - chain type/id to scan
    */
-  async syncRailgunTransactionsForTXIDVersion(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    trigger: string,
-  ) {
+  async syncRailgunTransactionsV2(chain: Chain, trigger: string) {
+    const txidVersion = TXIDVersion.V2_PoseidonMerkle;
+
     if (!this.hasTXIDMerkletree(txidVersion, chain)) {
       EngineDebug.log(
         `Cannot sync txids. Txid merkletree not yet loaded for chain ${chain.type}:${chain.id}.`,
@@ -699,15 +875,7 @@ class RailgunEngine extends EventEmitter {
     }
     txidMerkletree.isScanning = true;
 
-    switch (txidVersion) {
-      case TXIDVersion.V2_PoseidonMerkle:
-        await this.performSyncRailgunTransactionsV2(chain, trigger);
-        break;
-      // case TXIDVersion.V3_PoseidonMerkle:
-      //   throw new Error('Sync not implemented for V3 Poseidon Merkle');
-      // case TXIDVersion.V3_KZG:
-      //   throw new Error('Sync not implemented for V3 KZG');
-    }
+    await this.performSyncRailgunTransactionsV2(chain, trigger);
 
     txidMerkletree.isScanning = false;
   }
@@ -759,14 +927,21 @@ class RailgunEngine extends EventEmitter {
       const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
       const latestRailgunTransaction: Optional<RailgunTransactionWithHash> =
         await txidMerkletree.getLatestRailgunTransaction();
-      const railgunTransactions: RailgunTransaction[] = await this.quickSyncRailgunTransactions(
+      if (
+        latestRailgunTransaction &&
+        latestRailgunTransaction.version !== RailgunTransactionVersion.V2
+      ) {
+        return;
+      }
+
+      const railgunTransactions: RailgunTransactionV2[] = await this.quickSyncRailgunTransactionsV2(
         chain,
         latestRailgunTransaction?.graphID,
       );
 
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.4); // 40%
 
-      await this.handleNewRailgunTransactions(
+      await this.handleNewRailgunTransactionsV2(
         txidVersion,
         chain,
         railgunTransactions,
@@ -809,10 +984,10 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async handleNewRailgunTransactions(
+  async handleNewRailgunTransactionsV2(
     txidVersion: TXIDVersion,
     chain: Chain,
-    railgunTransactions: RailgunTransaction[],
+    railgunTransactions: RailgunTransactionV2[],
     latestVerificationHash?: string,
     maxTxidIndex?: number,
   ) {
@@ -827,10 +1002,11 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransaction of railgunTransactions) {
-      const railgunTransactionWithTxid = createRailgunTransactionWithHash(
-        railgunTransaction,
-        txidVersion,
-      );
+      const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
+      if (railgunTransactionWithTxid.version !== RailgunTransactionVersion.V2) {
+        return;
+      }
+
       const {
         commitments,
         nullifiers,
@@ -965,6 +1141,26 @@ class RailgunEngine extends EventEmitter {
     await txidMerkletree.updateTreesFromWriteQueue();
   }
 
+  async handleNewRailgunTransactionsV3(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    railgunTransactions: RailgunTransactionV3[],
+    maxTxidIndex?: number,
+  ) {
+    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
+
+    const toQueue: RailgunTransactionWithHash[] = [];
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (const railgunTransaction of railgunTransactions) {
+      const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
+      toQueue.push(railgunTransactionWithTxid);
+    }
+
+    await txidMerkletree.queueRailgunTransactions(toQueue, maxTxidIndex);
+    await txidMerkletree.updateTreesFromWriteQueue();
+  }
+
   async validateHistoricalRailgunTxidMerkleroot(
     txidVersion: TXIDVersion,
     chain: Chain,
@@ -1036,16 +1232,24 @@ class RailgunEngine extends EventEmitter {
    * Clears all merkletree leaves stored in database.
    * @param chain - chain type/id to clear
    */
-  async clearSyncedUTXOMerkletreeLeaves(txidVersion: TXIDVersion, chain: Chain) {
-    const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
-    await utxoMerkletree.clearDataForMerkletree();
+  async clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of Object.values(TXIDVersion)) {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
+      const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
+      // eslint-disable-next-line no-await-in-loop
+      await utxoMerkletree.clearDataForMerkletree();
+    }
     await this.db.clearNamespace(RailgunEngine.getLastSyncedBlockDBPrefix(chain));
   }
 
-  private async clearUTXOMerkletreeAndLoadedWallets(txidVersion: TXIDVersion, chain: Chain) {
-    await this.clearSyncedUTXOMerkletreeLeaves(txidVersion, chain);
+  private async clearUTXOMerkletreeAndLoadedWalletsAllTXIDVersions(chain: Chain) {
+    await this.clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain);
     await Promise.all(
-      this.allWallets().map((wallet) => wallet.clearScannedBalances(txidVersion, chain)),
+      this.allWallets().map((wallet) => wallet.clearScannedBalancesAllTXIDVersions(chain)),
     );
   }
 
@@ -1071,6 +1275,10 @@ class RailgunEngine extends EventEmitter {
   async fullRescanUTXOMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
       if (!this.hasUTXOMerkletree(txidVersion, chain)) {
         const err = new Error(
           `Cannot re-scan history. Merkletree not yet loaded for ${txidVersion}, chain ${chain.type}:${chain.id}.`,
@@ -1088,12 +1296,16 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
       this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 0.01); // 1%
       utxoMerkletree.isScanning = true; // Don't allow scans while removing leaves.
       // eslint-disable-next-line no-await-in-loop
-      await this.clearUTXOMerkletreeAndLoadedWallets(txidVersion, chain);
+      await this.clearUTXOMerkletreeAndLoadedWalletsAllTXIDVersions(chain);
       // eslint-disable-next-line no-await-in-loop
       await this.clearSyncedUnshieldEvents(txidVersion, chain);
       utxoMerkletree.isScanning = false; // Clear before calling scanHistory.
@@ -1107,7 +1319,7 @@ class RailgunEngine extends EventEmitter {
   }
 
   async fullResetTXIDMerkletrees(chain: Chain): Promise<void> {
-    if (this.pollingRailgunTransactions[chain.type]?.[chain.id] !== true) {
+    if (this.pollingRailgunTransactionsV2[chain.type]?.[chain.id] !== true) {
       const err = new Error(
         `Cannot re-scan railgun txids. Must get UTXO history first. Please wait and try again.`,
       );
@@ -1117,6 +1329,10 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
       const hasMerkletree = this.hasTXIDMerkletree(txidVersion, chain);
       if (!hasMerkletree) {
         const err = new Error(
@@ -1135,6 +1351,10 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
       const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
       txidMerkletree.isScanning = true; // Don't allow scans while removing leaves.
       // eslint-disable-next-line no-await-in-loop
@@ -1142,7 +1362,7 @@ class RailgunEngine extends EventEmitter {
       txidMerkletree.savedPOILaunchSnapshot = false;
       txidMerkletree.isScanning = false; // Clear before calling syncRailgunTransactions.
       // eslint-disable-next-line no-await-in-loop
-      await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'full txid reset');
+      await this.syncRailgunTransactionsV2(chain, 'full txid reset');
     }
   }
 
@@ -1155,24 +1375,49 @@ class RailgunEngine extends EventEmitter {
     txidMerkletree.isScanning = true; // Don't allow scans while removing leaves.
     await txidMerkletree.clearLeavesAfterTxidIndex(txidIndex);
     txidMerkletree.isScanning = false; // Clear before calling syncRailgunTransactions.
-    await this.syncRailgunTransactionsForTXIDVersion(txidVersion, chain, 'reset after txid index');
+    await this.syncRailgunTransactionsV2(chain, 'reset after txid index');
+  }
+
+  private static async validateMerkleroot(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    tree: number,
+    _index: number,
+    merkleroot: string,
+  ) {
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle:
+        return ContractStore.railgunSmartWalletContracts[chain.type]?.[
+          chain.id
+        ]?.validateMerkleroot(tree, merkleroot);
+
+      case TXIDVersion.V3_PoseidonMerkle:
+        return ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[
+          chain.id
+        ]?.validateMerkleroot(tree, merkleroot);
+    }
+    return false;
   }
 
   /**
    * Load network
    * @param railgunSmartWalletContractAddress - address of railgun instance (proxy contract)
-   * @param relayAdaptContractAddress - address of railgun instance (proxy contract)
+   * @param relayAdaptV2ContractAddress - address of railgun instance (proxy contract)
    * @param provider - ethers provider for network
    * @param deploymentBlock - block number to start scanning from
    */
   async loadNetwork(
     chain: Chain,
     railgunSmartWalletContractAddress: string,
-    relayAdaptContractAddress: string,
+    relayAdaptV2ContractAddress: string,
+    poseidonMerkleAccumulatorV3Address: string,
+    poseidonMerkleVerifierV3Address: string,
+    tokenVaultV3Address: string,
     defaultProvider: PollingJsonRpcProvider | FallbackProvider,
     pollingProvider: PollingJsonRpcProvider,
     deploymentBlocks: Record<TXIDVersion, number>,
     poiLaunchBlock: Optional<number>,
+    supportsV3: boolean,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
@@ -1201,6 +1446,10 @@ class RailgunEngine extends EventEmitter {
       throw new Error(err.message);
     }
 
+    if (supportsV3) {
+      addChainSupportsV3(chain);
+    }
+
     const hasAnyMerkletree = ACTIVE_TXID_VERSIONS.every(
       (txidVersion) =>
         !this.hasUTXOMerkletree(txidVersion, chain) && !this.hasTXIDMerkletree(txidVersion, chain),
@@ -1208,15 +1457,31 @@ class RailgunEngine extends EventEmitter {
     const hasSmartWalletContract = isDefined(
       ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id],
     );
-    const hasRelayAdaptContract = isDefined(
-      ContractStore.relayAdaptContracts[chain.type]?.[chain.id],
+    const hasRelayAdaptV2Contract = isDefined(
+      ContractStore.relayAdaptV2Contracts[chain.type]?.[chain.id],
     );
-    if (hasAnyMerkletree || hasSmartWalletContract || hasRelayAdaptContract) {
+    const hasPoseidonMerkleAccumulatorV3Contract = isDefined(
+      ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id],
+    );
+    const hasPoseidonMerkleVerifierV3Contract = isDefined(
+      ContractStore.poseidonMerkleVerifierV3Contracts[chain.type]?.[chain.id],
+    );
+    const hasTokenVaultV3Contract = isDefined(
+      ContractStore.tokenVaultV3Contracts[chain.type]?.[chain.id],
+    );
+    if (
+      hasAnyMerkletree ||
+      hasSmartWalletContract ||
+      hasRelayAdaptV2Contract ||
+      hasPoseidonMerkleAccumulatorV3Contract ||
+      hasPoseidonMerkleVerifierV3Contract ||
+      hasTokenVaultV3Contract
+    ) {
       // If a network with this chainID exists, unload it and load the provider as a new network
       await this.unloadNetwork(chain);
     }
 
-    // Create proxy contract instance
+    // Create contract instances
     ContractStore.railgunSmartWalletContracts[chain.type] ??= [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
@@ -1226,15 +1491,39 @@ class RailgunEngine extends EventEmitter {
         chain,
       );
 
-    // Create relay adapt contract instance
-    ContractStore.relayAdaptContracts[chain.type] ??= [];
-    ContractStore.relayAdaptContracts[chain.type][chain.id] = new RelayAdaptContract(
-      relayAdaptContractAddress,
+    ContractStore.relayAdaptV2Contracts[chain.type] ??= [];
+    ContractStore.relayAdaptV2Contracts[chain.type][chain.id] = new RelayAdaptV2Contract(
+      relayAdaptV2ContractAddress,
       defaultProvider,
     );
 
+    if (supportsV3) {
+      ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type] ??= [];
+      ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type][chain.id] =
+        new PoseidonMerkleAccumulatorContract(
+          poseidonMerkleAccumulatorV3Address,
+          defaultProvider,
+          pollingProvider,
+          chain,
+        );
+
+      ContractStore.poseidonMerkleVerifierV3Contracts[chain.type] ??= [];
+      ContractStore.poseidonMerkleVerifierV3Contracts[chain.type][chain.id] =
+        new PoseidonMerkleVerifierContract(poseidonMerkleVerifierV3Address, defaultProvider);
+
+      ContractStore.tokenVaultV3Contracts[chain.type] ??= [];
+      ContractStore.tokenVaultV3Contracts[chain.type][chain.id] = new TokenVaultContract(
+        tokenVaultV3Address,
+        defaultProvider,
+      );
+    }
+
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS) {
+      if (!supportsV3 && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        continue;
+      }
+
       // Create utxo merkletrees
       this.utxoMerkletrees[txidVersion] ??= [];
       this.utxoMerkletrees[txidVersion][chain.type] ??= [];
@@ -1244,11 +1533,9 @@ class RailgunEngine extends EventEmitter {
         this.db,
         chain,
         txidVersion,
-        (_txidVersion, _chain, tree, _index, merkleroot) =>
-          ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id]?.validateMerkleroot(
-            tree,
-            merkleroot,
-          ),
+        // eslint-disable-next-line @typescript-eslint/no-shadow
+        (txidVersion, chain, tree, index, merkleroot) =>
+          RailgunEngine.validateMerkleroot(txidVersion, chain, tree, index, merkleroot),
       );
       this.utxoMerkletrees[txidVersion][chain.type][chain.id] = utxoMerkletree;
 
@@ -1310,19 +1597,17 @@ class RailgunEngine extends EventEmitter {
       return;
     }
 
-    // Setup listeners
-    const eventsListener = async (
+    // Set up listeners
+    const commitmentListener = async (
       txidVersion: TXIDVersion,
-      { startPosition, treeNumber, commitments }: CommitmentEvent,
+      commitmentEvents: CommitmentEvent[],
     ) => {
       await this.commitmentListener(
         txidVersion,
         chain,
-        treeNumber,
-        startPosition,
-        commitments,
+        commitmentEvents,
         true, // shouldUpdateTrees
-        true, // shouldTriggerTxidSync - only for live listener events
+        txidVersion === TXIDVersion.V2_PoseidonMerkle, // shouldTriggerV2TxidSync - only for live listener events on V2
       );
       await this.scanAllWallets(txidVersion, chain, undefined);
     };
@@ -1334,10 +1619,46 @@ class RailgunEngine extends EventEmitter {
       await this.unshieldListener(txidVersion, chain, unshields);
     };
     await ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].setTreeUpdateListeners(
-      eventsListener,
+      commitmentListener,
       nullifierListener,
       unshieldListener,
     );
+
+    if (supportsV3) {
+      const railgunTransactionsV3Listener = async (
+        txidVersion: TXIDVersion,
+        railgunTransactions: RailgunTransactionV3[],
+      ) => {
+        await this.railgunTransactionsV3Listener(txidVersion, chain, railgunTransactions);
+      };
+      const commitmentListenerV3 = async (
+        txidVersion: TXIDVersion,
+        commitmentEvents: CommitmentEvent[],
+      ) => {
+        await this.commitmentListener(
+          txidVersion,
+          chain,
+          commitmentEvents,
+          true, // shouldUpdateTrees
+          txidVersion === TXIDVersion.V2_PoseidonMerkle, // shouldTriggerV2TxidSync - only for live listener events on V2
+        );
+      };
+      const nullifierListenerV3 = async (txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
+        await this.nullifierListener(txidVersion, chain, nullifiers);
+      };
+      const triggerWalletScans = async (txidVersion: TXIDVersion) => {
+        await this.scanAllWallets(txidVersion, chain, undefined);
+      };
+      await ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type][
+        chain.id
+      ].setTreeUpdateListeners(
+        commitmentListenerV3, // No wallet scans
+        nullifierListenerV3, // No wallet scans
+        unshieldListener,
+        railgunTransactionsV3Listener,
+        triggerWalletScans,
+      );
+    }
   }
 
   /**
@@ -1352,6 +1673,10 @@ class RailgunEngine extends EventEmitter {
     // Unload merkletrees from wallets
     Object.values(this.wallets).forEach((wallet) => {
       ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
+        if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+          return;
+        }
+
         wallet.unloadUTXOMerkletree(txidVersion, chain);
         wallet.unloadRailgunTXIDMerkletree(txidVersion, chain);
       });
@@ -1359,12 +1684,20 @@ class RailgunEngine extends EventEmitter {
 
     // Unload listeners
     await ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].unload();
+    await ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id]?.unload();
 
     // Delete contracts
     delete ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
-    delete ContractStore.relayAdaptContracts[chain.type]?.[chain.id];
+    delete ContractStore.relayAdaptV2Contracts[chain.type]?.[chain.id];
+    delete ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id];
+    delete ContractStore.poseidonMerkleVerifierV3Contracts[chain.type]?.[chain.id];
+    delete ContractStore.tokenVaultV3Contracts[chain.type]?.[chain.id];
 
     ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
+      if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+        return;
+      }
+
       // Delete UTXO merkletree
       delete this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
       // Delete Txid merkletree
@@ -1448,6 +1781,9 @@ class RailgunEngine extends EventEmitter {
   }
 
   getUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain): UTXOMerkletree {
+    if (txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+      assertChainSupportsV3(chain);
+    }
     const merkletree = this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(
@@ -1467,6 +1803,9 @@ class RailgunEngine extends EventEmitter {
   }
 
   getTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain): TXIDMerkletree {
+    if (txidVersion === TXIDVersion.V3_PoseidonMerkle) {
+      assertChainSupportsV3(chain);
+    }
     const merkletree = this.txidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
     if (!isDefined(merkletree)) {
       throw new Error(
@@ -1739,7 +2078,7 @@ class RailgunEngine extends EventEmitter {
 
   railgunSmartWalletContracts = ContractStore.railgunSmartWalletContracts;
 
-  relayAdaptContracts = ContractStore.relayAdaptContracts;
+  relayAdaptV2Contracts = ContractStore.relayAdaptV2Contracts;
 }
 
 export { RailgunEngine };

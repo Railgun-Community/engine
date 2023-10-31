@@ -4,17 +4,17 @@ import {
   CommitmentType,
   Nullifier,
   ShieldCommitment,
-  TransactCommitment,
-} from '../../models/formatted-types';
-import { ByteLength, formatToByteLength, nToHex } from '../../utils/bytes';
-import EngineDebug from '../../debugger/debugger';
+  TransactCommitmentV2,
+} from '../../../models/formatted-types';
+import { ByteLength, formatToByteLength, nToHex } from '../../../utils/bytes';
+import EngineDebug from '../../../debugger/debugger';
 import {
   CommitmentEvent,
   EventsCommitmentListener,
   EventsNullifierListener,
   EventsUnshieldListener,
   UnshieldStoredEvent,
-} from '../../models/event-types';
+} from '../../../models/event-types';
 import {
   CommitmentCiphertextStructOutput,
   CommitmentPreimageStructOutput,
@@ -23,15 +23,12 @@ import {
   ShieldEvent,
   TransactEvent,
   UnshieldEvent,
-} from '../../abi/typechain/RailgunSmartWallet';
-import { serializeTokenData, serializePreImage, getNoteHash } from '../../note/note-util';
-import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
-import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../abi/legacy/abi-legacy';
-import { TXIDVersion } from '../../models/poi-types';
+} from '../../../abi/typechain/RailgunSmartWallet';
+import { serializeTokenData, serializePreImage, getNoteHash } from '../../../note/note-util';
+import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
+import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../../abi/abi';
+import { TXIDVersion } from '../../../models/poi-types';
 
-/**
- * Parse event data for database
- */
 export const formatShieldCommitments = (
   transactionHash: string,
   preImages: CommitmentPreimageStructOutput[],
@@ -143,10 +140,10 @@ export const formatTransactCommitments = (
   utxoTree: number,
   utxoStartingIndex: number,
   timestamp: Optional<number>,
-): TransactCommitment[] => {
+): TransactCommitmentV2[] => {
   return commitments.map((commitment, index) => {
     return {
-      commitmentType: CommitmentType.TransactCommitment,
+      commitmentType: CommitmentType.TransactCommitmentV2,
       hash: formatToByteLength(hash[index], ByteLength.UINT_256),
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       timestamp,
@@ -232,13 +229,13 @@ export const processShieldEvents = async (
       const { fees } = args;
       return eventsListener(
         txidVersion,
-        formatShieldEvent(
+        [formatShieldEvent(
           args,
           transactionHash,
           blockNumber,
           fees,
           undefined, // timestamp
-        ),
+        )],
       );
     }),
   );
@@ -275,13 +272,13 @@ export const processShieldEvents_LegacyShield_PreMar23 = async (
       const fees: Optional<bigint[]> = undefined;
       return eventsListener(
         txidVersion,
-        formatShieldEvent(
+        [formatShieldEvent(
           args,
           transactionHash,
           blockNumber,
           fees,
           undefined, // timestamp
-        ),
+        )],
       );
     }),
   );
@@ -301,12 +298,12 @@ export const processTransactEvents = async (
       const { args, transactionHash, blockNumber } = event;
       return eventsListener(
         txidVersion,
-        formatTransactEvent(
+        [formatTransactEvent(
           args,
           transactionHash,
           blockNumber,
           undefined, // timestamp
-        ),
+        )],
       );
     }),
   );

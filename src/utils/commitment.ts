@@ -2,7 +2,7 @@ import {
   CommitmentCiphertextStructOutput,
   TransactionStruct,
 } from '../abi/typechain/RailgunSmartWallet';
-import { formatCommitmentCiphertext } from '../contracts/railgun-smart-wallet/events';
+import { formatCommitmentCiphertext } from '../contracts/railgun-smart-wallet/V2/V2-events';
 import {
   Commitment,
   CommitmentCiphertext,
@@ -10,7 +10,7 @@ import {
   CommitmentType,
   LegacyEncryptedCommitment,
   StoredReceiveCommitment,
-  TransactCommitment,
+  TransactCommitmentV2,
 } from '../models/formatted-types';
 
 export const convertTransactionStructToCommitmentSummary = (
@@ -37,7 +37,8 @@ export const isShieldCommitmentType = (commitmentType: CommitmentType): boolean 
     case CommitmentType.ShieldCommitment:
     case CommitmentType.LegacyGeneratedCommitment:
       return true;
-    case CommitmentType.TransactCommitment:
+    case CommitmentType.TransactCommitmentV2:
+    case CommitmentType.TransactCommitmentV3:
     case CommitmentType.LegacyEncryptedCommitment:
       return false;
   }
@@ -50,7 +51,8 @@ export const isReceiveShieldCommitment = (receiveCommitment: StoredReceiveCommit
 
 export const isTransactCommitmentType = (commitmentType: CommitmentType): boolean => {
   switch (commitmentType) {
-    case CommitmentType.TransactCommitment:
+    case CommitmentType.TransactCommitmentV2:
+    case CommitmentType.TransactCommitmentV3:
     case CommitmentType.LegacyEncryptedCommitment:
       return true;
     case CommitmentType.ShieldCommitment:
@@ -62,6 +64,6 @@ export const isTransactCommitmentType = (commitmentType: CommitmentType): boolea
 
 export const isTransactCommitment = (
   commitment: Commitment,
-): commitment is TransactCommitment | LegacyEncryptedCommitment => {
+): commitment is TransactCommitmentV2 | LegacyEncryptedCommitment => {
   return isTransactCommitmentType(commitment.commitmentType);
 };
