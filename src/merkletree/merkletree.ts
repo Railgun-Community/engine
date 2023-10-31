@@ -145,10 +145,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     switch (this.txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle:
         return 'V2';
-      // case TXIDVersion.V3_PoseidonMerkle:
-      // return 'V3';
-      // case TXIDVersion.V3_KZG:
-      // throw new Error('KZG txid version not supported for merkletrees.');
+      case TXIDVersion.V3_PoseidonMerkle:
+        return 'V3';
     }
     throw new Error('Unrecognized txid version for merkletree');
   }
@@ -773,9 +771,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
     if (!isDefined(nextCommitmentGroup)) {
-      EngineDebug.log(
-        `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
-      );
+      // EngineDebug.log(
+      //   `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
+      // );
       return false;
     }
 

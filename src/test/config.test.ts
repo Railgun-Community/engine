@@ -20,6 +20,11 @@ let config = {
     voting: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
     weth9: '0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7',
     relayAdapt: '0x0355B7B8cb128fA5692729Ab3AAa199C1753f726',
+
+    // V3
+    poseidonMerkleAccumulatorV3: '0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5',
+    poseidonMerkleVerifierV3: '0xfbC22278A96299D91d41C453234d97b4F5Eb9B2d',
+    tokenVaultV3: '0xD84379CEae14AA33C123Af12424A37803F885889',
   },
 };
 

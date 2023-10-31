@@ -44,11 +44,12 @@ export const ENGINE_V2_SHIELD_EVENT_UPDATE_03_09_23_BLOCK_NUMBERS_EVM: {
 
 /**
  * Increment to issue fresh utxo merkletree rescan on next launch.
- * WARNING: When updating, make sure to update TXID version too.
+ * Also will rescan TXIDs for V3 (which use the same data source as V3 UTXOs).
+ * WARNING: When updating for V2 data, make sure to update TXID V2 version as well.
  */
-export const CURRENT_UTXO_MERKLETREE_HISTORY_VERSION = 12;
+export const CURRENT_UTXO_MERKLETREE_HISTORY_VERSION = 13;
 
 /**
- * Increment to issue fresh txid merkletree rescan on next launch.
+ * Increment to issue fresh V2 txid merkletree rescan on next launch.
  */
-export const CURRENT_TXID_MERKLETREE_HISTORY_VERSION = 15;
+export const CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION = 16;

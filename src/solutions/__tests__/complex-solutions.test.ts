@@ -1,5 +1,4 @@
 import { assert, expect } from 'chai';
-import { randomBytes } from 'ethers';
 import {
   createSpendingSolutionsForValue,
   findNextSolutionBatch,
@@ -11,10 +10,8 @@ import { TransactionBatch } from '../../transaction/transaction-batch';
 import { CommitmentType, OutputType } from '../../models/formatted-types';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
 import { randomHex } from '../../utils/bytes';
-import { getPublicViewingKey } from '../../utils/keys-utils';
 import { ChainType } from '../../models/engine-types';
 import { AddressData } from '../../key-derivation/bech32';
-import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { TransactNote } from '../../note/transact-note';
 import { RailgunEngine } from '../../railgun-engine';
 import { getTokenDataERC20 } from '../../note/note-util';
@@ -42,19 +39,11 @@ const CHAIN = {
 };
 
 const createMockNote = async (addressData: AddressData, value: bigint) => {
-  const privateViewingKey = randomBytes(32);
-  const publicViewingKey = await getPublicViewingKey(privateViewingKey);
-  const viewingKeyPair: ViewingKeyPair = {
-    privateKey: privateViewingKey,
-    pubkey: publicViewingKey,
-  };
-
   return TransactNote.createTransfer(
     addressData,
     undefined,
     value,
     tokenData,
-    viewingKeyPair,
     false, // showSenderAddressToRecipient
     OutputType.Transfer,
     undefined, // memoText
@@ -73,7 +62,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     poisPerList: undefined,
     blindedCommitment: undefined,
     transactCreationRailgunTxid: undefined,
-    commitmentType: CommitmentType.TransactCommitment,
+    commitmentType: CommitmentType.TransactCommitmentV3,
     nullifier: randomHex(32),
     blockNumber: 100,
   };

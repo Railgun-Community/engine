@@ -5,6 +5,7 @@ export * from './contracts';
 export * from './database/database';
 export * from './key-derivation';
 export * from './merkletree/merkletree';
+export * from './validation';
 export * from './models';
 export * from './note';
 export * from './prover/prover';

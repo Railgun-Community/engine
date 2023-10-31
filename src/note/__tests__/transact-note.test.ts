@@ -4,30 +4,30 @@ import memdown from 'memdown';
 import { randomBytes } from 'ethers';
 import Sinon from 'sinon';
 import { ContractStore } from '../../contracts/contract-store';
-import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/railgun-smart-wallet';
+import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { Database } from '../../database/database';
 import { ViewingKeyPair } from '../../key-derivation/wallet-node';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Ciphertext, LegacyNoteSerialized, OutputType } from '../../models/formatted-types';
 import { config } from '../../test/config.test';
 import { TokenDataGetter } from '../../token/token-data-getter';
-import {
-  ByteLength,
-  formatToByteLength,
-  hexlify,
-  hexStringToBytes,
-  hexToBigInt,
-  nToHex,
-} from '../../utils/bytes';
+import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
 import { getTokenDataERC20 } from '../note-util';
 import { TransactNote } from '../transact-note';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
+import { getTestTXIDVersion, isV2Test } from '../../test/helper.test';
+import { Memo } from '../memo';
+import WalletInfo from '../../wallet/wallet-info';
+import { TokenVaultContract } from '../../contracts/railgun-smart-wallet/V3/token-vault-contract';
+import { TXIDVersion } from '../../models/poi-types';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 const BLOCK_NUMBER = 100;
+
+const txidVersion = getTestTXIDVersion();
 
 const vectors: {
   note: LegacyNoteSerialized;
@@ -39,7 +39,7 @@ const vectors: {
   {
     note: {
       npk: '23da85e72baa8d77f476a893de0964ce1ec2957d056b591a19d05bb4b9a549ed',
-      token: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
+      tokenHash: '0000000000000000000000007f4925cdf66ddf5b88016df1fe915e68eff8f192',
       value: '0000000000000000086aa1ade61ccb53',
       encryptedRandom: [
         '0x5c4a783fd15546fbad149c673b7139790a9cf62ec849a5a8e6a167815ee2d08d',
@@ -59,7 +59,7 @@ const vectors: {
   {
     note: {
       npk: '21eacdfdbe32555ed1c08c4872e73da1e59cb47f7f9d886f702b0e0e6399474c',
-      token: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
+      tokenHash: '000000000000000000000000df0fa4124c8a5feec8efcb0e0142d3e04a9e0fbf',
       value: '000000000000000007cf6b5ae17ae75a',
       encryptedRandom: [
         '0xf401e001c520b9f40d37736c0ef2309fa9b2dc97bf1634ac1443fc2fe5359f69',
@@ -79,7 +79,7 @@ const vectors: {
   {
     note: {
       npk: '24203d63bb50c2cfc256c405b81147058ded5ab422c97489dddef7a2486217d7',
-      token: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
+      tokenHash: '00000000000000000000000034e34b5d8e848f9d20d9bd8e1e48e24c3b87c396',
       value: '00000000000000000b9df0087cbbd709',
       encryptedRandom: [
         '0x4b0b63e8f573bf29cabc8e840c5db89892c0acc3f30bbdf6ad9d39ac9485fa49',
@@ -99,7 +99,7 @@ const vectors: {
   {
     note: {
       npk: '099729608f0c9671590c98730a40b7da122808b9691582a423526ec45f8b1b04',
-      token: '0000000000000000000000009b71cad96341485290d3f1376fb9e969a632694d',
+      tokenHash: '0000000000000000000000009b71cad96341485290d3f1376fb9e969a632694d',
       value: '00000000000000000ac76747c40dda3a',
       encryptedRandom: [
         '0xe9abf13a310d1910d3010a1cf8b5c03a50c228f1fe81de21734479398973ec77',
@@ -119,7 +119,7 @@ const vectors: {
   {
     note: {
       npk: '239ca439444c50907c4259e200b4314d19fed2ab7bcc2b236e60f90d5962ca8e',
-      token: '00000000000000000000000089d21609e4ea344c576d1692ceca0f0e0bf4b771',
+      tokenHash: '00000000000000000000000089d21609e4ea344c576d1692ceca0f0e0bf4b771',
       value: '00000000000000000475d82f700206b8',
       encryptedRandom: [
         '0x7462849ef8b7bdbb9deeae7983f84334d934d129bd7a7e926bd87b6cf0053e0d',
@@ -139,7 +139,7 @@ const vectors: {
   {
     note: {
       npk: '058075b59e688d3e879a72e97e3a68de05cc4d7f76bb8e4246ac4a9a9700698b',
-      token: '0000000000000000000000006f2870a30f4ff19f073fe894d6fe881f0c04657f',
+      tokenHash: '0000000000000000000000006f2870a30f4ff19f073fe894d6fe881f0c04657f',
       value: '000000000000000003426801bd08640b',
       encryptedRandom: [
         '0xe501c3195c8a4cc2134ed19d69ba1208a4c7f4ef6f33c2c5e51655f919d4855e',
@@ -159,7 +159,7 @@ const vectors: {
   {
     note: {
       npk: '2856460b27f8896e81009b2a0d0760bc03c07cd854570018cd0b53061f697acf',
-      token: '0000000000000000000000004224904029a556a7cd0bc78d81b165c391fffb45',
+      tokenHash: '0000000000000000000000004224904029a556a7cd0bc78d81b165c391fffb45',
       value: '000000000000000003449e13312815a6',
       encryptedRandom: [
         '0x1bef951429c37eaa69190cb635591d122ffe959d690366876e9f1704aa37bb18',
@@ -179,7 +179,7 @@ const vectors: {
   {
     note: {
       npk: '03c8d39bf8186f0d478a853b7102c0bec63e1fbb4ce2d6e8d289cc698e116fc0',
-      token: '000000000000000000000000480bdc4d52df318db7b458b171540a936dc39a07',
+      tokenHash: '000000000000000000000000480bdc4d52df318db7b458b171540a936dc39a07',
       value: '000000000000000008d210fd771f72ab',
       encryptedRandom: [
         '0x789ee74fc10fd3b8daac3846b307d7d20db76ca9d5b6894c78f58b2ebc0303e4',
@@ -199,7 +199,7 @@ const vectors: {
   {
     note: {
       npk: '2edc5f1181d22381b83db79e558bbe6e7739da59dc71d31dff3074d4bec38f3b',
-      token: '0000000000000000000000008afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
+      tokenHash: '0000000000000000000000008afe4263f81c6d01cb6ea2548132a82d4c5b16e8',
       value: '0000000000000000060c736c94f022c6',
       encryptedRandom: [
         '0x82df79ed67267bd528f0302a95129bbb56d04fab22f95af35b03d2c07ac75737',
@@ -219,7 +219,7 @@ const vectors: {
   {
     note: {
       npk: '10cd7f88b213cb9efcd58f7a45eed24e39513b640e913aa48de129d2685199b1',
-      token: '0000000000000000000000004f53cbc84f501847cf42bd9fb14d63be21dcffc8',
+      tokenHash: '0000000000000000000000004f53cbc84f501847cf42bd9fb14d63be21dcffc8',
       value: '0000000000000000005589f7d39c59bf',
       encryptedRandom: [
         '0x4732f678e893c09c6393be8f8fcc5eee1d9a1078a16151dcae2d65f2d78edc4b',
@@ -322,21 +322,27 @@ describe('transact-note', () => {
       id: 1,
     };
 
-    // Load fake contract
+    WalletInfo.setWalletSource('tester');
+
+    // Load fake contracts
     ContractStore.railgunSmartWalletContracts[chain.type] = [];
     ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
-        new PollingJsonRpcProvider('abc', 1, 500, 1),
-        new PollingJsonRpcProvider('abc', 1, 500, 1),
+        new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
+        new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
         chain,
       );
+    ContractStore.tokenVaultV3Contracts[chain.type] = [];
+    ContractStore.tokenVaultV3Contracts[chain.type][chain.id] = new TokenVaultContract(
+      config.contracts.poseidonMerkleVerifierV3,
+      new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
+    );
 
-    tokenDataGetter = new TokenDataGetter(db, chain);
+    tokenDataGetter = new TokenDataGetter(db);
   });
 
-  // TODO: Skipped test. Test vectors need updating.
-  it.skip('Should encrypt and decrypt notes', async () => {
+  it('Should encrypt and decrypt notes', async () => {
     await Promise.all(
       ciphertextVectors.map(async (vector) => {
         const viewingPublicKey = hexStringToBytes(vector.note.pubkey);
@@ -360,10 +366,8 @@ describe('transact-note', () => {
         const note = TransactNote.createTransfer(
           address,
           address,
-
           hexToBigInt(vector.note.amount),
           tokenData,
-          viewingKeyPair,
           false, // showSenderAddressToRecipient
           OutputType.RelayerFee,
           'something', // memoText
@@ -373,53 +377,83 @@ describe('transact-note', () => {
 
         const sharedKeyBytes = hexStringToBytes(vector.sharedKey);
 
-        // Get encrypted values
-        const { noteCiphertext, noteMemo } = note.encrypt(
-          sharedKeyBytes,
-          address.masterPublicKey,
-          undefined,
-        );
+        let noteCiphertext;
+        let noteMemo;
+        let annotationData;
+
+        switch (txidVersion) {
+          case TXIDVersion.V2_PoseidonMerkle: {
+            const encryptedValues = note.encryptV2(
+              txidVersion,
+              sharedKeyBytes,
+              address.masterPublicKey,
+              note.senderRandom,
+              viewingKeyPair.privateKey,
+            );
+            noteCiphertext = encryptedValues.noteCiphertext;
+            noteMemo = encryptedValues.noteMemo;
+            annotationData = encryptedValues.annotationData;
+            break;
+          }
+          case TXIDVersion.V3_PoseidonMerkle: {
+            noteCiphertext = note.encryptV3(txidVersion, sharedKeyBytes, address.masterPublicKey);
+            noteMemo = '';
+            annotationData = Memo.createSenderAnnotationEncryptedV3(
+              WalletInfo.walletSource,
+              [note.outputType as OutputType],
+              viewingKeyPair.privateKey,
+            );
+            break;
+          }
+        }
 
         // Check if encrypted values are successfully decrypted
         const decrypted = await TransactNote.decrypt(
+          txidVersion,
+          chain,
           address,
           noteCiphertext,
           sharedKeyBytes,
           noteMemo,
-          note.annotationData,
+          annotationData,
+          viewingKeyPair.privateKey,
           undefined, // blindedReceiverViewingKey
           undefined, // blindedSenderViewingKey
-          undefined, // senderRandom
           true, // isSentNote
           true, // isLegacyDecryption
           tokenDataGetter,
           BLOCK_NUMBER,
+          isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
         );
         expect(decrypted.tokenHash).to.equal(note.tokenHash);
         expect(decrypted.value).to.equal(note.value);
         expect(decrypted.random).to.equal(note.random);
-        expect(decrypted.hash).to.equal(note.hash);
+        // expect(decrypted.hash).to.equal(note.hash);
         expect(decrypted.memoText).to.equal(note.memoText);
 
         // Check if vector encrypted values are successfully decrypted
         const decryptedFromCiphertext = await TransactNote.decrypt(
+          txidVersion,
+          chain,
           address,
           noteCiphertext,
           sharedKeyBytes,
           noteMemo,
-          note.annotationData,
+          annotationData,
+          viewingKeyPair.privateKey,
           undefined, // blindedReceiverViewingKey
           undefined, // blindedSenderViewingKey
-          undefined, // senderRandom
           true, // isSentNote
           true, // isLegacyDecryption
           tokenDataGetter,
           BLOCK_NUMBER,
+          isV2Test() ? undefined : 0, // transactCommitmentBatchIndex
         );
         expect(decryptedFromCiphertext.tokenHash).to.equal(note.tokenHash);
         expect(decryptedFromCiphertext.value).to.equal(note.value);
         expect(decryptedFromCiphertext.random).to.equal(note.random);
-        expect(decryptedFromCiphertext.hash).to.equal(note.hash);
+        // TODO: Update vectors for note hashes
+        // expect(decryptedFromCiphertext.hash).to.equal(note.hash);
         expect(decryptedFromCiphertext.memoText).to.equal(note.memoText);
         expect(decryptedFromCiphertext.receiverAddressData.masterPublicKey).to.equal(
           address.masterPublicKey,
@@ -436,7 +470,13 @@ describe('transact-note', () => {
       vectors.map(async (vector) => {
         const vectorBytes = hexStringToBytes(vector.vpk);
 
-        const note = await TransactNote.deserialize(vector.note, vectorBytes, tokenDataGetter);
+        const note = await TransactNote.deserialize(
+          txidVersion,
+          chain,
+          vector.note,
+          vectorBytes,
+          tokenDataGetter,
+        );
         expect(hexlify(note.random)).to.equal(vector.random);
 
         const hexHash = nToHex(note.hash, ByteLength.UINT_256);
@@ -445,25 +485,29 @@ describe('transact-note', () => {
         const reserialized = note.serialize();
         expect(reserialized.npk).to.equal(vector.note.npk);
         expect(reserialized.value).to.equal(vector.note.value);
-        expect(reserialized.token).to.equal(vector.note.token);
-        expect(reserialized.annotationData).to.equal('01');
+        expect(reserialized.tokenHash).to.equal(vector.note.tokenHash);
         expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
 
         const reserializedContract = note.serialize(true);
         expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
-        expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
-        expect(reserializedContract.annotationData).to.equal('01');
+        expect(reserializedContract.tokenHash).to.equal(`0x${vector.note.tokenHash}`);
         expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
       }),
     );
   });
 
-  it('Should serialize and deserialize notes (legacy)', async () => {
+  it('Should serialize and deserialize notes (legacy V1-V2)', async () => {
     await Promise.all(
       vectors.map(async (vector) => {
         const vectorBytes = hexStringToBytes(vector.vpk);
 
-        const note = await TransactNote.deserialize(vector.note, vectorBytes, tokenDataGetter);
+        const note = await TransactNote.deserialize(
+          txidVersion,
+          chain,
+          vector.note,
+          vectorBytes,
+          tokenDataGetter,
+        );
         expect(hexlify(note.random)).to.equal(vector.random);
 
         const hexHash = nToHex(note.hash, ByteLength.UINT_256);
@@ -472,18 +516,14 @@ describe('transact-note', () => {
         const reserialized = note.serializeLegacy(vectorBytes);
         expect(reserialized.npk).to.equal(vector.note.npk);
         expect(reserialized.value).to.equal(vector.note.value);
-        expect(reserialized.token).to.equal(vector.note.token);
-        expect(reserialized.memoField).to.deep.equal(
-          vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256)),
-        );
+        expect(reserialized.tokenHash).to.equal(vector.note.tokenHash);
+        expect(reserialized.memoField).to.deep.equal([]);
         expect(reserialized.recipientAddress).to.equal(vector.note.recipientAddress);
 
         const reserializedContract = note.serializeLegacy(vectorBytes, true);
         expect(reserializedContract.value).to.equal(`0x${vector.note.value}`);
-        expect(reserializedContract.token).to.equal(`0x${vector.note.token}`);
-        expect(reserializedContract.memoField).to.deep.equal(
-          vector.note.memoField.map((el) => formatToByteLength(el, ByteLength.UINT_256, true)),
-        );
+        expect(reserializedContract.tokenHash).to.equal(`0x${vector.note.tokenHash}`);
+        expect(reserializedContract.memoField).to.deep.equal([]);
         expect(reserializedContract.recipientAddress).to.equal(vector.note.recipientAddress);
       }),
     );

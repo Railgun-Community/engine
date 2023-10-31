@@ -1,4 +1,9 @@
-import { Commitment, Nullifier, RailgunTransaction } from './formatted-types';
+import {
+  Commitment,
+  Nullifier,
+  RailgunTransactionV2,
+  RailgunTransactionV3,
+} from './formatted-types';
 import { Chain } from './engine-types';
 import { POIsPerList, TXIDVersion } from './poi-types';
 
@@ -17,7 +22,7 @@ export type QuickSyncEvents = (
 ) => Promise<AccumulatedEvents>;
 export type EventsCommitmentListener = (
   txidVersion: TXIDVersion,
-  event: CommitmentEvent,
+  events: CommitmentEvent[],
 ) => Promise<void>;
 export type EventsNullifierListener = (
   txidVersion: TXIDVersion,
@@ -27,11 +32,15 @@ export type EventsUnshieldListener = (
   txidVersion: TXIDVersion,
   unshields: UnshieldStoredEvent[],
 ) => Promise<void>;
+export type EventsRailgunTransactionListenerV3 = (
+  txidVersion: TXIDVersion,
+  railgunTransaction: RailgunTransactionV3[],
+) => Promise<void>;
 
-export type QuickSyncRailgunTransactions = (
+export type QuickSyncRailgunTransactionsV2 = (
   chain: Chain,
   latestGraphID: Optional<string>,
-) => Promise<RailgunTransaction[]>;
+) => Promise<RailgunTransactionV2[]>;
 
 export type GetLatestValidatedRailgunTxid = (
   txidVersion: TXIDVersion,
@@ -65,6 +74,7 @@ export type AccumulatedEvents = {
   commitmentEvents: CommitmentEvent[];
   unshieldEvents: UnshieldStoredEvent[];
   nullifierEvents: Nullifier[];
+  railgunTransactionEvents?: RailgunTransactionV3[];
 };
 
 export type WalletScannedEventData = {

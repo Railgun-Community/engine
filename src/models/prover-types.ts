@@ -1,4 +1,7 @@
+import { PoseidonMerkleVerifier } from '../abi/typechain';
 import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
+// eslint-disable-next-line import/no-cycle
+import { TXIDVersion } from './poi-types';
 
 export const enum Circuits {
   OneTwo,
@@ -48,11 +51,21 @@ export type PrivateInputsRailgun = {
   valueOut: bigint[];
 };
 
-export type RailgunTransactionRequest = {
+export type RailgunTransactionRequestV2 = {
+  txidVersion: TXIDVersion.V2_PoseidonMerkle;
   privateInputs: PrivateInputsRailgun;
   publicInputs: PublicInputsRailgun;
   boundParams: BoundParamsStruct;
 };
+
+export type RailgunTransactionRequestV3 = {
+  txidVersion: TXIDVersion.V3_PoseidonMerkle;
+  privateInputs: PrivateInputsRailgun;
+  publicInputs: PublicInputsRailgun;
+  boundParams: PoseidonMerkleVerifier.BoundParamsStruct;
+};
+
+export type RailgunTransactionRequest = RailgunTransactionRequestV2 | RailgunTransactionRequestV3;
 
 export type UnprovedTransactionInputs = RailgunTransactionRequest & {
   signature: [bigint, bigint, bigint];

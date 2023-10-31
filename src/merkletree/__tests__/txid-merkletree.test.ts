@@ -6,9 +6,8 @@ import { poseidon } from 'circomlibjs';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { TXIDMerkletree } from '../txid-merkletree';
-import { RailgunTransaction, TXIDVersion } from '../../models';
+import { RailgunTransactionV2, RailgunTransactionVersion, TXIDVersion } from '../../models';
 import {
-  calculateRailgunTransactionVerificationHash,
   createRailgunTransactionWithHash,
   getRailgunTransactionID,
 } from '../../transaction/railgun-txid';
@@ -21,6 +20,8 @@ import { POI } from '../../poi/poi';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
+
+const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
 // Database object
 let db: Database;
@@ -41,19 +42,13 @@ describe('txid-merkletree', () => {
 
     POI.setLaunchBlock(chain, poiLaunchBlock);
 
-    merkletreePOINode = await TXIDMerkletree.createForPOINode(
-      db,
-      chain,
-      TXIDVersion.V2_PoseidonMerkle,
-      poiLaunchBlock,
-    );
+    merkletreePOINode = await TXIDMerkletree.createForPOINode(db, chain, txidVersion);
     expect(merkletreePOINode.shouldStoreMerkleroots).to.equal(true);
 
     merkletreeWallet = await TXIDMerkletree.createForWallet(
       db,
       chain,
-      TXIDVersion.V2_PoseidonMerkle,
-      poiLaunchBlock,
+      txidVersion,
       async () => true,
     );
     expect(merkletreeWallet.shouldStoreMerkleroots).to.equal(false);
@@ -62,7 +57,6 @@ describe('txid-merkletree', () => {
   it('Should get Txid merkletree DB paths', async () => {
     type Vector = {
       chain: Chain;
-      poiLaunchBlock: number;
       treeNumber: number;
       level: number;
       index: number;
@@ -75,7 +69,6 @@ describe('txid-merkletree', () => {
     const vectors: Vector[] = [
       {
         chain: { type: ChainType.EVM, id: 0 },
-        poiLaunchBlock: 10,
         treeNumber: 0,
         level: 1,
         index: 5,
@@ -90,7 +83,6 @@ describe('txid-merkletree', () => {
       },
       {
         chain: { type: ChainType.EVM, id: 4 },
-        poiLaunchBlock: 11,
         treeNumber: 2,
         level: 7,
         index: 10,
@@ -110,8 +102,7 @@ describe('txid-merkletree', () => {
         const merkletreeVectorTest = await TXIDMerkletree.createForPOINode(
           db,
           vector.chain,
-          TXIDVersion.V2_PoseidonMerkle,
-          vector.poiLaunchBlock,
+          txidVersion,
         );
 
         expect(merkletreeVectorTest.getTreeDBPrefix(vector.treeNumber)).to.deep.equal(
@@ -134,8 +125,9 @@ describe('txid-merkletree', () => {
         '14fceeac99eb8419a2796d1958fc2050d489bf5a3eb170ef16a667060344ba90',
       );
 
-      const railgunTransactions: RailgunTransaction[] = [
+      const railgunTransactions: RailgunTransactionV2[] = [
         {
+          version: RailgunTransactionVersion.V2,
           graphID: '0x00',
           commitments: ['0x01', '0x02'],
           nullifiers: ['0x03', '0x04'],
@@ -154,6 +146,7 @@ describe('txid-merkletree', () => {
           verificationHash: 'test',
         },
         {
+          version: RailgunTransactionVersion.V2,
           graphID: '0x10',
           commitments: ['0x11', '0x12'],
           nullifiers: ['0x13', '0x14'],
@@ -169,7 +162,7 @@ describe('txid-merkletree', () => {
         },
       ];
       const railgunTransactionsWithTxids = railgunTransactions.map((railgunTransaction) =>
-        createRailgunTransactionWithHash(railgunTransaction, TXIDVersion.V2_PoseidonMerkle),
+        createRailgunTransactionWithHash(railgunTransaction),
       );
 
       await merkletree.queueRailgunTransactions(railgunTransactionsWithTxids, 1);
@@ -214,6 +207,7 @@ describe('txid-merkletree', () => {
       );
       const hash = poseidon([railgunTxid, 0n, 0n]);
       expect(railgunTransaction).to.deep.equal({
+        version: RailgunTransactionVersion.V2,
         graphID: railgunTransactions[0].graphID,
         nullifiers: railgunTransactions[0].nullifiers,
         commitments: railgunTransactions[0].commitments,
@@ -239,6 +233,7 @@ describe('txid-merkletree', () => {
       expect(
         await merkletree.getRailgunTransactionByTxid(railgunTransactionsWithTxids[0].railgunTxid),
       ).to.deep.equal({
+        version: RailgunTransactionVersion.V2,
         graphID: '0x00',
         commitments: ['0x01', '0x02'],
         nullifiers: ['0x03', '0x04'],
@@ -262,17 +257,13 @@ describe('txid-merkletree', () => {
       });
 
       // Make sure new constructed tree inherits db values
-      const merkletree2 = await TXIDMerkletree.createForPOINode(
-        db,
-        chain,
-        TXIDVersion.V2_PoseidonMerkle,
-        poiLaunchBlock,
-      );
+      const merkletree2 = await TXIDMerkletree.createForPOINode(db, chain, txidVersion);
       const treeLength2 = await merkletree2.getTreeLength(0);
       expect(treeLength2).to.equal(2);
 
-      const moreRailgunTransactions: RailgunTransaction[] = [
+      const moreRailgunTransactions: RailgunTransactionV2[] = [
         {
+          version: RailgunTransactionVersion.V2,
           graphID: '0x02',
           commitments: ['0x0101', '0x0102'],
           nullifiers: ['0x0103', '0x0104'],
@@ -291,6 +282,7 @@ describe('txid-merkletree', () => {
           verificationHash: 'test',
         },
         {
+          version: RailgunTransactionVersion.V2,
           graphID: '0x13',
           commitments: ['0x0211', '0x0212'],
           nullifiers: ['0x0213', '0x0214'],
@@ -310,7 +302,7 @@ describe('txid-merkletree', () => {
         },
       ];
       const moreRailgunTransactionsWithTxids = moreRailgunTransactions.map((railgunTransaction2) =>
-        createRailgunTransactionWithHash(railgunTransaction2, TXIDVersion.V2_PoseidonMerkle),
+        createRailgunTransactionWithHash(railgunTransaction2),
       );
 
       await merkletree.queueRailgunTransactions(moreRailgunTransactionsWithTxids, undefined);
@@ -337,6 +329,7 @@ describe('txid-merkletree', () => {
         );
         expect(currentMerkletreeData).to.deep.equal({
           railgunTransaction: {
+            version: RailgunTransactionVersion.V2,
             graphID: '0x00',
             commitments: ['0x01', '0x02'],
             nullifiers: ['0x03', '0x04'],
@@ -401,6 +394,7 @@ describe('txid-merkletree', () => {
 
         expect(currentMerkletreeData).to.deep.equal({
           railgunTransaction: {
+            version: RailgunTransactionVersion.V2,
             graphID: '0x00',
             commitments: ['0x01', '0x02'],
             nullifiers: ['0x03', '0x04'],

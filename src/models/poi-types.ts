@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-cycle
 import { Proof } from './prover-types';
 
 export enum TXOPOIListStatus {
@@ -90,9 +91,16 @@ export type POIEngineProofInputs = {
 
 export enum TXIDVersion {
   V2_PoseidonMerkle = 'V2_PoseidonMerkle',
-  // V3_PoseidonMerkle = 'V3_PoseidonMerkle',
+  V3_PoseidonMerkle = 'V3_PoseidonMerkle',
   // V3_KZG = 'V3_KZG',
 }
 
-export const ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS: TXIDVersion[] = [TXIDVersion.V2_PoseidonMerkle];
-export const ACTIVE_TXID_VERSIONS: TXIDVersion[] = Object.values(TXIDVersion);
+export const ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS: TXIDVersion[] = [
+  TXIDVersion.V2_PoseidonMerkle,
+  TXIDVersion.V3_PoseidonMerkle,
+];
+
+export const ACTIVE_TXID_VERSIONS: TXIDVersion[] = [
+  TXIDVersion.V2_PoseidonMerkle,
+  TXIDVersion.V3_PoseidonMerkle,
+];

@@ -32,8 +32,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
   protected merkletreeType = 'TXID';
 
-  poiLaunchBlock: number;
-
   shouldStoreMerkleroots: boolean;
 
   shouldSavePOILaunchSnapshot: boolean;
@@ -44,7 +42,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     db: Database,
     chain: Chain,
     txidVersion: TXIDVersion,
-    poiLaunchBlock: number,
     merklerootValidator: MerklerootValidator,
     isPOINode: boolean,
   ) {
@@ -54,12 +51,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       : CommitmentProcessingGroupSize.XXXLarge;
 
     super(db, chain, txidVersion, merklerootValidator, commitmentProcessingGroupSize);
-
-    if (POI.getLaunchBlock(chain) !== poiLaunchBlock) {
-      throw new Error('POI launch block is invalid.');
-    }
-
-    this.poiLaunchBlock = poiLaunchBlock;
 
     // For Txid merkletree on POI Nodes, store all merkleroots.
     this.shouldStoreMerkleroots = isPOINode;
@@ -73,14 +64,12 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     db: Database,
     chain: Chain,
     txidVersion: TXIDVersion,
-    poiLaunchBlock: number,
     merklerootValidator: MerklerootValidator,
   ): Promise<TXIDMerkletree> {
     const merkletree = new TXIDMerkletree(
       db,
       chain,
       txidVersion,
-      poiLaunchBlock,
       merklerootValidator,
       false, // isPOINode
     );
@@ -96,7 +85,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     db: Database,
     chain: Chain,
     txidVersion: TXIDVersion,
-    poiLaunchBlock: number,
   ): Promise<TXIDMerkletree> {
     // Assume all merkleroots are valid.
     const merklerootValidator = async () => true;
@@ -105,7 +93,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       db,
       chain,
       txidVersion,
-      poiLaunchBlock,
       merklerootValidator,
       true, // isPOINode
     );
@@ -164,9 +151,11 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
     // Use the snapshot if this is a legacy transaction, and we have a snapshot.
     // (Ie., after POI has launched for this chain).
+    const poiLaunchBlock = POI.getLaunchBlock(this.chain);
     const useSnapshot =
+      isDefined(poiLaunchBlock) &&
       this.shouldSavePOILaunchSnapshot &&
-      railgunTransaction.blockNumber < this.poiLaunchBlock &&
+      railgunTransaction.blockNumber < poiLaunchBlock &&
       (await this.hasSavedPOILaunchSnapshot());
 
     if (useSnapshot) {
@@ -282,6 +271,10 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     railgunTransactionsWithTxids: RailgunTransactionWithHash[],
     maxTxidIndex: Optional<number>,
   ): Promise<void> {
+    if (!railgunTransactionsWithTxids.length) {
+      return;
+    }
+
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
     let nextTree = latestTree;
     let nextIndex = latestIndex;
@@ -298,6 +291,31 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
       const railgunTransactionWithTxid = railgunTransactionsWithTxids[i];
 
+      const txidIndex = TXIDMerkletree.getGlobalPosition(nextTree, nextIndex);
+
+      // TODO-V3: We need a way to verify the txid tree position.
+      // The following won't work, because the UTXO start position includes shields, and the TXID position doesn't have shields.
+      // if (
+      //   railgunTransactionWithTxid.version === RailgunTransactionVersion.V3 &&
+      //   railgunTransactionWithTxid.txidTreeVerificationGlobalIndex !== txidIndex
+      // ) {
+      //   const isUnshieldOnly =
+      //     isDefined(railgunTransactionWithTxid.unshield) &&
+      //     railgunTransactionWithTxid.commitments.length === 1;
+      //   if (isUnshieldOnly) {
+      //     EngineDebug.log(
+      //       `Warning: Skipping railgun transaction queueing: potentially out of order. Tried to insert ${railgunTransactionWithTxid.txidTreeVerificationGlobalIndex} at position ${txidIndex}. This is an unshield-only - if there are 2 unshield-onlys in a row, this is expected, because these events don't technically have a global UTXO tree position.`,
+      //     );
+      //   } else {
+      //     EngineDebug.error(
+      //       new Error(
+      //         `Skipping railgun transaction queueing: out of order. Tried to insert ${railgunTransactionWithTxid.txidTreeVerificationGlobalIndex} at position ${txidIndex}`,
+      //       ),
+      //     );
+      //     return;
+      //   }
+      // }
+
       const { railgunTxid } = railgunTransactionWithTxid;
 
       const latestLeafIndex = nextIndex - 1;
@@ -307,7 +325,6 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       // eslint-disable-next-line no-await-in-loop
       await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithTxid]);
 
-      const txidIndex = TXIDMerkletree.getGlobalPosition(nextTree, nextIndex);
       railgunTxidIndexLookupBatch.push({
         type: 'put',
         key: this.getRailgunTxidLookupDBPath(railgunTxid).join(':'),
@@ -339,10 +356,12 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     if (!this.shouldSavePOILaunchSnapshot) {
       return;
     }
-    if (!isDefined(this.poiLaunchBlock)) {
+
+    const poiLaunchBlock = POI.getLaunchBlock(this.chain);
+    if (!isDefined(poiLaunchBlock)) {
       return;
     }
-    if (railgunTransactionWithTxid.blockNumber < this.poiLaunchBlock) {
+    if (railgunTransactionWithTxid.blockNumber < poiLaunchBlock) {
       return;
     }
 

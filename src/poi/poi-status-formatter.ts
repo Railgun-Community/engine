@@ -183,7 +183,11 @@ const formatSpentStatusInfo = async (
         .map((hex) => emojiHashForPOIStatusInfo(hex))
         .join(', ')} (${hasAllCom ? '✓' : 'x'})`;
 
-      const isLegacyPOIProof = railgunTransaction.blockNumber < txidMerkletree.poiLaunchBlock;
+      const poiLaunchBlock = POI.getLaunchBlock(txidMerkletree.chain);
+      if (!isDefined(poiLaunchBlock)) {
+        throw new Error('No POI launch block for railgun txids');
+      }
+      const isLegacyPOIProof = railgunTransaction.blockNumber < poiLaunchBlock;
 
       spentTXOs = TXOs.filter((txo) =>
         railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
