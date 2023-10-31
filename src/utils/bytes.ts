@@ -26,7 +26,7 @@ export enum ByteLength {
 const isPrefixed = (str: string): boolean => str.startsWith('0x');
 
 // add 0x if it str isn't already prefixed
-const prefix0x = (str: string): string => (isPrefixed(str) ? str : `0x${str}`);
+export const prefix0x = (str: string): string => (isPrefixed(str) ? str : `0x${str}`);
 
 // remove 0x prefix if it exists
 export const strip0x = (str: string): string => (isPrefixed(str) ? str.slice(2) : str);

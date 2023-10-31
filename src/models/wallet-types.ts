@@ -1,6 +1,9 @@
 import { UnshieldStoredEvent } from './event-types';
-import { NoteAnnotationData, TokenData } from './formatted-types';
+import { OutputType, TokenData } from './formatted-types';
+import { TXIDVersion } from './poi-types';
 import { TXO, WalletBalanceBucket } from './txo-types';
+
+export type WalletDetailsMap = Partial<Record<TXIDVersion, WalletDetails>>;
 
 export type WalletDetails = {
   treeScannedHeights: number[];
@@ -51,7 +54,8 @@ export type TransactionHistoryTokenAmount = {
   tokenHash: string;
   tokenData: TokenData;
   amount: bigint;
-  noteAnnotationData?: NoteAnnotationData;
+  outputType?: OutputType;
+  walletSource?: string;
   memoText: Optional<string>;
   hasValidPOIForActiveLists: boolean;
 };
@@ -67,12 +71,14 @@ export type TransactionHistoryReceiveTokenAmount = TransactionHistoryTokenAmount
   balanceBucket: WalletBalanceBucket;
 };
 export type TransactionHistoryEntryReceived = {
+  txidVersion: TXIDVersion;
   txid: string;
   timestamp: Optional<number>;
   blockNumber: Optional<number>;
   receiveTokenAmounts: TransactionHistoryReceiveTokenAmount[];
 };
 export type TransactionHistoryEntrySpent = {
+  txidVersion: TXIDVersion;
   txid: string;
   timestamp: Optional<number>;
   blockNumber: Optional<number>;

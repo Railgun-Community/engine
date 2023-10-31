@@ -4,7 +4,6 @@ import {
   calculateRailgunTransactionVerificationHash,
   getRailgunTxidLeafHash,
 } from '../railgun-txid';
-import { TXIDVersion } from '../../models';
 import { ByteLength, nToHex } from '../../utils';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
 
@@ -18,7 +17,6 @@ describe('railgun-txid', () => {
         12157249116530410877712851712509084797672039320300907005218073634829938454808n,
         0n,
         getGlobalTreePosition(99999, 99999),
-        TXIDVersion.V2_PoseidonMerkle,
       ),
     ).to.equal(
       nToHex(

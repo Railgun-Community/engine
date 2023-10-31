@@ -7,7 +7,11 @@ import TestVectorPOI from '../../test/test-vector-poi.json';
 import { createRailgunTransactionWithHash } from '../../transaction/railgun-txid';
 import { verifyMerkleProof } from '../../merkletree/merkle-proof';
 import { Chain } from '../../models/engine-types';
-import { MerkleProof } from '../../models/formatted-types';
+import {
+  MerkleProof,
+  RailgunTransactionVersion,
+  RailgunTransactionWithHash,
+} from '../../models/formatted-types';
 import { TXIDVersion } from '../../models/poi-types';
 import { TXIDMerkletree } from '../../merkletree/txid-merkletree';
 import { Database } from '../../database/database';
@@ -16,7 +20,7 @@ import { ByteLength, hexToBigInt, nToHex } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
 import { getBlindedCommitmentForShieldOrTransact } from '../../poi/blinded-commitment';
-import { Proof, PublicInputsPOI } from '../../models';
+import { PublicInputsPOI } from '../../models';
 import { ProofCachePOI } from '../proof-cache-poi';
 import { config } from '../../test/config.test';
 import { POI } from '../../poi/poi';
@@ -123,27 +127,25 @@ describe('prover', () => {
   it('Should verify input vector', async () => {
     const testVector = TestVectorPOI;
 
-    const railgunTransaction = createRailgunTransactionWithHash(
-      {
-        graphID: '',
-        boundParamsHash: testVector.boundParamsHash,
-        commitments: testVector.commitmentsOut,
-        nullifiers: testVector.nullifiers,
-        unshield: {
-          tokenData: getTokenDataERC20(config.contracts.rail),
-          toAddress: '0x1234',
-          value: '0x01',
-        },
-        timestamp: 1_000_000,
-        txid: '00',
-        blockNumber: 0,
-        utxoTreeIn: 0,
-        utxoTreeOut: 0,
-        utxoBatchStartPositionOut: 1,
-        verificationHash: 'todo',
+    const railgunTransaction: RailgunTransactionWithHash = createRailgunTransactionWithHash({
+      version: RailgunTransactionVersion.V2,
+      graphID: '',
+      boundParamsHash: testVector.boundParamsHash,
+      commitments: testVector.commitmentsOut,
+      nullifiers: testVector.nullifiers,
+      unshield: {
+        tokenData: getTokenDataERC20(config.contracts.rail),
+        toAddress: '0x1234',
+        value: '0x01',
       },
-      TXIDVersion.V2_PoseidonMerkle,
-    );
+      timestamp: 1_000_000,
+      txid: '00',
+      blockNumber: 0,
+      utxoTreeIn: 0,
+      utxoTreeOut: 0,
+      utxoBatchStartPositionOut: 1,
+      verificationHash: 'todo',
+    });
     expect(hexToBigInt(railgunTransaction.railgunTxid)).to.equal(
       BigInt(testVector.railgunTxidIfHasUnshield),
     );
@@ -152,7 +154,6 @@ describe('prover', () => {
       new Database(memdown()),
       chain,
       TXIDVersion.V2_PoseidonMerkle,
-      0,
       async () => true,
     );
     await txidMerkletree.queueRailgunTransactions([railgunTransaction], undefined);

@@ -4,7 +4,7 @@ import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
 import { BytesData, Ciphertext } from '../models/formatted-types';
 import { chunk, combine, hexlify } from '../utils/bytes';
-import { AES } from '../utils/encryption';
+import { AES } from '../utils/encryption/aes';
 import EngineDebug from '../debugger/debugger';
 
 export type Encoding =

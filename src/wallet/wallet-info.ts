@@ -2,7 +2,7 @@ const MAX_LENGTH = 16;
 const WALLET_SOURCE_CHARSET = ' 0123456789abcdefghijklmnopqrstuvwxyz';
 
 export default class WalletInfo {
-  private static walletSource: string;
+  static walletSource: string;
 
   static setWalletSource(walletSource: string) {
     const lowercase = walletSource.toLowerCase();
@@ -20,11 +20,11 @@ export default class WalletInfo {
     this.encodeWalletSource(walletSource);
   }
 
-  static getEncodedWalletSource(): string {
-    if (!this.walletSource) {
+  static getEncodedWalletSource(walletSource: string): string {
+    if (!walletSource) {
       return '';
     }
-    return this.encodeWalletSource(this.walletSource);
+    return this.encodeWalletSource(walletSource.toLowerCase());
   }
 
   /**

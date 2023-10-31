@@ -10,7 +10,8 @@ import {
 } from '../../models/formatted-types';
 import { ShieldNoteNFT } from '../../note/nft/shield-note-nft';
 import { ERC721_NOTE_VALUE } from '../../note/note-util';
-import { RelayAdapt, ShieldRequestStruct, TransactionStruct } from '../../abi/typechain/RelayAdapt';
+import { RelayAdapt, ShieldRequestStruct } from '../../abi/typechain/RelayAdapt';
+import { TransactionStructV2, TransactionStructV3 } from '../../models/transaction-types';
 
 class RelayAdaptHelper {
   static async generateRelayShieldRequests(
@@ -108,7 +109,7 @@ class RelayAdaptHelper {
    * @returns adapt params
    */
   static getRelayAdaptParams(
-    transactions: TransactionStruct[],
+    transactions: (TransactionStructV2 | TransactionStructV3)[],
     random: string,
     requireSuccess: boolean,
     calls: ContractTransaction[],

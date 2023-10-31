@@ -14,9 +14,20 @@ export type Ciphertext = {
   data: string[];
 };
 
-export type CTRCiphertext = {
+export type CiphertextCTR = {
   iv: string;
   data: string[];
+};
+
+export enum XChaChaEncryptionAlgorithm {
+  XChaCha = 'XChaCha',
+  XChaChaPoly1305 = 'XChaChaPoly1305',
+}
+
+export type CiphertextXChaCha = {
+  algorithm: XChaChaEncryptionAlgorithm;
+  nonce: string;
+  bundle: string;
 };
 
 export enum TokenType {
@@ -43,10 +54,14 @@ export type NFTTokenData = TokenData & {
 export type EncryptedData = [string, string];
 
 export enum CommitmentType {
-  ShieldCommitment = 'ShieldCommitment',
-  TransactCommitment = 'TransactCommitment',
+  // V1
   LegacyEncryptedCommitment = 'LegacyEncryptedCommitment',
   LegacyGeneratedCommitment = 'LegacyGeneratedCommitment',
+  // V2
+  ShieldCommitment = 'ShieldCommitment',
+  TransactCommitmentV2 = 'TransactCommitmentV2',
+  // V3
+  TransactCommitmentV3 = 'TransactCommitmentV3',
 }
 
 export enum OutputType {
@@ -61,17 +76,23 @@ export type NoteAnnotationData = {
   walletSource: Optional<string>; // Chunk 1: Bytes 22-32 (11) - can be extended left if needed
 };
 
+export type SenderAnnotationDecrypted = {
+  walletSource: Optional<string>; // Chunk 0: 16 bytes
+  outputType: OutputType; // Chunk 1: 1 byte per transact commitment
+};
+
 export type EncryptedNoteAnnotationData = string;
 
 // !! DO NOT MODIFY THIS TYPE - IT IS STORED IN DB WITH THESE EXACT KEYS !!
 export type NoteSerialized = {
   npk: string;
   value: string;
-  token: string;
+  tokenHash: string;
   random: string;
-  annotationData: string;
   recipientAddress: string;
   outputType: Optional<OutputType>;
+  senderRandom: Optional<string>;
+  walletSource: Optional<string>;
   senderAddress: Optional<string>;
   memoText: Optional<string>;
   shieldFee: Optional<string>;
@@ -82,7 +103,7 @@ export type NoteSerialized = {
 export type LegacyNoteSerialized = {
   npk: string;
   value: string;
-  token: string;
+  tokenHash: string;
   encryptedRandom: [string, string];
   memoField: string[];
   recipientAddress: string;
@@ -108,12 +129,18 @@ export type ShieldCiphertext = {
   shieldKey: string;
 };
 
-export type CommitmentCiphertext = {
+export type CommitmentCiphertextV2 = {
   ciphertext: Ciphertext;
   blindedSenderViewingKey: string;
   blindedReceiverViewingKey: string;
   annotationData: string;
   memo: string;
+};
+
+export type CommitmentCiphertextV3 = {
+  ciphertext: CiphertextXChaCha;
+  blindedSenderViewingKey: string;
+  blindedReceiverViewingKey: string;
 };
 
 type CommitmentShared = {
@@ -132,32 +159,66 @@ export type ShieldCommitment = CommitmentShared & {
   encryptedBundle: [string, string, string];
   shieldKey: string;
   fee: Optional<string>;
+  from: Optional<string>;
 };
 
-export type TransactCommitment = CommitmentShared & {
-  commitmentType: CommitmentType.TransactCommitment;
-  ciphertext: CommitmentCiphertext;
+export type TransactCommitmentV2 = CommitmentShared & {
+  commitmentType: CommitmentType.TransactCommitmentV2;
+  ciphertext: CommitmentCiphertextV2;
   railgunTxid: Optional<string>;
 };
 
-export type RailgunTransaction = {
+export type TransactCommitmentV3 = CommitmentShared & {
+  commitmentType: CommitmentType.TransactCommitmentV3;
+  ciphertext: CommitmentCiphertextV3;
+  senderCiphertext: string;
+  railgunTxid: Optional<string>;
+  transactCommitmentBatchIndex: number;
+};
+
+export type UnshieldRailgunTransactionData = {
+  tokenData: TokenData;
+  toAddress: string;
+  value: string;
+};
+
+export enum RailgunTransactionVersion {
+  V2 = 'V2',
+  V3 = 'V3',
+}
+
+// Comes from Graph
+export type RailgunTransactionV2 = {
+  version: RailgunTransactionVersion.V2;
   graphID: string;
   commitments: string[];
   nullifiers: string[];
   boundParamsHash: string;
   blockNumber: number;
   txid: string;
-  unshield: Optional<{
-    tokenData: TokenData;
-    toAddress: string;
-    value: string;
-  }>;
+  unshield: Optional<UnshieldRailgunTransactionData>;
   utxoTreeIn: number;
   utxoTreeOut: number;
   utxoBatchStartPositionOut: number;
   timestamp: number;
   verificationHash: string;
 };
+
+// Comes from on-chain AccumulatorStateUpdate events
+export type RailgunTransactionV3 = {
+  version: RailgunTransactionVersion.V3;
+  commitments: string[];
+  nullifiers: string[];
+  boundParamsHash: string;
+  blockNumber: number;
+  txid: string;
+  unshield: Optional<UnshieldRailgunTransactionData>;
+  utxoTreeIn: number;
+  utxoTreeOut: number;
+  utxoBatchStartPositionOut: number;
+};
+
+export type RailgunTransaction = RailgunTransactionV2 | RailgunTransactionV3;
 
 export type RailgunTransactionWithHash = RailgunTransaction & {
   railgunTxid: string;
@@ -171,10 +232,11 @@ export type TXIDMerkletreeData = {
 };
 
 export type Commitment =
-  | ShieldCommitment
-  | TransactCommitment
-  | LegacyGeneratedCommitment
-  | LegacyEncryptedCommitment;
+  | ShieldCommitment // Shield V2 and V2.1
+  | TransactCommitmentV2
+  | TransactCommitmentV3
+  | LegacyGeneratedCommitment // Shield V1
+  | LegacyEncryptedCommitment; // Transact V1
 
 export type Nullifier = {
   nullifier: string;
@@ -206,7 +268,8 @@ export type StoredSendCommitment = {
   timestamp: Optional<number>;
   decrypted: NoteSerialized | LegacyNoteSerialized;
   commitmentType: CommitmentType;
-  noteExtraData?: NoteAnnotationData;
+  outputType: Optional<OutputType>;
+  walletSource: Optional<string>;
   recipientAddress: string;
   railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
@@ -237,7 +300,7 @@ export type LegacyEncryptedCommitment = CommitmentShared & {
 };
 
 export type CommitmentSummary = {
-  commitmentCiphertext: CommitmentCiphertext;
+  commitmentCiphertext: CommitmentCiphertextV2 | CommitmentCiphertextV3;
   commitmentHash: string;
 };
 

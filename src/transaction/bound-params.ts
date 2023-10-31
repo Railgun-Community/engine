@@ -1,10 +1,11 @@
 import { AbiCoder } from 'ethers';
 import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 import { keccak256, hexToBigInt, SNARK_PRIME_BIGINT } from '../utils';
+import { PoseidonMerkleVerifier } from '../abi/typechain';
 
 const abiCoder = AbiCoder.defaultAbiCoder();
 
-export function hashBoundParams(boundParams: BoundParamsStruct) {
+export const hashBoundParamsV2 = (boundParams: BoundParamsStruct) => {
   const hashed = keccak256(
     abiCoder.encode(
       [
@@ -15,4 +16,17 @@ export function hashBoundParams(boundParams: BoundParamsStruct) {
   );
 
   return hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
-}
+};
+
+export const hashBoundParamsV3 = (boundParams: PoseidonMerkleVerifier.BoundParamsStruct) => {
+  const hashed = keccak256(
+    abiCoder.encode(
+      [
+        'tuple(tuple(uint32 treeNumber, tuple(bytes ciphertext, bytes32 blindedSenderViewingKey, bytes32 blindedReceiverViewingKey)[] commitmentCiphertext) local, tuple(uint128 minGasPrice, uint128 chainID, bytes senderCiphertext, address to, bytes data) global)',
+      ],
+      [boundParams],
+    ),
+  );
+
+  return hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
+};

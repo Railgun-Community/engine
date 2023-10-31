@@ -1,7 +1,7 @@
 /// <reference types="../types/global" />
 import { ContractTransaction, Provider, TransactionResponse, Wallet } from 'ethers';
 import artifacts from './test-artifacts-lite';
-import { Nullifier, RailgunTransaction } from '../models/formatted-types';
+import { Nullifier, RailgunTransactionV2 } from '../models/formatted-types';
 import {
   AccumulatedEvents,
   CommitmentEvent,
@@ -9,7 +9,7 @@ import {
   WalletScannedEventData,
   UnshieldStoredEvent,
   QuickSyncEvents,
-  QuickSyncRailgunTransactions,
+  QuickSyncRailgunTransactionsV2,
   GetLatestValidatedRailgunTxid,
 } from '../models/event-types';
 import { AbstractWallet } from '../wallet/abstract-wallet';
@@ -17,10 +17,11 @@ import { Chain } from '../models/engine-types';
 import { ArtifactGetter, PublicInputsRailgun } from '../models/prover-types';
 import { mnemonicToPrivateKey } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
-import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { promiseTimeout } from '../utils';
 import { MerklerootValidator } from '../models/merkletree-types';
 import { TXIDVersion } from '../models';
+import { RailgunVersionedSmartContracts } from '../contracts/railgun-smart-wallet/railgun-versioned-smart-contracts';
+import { ContractStore } from '../contracts/contract-store';
 
 export const DECIMALS_18 = BigInt(10) ** BigInt(18);
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -90,12 +91,12 @@ export const mockQuickSyncEvents: QuickSyncEvents = (
     nullifierEvents: [] as Nullifier[],
   });
 
-export const mockQuickSyncRailgunTransactions: QuickSyncRailgunTransactions = (
+export const mockQuickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2 = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _chain: Chain,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _latestGraphID: Optional<string>,
-): Promise<RailgunTransaction[]> => Promise.resolve([]);
+): Promise<RailgunTransactionV2[]> => Promise.resolve([]);
 
 export const mockRailgunTxidMerklerootValidator: MerklerootValidator = (): Promise<boolean> =>
   Promise.resolve(true);
@@ -129,53 +130,92 @@ export const awaitMultipleScans = async (
 };
 
 export const awaitRailgunSmartWalletEvent = async (
-  railgunSmartWallet: RailgunSmartWalletContract,
+  txidVersion: TXIDVersion,
+  chain: Chain,
   event: TypedDeferredTopicFilter<TypedContractEvent>,
 ) => {
   await promiseTimeout(
     new Promise<void>((resolve) => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      railgunSmartWallet.contractForListeners.once(event, () => resolve());
+      // @ts-expect-error
+      RailgunVersionedSmartContracts.getAccumulator(txidVersion, chain).contractForListeners.once(
+        event,
+        () => resolve(),
+      );
     }),
     15000,
-    `Timed out waiting for RailgunSmartWallet event: ${event.fragment.name}`,
+    `Timed out waiting for event: ${event.fragment.name}`,
   );
 };
 
-export const awaitRailgunSmartWalletShield = async (
-  railgunSmartWallet: RailgunSmartWalletContract,
-) => {
+const awaitPoseidonMerkleAccumulatorV3Update = async (txidVersion: TXIDVersion, chain: Chain) => {
   return awaitRailgunSmartWalletEvent(
-    railgunSmartWallet,
-    railgunSmartWallet.contract.filters.Shield(),
+    txidVersion,
+    chain,
+    ContractStore.getPoseidonMerkleAccumulatorV3Contract(
+      chain,
+    ).contract.filters.AccumulatorStateUpdate(),
   );
 };
 
-export const awaitRailgunSmartWalletTransact = async (
-  railgunSmartWallet: RailgunSmartWalletContract,
-) => {
-  return awaitRailgunSmartWalletEvent(
-    railgunSmartWallet,
-    railgunSmartWallet.contract.filters.Transact(),
-  );
+export const awaitRailgunSmartWalletShield = async (txidVersion: TXIDVersion, chain: Chain) => {
+  switch (txidVersion) {
+    case TXIDVersion.V2_PoseidonMerkle:
+      return awaitRailgunSmartWalletEvent(
+        txidVersion,
+        chain,
+        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Shield(),
+      );
+
+    case TXIDVersion.V3_PoseidonMerkle:
+      return awaitPoseidonMerkleAccumulatorV3Update(txidVersion, chain);
+  }
+  throw new Error('Unsupported txidVersion');
 };
 
-export const awaitRailgunSmartWalletUnshield = async (
-  railgunSmartWallet: RailgunSmartWalletContract,
-) => {
-  return awaitRailgunSmartWalletEvent(
-    railgunSmartWallet,
-    railgunSmartWallet.contract.filters.Unshield(),
-  );
+export const awaitRailgunSmartWalletTransact = async (txidVersion: TXIDVersion, chain: Chain) => {
+  switch (txidVersion) {
+    case TXIDVersion.V2_PoseidonMerkle:
+      return awaitRailgunSmartWalletEvent(
+        txidVersion,
+        chain,
+        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Transact(),
+      );
+
+    case TXIDVersion.V3_PoseidonMerkle:
+      return awaitPoseidonMerkleAccumulatorV3Update(txidVersion, chain);
+  }
+  throw new Error('Unsupported txidVersion');
 };
 
-export const awaitRailgunSmartWalletNullified = async (
-  railgunSmartWallet: RailgunSmartWalletContract,
-) => {
-  return awaitRailgunSmartWalletEvent(
-    railgunSmartWallet,
-    railgunSmartWallet.contract.filters.Nullified(),
-  );
+export const awaitRailgunSmartWalletUnshield = async (txidVersion: TXIDVersion, chain: Chain) => {
+  switch (txidVersion) {
+    case TXIDVersion.V2_PoseidonMerkle:
+      return awaitRailgunSmartWalletEvent(
+        txidVersion,
+        chain,
+        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Unshield(),
+      );
+
+    case TXIDVersion.V3_PoseidonMerkle:
+      return awaitPoseidonMerkleAccumulatorV3Update(txidVersion, chain);
+  }
+  throw new Error('Unsupported txidVersion');
+};
+
+export const awaitRailgunSmartWalletNullified = async (txidVersion: TXIDVersion, chain: Chain) => {
+  switch (txidVersion) {
+    case TXIDVersion.V2_PoseidonMerkle:
+      return awaitRailgunSmartWalletEvent(
+        txidVersion,
+        chain,
+        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Nullified(),
+      );
+
+    case TXIDVersion.V3_PoseidonMerkle:
+      return awaitPoseidonMerkleAccumulatorV3Update(txidVersion, chain);
+  }
+  throw new Error('Unsupported txidVersion');
 };
 
 export const getEthersWallet = (mnemonic: string, provider?: Provider): Wallet => {
@@ -193,7 +233,7 @@ export const sendTransactionWithLatestNonce = async (
   expectedNextNonce?: number,
   retries = 0,
 ): Promise<TransactionResponse> => {
-  if (retries > 3) {
+  if (retries > 5) {
     throw new Error('Nonce already used - many pending transactions');
   }
   const latestNonce = await wallet.getNonce('latest');
@@ -213,4 +253,15 @@ export const sendTransactionWithLatestNonce = async (
     }
     throw err;
   }
+};
+
+export const isV2Test = (): boolean => {
+  return process.env.V2_TEST === '1';
+};
+
+export const getTestTXIDVersion = () => {
+  if (isV2Test()) {
+    return TXIDVersion.V2_PoseidonMerkle;
+  }
+  return TXIDVersion.V3_PoseidonMerkle;
 };

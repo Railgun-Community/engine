@@ -30,7 +30,7 @@ const invalidPOIsForList1 = {
     [activeList1]: TXOPOIListStatus.Missing,
     [activeList2]: TXOPOIListStatus.Valid,
   } as POIsPerList,
-  commitmentType: CommitmentType.TransactCommitment,
+  commitmentType: CommitmentType.TransactCommitmentV2,
   note: { value: 1n },
 };
 const submittedPOIsForList1 = {
@@ -38,7 +38,7 @@ const submittedPOIsForList1 = {
     [activeList1]: TXOPOIListStatus.ProofSubmitted,
     [activeList2]: TXOPOIListStatus.Valid,
   } as POIsPerList,
-  commitmentType: CommitmentType.TransactCommitment,
+  commitmentType: CommitmentType.TransactCommitmentV2,
   note: { value: 1n },
 };
 const validPOIsForList1 = {
@@ -46,7 +46,7 @@ const validPOIsForList1 = {
     [activeList1]: TXOPOIListStatus.Valid,
     [activeList2]: TXOPOIListStatus.Valid,
   } as POIsPerList,
-  commitmentType: CommitmentType.TransactCommitment,
+  commitmentType: CommitmentType.TransactCommitmentV2,
   note: { value: 1n },
 };
 const shieldPendingPOIsForList1 = {

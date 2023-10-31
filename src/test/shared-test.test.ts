@@ -2,7 +2,6 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { Wallet } from 'ethers';
-import { RailgunSmartWalletContract } from '../contracts/railgun-smart-wallet/railgun-smart-wallet';
 import { Chain } from '../models/engine-types';
 import { NFTTokenData, TokenType } from '../models/formatted-types';
 import { ShieldNoteNFT } from '../note/nft/shield-note-nft';
@@ -15,6 +14,8 @@ import {
 } from './helper.test';
 import { TestERC721 } from './abi/typechain/TestERC721';
 import { promiseTimeout } from '../utils/promises';
+import { TXIDVersion } from '../models';
+import { RailgunVersionedSmartContracts } from '../contracts/railgun-smart-wallet/railgun-versioned-smart-contracts';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -37,9 +38,9 @@ export const mintNFTsID01ForTest = async (nft: TestERC721, ethersWallet: Wallet)
 };
 
 export const shieldNFTForTest = async (
+  txidVersion: TXIDVersion,
   wallet: RailgunWallet,
   ethersWallet: Wallet,
-  railgunSmartWalletContract: RailgunSmartWalletContract,
   chain: Chain,
   random: string,
   nftAddress: string,
@@ -55,17 +56,19 @@ export const shieldNFTForTest = async (
   const shieldPrivateKey = hexToBytes(randomHex(32));
   const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
-  const shieldTx = await railgunSmartWalletContract.generateShield([shieldInput]);
+  const shieldTx = await RailgunVersionedSmartContracts.generateShield(txidVersion, chain, [
+    shieldInput,
+  ]);
 
   // Send shield on chain
   const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
   await Promise.all([
-    awaitRailgunSmartWalletShield(railgunSmartWalletContract),
-    promiseTimeout(awaitScan(wallet, chain), 10000, 'Timed out waiting for NFT shield'),
+    awaitRailgunSmartWalletShield(txidVersion, chain),
+    promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out waiting for NFT shield'),
     txResponse.wait(),
   ]);
-  await wallet.refreshPOIsForAllTXIDVersions(chain, true);
+  await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
 
   return shield;
 };

@@ -66,7 +66,7 @@ const createNullUTXO = (nullNote: TransactNote): TXO => {
     poisPerList: undefined,
     blindedCommitment: undefined,
     transactCreationRailgunTxid: undefined,
-    commitmentType: CommitmentType.TransactCommitment,
+    commitmentType: CommitmentType.TransactCommitmentV3,
     nullifier: ZERO_32_BYTE_VALUE,
   };
 };

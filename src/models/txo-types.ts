@@ -1,5 +1,5 @@
 import { TransactNote } from '../note/transact-note';
-import { CommitmentType, NoteAnnotationData, TokenData } from './formatted-types';
+import { CommitmentType, OutputType, TokenData } from './formatted-types';
 import { POIsPerList } from './poi-types';
 
 export type TXO = {
@@ -24,7 +24,8 @@ export type SentCommitment = {
   txid: string;
   timestamp: Optional<number>;
   note: TransactNote;
-  noteAnnotationData?: NoteAnnotationData;
+  walletSource: Optional<string>;
+  outputType: Optional<OutputType>;
   isLegacyTransactNote: boolean;
   railgunTxid: Optional<string>;
   poisPerList: Optional<POIsPerList>;
