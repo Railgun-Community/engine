@@ -1644,8 +1644,10 @@ abstract class AbstractWallet extends EventEmitter {
       // Commitment notes data
       npksOut: hasUnshield ? privateInputs.npkOut.slice(0, -1) : privateInputs.npkOut,
       valuesOut: hasUnshield ? privateInputs.valueOut.slice(0, -1) : privateInputs.valueOut,
-      utxoTreeOut: GLOBAL_UTXO_TREE_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
-      utxoBatchStartPositionOut: GLOBAL_UTXO_POSITION_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+      utxoGlobalBatchStartPositionOut: getGlobalTreePosition(
+        GLOBAL_UTXO_TREE_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+        GLOBAL_UTXO_POSITION_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
+      ),
       railgunTxidIfHasUnshield,
 
       // Railgun txid tree
@@ -1829,8 +1831,10 @@ abstract class AbstractWallet extends EventEmitter {
         // Commitment notes data
         npksOut,
         valuesOut,
-        utxoTreeOut: railgunTransaction.utxoTreeOut,
-        utxoBatchStartPositionOut: railgunTransaction.utxoBatchStartPositionOut,
+        utxoGlobalBatchStartPositionOut: getGlobalTreePosition(
+          railgunTransaction.utxoTreeOut,
+          railgunTransaction.utxoBatchStartPositionOut,
+        ),
         railgunTxidIfHasUnshield,
 
         // Railgun txid tree

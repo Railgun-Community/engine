@@ -74,8 +74,7 @@ export type POIEngineProofInputs = {
   // Commitment notes data
   npksOut: bigint[];
   valuesOut: bigint[];
-  utxoTreeOut: number;
-  utxoBatchStartPositionOut: number;
+  utxoGlobalBatchStartPositionOut: bigint;
 
   // Unshield data
   railgunTxidIfHasUnshield: string;

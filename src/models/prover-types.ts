@@ -117,8 +117,7 @@ export type FormattedCircuitInputsPOI = {
   utxoTreeIn: bigint;
   npksOut: bigint[];
   valuesOut: bigint[];
-  utxoTreeOut: bigint;
-  utxoBatchStartPositionOut: bigint;
+  utxoGlobalBatchStartPositionOut: bigint;
   railgunTxidIfHasUnshield: bigint;
   railgunTxidMerkleProofIndices: bigint;
   railgunTxidMerkleProofPathElements: bigint[];
@@ -144,8 +143,7 @@ export type NativeProverFormattedJsonInputsPOI = {
   utxoTreeIn: string;
   npksOut: string[];
   valuesOut: string[];
-  utxoTreeOut: string;
-  utxoBatchStartPositionOut: string;
+  utxoGlobalBatchStartPositionOut: string;
   railgunTxidIfHasUnshield: string;
   railgunTxidMerkleProofIndices: string;
   railgunTxidMerkleProofPathElements: string[];
