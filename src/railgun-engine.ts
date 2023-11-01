@@ -232,6 +232,18 @@ class RailgunEngine extends EventEmitter {
       chain,
       'delayed sync after new utxo',
     );
+    await delay(10000);
+    await this.syncRailgunTransactionsForTXIDVersion(
+      txidVersion,
+      chain,
+      'delayed sync after new utxo',
+    );
+    await delay(10000);
+    await this.syncRailgunTransactionsForTXIDVersion(
+      txidVersion,
+      chain,
+      'delayed sync after new utxo',
+    );
   }
 
   /**
@@ -626,8 +638,8 @@ class RailgunEngine extends EventEmitter {
 
       switch (txidVersion) {
         case TXIDVersion.V2_PoseidonMerkle: {
-          // Every 1 min for POI nodes, 3 min for wallets
-          const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 3 * 60 * 1000;
+          // Every 1 min for POI nodes, 2 min for wallets
+          const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 2 * 60 * 1000;
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.syncRailgunTransactionsPoller(txidVersion, chain, refreshDelayMsec);
           break;
