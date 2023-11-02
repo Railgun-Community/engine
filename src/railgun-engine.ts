@@ -224,7 +224,11 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async triggerDelayedTXIDMerkletreeSync(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
+  async triggerDelayedTXIDMerkletreeSync(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    rescanCount: number = 2,
+  ): Promise<void> {
     // Delay 10 seconds, and then trigger a Railgun Txid Merkletree sync.
     await delay(10000);
     await this.syncRailgunTransactionsForTXIDVersion(
@@ -232,18 +236,10 @@ class RailgunEngine extends EventEmitter {
       chain,
       'delayed sync after new utxo',
     );
-    await delay(10000);
-    await this.syncRailgunTransactionsForTXIDVersion(
-      txidVersion,
-      chain,
-      'delayed sync after new utxo',
-    );
-    await delay(10000);
-    await this.syncRailgunTransactionsForTXIDVersion(
-      txidVersion,
-      chain,
-      'delayed sync after new utxo',
-    );
+    if (rescanCount > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.triggerDelayedTXIDMerkletreeSync(txidVersion, chain, rescanCount - 1);
+    }
   }
 
   /**
