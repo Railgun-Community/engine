@@ -227,7 +227,7 @@ class RailgunEngine extends EventEmitter {
   async triggerDelayedTXIDMerkletreeSync(
     txidVersion: TXIDVersion,
     chain: Chain,
-    rescanCount: number = 3,
+    rescanCount: number = 2,
   ): Promise<void> {
     // Delay 10 seconds, and then trigger a Railgun Txid Merkletree sync.
     await delay(10000);
