@@ -608,8 +608,7 @@ describe('railgun-engine', function test() {
         token: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
         utxoPositionsIn: [0],
         utxoTreeIn: 0,
-        utxoTreeOut: 0,
-        utxoBatchStartPositionOut: 1,
+        utxoBatchGlobalStartPositionOut: 1n,
         railgunTxidIfHasUnshield:
           '0x0fefd169291c1deec2affa8dcbfbee4a4bbeddfc3b5723c031665ba631725c62',
         valuesIn: [109725000000000000000000n],
@@ -842,8 +841,7 @@ describe('railgun-engine', function test() {
         token: '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
         utxoPositionsIn: [0],
         utxoTreeIn: 0,
-        utxoTreeOut: 0,
-        utxoBatchStartPositionOut: 1,
+        utxoBatchGlobalStartPositionOut: 1n,
         railgunTxidIfHasUnshield:
           '0x018d6143a22e09c18ba2a713985bd1e43a095605d5d259d72d96da2cca604f3e',
         valuesIn: [109725000000000000000000n],

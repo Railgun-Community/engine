@@ -707,7 +707,7 @@ export class Prover {
         maxOutputs,
         0n, // Use Zero = 0 here
       ),
-      utxoGlobalBatchStartPositionOut: BigInt(proofInputs.utxoGlobalBatchStartPositionOut),
+      utxoBatchGlobalStartPositionOut: BigInt(proofInputs.utxoBatchGlobalStartPositionOut),
       railgunTxidIfHasUnshield: BigInt(proofInputs.railgunTxidIfHasUnshield),
       railgunTxidMerkleProofIndices: hexToBigInt(proofInputs.railgunTxidMerkleProofIndices),
       railgunTxidMerkleProofPathElements:
