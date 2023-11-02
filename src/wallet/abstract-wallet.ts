@@ -1644,7 +1644,7 @@ abstract class AbstractWallet extends EventEmitter {
       // Commitment notes data
       npksOut: hasUnshield ? privateInputs.npkOut.slice(0, -1) : privateInputs.npkOut,
       valuesOut: hasUnshield ? privateInputs.valueOut.slice(0, -1) : privateInputs.valueOut,
-      utxoGlobalBatchStartPositionOut: getGlobalTreePosition(
+      utxoBatchGlobalStartPositionOut: getGlobalTreePosition(
         GLOBAL_UTXO_TREE_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
         GLOBAL_UTXO_POSITION_PRE_TRANSACTION_POI_PROOF_HARDCODED_VALUE,
       ),
@@ -1831,7 +1831,7 @@ abstract class AbstractWallet extends EventEmitter {
         // Commitment notes data
         npksOut,
         valuesOut,
-        utxoGlobalBatchStartPositionOut: getGlobalTreePosition(
+        utxoBatchGlobalStartPositionOut: getGlobalTreePosition(
           railgunTransaction.utxoTreeOut,
           railgunTransaction.utxoBatchStartPositionOut,
         ),
