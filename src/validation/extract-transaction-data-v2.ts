@@ -229,6 +229,10 @@ const extractRailgunTransactionDataV2 = async (
       const index = 0;
       const commitmentCiphertextStructOutput = boundParams.commitmentCiphertext[index];
 
+      if (!isDefined(commitmentCiphertextStructOutput)) {
+        throw new Error('No ciphertext found for commitment at index 0');
+      }
+
       const commitmentCiphertext = formatCommitmentCiphertextV2(commitmentCiphertextStructOutput);
 
       // Get NPK for first note, if addressed to current wallet.

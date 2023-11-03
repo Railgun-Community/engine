@@ -76,6 +76,7 @@ import { isDefined } from '../../../../utils/is-defined';
 import { TXIDVersion } from '../../../../models/poi-types';
 import { WalletBalanceBucket } from '../../../../models/txo-types';
 import { RailgunVersionedSmartContracts } from '../../railgun-versioned-smart-contracts';
+import { POIValidation } from '../../../../validation/poi-validation';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -277,19 +278,35 @@ describe('railgun-smart-wallet', function runTests() {
     // Submit actual transaction so the tree has a spent note/nullifier at position 0.
     const initialTransactionBatch = new TransactionBatch(chain);
     initialTransactionBatch.addOutput(actualRelayerFeeOutput);
-    const { provedTransactions: txs_initial } = await initialTransactionBatch.generateTransactions(
-      engine.prover,
-      wallet,
-      txidVersion,
-      testEncryptionKey,
-      () => {},
-      false, // shouldGeneratePreTransactionPOIs
-    );
+    const { provedTransactions: txs_initial, preTransactionPOIsPerTxidLeafPerList } =
+      await initialTransactionBatch.generateTransactions(
+        engine.prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+        true, // shouldGeneratePreTransactionPOIs
+      );
     const tx_initial = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
       chain,
       txs_initial,
     );
+
+    const isValidPOI = await POIValidation.isValidSpendableTransaction(
+      txidVersion,
+      chain,
+      engine.prover,
+      tx_initial,
+      false, // useRelayAdapt
+      isV2Test() ? config.contracts.proxy : config.contracts.poseidonMerkleVerifierV3,
+      preTransactionPOIsPerTxidLeafPerList,
+      wallet2.viewingKeyPair.privateKey,
+      wallet2.addressKeys,
+      new TokenDataGetter(engine.db),
+    );
+    expect(isValidPOI.isValid).to.equal(true, isValidPOI.error);
+
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, tx_initial);
     await Promise.all([txTransact.wait()]);
 
@@ -598,19 +615,34 @@ describe('railgun-smart-wallet', function runTests() {
       value: 100n,
       tokenData,
     });
-    const { provedTransactions: serializedTxs } = await transactionBatch.generateTransactions(
-      engine.prover,
-      wallet,
-      txidVersion,
-      testEncryptionKey,
-      () => {},
-      false, // shouldGeneratePreTransactionPOIs
-    );
+    const { provedTransactions: serializedTxs, preTransactionPOIsPerTxidLeafPerList } =
+      await transactionBatch.generateTransactions(
+        engine.prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+        false, // shouldGeneratePreTransactionPOIs
+      );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
       chain,
       serializedTxs,
     );
+
+    const isValidPOI = await POIValidation.isValidSpendableTransaction(
+      txidVersion,
+      chain,
+      engine.prover,
+      transact,
+      false, // useRelayAdapt
+      isV2Test() ? config.contracts.proxy : config.contracts.poseidonMerkleVerifierV3,
+      preTransactionPOIsPerTxidLeafPerList,
+      wallet2.viewingKeyPair.privateKey,
+      wallet2.addressKeys,
+      new TokenDataGetter(engine.db),
+    );
+    expect(isValidPOI.isValid).to.equal(true, isValidPOI.error);
 
     // Send transact on chain
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
