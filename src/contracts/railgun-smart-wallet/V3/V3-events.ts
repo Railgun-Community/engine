@@ -36,6 +36,10 @@ import { ByteLength, chunk, formatToByteLength, nToHex, strip0x } from '../../..
 import { recursivelyDecodeResult } from '../../../utils/ethers';
 import EngineDebug from '../../../debugger/debugger';
 import { getRailgunTransactionIDHex } from '../../../transaction/railgun-txid';
+import {
+  GLOBAL_UTXO_POSITION_UNSHIELD_EVENT_HARDCODED_VALUE,
+  GLOBAL_UTXO_TREE_UNSHIELD_EVENT_HARDCODED_VALUE,
+} from '../../../poi/global-tree-position';
 
 export const formatTransactEventV3 = (
   transactionHash: string,
@@ -170,18 +174,21 @@ export const formatRailgunTransactionEventV3 = (
   utxoTree: number,
   utxoBatchStartPosition: number,
 ): RailgunTransactionV3 => {
-  const unshield: Optional<UnshieldRailgunTransactionData> =
-    unshieldPreimage.value > 0n
-      ? {
-          toAddress: formatToByteLength(unshieldPreimage.npk, ByteLength.Address, true),
-          tokenData: serializeTokenData(
-            unshieldPreimage.token.tokenAddress,
-            unshieldPreimage.token.tokenType,
-            unshieldPreimage.token.tokenSubID.toString(),
-          ),
-          value: unshieldPreimage.value.toString(),
-        }
-      : undefined;
+  const hasUnshield = unshieldPreimage.value > 0n;
+  const unshield: Optional<UnshieldRailgunTransactionData> = hasUnshield
+    ? {
+        toAddress: formatToByteLength(unshieldPreimage.npk, ByteLength.Address, true),
+        tokenData: serializeTokenData(
+          unshieldPreimage.token.tokenAddress,
+          unshieldPreimage.token.tokenType,
+          unshieldPreimage.token.tokenSubID.toString(),
+        ),
+        value: unshieldPreimage.value.toString(),
+      }
+    : undefined;
+
+  // Unshield-only transactions must have hardcoded utxoTreeOut and utxoBatchStartPositionOut of 99999.
+  const isUnshieldOnly = commitments.length === 1 && hasUnshield;
 
   return {
     version: RailgunTransactionVersion.V3,
@@ -192,8 +199,10 @@ export const formatRailgunTransactionEventV3 = (
     boundParamsHash,
     unshield,
     utxoTreeIn,
-    utxoTreeOut: utxoTree,
-    utxoBatchStartPositionOut: utxoBatchStartPosition,
+    utxoTreeOut: isUnshieldOnly ? GLOBAL_UTXO_TREE_UNSHIELD_EVENT_HARDCODED_VALUE : utxoTree,
+    utxoBatchStartPositionOut: isUnshieldOnly
+      ? GLOBAL_UTXO_POSITION_UNSHIELD_EVENT_HARDCODED_VALUE
+      : utxoBatchStartPosition,
   };
 };
 
@@ -359,8 +368,8 @@ export const processAccumulatorEvent = async (
       });
       const unshieldValue = unshield?.unshieldPreimage.value ?? 0n;
 
-      const shield = shields.find((shield) => {
-        const shieldTokenHash = extractTokenHashFromCommitmentPreImageV3(shield.preimage);
+      const shield = shields.find(({ preimage }) => {
+        const shieldTokenHash = extractTokenHashFromCommitmentPreImageV3(preimage);
         return shieldTokenHash === strippedTokenID;
       });
       const shieldValue = shield?.preimage.value ?? 0n;
