@@ -74,7 +74,7 @@ import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitme
 import { getGlobalTreePosition } from '../poi/global-tree-position';
 import { ShieldNote } from '../note';
 import { TransactionStruct, WalletBalanceBucket } from '../models';
-import { AES } from '../utils';
+import { AES, stringifySafe } from '../utils';
 import { createDummyMerkleProof } from '../merkletree/merkle-proof';
 
 chai.use(chaiAsPromised);
@@ -1248,17 +1248,23 @@ describe('railgun-engine', function test() {
       ),
     );
 
-    const { provedTransactions } = await transactionBatch.generateTransactions(
-      engine.prover,
-      wallet,
-      txidVersion,
-      testEncryptionKey,
-      () => {},
-      false, // shouldGeneratePreTransactionPOIs
-    );
+    const { provedTransactions, preTransactionPOIsPerTxidLeafPerList } =
+      await transactionBatch.generateTransactions(
+        engine.prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        () => {},
+        true, // shouldGeneratePreTransactionPOIs
+      );
+
+    expect(Object.keys(preTransactionPOIsPerTxidLeafPerList).length).to.equal(1);
+    expect(Object.keys(preTransactionPOIsPerTxidLeafPerList[MOCK_LIST_KEY]).length).to.equal(3);
+
     const transact = await railgunSmartWalletContract.transact(provedTransactions);
 
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
+
     await transactTx.wait();
     await Promise.all([
       promiseTimeout(awaitMultipleScans(wallet, chain, 4), 15000, 'Timed out wallet1 scan'),
