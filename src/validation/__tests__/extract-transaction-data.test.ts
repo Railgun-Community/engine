@@ -54,7 +54,6 @@ const MOCK_TOKEN_ADDRESS = config.contracts.rail;
 const TREE = 0;
 let chain: Chain;
 let tokenDataGetter: TokenDataGetter;
-const MOCK_MNEMONIC_1 = 'test test test test test test test test test test test junk';
 
 const MOCK_ETH_WALLET_ADDRESS = '0x9E9F988356f46744Ee0374A17a5Fa1a3A3cC3777';
 
@@ -135,7 +134,7 @@ describe('extract-transaction-data', () => {
 
     railgunWallet = await engine.createWalletFromMnemonic(
       config.encryptionKey,
-      MOCK_MNEMONIC_1,
+      config.mnemonic,
       undefined,
     );
 
@@ -174,7 +173,7 @@ describe('extract-transaction-data', () => {
     TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
   });
 
-  it('Should extract railgun transaction data', async function run() {
+  it('[V2] Should extract railgun transaction data', async function run() {
     if (!isV2Test()) {
       this.skip();
       return;

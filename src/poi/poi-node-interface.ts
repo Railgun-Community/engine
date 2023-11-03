@@ -27,6 +27,13 @@ export abstract class POINodeInterface {
     blindedCommitments: string[],
   ): Promise<MerkleProof[]>;
 
+  abstract validatePOIMerkleroots(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    poiMerkleroots: string[],
+  ): Promise<boolean>;
+
   abstract submitPOI(
     txidVersion: TXIDVersion,
     chain: Chain,

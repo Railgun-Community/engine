@@ -73,6 +73,16 @@ export class TestPOINodeInterface extends POINodeInterface {
   }
 
   // eslint-disable-next-line class-methods-use-this
+  async validatePOIMerkleroots(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    poiMerkleroots: string[],
+  ): Promise<boolean> {
+    return true;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
   async submitPOI(
     txidVersion: TXIDVersion,
     chain: Chain,

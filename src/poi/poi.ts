@@ -314,7 +314,7 @@ export class POI {
         Object.values(WalletBalanceBucket);
   }
 
-  static async retrievePOIsForBlindedCommitments(
+  static retrievePOIsForBlindedCommitments(
     txidVersion: TXIDVersion,
     chain: Chain,
     blindedCommitmentDatas: BlindedCommitmentData[],
@@ -329,7 +329,7 @@ export class POI {
     return this.nodeInterface.getPOIsPerList(txidVersion, chain, listKeys, blindedCommitmentDatas);
   }
 
-  static async getPOIMerkleProofs(
+  static getPOIMerkleProofs(
     txidVersion: TXIDVersion,
     chain: Chain,
     listKey: string,
@@ -340,6 +340,19 @@ export class POI {
     }
 
     return this.nodeInterface.getPOIMerkleProofs(txidVersion, chain, listKey, blindedCommitmentsIn);
+  }
+
+  static validatePOIMerkleroots(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    listKey: string,
+    poiMerkleroots: string[],
+  ): Promise<boolean> {
+    if (!isDefined(this.nodeInterface)) {
+      throw new Error('POI node interface not initialized');
+    }
+
+    return this.nodeInterface.validatePOIMerkleroots(txidVersion, chain, listKey, poiMerkleroots);
   }
 
   static async submitPOI(
