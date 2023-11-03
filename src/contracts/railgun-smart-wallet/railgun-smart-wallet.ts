@@ -240,6 +240,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       event.log.transactionHash,
       event.log.blockNumber,
       args.fees,
+      Date.now() / 1000, // We assume that the listener event just occurred, but this may not be the case with pause/resume RPC listeners
     );
     await eventsCommitmentListener(TXIDVersion.V2_PoseidonMerkle, shieldEvent);
   }
@@ -267,6 +268,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       args,
       event.log.transactionHash,
       event.log.blockNumber,
+      Date.now() / 1000, // We assume that the listener event just occurred, but this may not be the case with pause/resume RPC listeners
     );
     await eventsCommitmentListener(TXIDVersion.V2_PoseidonMerkle, transactEvent);
   }
@@ -292,6 +294,7 @@ class RailgunSmartWalletContract extends EventEmitter {
       event.log.transactionHash,
       event.log.blockNumber,
       event.log.index,
+      Date.now() / 1000, // We assume that the listener event just occurred, but this may not be the case with pause/resume RPC listeners
     );
     await eventsUnshieldListener(TXIDVersion.V2_PoseidonMerkle, [unshieldEvent]);
   }
