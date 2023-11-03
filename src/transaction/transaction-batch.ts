@@ -376,9 +376,9 @@ export class TransactionBatch {
           const listKey = activeListKeys[i];
           preTransactionPOIsPerTxidLeafPerList[listKey] ??= {};
 
-          const preTransactionProofProgressStatus = `Generating proof of spendability ${i + 1}/${
-            activeListKeys.length
-          }...`;
+          const preTransactionProofProgressStatus = `Generating proof of spendability ${
+            i + index + 1
+          }/${activeListKeys.length * spendingSolutionGroups.length}...`;
 
           // eslint-disable-next-line no-await-in-loop
           const { txidLeafHash, preTransactionPOI } = await wallet.generatePreTransactionPOI(
