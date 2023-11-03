@@ -1,29 +1,43 @@
-import {
-  CommitmentCiphertextStructOutput,
-  TransactionStruct,
-} from '../abi/typechain/RailgunSmartWallet';
-import { formatCommitmentCiphertext } from '../contracts/railgun-smart-wallet/V2/V2-events';
+import { PoseidonMerkleAccumulator } from '../abi/typechain/PoseidonMerkleAccumulator';
+import { CommitmentCiphertextStructOutput } from '../abi/typechain/RailgunSmartWallet';
+import { formatCommitmentCiphertextV2 } from '../contracts/railgun-smart-wallet/V2/V2-events';
+import { formatCommitmentCiphertextV3 } from '../contracts/railgun-smart-wallet/V3/V3-events';
 import {
   Commitment,
-  CommitmentCiphertext,
+  CommitmentCiphertextV2,
+  CommitmentCiphertextV3,
   CommitmentSummary,
   CommitmentType,
   LegacyEncryptedCommitment,
   StoredReceiveCommitment,
   TransactCommitmentV2,
 } from '../models/formatted-types';
+import { TXIDVersion } from '../models/poi-types';
+import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 
 export const convertTransactionStructToCommitmentSummary = (
-  transactionStruct: TransactionStruct,
+  transactionStruct: TransactionStructV2 | TransactionStructV3,
   commitmentIndex: number,
 ): CommitmentSummary => {
-  const commitmentCiphertextStruct = transactionStruct.boundParams.commitmentCiphertext[
-    commitmentIndex
-  ] as CommitmentCiphertextStructOutput;
+  let commitmentCiphertext: CommitmentCiphertextV2 | CommitmentCiphertextV3;
 
-  const commitmentCiphertext: CommitmentCiphertext = formatCommitmentCiphertext(
-    commitmentCiphertextStruct,
-  );
+  switch (transactionStruct.txidVersion) {
+    case TXIDVersion.V2_PoseidonMerkle: {
+      const commitmentCiphertextStruct = transactionStruct.boundParams.commitmentCiphertext[
+        commitmentIndex
+      ] as CommitmentCiphertextStructOutput;
+      commitmentCiphertext = formatCommitmentCiphertextV2(commitmentCiphertextStruct);
+      break;
+    }
+    case TXIDVersion.V3_PoseidonMerkle: {
+      const commitmentCiphertextStruct = transactionStruct.boundParams.local.commitmentCiphertext[
+        commitmentIndex
+      ] as PoseidonMerkleAccumulator.CommitmentCiphertextStructOutput;
+      commitmentCiphertext = formatCommitmentCiphertextV3(commitmentCiphertextStruct);
+      break;
+    }
+  }
+
   const commitmentHash = transactionStruct.commitments[commitmentIndex] as string;
 
   return {

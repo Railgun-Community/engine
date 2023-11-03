@@ -10,7 +10,7 @@ import {
 } from '../utils/bytes';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { getGlobalTreePosition } from '../poi/global-tree-position';
-import { keccak256 } from '../utils';
+import { keccak256 } from '../utils/hash';
 
 const padWithZerosToMax = (array: bigint[], max: number): bigint[] => {
   const padded = [...array];

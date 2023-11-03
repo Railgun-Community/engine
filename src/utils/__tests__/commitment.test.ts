@@ -1,14 +1,16 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { convertTransactionStructToCommitmentSummary } from '../commitment';
-import { TransactionStruct } from '../../models/typechain-types';
+import { TXIDVersion, TransactionStructV2 } from '../../models';
+import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('commitment', () => {
   it('Should convert transaction struct into commitment summary', () => {
-    const transactionStruct = {
+    const transactionStruct: TransactionStructV2 = {
+      txidVersion: TXIDVersion.V2_PoseidonMerkle,
       commitments: ['0x10f1c4ac23f7d0b0e0a6ba3fa23efaf736a44d3e92f6dd37b5d2044cb5c081dd'],
       boundParams: {
         commitmentCiphertext: [
@@ -28,8 +30,8 @@ describe('commitment', () => {
               '0x3f5ff6e7bab3653afd46501dac3d55bd72b33355e41bfc02fcd63a78fe9d5da550957fabde36c9ded90126755f80a3fa3cdd0d84be4686c4192e920d85dd',
           },
         ],
-      },
-    } as TransactionStruct;
+      } as BoundParamsStruct,
+    } as TransactionStructV2;
 
     const firstCommitmentIndex = 0;
     const firstCommitmentSummary = convertTransactionStructToCommitmentSummary(

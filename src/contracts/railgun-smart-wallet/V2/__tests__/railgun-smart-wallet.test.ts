@@ -76,7 +76,6 @@ import { isDefined } from '../../../../utils/is-defined';
 import { TXIDVersion } from '../../../../models/poi-types';
 import { WalletBalanceBucket } from '../../../../models/txo-types';
 import { RailgunVersionedSmartContracts } from '../../railgun-versioned-smart-contracts';
-import { stringifySafe } from '../../../../utils';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

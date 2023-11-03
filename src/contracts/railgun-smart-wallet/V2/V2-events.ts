@@ -1,6 +1,6 @@
 import { Interface } from 'ethers';
 import {
-  CommitmentCiphertext,
+  CommitmentCiphertextV2,
   CommitmentType,
   Nullifier,
   ShieldCommitment,
@@ -109,9 +109,9 @@ export const formatShieldEvent = (
   };
 };
 
-export const formatCommitmentCiphertext = (
+export const formatCommitmentCiphertextV2 = (
   commitmentCiphertext: CommitmentCiphertextStructOutput,
-): CommitmentCiphertext => {
+): CommitmentCiphertextV2 => {
   const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } =
     commitmentCiphertext;
   const ciphertext = commitmentCiphertext.ciphertext.map(
@@ -148,7 +148,7 @@ export const formatTransactCommitments = (
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       timestamp,
       blockNumber,
-      ciphertext: formatCommitmentCiphertext(commitment),
+      ciphertext: formatCommitmentCiphertextV2(commitment),
       utxoTree,
       utxoIndex: utxoStartingIndex + index,
       railgunTxid: undefined,
@@ -227,16 +227,15 @@ export const processShieldEvents = async (
     filtered.map(async (log) => {
       const { args, transactionHash, blockNumber } = log;
       const { fees } = args;
-      return eventsListener(
-        txidVersion,
-        [formatShieldEvent(
+      return eventsListener(txidVersion, [
+        formatShieldEvent(
           args,
           transactionHash,
           blockNumber,
           fees,
           undefined, // timestamp
-        )],
-      );
+        ),
+      ]);
     }),
   );
 };
@@ -270,16 +269,15 @@ export const processShieldEvents_LegacyShield_PreMar23 = async (
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
       const fees: Optional<bigint[]> = undefined;
-      return eventsListener(
-        txidVersion,
-        [formatShieldEvent(
+      return eventsListener(txidVersion, [
+        formatShieldEvent(
           args,
           transactionHash,
           blockNumber,
           fees,
           undefined, // timestamp
-        )],
-      );
+        ),
+      ]);
     }),
   );
 };
@@ -296,15 +294,14 @@ export const processTransactEvents = async (
   await Promise.all(
     filtered.map(async (event) => {
       const { args, transactionHash, blockNumber } = event;
-      return eventsListener(
-        txidVersion,
-        [formatTransactEvent(
+      return eventsListener(txidVersion, [
+        formatTransactEvent(
           args,
           transactionHash,
           blockNumber,
           undefined, // timestamp
-        )],
-      );
+        ),
+      ]);
     }),
   );
 };

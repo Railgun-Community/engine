@@ -118,7 +118,7 @@ export type ShieldCiphertext = {
   shieldKey: string;
 };
 
-export type CommitmentCiphertext = {
+export type CommitmentCiphertextV2 = {
   ciphertext: Ciphertext;
   blindedSenderViewingKey: string;
   blindedReceiverViewingKey: string;
@@ -152,7 +152,7 @@ export type ShieldCommitment = CommitmentShared & {
 
 export type TransactCommitmentV2 = CommitmentShared & {
   commitmentType: CommitmentType.TransactCommitmentV2;
-  ciphertext: CommitmentCiphertext;
+  ciphertext: CommitmentCiphertextV2;
   railgunTxid: Optional<string>;
 };
 
@@ -288,7 +288,7 @@ export type LegacyEncryptedCommitment = CommitmentShared & {
 };
 
 export type CommitmentSummary = {
-  commitmentCiphertext: CommitmentCiphertext;
+  commitmentCiphertext: CommitmentCiphertextV2 | CommitmentCiphertextV3;
   commitmentHash: string;
 };
 

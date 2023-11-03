@@ -23,3 +23,10 @@ export type TransactionStructV3 = {
   boundParams: PoseidonMerkleVerifier.BoundParamsStruct;
   unshieldPreimage: CommitmentPreimageStruct;
 };
+
+export type ExtractedRailgunTransactionData = {
+  railgunTxid: string;
+  utxoTreeIn: bigint;
+  firstCommitment: Optional<string>;
+  firstCommitmentNotePublicKey: Optional<bigint>;
+}[];

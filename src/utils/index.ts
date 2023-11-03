@@ -5,6 +5,7 @@ export * from './encryption/ciphertext';
 export * from './commitment';
 export * from './constants';
 export * from './ecies';
+export * from './ethers';
 export * from './encryption/aes';
 export * from './hash';
 export * from './keys-utils';

@@ -4,6 +4,7 @@ export * from './formatted-types';
 export * from './txo-types';
 export * from './transaction-types';
 export * from './poi-types';
+export * from './merkletree-types';
 export * from './wallet-types';
 export * from './transaction-constants';
 export * from './prover-types';

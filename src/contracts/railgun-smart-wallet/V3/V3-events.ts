@@ -31,7 +31,7 @@ import {
   serializePreImage,
   serializeTokenData,
 } from '../../../note/note-util';
-import { isDefined } from '../../../utils';
+import { isDefined } from '../../../utils/is-defined';
 import { ByteLength, chunk, formatToByteLength, nToHex, strip0x } from '../../../utils/bytes';
 import { recursivelyDecodeResult } from '../../../utils/ethers';
 import EngineDebug from '../../../debugger/debugger';
