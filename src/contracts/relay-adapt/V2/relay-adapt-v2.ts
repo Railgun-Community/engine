@@ -19,6 +19,7 @@ import { ShieldRequestStruct } from '../../../abi/typechain/RailgunSmartWallet';
 import { RelayAdapt } from '../../../abi/typechain/RelayAdapt';
 import { PayableOverrides } from '../../../abi/typechain/common';
 import { TransactionStructV2 } from '../../../models/transaction-types';
+import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -26,10 +27,6 @@ enum RelayAdaptEvent {
 
 export const RETURN_DATA_RELAY_ADAPT_STRING_PREFIX = '0x5c0dee5d';
 export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
-
-// A low (or undefined) gas limit can cause the Relay Adapt module to fail.
-// Set a high default that can be overridden by a developer.
-export const MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT = BigInt(3_200_000);
 
 export class RelayAdaptV2Contract {
   private readonly contract: RelayAdapt;
@@ -180,7 +177,7 @@ export class RelayAdaptV2Contract {
       isRelayerTransaction,
     );
 
-    const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
+    const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2;
     const minGasLimitForContract =
       RelayAdaptV2Contract.getMinimumGasLimitForContract(minimumGasLimit);
 
@@ -212,7 +209,7 @@ export class RelayAdaptV2Contract {
       isRelayerTransaction,
     );
 
-    const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT;
+    const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2;
     const minGasLimitForContract =
       RelayAdaptV2Contract.getMinimumGasLimitForContract(minimumGasLimit);
 

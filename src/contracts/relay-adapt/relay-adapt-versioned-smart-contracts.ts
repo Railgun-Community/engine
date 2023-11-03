@@ -3,7 +3,7 @@ import { ContractStore } from '../contract-store';
 import { Chain } from '../../models/engine-types';
 import { TXIDVersion } from '../../models/poi-types';
 import { ShieldRequestStruct } from '../../abi/typechain/RelayAdapt';
-import { TransactionStructV2, TransactionStructV3 } from '../../models';
+import { TransactionReceiptLog, TransactionStructV2, TransactionStructV3 } from '../../models';
 import { RelayAdaptV2Contract } from './V2/relay-adapt-v2';
 import { RelayAdaptV3Contract } from './V3/relay-adapt-v3';
 
@@ -174,6 +174,30 @@ export class RelayAdaptVersionedSmartContracts {
       }
       case TXIDVersion.V3_PoseidonMerkle: {
         return RelayAdaptV3Contract.estimateGasWithErrorHandler(provider, transaction);
+      }
+    }
+    throw new Error('Unsupported txidVersion');
+  }
+
+  static getRelayAdaptCallError(txidVersion: TXIDVersion, receiptLogs: TransactionReceiptLog[]) {
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        return RelayAdaptV2Contract.getRelayAdaptCallError(receiptLogs);
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        return RelayAdaptV3Contract.getRelayAdaptCallError(receiptLogs);
+      }
+    }
+    throw new Error('Unsupported txidVersion');
+  }
+
+  static parseRelayAdaptReturnValue(txidVersion: TXIDVersion, data: string) {
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        return RelayAdaptV2Contract.parseRelayAdaptReturnValue(data);
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        return RelayAdaptV3Contract.parseRelayAdaptReturnValue(data);
       }
     }
     throw new Error('Unsupported txidVersion');

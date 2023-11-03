@@ -42,10 +42,7 @@ import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes'
 import { SnarkJSGroth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
-import {
-  MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
-  RelayAdaptV2Contract,
-} from '../V2/relay-adapt-v2';
+import { RelayAdaptV2Contract } from '../V2/relay-adapt-v2';
 import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
 import { TransactNote } from '../../../note/transact-note';
 import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
@@ -65,6 +62,7 @@ import { WalletBalanceBucket } from '../../../models/txo-types';
 import { RailgunVersionedSmartContracts } from '../../railgun-smart-wallet/railgun-versioned-smart-contracts';
 import { RelayAdaptVersionedSmartContracts } from '../relay-adapt-versioned-smart-contracts';
 import { TransactionStructV2 } from '../../../models';
+import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -522,12 +520,12 @@ describe('relay-adapt', function test() {
     expect(Number(gasEstimate)).to.be.greaterThan(
       Number(
         RelayAdaptV2Contract.getMinimumGasLimitForContract(
-          MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
+          MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2,
         ),
       ),
     );
     expect(Number(gasEstimate)).to.be.lessThan(
-      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT),
+      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2),
     );
 
     // 7. Create real transactions with relay adapt params.
@@ -769,12 +767,12 @@ describe('relay-adapt', function test() {
     expect(Number(gasEstimate)).to.be.greaterThan(
       Number(
         RelayAdaptV2Contract.getMinimumGasLimitForContract(
-          MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT,
+          MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2,
         ),
       ),
     );
     expect(Number(gasEstimate)).to.be.lessThan(
-      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT),
+      Number(MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2),
     );
 
     // 6. Create real transactions with relay adapt params.
