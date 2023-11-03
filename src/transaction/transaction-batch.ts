@@ -370,15 +370,17 @@ export class TransactionBatch {
           this.overallBatchMinGasPrice,
         );
 
-      if (shouldGeneratePreTransactionPOIs) {
+      const includesRelayerFee =
+        spendingSolutionGroup.tokenOutputs[0].outputType === OutputType.RelayerFee;
+      if (shouldGeneratePreTransactionPOIs && includesRelayerFee) {
         // eslint-disable-next-line no-restricted-syntax
         for (let i = 0; i < activeListKeys.length; i += 1) {
           const listKey = activeListKeys[i];
           preTransactionPOIsPerTxidLeafPerList[listKey] ??= {};
 
-          const preTransactionProofProgressStatus = `Generating proof of spendability ${
-            i + index + 1
-          }/${activeListKeys.length * spendingSolutionGroups.length}...`;
+          const preTransactionProofProgressStatus = `Generating proof of spendability ${i + 1}/${
+            activeListKeys.length
+          }...`;
 
           // eslint-disable-next-line no-await-in-loop
           const { txidLeafHash, preTransactionPOI } = await wallet.generatePreTransactionPOI(
