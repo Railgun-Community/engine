@@ -360,6 +360,11 @@ export class TransactionBatch {
 
     for (let index = 0; index < spendingSolutionGroups.length; index += 1) {
       const spendingSolutionGroup = spendingSolutionGroups[index];
+
+      const includesRelayerFee =
+        spendingSolutionGroup.tokenOutputs.length > 0 &&
+        spendingSolutionGroup.tokenOutputs[0].outputType === OutputType.RelayerFee;
+
       const transaction = this.generateTransactionForSpendingSolutionGroup(spendingSolutionGroup);
       const { publicInputs, privateInputs, boundParams } =
         // eslint-disable-next-line no-await-in-loop
@@ -370,8 +375,6 @@ export class TransactionBatch {
           this.overallBatchMinGasPrice,
         );
 
-      const includesRelayerFee =
-        spendingSolutionGroup.tokenOutputs[0].outputType === OutputType.RelayerFee;
       if (shouldGeneratePreTransactionPOIs && includesRelayerFee) {
         // eslint-disable-next-line no-restricted-syntax
         for (let i = 0; i < activeListKeys.length; i += 1) {
