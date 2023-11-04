@@ -224,7 +224,9 @@ export interface RelayAdaptInterface extends Interface {
     nameOrSignature:
       | "getAdaptParams"
       | "multicall"
+      | "onERC721Received"
       | "railgun"
+      | "receivedERC721"
       | "relay"
       | "shield"
       | "transfer"
@@ -243,7 +245,15 @@ export interface RelayAdaptInterface extends Interface {
     functionFragment: "multicall",
     values: [boolean, RelayAdapt.CallStruct[]]
   ): string;
+  encodeFunctionData(
+    functionFragment: "onERC721Received",
+    values: [AddressLike, AddressLike, BigNumberish, BytesLike]
+  ): string;
   encodeFunctionData(functionFragment: "railgun", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "receivedERC721",
+    values: [AddressLike, BigNumberish]
+  ): string;
   encodeFunctionData(
     functionFragment: "relay",
     values: [TransactionStruct[], RelayAdapt.ActionDataStruct]
@@ -271,7 +281,15 @@ export interface RelayAdaptInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "multicall", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "onERC721Received",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "railgun", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "receivedERC721",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "relay", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "shield", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
@@ -352,7 +370,24 @@ export interface RelayAdapt extends BaseContract {
     "payable"
   >;
 
+  onERC721Received: TypedContractMethod<
+    [
+      arg0: AddressLike,
+      arg1: AddressLike,
+      tokenId: BigNumberish,
+      arg3: BytesLike
+    ],
+    [string],
+    "nonpayable"
+  >;
+
   railgun: TypedContractMethod<[], [string], "view">;
+
+  receivedERC721: TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
 
   relay: TypedContractMethod<
     [
@@ -407,8 +442,27 @@ export interface RelayAdapt extends BaseContract {
     "payable"
   >;
   getFunction(
+    nameOrSignature: "onERC721Received"
+  ): TypedContractMethod<
+    [
+      arg0: AddressLike,
+      arg1: AddressLike,
+      tokenId: BigNumberish,
+      arg3: BytesLike
+    ],
+    [string],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "railgun"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "receivedERC721"
+  ): TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "relay"
   ): TypedContractMethod<
