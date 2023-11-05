@@ -229,8 +229,14 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     rescanCount: number = 2,
   ): Promise<void> {
-    // Delay 10 seconds, and then trigger a Railgun Txid Merkletree sync.
-    await delay(10000);
+    if (this.isPOINode) {
+      // Delay 3 seconds, and then trigger a Railgun Txid Merkletree sync.
+      // POI node should scan faster because POI node is the data source for wallets
+      await delay(3000);
+    } else {
+      // Delay 7 seconds, and then trigger a Railgun Txid Merkletree sync.
+      await delay(7000);
+    }
     await this.syncRailgunTransactionsForTXIDVersion(
       txidVersion,
       chain,
