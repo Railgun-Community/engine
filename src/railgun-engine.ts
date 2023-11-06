@@ -227,24 +227,30 @@ class RailgunEngine extends EventEmitter {
   async triggerDelayedTXIDMerkletreeSync(
     txidVersion: TXIDVersion,
     chain: Chain,
-    rescanCount: number = 2,
+    scanCount: number = 0,
   ): Promise<void> {
+    // Delay and then trigger a Railgun Txid Merkletree sync.
     if (this.isPOINode) {
-      // Delay 3 seconds, and then trigger a Railgun Txid Merkletree sync.
       // POI node should scan faster because POI node is the data source for wallets
       await delay(3000);
+    } else if (scanCount === 0) {
+      // Delay for 10 seconds on first scan for wallet
+      await delay(10000);
     } else {
-      // Delay 7 seconds, and then trigger a Railgun Txid Merkletree sync.
-      await delay(7000);
+      // Delay for 5 seconds on for subsequent scans for wallet
+      await delay(5000);
     }
+
     await this.syncRailgunTransactionsForTXIDVersion(
       txidVersion,
       chain,
       'delayed sync after new utxo',
     );
-    if (rescanCount > 0) {
+
+    // Scan for 3 times total
+    if (scanCount < 2) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.triggerDelayedTXIDMerkletreeSync(txidVersion, chain, rescanCount - 1);
+      this.triggerDelayedTXIDMerkletreeSync(txidVersion, chain, scanCount + 1);
     }
   }
 
