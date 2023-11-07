@@ -1144,6 +1144,9 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransaction of railgunTransactions) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
+
+      // TODO-V3: Calculate and verify verificationHash on RailgunTransactionV3.
+
       toQueue.push(railgunTransactionWithTxid);
     }
 
@@ -1565,14 +1568,15 @@ class RailgunEngine extends EventEmitter {
           // Make sure to clear the TXID merkletree when poiLaunchBlock is first set for this chain.
           // (Store the poiLaunchBlock in the TXID Merkletree db).
 
+          const autoValidate = async () => true;
+
           // eslint-disable-next-line no-await-in-loop
           txidMerkletree = await TXIDMerkletree.createForWallet(
             this.db,
             chain,
             txidVersion,
-            // TODO-V3: For V3, we receive events in realtime, and there's no guarantee that this validator will be updated.
-            // We need another way to validate that txids are added in the correct order, and the tree is properly synced.
-            this.validateRailgunTxidMerkleroot,
+            // For V3, we receive events in realtime, and validation is done via on-chain verificationHash field.
+            supportsV3 ? autoValidate : this.validateRailgunTxidMerkleroot,
           );
           this.txidMerkletrees[txidVersion][chain.type][chain.id] = txidMerkletree;
         }

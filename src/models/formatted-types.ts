@@ -216,6 +216,9 @@ export type RailgunTransactionV3 = {
   utxoTreeIn: number;
   utxoTreeOut: number;
   utxoBatchStartPositionOut: number;
+
+  // TODO-V3: This should be required, when it's available from on-chain data.
+  verificationHash: Optional<string>;
 };
 
 export type RailgunTransaction = RailgunTransactionV2 | RailgunTransactionV3;

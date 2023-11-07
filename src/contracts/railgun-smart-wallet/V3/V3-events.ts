@@ -1,7 +1,6 @@
 import { Result } from 'ethers';
 import {
   AccumulatorStateUpdateEvent,
-  CommitmentPreimageStructOutput,
   PoseidonMerkleAccumulator,
 } from '../../../abi/typechain/PoseidonMerkleAccumulator';
 import {
@@ -201,6 +200,7 @@ export const formatRailgunTransactionEventV3 = (
   utxoTreeIn: number,
   utxoTree: number,
   utxoBatchStartPosition: number,
+  verificationHash: Optional<string>, // TODO-V3: This should be required when it's available from on-chain data.
 ): RailgunTransactionV3 => {
   const hasUnshield = unshieldPreimage.value > 0n;
   const unshield: Optional<UnshieldRailgunTransactionData> = hasUnshield
@@ -231,7 +231,7 @@ export const formatRailgunTransactionEventV3 = (
     utxoBatchStartPositionOut: isUnshieldOnly
       ? GLOBAL_UTXO_POSITION_UNSHIELD_EVENT_HARDCODED_VALUE
       : utxoBatchStartPosition,
-    // TODO-V3: We need a parameter that can verify the txid tree position.
+    verificationHash,
   };
 };
 
@@ -491,6 +491,7 @@ export const processAccumulatorEvent = async (
         Number(spendAccumulatorNumber), // utxoTreeIn
         utxoTree,
         utxoStartingIndex,
+        undefined, // TODO-V3: add verificationHash
       );
       // eslint-disable-next-line no-await-in-loop
       await eventsRailgunTransactionsV3Listener(txidVersion, [railgunTransaction]);
