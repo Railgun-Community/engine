@@ -140,18 +140,24 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * Adds unshield event to database
    * @param unshields - unshield events to add to db
    */
-  async addUnshieldEvents(unshields: UnshieldStoredEvent[]): Promise<void> {
-    const newUnshields = removeUndefineds(
-      await Promise.all(
-        unshields.map(async (unshield) => {
-          const hasExisting = await this.hasExistingUnshieldEvent(unshield);
-          if (!hasExisting) {
-            return unshield;
-          }
-          return undefined;
-        }),
-      ),
-    );
+  async addUnshieldEvents(
+    unshields: UnshieldStoredEvent[],
+    replaceExisting = false,
+  ): Promise<void> {
+    let newUnshields: UnshieldStoredEvent[] = unshields;
+    if (!replaceExisting) {
+      newUnshields = removeUndefineds(
+        await Promise.all(
+          unshields.map(async (unshield) => {
+            const hasExisting = await this.hasExistingUnshieldEvent(unshield);
+            if (!hasExisting) {
+              return unshield;
+            }
+            return undefined;
+          }),
+        ),
+      );
+    }
 
     // Build write batch for nullifiers
     const writeBatch: PutBatch[] = newUnshields.map((unshield) => ({
@@ -196,7 +202,8 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   }
 
   async updateUnshieldEvent(unshieldEvent: UnshieldStoredEvent): Promise<void> {
-    await this.addUnshieldEvents([unshieldEvent]);
+    const replaceExisting = true;
+    await this.addUnshieldEvents([unshieldEvent], replaceExisting);
   }
 
   // eslint-disable-next-line class-methods-use-this
