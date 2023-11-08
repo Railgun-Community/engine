@@ -11,7 +11,7 @@ import { ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
-import { isDefined } from '../utils/is-defined';
+import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { TXIDVersion } from '../models';
 
 export class UTXOMerkletree extends Merkletree<Commitment> {
@@ -141,8 +141,20 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * @param unshields - unshield events to add to db
    */
   async addUnshieldEvents(unshields: UnshieldStoredEvent[]): Promise<void> {
+    const newUnshields = removeUndefineds(
+      await Promise.all(
+        unshields.map(async (unshield) => {
+          const hasExisting = await this.hasExistingUnshieldEvent(unshield);
+          if (!hasExisting) {
+            return unshield;
+          }
+          return undefined;
+        }),
+      ),
+    );
+
     // Build write batch for nullifiers
-    const writeBatch: PutBatch[] = unshields.map((unshield) => ({
+    const writeBatch: PutBatch[] = newUnshields.map((unshield) => ({
       type: 'put',
       key: this.getUnshieldEventsDBPath(
         unshield.txid,
@@ -154,6 +166,15 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
 
     // Write to DB
     return this.db.batch(writeBatch, 'json');
+  }
+
+  async hasExistingUnshieldEvent(unshield: UnshieldStoredEvent): Promise<boolean> {
+    const existingUnshieldEvents = await this.getAllUnshieldEventsForTxid(unshield.txid);
+    return isDefined(
+      existingUnshieldEvents.find(
+        (existingUnshieldEvent) => existingUnshieldEvent.eventLogIndex === unshield.eventLogIndex,
+      ),
+    );
   }
 
   /**
