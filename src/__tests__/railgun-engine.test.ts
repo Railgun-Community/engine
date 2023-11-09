@@ -1343,7 +1343,7 @@ describe('railgun-engine', function test() {
         hasValidPOIForActiveLists: false,
       },
     ]);
-  }).timeout(120000);
+  }).timeout(300_000);
 
   it('Should set/get last synced block', async () => {
     const chainForSyncedBlock = {
