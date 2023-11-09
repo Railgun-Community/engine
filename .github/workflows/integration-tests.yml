@@ -34,8 +34,10 @@ jobs:
         with:
           cmd: install
           dir: 'contract'
+      - name: Compile contract
+        run: cd contract && npm run compile
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          command: cd engine && yarn test-hardhat
-          start: cd contract && npx hardhat node >/dev/null, cd contract && sleep 5 && npx hardhat deploy:test --network localhost >/dev/null
+          start: cd contract && $(npm bin)/hardhat node >/dev/null
+          command: cd contract && sleep 10 && $(npm bin)/hardhat deploy:test --network localhost && cd ../engine && yarn test-hardhat
