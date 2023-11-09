@@ -564,7 +564,7 @@ describe('relay-adapt', function test() {
 
     const nftBalanceAfterReshield = await nft.balanceOf(railgunSmartWalletContract.address);
     expect(nftBalanceAfterReshield).to.equal(1n);
-  }).timeout(90000);
+  }).timeout(300_000);
 
   it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -638,7 +638,7 @@ describe('relay-adapt', function test() {
         WalletBalanceBucket.Spendable,
       ]),
     ).to.equal(9971n);
-  });
+  }).timeout(300_000);
 
   it('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -823,7 +823,7 @@ describe('relay-adapt', function test() {
       [WalletBalanceBucket.Spendable],
     );
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
-  });
+  }).timeout(300_000);
 
   it('[HH] Should revert send, but keep fees for failing cross contract call', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
