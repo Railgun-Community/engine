@@ -119,6 +119,7 @@ describe('transaction-batch', function run() {
       config.contracts.poseidonMerkleAccumulatorV3,
       config.contracts.poseidonMerkleVerifierV3,
       config.contracts.tokenVaultV3,
+      config.contracts.poseidonMerkleAdaptV3,
       provider,
       pollingProvider,
       { [TXIDVersion.V2_PoseidonMerkle]: 0, [TXIDVersion.V3_PoseidonMerkle]: 0 },
@@ -180,6 +181,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs.length).to.equal(2);
     expect(txs.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
@@ -189,7 +191,13 @@ describe('transaction-batch', function run() {
     transactionBatch.addOutput(await makeNote(shieldValue * 6n));
     transactionBatch.addOutput(await makeNote(1n));
     await expect(
-      transactionBatch.generateDummyTransactions(prover, wallet, txidVersion, testEncryptionKey),
+      transactionBatch.generateDummyTransactions(
+        prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        [], // crossContractCallsV3
+      ),
     ).to.eventually.be.rejectedWith(
       `RAILGUN spendable private balance too low for ${tokenAddress.toLowerCase()}`,
     );
@@ -206,6 +214,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
@@ -221,6 +230,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs3.length).to.equal(1);
     expect(txs3.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
@@ -238,6 +248,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
     expect(txs4.map((tx) => tx.commitments.length)).to.deep.equal([1, 3]);
@@ -261,6 +272,7 @@ describe('transaction-batch', function run() {
         testEncryptionKey,
         () => {},
         false, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       ),
     ).to.eventually.be.rejectedWith(
       'Cannot prove transaction with null (zero value) inputs and outputs.',
@@ -290,6 +302,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs1.length).to.equal(2);
     expect(txs1.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 5]);
@@ -308,7 +321,13 @@ describe('transaction-batch', function run() {
       tokenData,
     });
     await expect(
-      transactionBatch.generateDummyTransactions(prover, wallet, txidVersion, testEncryptionKey),
+      transactionBatch.generateDummyTransactions(
+        prover,
+        wallet,
+        txidVersion,
+        testEncryptionKey,
+        [], // crossContractCallsV3
+      ),
     ).to.eventually.be.rejectedWith(
       `RAILGUN spendable private balance too low for ${tokenAddress.toLowerCase()}`,
     );
@@ -330,6 +349,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs2.length).to.equal(6);
     expect(txs2.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1, 1, 1, 1, 1]);
@@ -358,6 +378,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs3.length).to.equal(1);
     expect(txs3.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);
@@ -379,6 +400,7 @@ describe('transaction-batch', function run() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs4.length).to.equal(1);
     expect(txs4.map((tx) => tx.nullifiers.length)).to.deep.equal([5]);

@@ -12,11 +12,11 @@ import {
   TransactionReceipt,
   Wallet,
 } from 'ethers';
-import { RelayAdaptHelper } from '../relay-adapt-helper';
-import { abi as erc20Abi } from '../../../test/test-erc20-abi.test';
-import { abi as erc721Abi } from '../../../test/test-erc721-abi.test';
-import { config } from '../../../test/config.test';
-import { RailgunWallet } from '../../../wallet/railgun-wallet';
+import { RelayAdaptHelper } from '../../relay-adapt-helper';
+import { abi as erc20Abi } from '../../../../test/test-erc20-abi.test';
+import { abi as erc721Abi } from '../../../../test/test-erc721-abi.test';
+import { config } from '../../../../test/config.test';
+import { RailgunWallet } from '../../../../wallet/railgun-wallet';
 import {
   awaitMultipleScans,
   awaitRailgunSmartWalletShield,
@@ -24,7 +24,6 @@ import {
   awaitRailgunSmartWalletUnshield,
   awaitScan,
   getEthersWallet,
-  getTestTXIDVersion,
   isV2Test,
   mockGetLatestValidatedRailgunTxid,
   mockQuickSyncEvents,
@@ -32,37 +31,36 @@ import {
   mockRailgunTxidMerklerootValidator,
   sendTransactionWithLatestNonce,
   testArtifactsGetter,
-} from '../../../test/helper.test';
+} from '../../../../test/helper.test';
 import {
   NFTTokenData,
   OutputType,
   RelayAdaptShieldERC20Recipient,
-} from '../../../models/formatted-types';
-import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
-import { SnarkJSGroth16 } from '../../../prover/prover';
-import { Chain, ChainType } from '../../../models/engine-types';
-import { RailgunEngine } from '../../../railgun-engine';
-import { RelayAdaptV2Contract } from '../V2/relay-adapt-v2';
-import { ShieldNoteERC20 } from '../../../note/erc20/shield-note-erc20';
-import { TransactNote } from '../../../note/transact-note';
-import { UnshieldNoteERC20 } from '../../../note/erc20/unshield-note-erc20';
-import { TransactionBatch } from '../../../transaction/transaction-batch';
-import { getTokenDataERC20 } from '../../../note/note-util';
-import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../test/shared-test.test';
-import { UnshieldNoteNFT } from '../../../note';
+} from '../../../../models/formatted-types';
+import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../../utils/bytes';
+import { SnarkJSGroth16 } from '../../../../prover/prover';
+import { Chain, ChainType } from '../../../../models/engine-types';
+import { RailgunEngine } from '../../../../railgun-engine';
+import { ShieldNoteERC20 } from '../../../../note/erc20/shield-note-erc20';
+import { TransactNote } from '../../../../note/transact-note';
+import { UnshieldNoteERC20 } from '../../../../note/erc20/unshield-note-erc20';
+import { TransactionBatch } from '../../../../transaction/transaction-batch';
+import { getTokenDataERC20 } from '../../../../note/note-util';
+import { mintNFTsID01ForTest, shieldNFTForTest } from '../../../../test/shared-test.test';
+import { UnshieldNoteNFT } from '../../../../note';
 import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-logs.json';
-import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
-import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
-import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
-import { promiseTimeout } from '../../../utils';
-import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
-import { isDefined } from '../../../utils/is-defined';
-import { TXIDVersion } from '../../../models/poi-types';
-import { WalletBalanceBucket } from '../../../models/txo-types';
-import { RailgunVersionedSmartContracts } from '../../railgun-smart-wallet/railgun-versioned-smart-contracts';
-import { RelayAdaptVersionedSmartContracts } from '../relay-adapt-versioned-smart-contracts';
-import { TransactionStructV2 } from '../../../models';
-import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
+import { TestERC721 } from '../../../../test/abi/typechain/TestERC721';
+import { TestERC20 } from '../../../../test/abi/typechain/TestERC20';
+import { PollingJsonRpcProvider } from '../../../../provider/polling-json-rpc-provider';
+import { promiseTimeout } from '../../../../utils';
+import { createPollingJsonRpcProviderForListeners } from '../../../../provider/polling-util';
+import { isDefined } from '../../../../utils/is-defined';
+import { TXIDVersion } from '../../../../models/poi-types';
+import { WalletBalanceBucket } from '../../../../models/txo-types';
+import { RailgunVersionedSmartContracts } from '../../../railgun-smart-wallet/railgun-versioned-smart-contracts';
+import { TransactionStructV2 } from '../../../../models';
+import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../../constants';
+import { RelayAdaptV2Contract } from '../relay-adapt-v2';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -76,7 +74,7 @@ let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
 
-const txidVersion = getTestTXIDVersion();
+const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
@@ -100,12 +98,12 @@ const DEPLOYMENT_BLOCKS = {
 
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
-describe('relay-adapt', function test() {
+describe('relay-adapt-v2', function test() {
   this.timeout(45000);
 
   beforeEach(async () => {
     engine = RailgunEngine.initForWallet(
-      'TestRelayAdapt',
+      'TestRelayAdaptV2',
       memdown(),
       testArtifactsGetter,
       mockQuickSyncEvents,
@@ -143,6 +141,7 @@ describe('relay-adapt', function test() {
       config.contracts.poseidonMerkleAccumulatorV3,
       config.contracts.poseidonMerkleVerifierV3,
       config.contracts.tokenVaultV3,
+      config.contracts.poseidonMerkleAdaptV3,
       fallbackProvider,
       pollingProvider,
       DEPLOYMENT_BLOCKS,
@@ -173,7 +172,7 @@ describe('relay-adapt', function test() {
         wallet.getViewingKeyPair().pubkey,
       );
 
-      const shieldTx = await RelayAdaptVersionedSmartContracts.populateShieldBaseToken(
+      const shieldTx = await RailgunVersionedSmartContracts.populateShieldBaseToken(
         txidVersion,
         chain,
         shieldRequest,
@@ -198,7 +197,7 @@ describe('relay-adapt', function test() {
     };
   });
 
-  it('[HH] Should wrap and shield base token', async function run() {
+  it('[V2] [HH] Should wrap and shield base token', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
@@ -214,7 +213,7 @@ describe('relay-adapt', function test() {
       wallet.getViewingKeyPair().pubkey,
     );
 
-    const shieldTx = await RelayAdaptVersionedSmartContracts.populateShieldBaseToken(
+    const shieldTx = await RailgunVersionedSmartContracts.populateShieldBaseToken(
       txidVersion,
       chain,
       shieldRequest,
@@ -237,8 +236,8 @@ describe('relay-adapt', function test() {
     ).to.equal(9975n);
   });
 
-  it('[HH] Should return gas estimate for unshield base token', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should return gas estimate for unshield base token', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -266,7 +265,7 @@ describe('relay-adapt', function test() {
     const unshieldValue = 99000000n;
 
     const unshieldNote = new UnshieldNoteERC20(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       unshieldValue,
       WETH_TOKEN_ADDRESS,
     );
@@ -277,12 +276,13 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
 
     const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
 
     const relayTransactionGasEstimate =
-      await RelayAdaptVersionedSmartContracts.populateUnshieldBaseToken(
+      await RailgunVersionedSmartContracts.populateUnshieldBaseToken(
         txidVersion,
         chain,
         dummyTransactions,
@@ -296,8 +296,8 @@ describe('relay-adapt', function test() {
     expect(Number(gasEstimate)).to.be.greaterThan(0);
   });
 
-  it('[HH] Should execute relay adapt transaction for unshield base token', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should execute relay adapt transaction for unshield base token', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -325,7 +325,7 @@ describe('relay-adapt', function test() {
     const unshieldValue = 300n;
 
     const unshieldNote = new UnshieldNoteERC20(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       unshieldValue,
       WETH_TOKEN_ADDRESS,
     );
@@ -337,12 +337,13 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
 
     // 3. Generate relay adapt params from dummy transactions.
     const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
     const relayAdaptParams =
-      await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsUnshieldBaseToken(
+      await RailgunVersionedSmartContracts.getRelayAdaptV2ParamsUnshieldBaseToken(
         txidVersion,
         chain,
         dummyTransactions,
@@ -354,8 +355,8 @@ describe('relay-adapt', function test() {
     );
 
     // 4. Create real transactions with relay adapt params.
-    transactionBatch.setAdaptID({
-      contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+    transactionBatch.setAdaptIDV2({
+      contract: RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       parameters: relayAdaptParams,
     });
     const { provedTransactions } = await transactionBatch.generateTransactions(
@@ -365,10 +366,11 @@ describe('relay-adapt', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     provedTransactions.forEach((transaction) => {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
-        RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+        RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
@@ -378,7 +380,7 @@ describe('relay-adapt', function test() {
     // const preEthBalance = await ethersWallet.getBalanceERC20(txidVersion, );
 
     // 5: Generate final relay transaction for unshield base token.
-    const relayTransaction = await RelayAdaptVersionedSmartContracts.populateUnshieldBaseToken(
+    const relayTransaction = await RailgunVersionedSmartContracts.populateUnshieldBaseToken(
       txidVersion,
       chain,
       provedTransactions,
@@ -409,7 +411,10 @@ describe('relay-adapt', function test() {
       ]),
     ).to.equal(BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* unshield amount */));
 
-    const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
+    const callResultError = RailgunVersionedSmartContracts.getRelayAdaptCallError(
+      txidVersion,
+      txReceipt.logs,
+    );
     expect(callResultError).to.equal(undefined);
 
     // TODO: Fix this test assertion. How much gas is used?
@@ -419,8 +424,8 @@ describe('relay-adapt', function test() {
     // );
   });
 
-  it('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should execute relay adapt transaction for NFT transaction', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -476,7 +481,7 @@ describe('relay-adapt', function test() {
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
 
     const unshieldNote = new UnshieldNoteNFT(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       shield.tokenData as NFTTokenData,
     );
     transactionBatch.addUnshieldData(unshieldNote.unshieldData);
@@ -487,6 +492,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
 
     // 3. Create the cross contract calls.
@@ -505,7 +511,7 @@ describe('relay-adapt', function test() {
     // 6. Get gas estimate from dummy txs.
     const gasEstimateRandom = randomHex(31);
     const populatedTransactionGasEstimate =
-      await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+      await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -516,7 +522,8 @@ describe('relay-adapt', function test() {
         true, // isRelayerTransaction
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await RelayAdaptV2Contract.estimateGasWithErrorHandler(
+    const gasEstimate = await RailgunVersionedSmartContracts.estimateGasWithErrorHandler(
+      txidVersion,
       provider,
       populatedTransactionGasEstimate,
     );
@@ -535,7 +542,7 @@ describe('relay-adapt', function test() {
 
     const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
     const relayAdaptParams =
-      await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
+      await RailgunVersionedSmartContracts.getRelayAdaptV2ParamsCrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -544,8 +551,8 @@ describe('relay-adapt', function test() {
         random,
         true, // isRelayerTransaction
       );
-    transactionBatch.setAdaptID({
-      contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+    transactionBatch.setAdaptIDV2({
+      contract: RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       parameters: relayAdaptParams,
     });
     const { provedTransactions } = await transactionBatch.generateTransactions(
@@ -555,10 +562,11 @@ describe('relay-adapt', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     provedTransactions.forEach((transaction) => {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
-        RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+        RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
@@ -566,7 +574,7 @@ describe('relay-adapt', function test() {
     });
 
     // 8. Generate real relay transaction for cross contract call.
-    const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+    const relayTransaction = await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
       txidVersion,
       chain,
       provedTransactions,
@@ -600,7 +608,10 @@ describe('relay-adapt', function test() {
       throw new Error('No transaction receipt for relay transaction');
     }
 
-    const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
+    const callResultError = RailgunVersionedSmartContracts.getRelayAdaptCallError(
+      txidVersion,
+      txReceipt.logs,
+    );
     expect(callResultError).to.equal(undefined);
 
     const nftBalanceAfterReshield = await nft.balanceOf(
@@ -609,8 +620,8 @@ describe('relay-adapt', function test() {
     expect(nftBalanceAfterReshield).to.equal(1n);
   }).timeout(300_000);
 
-  it('[HH] Should shield all leftover WETH in relay adapt contract', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should shield all leftover WETH in relay adapt contract', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -625,7 +636,7 @@ describe('relay-adapt', function test() {
     // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
     const transactionBatch = new TransactionBatch(chain);
     const unshieldNote = new UnshieldNoteERC20(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       1000n,
       WETH_TOKEN_ADDRESS,
     );
@@ -638,6 +649,7 @@ describe('relay-adapt', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
@@ -662,7 +674,7 @@ describe('relay-adapt', function test() {
     ) as unknown as TestERC20;
 
     let relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
     );
     expect(relayAdaptAddressBalance).to.equal(998n);
 
@@ -677,7 +689,7 @@ describe('relay-adapt', function test() {
     await testShieldBaseToken(0n);
 
     relayAdaptAddressBalance = await wethTokenContract.balanceOf(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
     );
     expect(relayAdaptAddressBalance).to.equal(0n);
 
@@ -689,8 +701,8 @@ describe('relay-adapt', function test() {
     ).to.equal(9971n);
   }).timeout(300_000);
 
-  it('[HH] Should execute relay adapt transaction for cross contract call', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should execute relay adapt transaction for cross contract call', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -715,7 +727,7 @@ describe('relay-adapt', function test() {
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const unshieldNote = new UnshieldNoteERC20(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       1000n,
       WETH_TOKEN_ADDRESS,
     );
@@ -727,6 +739,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
 
     // 3. Create the cross contract call.
@@ -756,7 +769,7 @@ describe('relay-adapt', function test() {
     // 5. Get gas estimate from dummy txs.
     const randomGasEstimate = randomHex(31);
     const populatedTransactionGasEstimate =
-      await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+      await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -767,7 +780,8 @@ describe('relay-adapt', function test() {
         true, // isRelayerTransaction
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
-    const gasEstimate = await RelayAdaptV2Contract.estimateGasWithErrorHandler(
+    const gasEstimate = await RailgunVersionedSmartContracts.estimateGasWithErrorHandler(
+      txidVersion,
       provider,
       populatedTransactionGasEstimate,
     );
@@ -785,7 +799,7 @@ describe('relay-adapt', function test() {
     // 6. Create real transactions with relay adapt params.
     const random = randomHex(31);
     const relayAdaptParams =
-      await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
+      await RailgunVersionedSmartContracts.getRelayAdaptV2ParamsCrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -794,8 +808,8 @@ describe('relay-adapt', function test() {
         random,
         true, // isRelayerTransaction
       );
-    transactionBatch.setAdaptID({
-      contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+    transactionBatch.setAdaptIDV2({
+      contract: RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       parameters: relayAdaptParams,
     });
     const { provedTransactions } = await transactionBatch.generateTransactions(
@@ -805,10 +819,11 @@ describe('relay-adapt', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     provedTransactions.forEach((transaction) => {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
-        RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+        RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
@@ -816,7 +831,7 @@ describe('relay-adapt', function test() {
     });
 
     // 7. Generate real relay transaction for cross contract call.
-    const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+    const relayTransaction = await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
       txidVersion,
       chain,
       provedTransactions,
@@ -858,11 +873,14 @@ describe('relay-adapt', function test() {
     expect(sendAddressBalance).to.equal(sendAmount);
 
     const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
     );
     expect(relayAdaptAddressBalance).to.equal(0n);
 
-    const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
+    const callResultError = RailgunVersionedSmartContracts.getRelayAdaptCallError(
+      txidVersion,
+      txReceipt.logs,
+    );
     expect(callResultError).to.equal(undefined);
 
     const expectedPrivateWethBalance = BigInt(
@@ -887,8 +905,8 @@ describe('relay-adapt', function test() {
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   }).timeout(300_000);
 
-  it('[HH] Should revert send, but keep fees for failing cross contract call', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should revert send, but keep fees for failing cross contract call', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -913,7 +931,7 @@ describe('relay-adapt', function test() {
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const unshieldNote = new UnshieldNoteERC20(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       10000n,
       WETH_TOKEN_ADDRESS,
     );
@@ -925,6 +943,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
 
     // 3. Create the cross contract call.
@@ -954,7 +973,7 @@ describe('relay-adapt', function test() {
     // 5. Get gas estimate from dummy txs. (Expect revert).
     const gasEstimateRandom = randomHex(31);
     const populatedTransactionGasEstimate =
-      await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+      await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -966,7 +985,12 @@ describe('relay-adapt', function test() {
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     await expect(
-      RelayAdaptV2Contract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
+      RailgunVersionedSmartContracts.estimateGasWithErrorHandler(
+        txidVersion,
+        provider,
+        populatedTransactionGasEstimate,
+      ),
+      txidVersion,
     ).to.be.rejectedWith(
       `RelayAdapt multicall failed at index 0 with 'execution reverted (unknown custom error)': Unknown Relay Adapt error.`,
     );
@@ -974,7 +998,7 @@ describe('relay-adapt', function test() {
     // 6. Create real transactions with relay adapt params.
     const random = randomHex(31);
     const relayAdaptParams =
-      await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
+      await RailgunVersionedSmartContracts.getRelayAdaptV2ParamsCrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -983,8 +1007,8 @@ describe('relay-adapt', function test() {
         random,
         true, // isRelayerTransaction
       );
-    transactionBatch.setAdaptID({
-      contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+    transactionBatch.setAdaptIDV2({
+      contract: RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       parameters: relayAdaptParams,
     });
     const { provedTransactions } = await transactionBatch.generateTransactions(
@@ -994,10 +1018,11 @@ describe('relay-adapt', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     provedTransactions.forEach((transaction) => {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
-        RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+        RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
@@ -1005,7 +1030,7 @@ describe('relay-adapt', function test() {
     });
 
     // 7. Generate real relay transaction for cross contract call.
-    const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+    const relayTransaction = await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
       txidVersion,
       chain,
       provedTransactions,
@@ -1043,11 +1068,14 @@ describe('relay-adapt', function test() {
     expect(sendAddressBalance).to.equal(0n);
 
     const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
     );
     expect(relayAdaptAddressBalance).to.equal(0n);
 
-    const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
+    const callResultError = RailgunVersionedSmartContracts.getRelayAdaptCallError(
+      txidVersion,
+      txReceipt.logs,
+    );
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     const expectedPrivateWethBalance = BigInt(
@@ -1074,8 +1102,8 @@ describe('relay-adapt', function test() {
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
   });
 
-  it('[HH] Should revert send for failing re-shield', async function run() {
-    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+  it('[V2] [HH] Should revert send for failing re-shield', async function run() {
+    if (!isV2Test() || !isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
     }
@@ -1100,7 +1128,7 @@ describe('relay-adapt', function test() {
     );
     transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
     const unshieldNote = new UnshieldNoteERC20(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       10000n,
       WETH_TOKEN_ADDRESS,
     );
@@ -1112,6 +1140,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
 
     // 3. Create the cross contract call.
@@ -1141,7 +1170,7 @@ describe('relay-adapt', function test() {
     // 5. Get gas estimate from dummy txs.
     const randomGasEstimate = randomHex(31);
     const populatedTransactionGasEstimate =
-      await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+      await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -1153,7 +1182,12 @@ describe('relay-adapt', function test() {
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     await expect(
-      RelayAdaptV2Contract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
+      RailgunVersionedSmartContracts.estimateGasWithErrorHandler(
+        txidVersion,
+        provider,
+        populatedTransactionGasEstimate,
+      ),
+      txidVersion,
     ).to.be.rejectedWith(
       `RelayAdapt multicall failed at index 0 with 'execution reverted (unknown custom error)': Unknown Relay Adapt error.`,
     );
@@ -1161,7 +1195,7 @@ describe('relay-adapt', function test() {
     // 6. Create real transactions with relay adapt params.
     const random = randomHex(31);
     const relayAdaptParams =
-      await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
+      await RailgunVersionedSmartContracts.getRelayAdaptV2ParamsCrossContractCalls(
         txidVersion,
         chain,
         dummyTransactions,
@@ -1170,8 +1204,8 @@ describe('relay-adapt', function test() {
         random,
         true, // isRelayerTransaction
       );
-    transactionBatch.setAdaptID({
-      contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+    transactionBatch.setAdaptIDV2({
+      contract: RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       parameters: relayAdaptParams,
     });
     const { provedTransactions } = await transactionBatch.generateTransactions(
@@ -1181,10 +1215,11 @@ describe('relay-adapt', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     provedTransactions.forEach((transaction) => {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
-        RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+        RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
@@ -1192,7 +1227,7 @@ describe('relay-adapt', function test() {
     });
 
     // 7. Generate real relay transaction for cross contract call.
-    const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
+    const relayTransaction = await RailgunVersionedSmartContracts.populateV2CrossContractCalls(
       txidVersion,
       chain,
       provedTransactions,
@@ -1232,12 +1267,15 @@ describe('relay-adapt', function test() {
     expect(sendAddressBalance).to.equal(0n);
 
     const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
-      RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
+      RailgunVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
     );
 
     expect(relayAdaptAddressBalance).to.equal(0n);
 
-    const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
+    const callResultError = RailgunVersionedSmartContracts.getRelayAdaptCallError(
+      txidVersion,
+      txReceipt.logs,
+    );
     expect(callResultError).to.equal('Unknown Relay Adapt error.');
 
     // TODO: These are the incorrect assertions, if the tx is fully reverted. This requires a callbacks upgrade to contract.
@@ -1318,7 +1356,12 @@ describe('relay-adapt', function test() {
     });
   });
 
-  it('Should calculate relay adapt params', () => {
+  it('[V2] Should calculate relay adapt params', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
     const nullifiers = [
       new Uint8Array([
         42, 178, 205, 78, 49, 222, 35, 76, 140, 83, 19, 50, 218, 74, 38, 161, 4, 32, 213, 247, 186,
@@ -1337,7 +1380,7 @@ describe('relay-adapt', function test() {
       ]),
     );
 
-    const relayAdaptParams = RelayAdaptHelper.getRelayAdaptParams(
+    const relayAdaptParams = RelayAdaptV2Contract.getRelayAdaptParams(
       [{ nullifiers } as unknown as TransactionStructV2],
       random,
       false,
@@ -1372,14 +1415,25 @@ describe('relay-adapt', function test() {
     expect(relayAdaptParams).to.equal(expectedParamsHex);
   });
 
-  it('Should decode and parse relay adapt error logs (from failed Sushi V2 LP removal)', () => {
-    const relayAdaptError = RelayAdaptV2Contract.getRelayAdaptCallError(
+  it('[V2] Should decode and parse relay adapt error logs (from failed Sushi V2 LP removal)', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
+    const relayAdaptError = RailgunVersionedSmartContracts.getRelayAdaptCallError(
+      txidVersion,
       FormattedRelayAdaptErrorLogs,
     );
     expect(relayAdaptError).to.equal('ds-math-sub-underflow');
   });
 
-  it('Should extract call failed index and error message from ethers error', () => {
+  it('[V2] Should extract call failed index and error message from ethers error', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
     const errorText = `execution reverted (unknown custom error) (action="estimateGas", data="0x5c0dee5d00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006408c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001564732d6d6174682d7375622d756e646572666c6f77000000000000000000000000000000000000000000000000000000000000000000000000000000", reason=null, transaction={ "data": "0x28223a77000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000007a00000000000000000000000000000000000000000000000000…00000000004640cd6086ade3e984b011b4e8c7cab9369b90499ab88222e673ec1ae4d2c3bf78ae96e95f9171653e5b1410273269edd64a0ab792a5d355093caa9cb92406125c7803a48028503783f2ab5e84f0ea270ce770860e436b77c942ed904a5d577d021cf0fd936183e0298175679d63d73902e116484e10c7b558d4dc84e113380500000000000000000000000000000000000000000000000000000000", "from": "0x000000000000000000000000000000000000dEaD", "to": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726" }, invocation=null, revert=null, code=CALL_EXCEPTION, version=6.4.0)`;
     const { callFailedIndexString, errorMessage } =
       RelayAdaptV2Contract.extractGasEstimateCallFailedIndexAndErrorText(errorText);
@@ -1389,31 +1443,54 @@ describe('relay-adapt', function test() {
     );
   });
 
-  it('Should parse relay adapt log revert data - relay adapt abi value', () => {
-    const parsed = RelayAdaptV2Contract.parseRelayAdaptReturnValue(
+  it('[V2] Should parse relay adapt log revert data - relay adapt abi value', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
+    const parsed = RailgunVersionedSmartContracts.parseRelayAdaptReturnValue(
+      txidVersion,
       `0x5c0dee5d00000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006408c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001564732d6d6174682d7375622d756e646572666c6f77000000000000000000000000000000000000000000000000000000000000000000000000000000`,
     );
     expect(parsed?.callIndex).to.equal(5);
     expect(parsed?.error).to.equal('ds-math-sub-underflow');
   });
 
-  it('Should parse relay adapt log revert data - string value', () => {
-    const parsed = RelayAdaptV2Contract.parseRelayAdaptReturnValue(
+  it('[V2] Should parse relay adapt log revert data - string value', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
+    const parsed = RailgunVersionedSmartContracts.parseRelayAdaptReturnValue(
+      txidVersion,
       `0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000205261696c67756e4c6f6769633a204e6f746520616c7265616479207370656e74`,
     );
     expect(parsed?.callIndex).to.equal(undefined);
     expect(parsed?.error).to.equal('RailgunLogic: Note already spent');
   });
 
-  it('Should parse relay adapt log revert data - string value from railgun cookbook transaction', () => {
-    const parsed = RelayAdaptV2Contract.parseRelayAdaptReturnValue(
+  it('[V2] Should parse relay adapt log revert data - string value from railgun cookbook transaction', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
+    const parsed = RailgunVersionedSmartContracts.parseRelayAdaptReturnValue(
+      txidVersion,
       `0x5c0dee5d00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002d52656c617941646170743a205265667573696e6720746f2063616c6c205261696c67756e20636f6e747261637400000000000000000000000000000000000000`,
     );
     expect(parsed?.callIndex).to.equal(2);
     expect(parsed?.error).to.equal('RelayAdapt: Refusing to call Railgun contract');
   });
 
-  it('Should extract call failed index and error message from non-parseable ethers error', () => {
+  it('[V2] Should extract call failed index and error message from non-parseable ethers error', async function run() {
+    if (!isV2Test()) {
+      this.skip();
+      return;
+    }
+
     const errorText = `not a parseable error`;
     const { callFailedIndexString, errorMessage } =
       RelayAdaptV2Contract.extractGasEstimateCallFailedIndexAndErrorText(errorText);

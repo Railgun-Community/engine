@@ -25,6 +25,7 @@ let config = {
     poseidonMerkleAccumulatorV3: '0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5',
     poseidonMerkleVerifierV3: '0xfbC22278A96299D91d41C453234d97b4F5Eb9B2d',
     tokenVaultV3: '0xD84379CEae14AA33C123Af12424A37803F885889',
+    poseidonMerkleAdaptV3: '0xA4899D35897033b927acFCf422bc745916139776',
   },
 };
 

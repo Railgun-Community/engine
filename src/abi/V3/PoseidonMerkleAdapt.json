@@ -1,0 +1,200 @@
+[
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "callIndex",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "revertReason",
+        "type": "bytes"
+      }
+    ],
+    "name": "CallFailed",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "callIndex",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "revertReason",
+        "type": "bytes"
+      }
+    ],
+    "name": "CallError",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "_data",
+        "type": "bytes"
+      }
+    ],
+    "name": "execute",
+    "outputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "bytes32[3]",
+                "name": "encryptedBundle",
+                "type": "bytes32[3]"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "shieldKey",
+                "type": "bytes32"
+              }
+            ],
+            "internalType": "struct PoseidonMerkleAccumulator.ShieldCiphertext",
+            "name": "ciphertext",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "npk",
+                "type": "bytes32"
+              },
+              {
+                "components": [
+                  {
+                    "internalType": "enum TokenType",
+                    "name": "tokenType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "tokenAddress",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "tokenSubID",
+                    "type": "uint256"
+                  }
+                ],
+                "internalType": "struct TokenData",
+                "name": "token",
+                "type": "tuple"
+              },
+              {
+                "internalType": "uint120",
+                "name": "value",
+                "type": "uint120"
+              }
+            ],
+            "internalType": "struct CommitmentPreimage",
+            "name": "preimage",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct PoseidonMerkleVerifier.ShieldRequest[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes",
+            "name": "data",
+            "type": "bytes"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct PoseidonMerkleAdapt.Call[]",
+        "name": "_calls",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "multicall",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "enum TokenType",
+                "name": "tokenType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "address",
+                "name": "tokenAddress",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "tokenSubID",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct TokenData",
+            "name": "token",
+            "type": "tuple"
+          },
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct PoseidonMerkleAdapt.TokenTransfer[]",
+        "name": "_transfers",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "transfer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
+  }
+]

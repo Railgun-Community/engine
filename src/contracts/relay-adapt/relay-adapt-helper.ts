@@ -1,4 +1,4 @@
-import { ContractTransaction, AbiCoder, keccak256 } from 'ethers';
+import { ContractTransaction } from 'ethers';
 import { randomHex, hexToBytes } from '../../utils/bytes';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 import { AddressData, decodeAddress } from '../../key-derivation';
@@ -11,7 +11,6 @@ import {
 import { ShieldNoteNFT } from '../../note/nft/shield-note-nft';
 import { ERC721_NOTE_VALUE } from '../../note/note-util';
 import { RelayAdapt, ShieldRequestStruct } from '../../abi/typechain/RelayAdapt';
-import { TransactionStructV2, TransactionStructV3 } from '../../models/transaction-types';
 
 class RelayAdaptHelper {
   static async generateRelayShieldRequests(
@@ -96,38 +95,6 @@ class RelayAdaptHelper {
       minGasLimit,
       calls: RelayAdaptHelper.formatCalls(calls),
     };
-  }
-
-  /**
-   * Get relay adapt params hash.
-   * Hashes transaction data and params to ensure that transaction is not modified by MITM.
-   *
-   * @param transactions - serialized transactions
-   * @param random - random value
-   * @param requireSuccess - require success on calls
-   * @param calls - calls list
-   * @returns adapt params
-   */
-  static getRelayAdaptParams(
-    transactions: (TransactionStructV2 | TransactionStructV3)[],
-    random: string,
-    requireSuccess: boolean,
-    calls: ContractTransaction[],
-    minGasLimit = BigInt(0),
-  ): string {
-    const nullifiers = transactions.map((transaction) => transaction.nullifiers);
-    const actionData = RelayAdaptHelper.getActionData(random, requireSuccess, calls, minGasLimit);
-
-    const preimage = AbiCoder.defaultAbiCoder().encode(
-      [
-        'bytes32[][] nullifiers',
-        'uint256 transactionsLength',
-        'tuple(bytes31 random, bool requireSuccess, uint256 minGasLimit, tuple(address to, bytes data, uint256 value)[] calls) actionData',
-      ],
-      [nullifiers, transactions.length, actionData],
-    );
-
-    return keccak256(hexToBytes(preimage));
   }
 
   /**

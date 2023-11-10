@@ -18,7 +18,6 @@ import {
   extractRailgunTransactionDataFromTransactionRequest,
 } from '../extract-transaction-data';
 import { config } from '../../test/config.test';
-import { RelayAdaptVersionedSmartContracts } from '../../contracts/relay-adapt/relay-adapt-versioned-smart-contracts';
 import {
   getTestTXIDVersion,
   isV2Test,
@@ -85,6 +84,7 @@ describe('extract-transaction-data', () => {
       railgunWallet,
       txidVersion,
       config.encryptionKey,
+      [], // crossContractCallsV3
     );
   };
 
@@ -111,6 +111,7 @@ describe('extract-transaction-data', () => {
       railgunWallet,
       txidVersion,
       config.encryptionKey,
+      [], // crossContractCallsV3
     );
   };
 
@@ -162,6 +163,7 @@ describe('extract-transaction-data', () => {
       config.contracts.poseidonMerkleAccumulatorV3,
       config.contracts.poseidonMerkleVerifierV3,
       config.contracts.tokenVaultV3,
+      config.contracts.poseidonMerkleAdaptV3,
       provider,
       pollingProvider,
       { [TXIDVersion.V2_PoseidonMerkle]: 0, [TXIDVersion.V3_PoseidonMerkle]: 0 },
@@ -297,7 +299,7 @@ describe('extract-transaction-data', () => {
       fee,
       MOCK_TOKEN_ADDRESS,
     );
-    const transaction = await RelayAdaptVersionedSmartContracts.populateUnshieldBaseToken(
+    const transaction = await RailgunVersionedSmartContracts.populateUnshieldBaseToken(
       txidVersion,
       chain,
       transactions,
@@ -337,7 +339,7 @@ describe('extract-transaction-data', () => {
       fee,
       MOCK_TOKEN_ADDRESS,
     );
-    const transaction = await RelayAdaptVersionedSmartContracts.populateUnshieldBaseToken(
+    const transaction = await RailgunVersionedSmartContracts.populateUnshieldBaseToken(
       txidVersion,
       chain,
       transactions,

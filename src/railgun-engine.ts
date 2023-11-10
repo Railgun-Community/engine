@@ -69,6 +69,7 @@ import { POI } from './poi';
 import { PoseidonMerkleAccumulatorContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-accumulator';
 import { PoseidonMerkleVerifierContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-verifier';
 import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-vault-contract';
+import { PoseidonMerkleAdaptV3Contract } from './contracts/relay-adapt/V3/poseidon-merkle-adapt-v3';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -350,7 +351,7 @@ class RailgunEngine extends EventEmitter {
   ): Promise<Optional<number>> {
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     const railgunSmartWalletContract =
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+      ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id];
     const provider = railgunSmartWalletContract.contract.runner?.provider;
     if (!provider) {
       throw new Error('Requires provider for commitment block lookup');
@@ -545,7 +546,7 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
-    if (!isDefined(ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id])) {
+    if (!isDefined(ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id])) {
       EngineDebug.log(
         `Cannot scan history. Proxy contract not yet loaded for chain ${chain.type}:${chain.id}.`,
       );
@@ -585,7 +586,7 @@ class RailgunEngine extends EventEmitter {
     );
 
     const railgunSmartWalletContract =
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+      ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id];
     if (!railgunSmartWalletContract.contract.runner?.provider) {
       throw new Error('Requires provider for RailgunSmartWallet contract');
     }
@@ -682,7 +683,7 @@ class RailgunEngine extends EventEmitter {
     const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
     const railgunSmartWalletContract =
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+      ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id];
     if (!isDefined(railgunSmartWalletContract)) {
       throw new Error('Requires RailgunSmartWallet contract');
     }
@@ -1455,7 +1456,7 @@ class RailgunEngine extends EventEmitter {
   ) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle:
-        return ContractStore.railgunSmartWalletContracts[chain.type]?.[
+        return ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[
           chain.id
         ]?.validateMerkleroot(tree, merkleroot);
 
@@ -1481,6 +1482,7 @@ class RailgunEngine extends EventEmitter {
     poseidonMerkleAccumulatorV3Address: string,
     poseidonMerkleVerifierV3Address: string,
     tokenVaultV3Address: string,
+    poseidonMerkleAdaptV3Address: string,
     defaultProvider: PollingJsonRpcProvider | FallbackProvider,
     pollingProvider: PollingJsonRpcProvider,
     deploymentBlocks: Record<TXIDVersion, number>,
@@ -1530,36 +1532,24 @@ class RailgunEngine extends EventEmitter {
       (txidVersion) =>
         !this.hasUTXOMerkletree(txidVersion, chain) && !this.hasTXIDMerkletree(txidVersion, chain),
     );
-    const hasSmartWalletContract = isDefined(
-      ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id],
-    );
-    const hasRelayAdaptV2Contract = isDefined(
-      ContractStore.relayAdaptV2Contracts[chain.type]?.[chain.id],
-    );
-    const hasPoseidonMerkleAccumulatorV3Contract = isDefined(
-      ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id],
+    const hasRailgunSmartWalletV2Contract = isDefined(
+      ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id],
     );
     const hasPoseidonMerkleVerifierV3Contract = isDefined(
       ContractStore.poseidonMerkleVerifierV3Contracts[chain.type]?.[chain.id],
     );
-    const hasTokenVaultV3Contract = isDefined(
-      ContractStore.tokenVaultV3Contracts[chain.type]?.[chain.id],
-    );
     if (
       hasAnyMerkletree ||
-      hasSmartWalletContract ||
-      hasRelayAdaptV2Contract ||
-      hasPoseidonMerkleAccumulatorV3Contract ||
-      hasPoseidonMerkleVerifierV3Contract ||
-      hasTokenVaultV3Contract
+      hasRailgunSmartWalletV2Contract ||
+      hasPoseidonMerkleVerifierV3Contract
     ) {
       // If a network with this chainID exists, unload it and load the provider as a new network
       await this.unloadNetwork(chain);
     }
 
     // Create contract instances
-    ContractStore.railgunSmartWalletContracts[chain.type] ??= [];
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+    ContractStore.railgunSmartWalletV2Contracts[chain.type] ??= [];
+    ContractStore.railgunSmartWalletV2Contracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         railgunSmartWalletContractAddress,
         defaultProvider,
@@ -1592,6 +1582,10 @@ class RailgunEngine extends EventEmitter {
         tokenVaultV3Address,
         defaultProvider,
       );
+
+      ContractStore.poseidonMerkleAdaptV3Contracts[chain.type] ??= [];
+      ContractStore.poseidonMerkleAdaptV3Contracts[chain.type][chain.id] =
+        new PoseidonMerkleAdaptV3Contract(poseidonMerkleAdaptV3Address, defaultProvider);
     }
 
     // eslint-disable-next-line no-restricted-syntax
@@ -1714,11 +1708,9 @@ class RailgunEngine extends EventEmitter {
     const unshieldListener = async (txidVersion: TXIDVersion, unshields: UnshieldStoredEvent[]) => {
       await this.unshieldListener(txidVersion, chain, unshields);
     };
-    await ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].setTreeUpdateListeners(
-      commitmentListener,
-      nullifierListener,
-      unshieldListener,
-    );
+    await ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[
+      chain.id
+    ].setTreeUpdateListeners(commitmentListener, nullifierListener, unshieldListener);
 
     if (supportsV3) {
       const railgunTransactionsV3Listener = async (
@@ -1771,7 +1763,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chainID of network to unload
    */
   async unloadNetwork(chain: Chain): Promise<void> {
-    if (!isDefined(ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id])) {
+    if (!isDefined(ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id])) {
       return;
     }
 
@@ -1788,11 +1780,11 @@ class RailgunEngine extends EventEmitter {
     });
 
     // Unload listeners
-    await ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id].unload();
+    await ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id].unload();
     await ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id]?.unload();
 
     // Delete contracts
-    delete ContractStore.railgunSmartWalletContracts[chain.type]?.[chain.id];
+    delete ContractStore.railgunSmartWalletV2Contracts[chain.type]?.[chain.id];
     delete ContractStore.relayAdaptV2Contracts[chain.type]?.[chain.id];
     delete ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type]?.[chain.id];
     delete ContractStore.poseidonMerkleVerifierV3Contracts[chain.type]?.[chain.id];
@@ -2016,7 +2008,7 @@ class RailgunEngine extends EventEmitter {
   async unload() {
     // Unload chains
     await Promise.all(
-      ContractStore.railgunSmartWalletContracts.map(async (contractsForChainType, chainType) => {
+      ContractStore.railgunSmartWalletV2Contracts.map(async (contractsForChainType, chainType) => {
         await Promise.all(
           contractsForChainType.map(async (_railgunSmartWalletContract, chainID) => {
             EngineDebug.log(`unload network ${chainType}:${chainID}`);
@@ -2203,7 +2195,7 @@ class RailgunEngine extends EventEmitter {
 
   static decodeAddress = decodeAddress;
 
-  railgunSmartWalletContracts = ContractStore.railgunSmartWalletContracts;
+  railgunSmartWalletContracts = ContractStore.railgunSmartWalletV2Contracts;
 
   relayAdaptV2Contracts = ContractStore.relayAdaptV2Contracts;
 }

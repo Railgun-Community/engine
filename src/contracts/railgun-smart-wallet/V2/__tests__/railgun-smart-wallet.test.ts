@@ -141,6 +141,7 @@ describe('railgun-smart-wallet', function runTests() {
       config.contracts.poseidonMerkleAccumulatorV3,
       config.contracts.poseidonMerkleVerifierV3,
       config.contracts.tokenVaultV3,
+      config.contracts.poseidonMerkleAdaptV3,
       provider,
       pollingProvider,
       { [TXIDVersion.V2_PoseidonMerkle]: 0, [TXIDVersion.V3_PoseidonMerkle]: 0 },
@@ -291,6 +292,7 @@ describe('railgun-smart-wallet', function runTests() {
         testEncryptionKey,
         () => {},
         true, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
     const tx_initial = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
@@ -337,6 +339,7 @@ describe('railgun-smart-wallet', function runTests() {
         wallet,
         txidVersion,
         testEncryptionKey,
+        [], // crossContractCallsV3
       );
     expect(txs_DummyNullRelayerFee.length).to.equal(2);
     expect(txs_DummyNullRelayerFee.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
@@ -380,6 +383,7 @@ describe('railgun-smart-wallet', function runTests() {
         wallet,
         txidVersion,
         testEncryptionKey,
+        [], // crossContractCallsV3
       );
     expect(txs_DummyActualRelayerFee.length).to.equal(2);
     expect(txs_DummyActualRelayerFee.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
@@ -424,6 +428,7 @@ describe('railgun-smart-wallet', function runTests() {
         testEncryptionKey,
         () => {},
         false, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
     expect(txs_ActualTransaction.length).to.equal(2);
     expect(txs_ActualTransaction.map((tx) => tx.nullifiers.length)).to.deep.equal([1, 1]);
@@ -628,6 +633,7 @@ describe('railgun-smart-wallet', function runTests() {
         testEncryptionKey,
         () => {},
         false, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
@@ -831,6 +837,7 @@ describe('railgun-smart-wallet', function runTests() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
@@ -1160,6 +1167,7 @@ describe('railgun-smart-wallet', function runTests() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,

@@ -121,6 +121,7 @@ describe('railgun-smart-wallet-events', function runTests() {
       '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9', // placeholder
       '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9', // placeholder
       '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9', // placeholder
+      '0xfa7093cdd9ee6932b4eb2c9e1cde7ce00b1fa4b9', // placeholder
       provider,
       pollingProvider,
       { [TXIDVersion.V2_PoseidonMerkle]: 0, [TXIDVersion.V3_PoseidonMerkle]: 0 },

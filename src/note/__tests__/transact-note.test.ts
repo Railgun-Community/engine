@@ -325,8 +325,8 @@ describe('transact-note', () => {
     WalletInfo.setWalletSource('tester');
 
     // Load fake contracts
-    ContractStore.railgunSmartWalletContracts[chain.type] = [];
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+    ContractStore.railgunSmartWalletV2Contracts[chain.type] = [];
+    ContractStore.railgunSmartWalletV2Contracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
         new PollingJsonRpcProvider(config.rpc, 1, 500, 1),

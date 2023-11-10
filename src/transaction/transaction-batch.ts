@@ -1,4 +1,4 @@
-import { BigNumberish } from 'ethers';
+import { BigNumberish, ContractTransaction } from 'ethers';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover } from '../prover/prover';
 import { HashZero } from '../utils/bytes';
@@ -31,7 +31,7 @@ import { POI } from '../poi';
 import { PoseidonMerkleVerifier } from '../abi/typechain';
 import { Memo } from '../note';
 import WalletInfo from '../wallet/wallet-info';
-import { ZERO_ADDRESS } from '../utils';
+import { RailgunVersionedSmartContracts } from '../contracts';
 
 export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 9000;
 
@@ -89,7 +89,7 @@ export class TransactionBatch {
       : BigInt(0);
   }
 
-  setAdaptID(adaptID: AdaptID) {
+  setAdaptIDV2(adaptID: AdaptID) {
     this.adaptID = adaptID;
   }
 
@@ -369,6 +369,7 @@ export class TransactionBatch {
     encryptionKey: string,
     progressCallback: (progress: number, status: string) => void,
     shouldGeneratePreTransactionPOIs: boolean,
+    crossContractCallsV3: ContractTransaction[],
     originShieldTxidForSpendabilityOverride?: string,
   ): Promise<{
     provedTransactions: (TransactionStructV2 | TransactionStructV3)[];
@@ -416,6 +417,11 @@ export class TransactionBatch {
     const { walletSource } = WalletInfo;
     const orderedOutputTypes = transactionDatas.map(({ outputTypes }) => outputTypes).flat();
 
+    const relayAdaptV3Calldata = RailgunVersionedSmartContracts.getRelayAdaptV3Calldata(
+      txidVersion,
+      this.chain,
+      crossContractCallsV3,
+    );
     const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
       minGasPrice: this.overallBatchMinGasPrice,
       chainID: this.chain.id,
@@ -424,8 +430,8 @@ export class TransactionBatch {
         orderedOutputTypes,
         wallet.viewingKeyPair.privateKey,
       ),
-      to: ZERO_ADDRESS, // TODO-V3: Add RelayAdapt contract address
-      data: '0x', // TODO-V3: Add RelayAdapt encoded calldata
+      to: relayAdaptV3Calldata.to,
+      data: relayAdaptV3Calldata.data,
     };
 
     for (let index = 0; index < transactionDatas.length; index += 1) {
@@ -554,6 +560,7 @@ export class TransactionBatch {
     wallet: RailgunWallet,
     txidVersion: TXIDVersion,
     encryptionKey: string,
+    crossContractCallsV3: ContractTransaction[],
     originShieldTxidForSpendabilityOverride?: string,
   ): Promise<(TransactionStructV2 | TransactionStructV3)[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
@@ -563,12 +570,17 @@ export class TransactionBatch {
     );
     TransactionBatch.logDummySpendingSolutionGroupsSummary(spendingSolutionGroups);
 
+    const relayAdaptV3Calldata = RailgunVersionedSmartContracts.getRelayAdaptV3Calldata(
+      txidVersion,
+      this.chain,
+      crossContractCallsV3,
+    );
     const globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
       minGasPrice: this.overallBatchMinGasPrice,
       chainID: this.chain.id,
       senderCiphertext: '0x',
-      to: ZERO_ADDRESS, // TODO-V3: Add RelayAdapt contract address
-      data: '0x', // TODO-V3: Add RelayAdapt encoded calldata
+      to: relayAdaptV3Calldata.to,
+      data: relayAdaptV3Calldata.data,
     };
 
     const dummyProvedTransactionPromises: Promise<TransactionStructV2 | TransactionStructV3>[] =

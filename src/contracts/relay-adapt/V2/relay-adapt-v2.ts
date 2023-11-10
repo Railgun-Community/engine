@@ -8,6 +8,7 @@ import {
   Result,
   Log,
   toUtf8String,
+  keccak256,
 } from 'ethers';
 import { ABIRelayAdapt } from '../../../abi/abi';
 import { TransactionReceiptLog } from '../../../models/formatted-types';
@@ -20,6 +21,7 @@ import { RelayAdapt } from '../../../abi/typechain/RelayAdapt';
 import { PayableOverrides } from '../../../abi/typechain/common';
 import { TransactionStructV2 } from '../../../models/transaction-types';
 import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
+import { hexToBytes } from '../../../utils/bytes';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -95,7 +97,7 @@ export class RelayAdaptV2Contract {
     ]);
   }
 
-  async getRelayAdaptParamsUnshieldBaseToken(
+  async getRelayAdaptV2ParamsUnshieldBaseToken(
     dummyTransactions: TransactionStructV2[],
     unshieldAddress: string,
     random: string,
@@ -105,7 +107,7 @@ export class RelayAdaptV2Contract {
     );
 
     const requireSuccess = true;
-    return RelayAdaptHelper.getRelayAdaptParams(
+    return RelayAdaptV2Contract.getRelayAdaptParams(
       dummyTransactions,
       random,
       requireSuccess,
@@ -156,7 +158,7 @@ export class RelayAdaptV2Contract {
     return !continueAfterMulticallFailure;
   }
 
-  async getRelayAdaptParamsCrossContractCalls(
+  async getRelayAdaptV2ParamsCrossContractCalls(
     dummyUnshieldTransactions: TransactionStructV2[],
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
@@ -181,7 +183,7 @@ export class RelayAdaptV2Contract {
     const minGasLimitForContract =
       RelayAdaptV2Contract.getMinimumGasLimitForContract(minimumGasLimit);
 
-    return RelayAdaptHelper.getRelayAdaptParams(
+    return RelayAdaptV2Contract.getRelayAdaptParams(
       dummyUnshieldTransactions,
       random,
       requireSuccess,
@@ -190,7 +192,7 @@ export class RelayAdaptV2Contract {
     );
   }
 
-  async populateCrossContractCalls(
+  async populateV2CrossContractCalls(
     unshieldTransactions: TransactionStructV2[],
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
@@ -226,6 +228,38 @@ export class RelayAdaptV2Contract {
     populatedTransaction.gasLimit = minimumGasLimit;
 
     return populatedTransaction;
+  }
+
+  /**
+   * Get relay adapt params hash.
+   * Hashes transaction data and params to ensure that transaction is not modified by MITM.
+   *
+   * @param transactions - serialized transactions
+   * @param random - random value
+   * @param requireSuccess - require success on calls
+   * @param calls - calls list
+   * @returns adapt params
+   */
+  static getRelayAdaptParams(
+    transactions: TransactionStructV2[],
+    random: string,
+    requireSuccess: boolean,
+    calls: ContractTransaction[],
+    minGasLimit = BigInt(0),
+  ): string {
+    const nullifiers = transactions.map((transaction) => transaction.nullifiers);
+    const actionData = RelayAdaptHelper.getActionData(random, requireSuccess, calls, minGasLimit);
+
+    const preimage = AbiCoder.defaultAbiCoder().encode(
+      [
+        'bytes32[][] nullifiers',
+        'uint256 transactionsLength',
+        'tuple(bytes31 random, bool requireSuccess, uint256 minGasLimit, tuple(address to, bytes data, uint256 value)[] calls) actionData',
+      ],
+      [nullifiers, transactions.length, actionData],
+    );
+
+    return keccak256(hexToBytes(preimage));
   }
 
   static getMinimumGasLimitForContract(minimumGasLimit: bigint) {

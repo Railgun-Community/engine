@@ -326,6 +326,7 @@ describe('railgun-engine', function test() {
       config.contracts.poseidonMerkleAccumulatorV3,
       config.contracts.poseidonMerkleVerifierV3,
       config.contracts.tokenVaultV3,
+      config.contracts.poseidonMerkleAdaptV3,
       provider,
       pollingProvider,
       { [TXIDVersion.V2_PoseidonMerkle]: 24, [TXIDVersion.V3_PoseidonMerkle]: 24 },
@@ -572,6 +573,7 @@ describe('railgun-engine', function test() {
           // console.log(progress, status);
         },
         true, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
 
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList).length).to.equal(1);
@@ -848,6 +850,7 @@ describe('railgun-engine', function test() {
         testEncryptionKey,
         () => {},
         true, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
     expect(provedTransactions.length).to.equal(1);
     expect(provedTransactions[0].nullifiers.length).to.equal(1);
@@ -1093,6 +1096,7 @@ describe('railgun-engine', function test() {
         testEncryptionKey,
         () => {},
         true, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
@@ -1354,6 +1358,7 @@ describe('railgun-engine', function test() {
         testEncryptionKey,
         () => {},
         true, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       );
 
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList).length).to.equal(1);

@@ -4,10 +4,10 @@ import { PoseidonMerkleAccumulatorContract } from './railgun-smart-wallet/V3/pos
 import { PoseidonMerkleVerifierContract } from './railgun-smart-wallet/V3/poseidon-merkle-verifier';
 import { TokenVaultContract } from './railgun-smart-wallet/V3/token-vault-contract';
 import { RelayAdaptV2Contract } from './relay-adapt/V2/relay-adapt-v2';
-import { RelayAdaptV3Contract } from './relay-adapt/V3/relay-adapt-v3';
+import { PoseidonMerkleAdaptV3Contract } from './relay-adapt/V3/poseidon-merkle-adapt-v3';
 
 export class ContractStore {
-  static readonly railgunSmartWalletContracts: RailgunSmartWalletContract[][] = [];
+  static readonly railgunSmartWalletV2Contracts: RailgunSmartWalletContract[][] = [];
 
   static readonly relayAdaptV2Contracts: RelayAdaptV2Contract[][] = [];
 
@@ -17,11 +17,11 @@ export class ContractStore {
 
   static readonly tokenVaultV3Contracts: TokenVaultContract[][] = [];
 
-  static readonly relayAdaptV3Contracts: RelayAdaptV3Contract[][] = [];
+  static readonly poseidonMerkleAdaptV3Contracts: PoseidonMerkleAdaptV3Contract[][] = [];
 
   static getRailgunSmartWalletContract(chain: Chain): RailgunSmartWalletContract {
     try {
-      return this.railgunSmartWalletContracts[chain.type][chain.id];
+      return this.railgunSmartWalletV2Contracts[chain.type][chain.id];
     } catch (cause) {
       throw new Error('No RailgunSmartWalletContract loaded.', { cause });
     }
@@ -35,11 +35,11 @@ export class ContractStore {
     }
   }
 
-  static getRelayAdaptV3Contract(chain: Chain): RelayAdaptV3Contract {
+  static getPoseidonMerkleAdaptV3Contract(chain: Chain): PoseidonMerkleAdaptV3Contract {
     try {
-      return this.relayAdaptV3Contracts[chain.type][chain.id];
+      return this.poseidonMerkleAdaptV3Contracts[chain.type][chain.id];
     } catch (cause) {
-      throw new Error('No RelayAdaptV3Contract loaded.', { cause });
+      throw new Error('No PoseidonMerkleAdaptV3Contract loaded.', { cause });
     }
   }
 

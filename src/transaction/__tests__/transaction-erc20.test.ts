@@ -124,8 +124,8 @@ describe('transaction-erc20', function test() {
     POI.setLaunchBlock(chain, 0);
 
     // Load fake contract
-    ContractStore.railgunSmartWalletContracts[chain.type] = [];
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+    ContractStore.railgunSmartWalletV2Contracts[chain.type] = [];
+    ContractStore.railgunSmartWalletV2Contracts[chain.type][chain.id] =
       new RailgunSmartWalletContract(
         config.contracts.proxy,
         new PollingJsonRpcProvider('abc', 1, 500),
@@ -885,6 +885,7 @@ describe('transaction-erc20', function test() {
         testEncryptionKey,
         () => {},
         false, // shouldGeneratePreTransactionPOIs
+        [], // crossContractCallsV3
       ),
     ).to.eventually.be.rejectedWith('Can not add more than 5 outputs.');
 
@@ -982,6 +983,7 @@ describe('transaction-erc20', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     expect(txs.length).to.equal(1);
     expect(txs[0].nullifiers.length).to.equal(1);
@@ -997,6 +999,7 @@ describe('transaction-erc20', function test() {
       testEncryptionKey,
       () => {},
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     expect(txs2.length).to.equal(1);
     expect(txs2[0].nullifiers.length).to.equal(1);
@@ -1014,6 +1017,7 @@ describe('transaction-erc20', function test() {
         loadProgress = progress;
       },
       false, // shouldGeneratePreTransactionPOIs
+      [], // crossContractCallsV3
     );
     expect(loadProgress).to.equal(100);
   });
@@ -1025,6 +1029,7 @@ describe('transaction-erc20', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
     );
     expect(txs.length).to.equal(1);
     expect(txs[0].nullifiers.length).to.equal(1);
@@ -1049,6 +1054,7 @@ describe('transaction-erc20', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
+      [], // crossContractCallsV3
       '0xc97a2d06ceb87f81752bd58310e4aca822ae18a747e4dde752020e0b308a3aee', // originShieldTxidForSpendabilityOverride
     );
     expect(txs.length).to.equal(1);
@@ -1061,6 +1067,7 @@ describe('transaction-erc20', function test() {
         wallet,
         txidVersion,
         testEncryptionKey,
+        [], // crossContractCallsV3
         ZERO_32_BYTE_VALUE, // originShieldTxidForSpendabilityOverride
       ),
     ).to.be.rejectedWith(

@@ -2,5 +2,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export { PoseidonMerkleAccumulator__factory } from "./PoseidonMerkleAccumulator__factory";
+export { PoseidonMerkleAdapt__factory } from "./PoseidonMerkleAdapt__factory";
 export { PoseidonMerkleVerifier__factory } from "./PoseidonMerkleVerifier__factory";
 export { TokenVault__factory } from "./TokenVault__factory";
