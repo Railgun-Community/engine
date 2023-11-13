@@ -890,13 +890,15 @@ class RailgunEngine extends EventEmitter {
         latestRailgunTransaction?.graphID,
       );
 
-      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.4); // 40%
+      const txidMerkletreeStartScanPercentage = 0.4; // 40%
+      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, txidMerkletreeStartScanPercentage);
 
       await this.handleNewRailgunTransactionsV2(
         txidVersion,
         chain,
         railgunTransactions,
         latestRailgunTransaction?.verificationHash,
+        txidMerkletreeStartScanPercentage,
       );
 
       const scanCompleteData: MerkletreeHistoryScanEventData = {
@@ -939,6 +941,8 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     railgunTransactions: RailgunTransactionV2[],
     latestVerificationHash?: string,
+    startScanPercentage: number,
+    endScanPercentage: number,
   ) {
     const latestValidatedTxidIndex = await this.getLatestValidatedTxidIndex(txidVersion, chain);
     EngineDebug.log(
@@ -975,6 +979,7 @@ class RailgunEngine extends EventEmitter {
 
     let previousVerificationHash = latestVerificationHash;
 
+    // TODO-PETE: At bottom of this, update the scan percentage based on index out of railgunTransactions
     // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransaction of railgunTransactions) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
