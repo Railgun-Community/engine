@@ -1228,12 +1228,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     const listKeys = POI.getListKeysCanSubmitLegacyTransactEvents(TXOs);
 
-    await POI.submitLegacyTransactProofs(
-      txidVersion,
-      chain,
-      listKeys,
-      legacyTransactProofDatas.slice(0, 100), // 100 max in request
-    );
+    await POI.submitLegacyTransactProofs(txidVersion, chain, listKeys, legacyTransactProofDatas);
 
     // Delay slightly, so POI queue can index the events. Refresh after submitting all legacy events.
     await delay(1000);
@@ -1302,7 +1297,7 @@ abstract class AbstractWallet extends EventEmitter {
     }
 
     const blindedCommitmentDatas: BlindedCommitmentData[] = txosNeedCreationPOIs
-      .slice(0, 100) // 100 max in request
+      .slice(0, 1000) // 1000 max in request
       .map((txo) => ({
         type: isTransactCommitmentType(txo.commitmentType)
           ? BlindedCommitmentType.Transact
@@ -1441,7 +1436,7 @@ abstract class AbstractWallet extends EventEmitter {
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
       txidVersion,
       chain,
-      blindedCommitmentDatas.slice(0, 100), // 100 max in request
+      blindedCommitmentDatas.slice(0, 1000), // 1000 max in request
     );
 
     // eslint-disable-next-line no-restricted-syntax
