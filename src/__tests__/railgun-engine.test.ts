@@ -1470,11 +1470,11 @@ describe('railgun-engine', function test() {
     };
     let lastSyncedBlock = await engine.getLastSyncedBlock(txidVersion, chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setTxidMerkletreeHistoryVersion(chainForSyncedBlock, 100);
-    lastSyncedBlock = await engine.getTxidMerkletreeHistoryVersion(chainForSyncedBlock);
+    await engine.setTxidV2MerkletreeHistoryVersion(chainForSyncedBlock, 100);
+    lastSyncedBlock = await engine.getTxidV2MerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setTxidMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
-    lastSyncedBlock = await engine.getTxidMerkletreeHistoryVersion(chainForSyncedBlock);
+    await engine.setTxidV2MerkletreeHistoryVersion(chainForSyncedBlock, 100000);
+    lastSyncedBlock = await engine.getTxidV2MerkletreeHistoryVersion(chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
