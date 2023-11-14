@@ -891,6 +891,7 @@ class RailgunEngine extends EventEmitter {
       );
 
       const txidMerkletreeStartScanPercentage = 0.4; // 40%
+      const txidMerkletreeEndScanPercentage = 0.99; // 99%
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, txidMerkletreeStartScanPercentage);
 
       await this.handleNewRailgunTransactionsV2(
@@ -899,6 +900,7 @@ class RailgunEngine extends EventEmitter {
         railgunTransactions,
         latestRailgunTransaction?.verificationHash,
         txidMerkletreeStartScanPercentage,
+        txidMerkletreeEndScanPercentage,
       );
 
       const scanCompleteData: MerkletreeHistoryScanEventData = {
@@ -940,7 +942,7 @@ class RailgunEngine extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransactionV2[],
-    latestVerificationHash?: string,
+    latestVerificationHash: Optional<string>,
     startScanPercentage: number,
     endScanPercentage: number,
   ) {
@@ -979,9 +981,16 @@ class RailgunEngine extends EventEmitter {
 
     let previousVerificationHash = latestVerificationHash;
 
-    // TODO-PETE: At bottom of this, update the scan percentage based on index out of railgunTransactions
+    const emitNewRailgunTransactionsProgress = (progress: number) => {
+      const overallProgress =
+        progress * (endScanPercentage - startScanPercentage) + startScanPercentage;
+      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress);
+    };
+
+    const railgunTransactionsLength = railgunTransactions.length;
+
     // eslint-disable-next-line no-restricted-syntax
-    for (const railgunTransaction of railgunTransactions) {
+    for (const [index, railgunTransaction] of railgunTransactions.entries()) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
       if (railgunTransactionWithTxid.version !== RailgunTransactionVersion.V2) {
         return;
@@ -1115,6 +1124,9 @@ class RailgunEngine extends EventEmitter {
       previousVerificationHash = expectedVerificationHash;
 
       toQueue.push(railgunTransactionWithTxid);
+
+      const progress = index / railgunTransactionsLength;
+      emitNewRailgunTransactionsProgress(progress);
     }
 
     await txidMerkletree.queueRailgunTransactions(toQueue, latestValidatedTxidIndex);
