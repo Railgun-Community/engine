@@ -806,7 +806,9 @@ abstract class AbstractWallet extends EventEmitter {
         ),
         transactCreationRailgunTxid: 'railgunTxid' in leaf ? leaf.railgunTxid : undefined,
       };
-      EngineDebug.log(`Adding RECEIVE commitment at ${position} (Wallet ${this.id}).`);
+      EngineDebug.log(
+        `Adding RECEIVE commitment at ${position} (Wallet ${this.id}). Chain: ${chain.id}`,
+      );
       scannedCommitments.push({
         type: 'put',
         key: this.getWalletReceiveCommitmentDBPrefix(chain, tree, position).join(':'),
@@ -832,7 +834,9 @@ abstract class AbstractWallet extends EventEmitter {
         ),
         railgunTxid: 'railgunTxid' in leaf ? leaf.railgunTxid : undefined,
       };
-      EngineDebug.log(`Adding SPEND commitment at ${position} (Wallet ${this.id}).`);
+      EngineDebug.log(
+        `Adding SPEND commitment at ${position} (Wallet ${this.id}). Chain: ${chain.id}`,
+      );
       scannedCommitments.push({
         type: 'put',
         key: this.getWalletSentCommitmentDBPrefix(chain, tree, position).join(':'),
