@@ -39,6 +39,7 @@ import {
 import { TestPOINodeInterface } from '../../test/test-poi-node-interface.test';
 import { TokenDataGetter } from '../../token/token-data-getter';
 import { RailgunVersionedSmartContracts } from '../../contracts/railgun-smart-wallet/railgun-versioned-smart-contracts';
+import { isDefined } from '../../utils/is-defined';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -138,6 +139,15 @@ describe('extract-transaction-data', () => {
       undefined,
     );
 
+    const tokenAddressHexlify = hexlify(padToLength(MOCK_TOKEN_ADDRESS, 32));
+
+    await createEngineWalletBalancesStub(railgunWallet.addressKeys, tokenAddressHexlify, TREE);
+    createEngineVerifyProofStub();
+
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+      return;
+    }
+
     const provider = new PollingJsonRpcProvider(config.rpc, config.chainId, 100);
     chain = {
       type: ChainType.EVM,
@@ -158,11 +168,6 @@ describe('extract-transaction-data', () => {
       0,
       !isV2Test(), // supportsV3
     );
-
-    const tokenAddressHexlify = hexlify(padToLength(MOCK_TOKEN_ADDRESS, 32));
-
-    await createEngineWalletBalancesStub(railgunWallet.addressKeys, tokenAddressHexlify, TREE);
-    createEngineVerifyProofStub();
   });
 
   beforeEach(() => {
@@ -204,7 +209,12 @@ describe('extract-transaction-data', () => {
     ]);
   });
 
-  it('Should extract fee correctly - transfer', async () => {
+  it('[HH] Should extract fee correctly - transfer', async function run() {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+      this.skip();
+      return;
+    }
+
     const fee = BigInt('1000');
     const senderAddressData = RailgunEngine.decodeAddress(
       '0zk1qy00025qjn7vw0mvu4egcxlkjv3nkemeat92qdlh3lzl4rpzxv9f8rv7j6fe3z53ll2adx8kn0lj0ucjkz4xxyax8l9mpqjgrf9z3zjvlvqr4qxgznrpqugcjt8',
@@ -234,7 +244,12 @@ describe('extract-transaction-data', () => {
     expect(firstNoteERC20AmountMap[MOCK_TOKEN_ADDRESS.toLowerCase()]).to.equal(1000n);
   }).timeout(60000);
 
-  it('Should fail for incorrect receiver address - transfer', async () => {
+  it('[HH] Should fail for incorrect receiver address - transfer', async function run() {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+      this.skip();
+      return;
+    }
+
     const fee = BigInt('1000');
     const receiverAddressData = RailgunEngine.decodeAddress(
       '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
@@ -266,7 +281,12 @@ describe('extract-transaction-data', () => {
     expect(Object.keys(firstNoteERC20AmountMap).length).to.equal(0);
   }).timeout(60000);
 
-  it('Should extract fee correctly - relay adapt', async () => {
+  it('[HH] Should extract fee correctly - relay adapt', async function run() {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+      this.skip();
+      return;
+    }
+
     const fee = BigInt('1000');
     const senderAddressData = RailgunEngine.decodeAddress(
       '0zk1qy00025qjn7vw0mvu4egcxlkjv3nkemeat92qdlh3lzl4rpzxv9f8rv7j6fe3z53ll2adx8kn0lj0ucjkz4xxyax8l9mpqjgrf9z3zjvlvqr4qxgznrpqugcjt8',
@@ -298,7 +318,12 @@ describe('extract-transaction-data', () => {
     expect(firstNoteERC20AmountMap[MOCK_TOKEN_ADDRESS.toLowerCase()]).to.equal(1000n);
   }).timeout(60000);
 
-  it('Should fail for incorrect receiver address - relay adapt', async () => {
+  it('[HH] Should fail for incorrect receiver address - relay adapt', async function run() {
+    if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
+      this.skip();
+      return;
+    }
+
     const fee = BigInt('1000');
     const receiverAddressData = RailgunEngine.decodeAddress(
       '0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts',
