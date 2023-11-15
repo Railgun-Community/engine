@@ -4,7 +4,7 @@ import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
-import { BigNumberish } from 'ethers';
+import { BigNumberish, ContractTransaction } from 'ethers';
 import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
@@ -114,6 +114,7 @@ import {
   POIEngineProofInputs,
   POIsPerList,
   PreTransactionPOI,
+  PreTransactionPOIsPerTxidLeafPerList,
   TXIDVersion,
 } from '../models/poi-types';
 import {
@@ -138,6 +139,8 @@ import {
   getRailgunTransactionIDFromBigInts,
   getRailgunTxidLeafHash,
 } from '../transaction/railgun-txid';
+import { ExtractedRailgunTransactionData } from '../models/transaction-types';
+import { POIValidation } from '../validation/poi-validation';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -1998,6 +2001,32 @@ abstract class AbstractWallet extends EventEmitter {
       EngineDebug.error(new Error(`Error generating proof - txid ${railgunTxid}: ${err.message}`));
       throw err;
     }
+  }
+
+  async isValidSpendableTransaction(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    verifierContractAddress: string,
+    transactionRequest: ContractTransaction,
+    useRelayAdapt: boolean,
+    pois: PreTransactionPOIsPerTxidLeafPerList,
+  ): Promise<{
+    isValid: boolean;
+    error?: string;
+    extractedRailgunTransactionData?: ExtractedRailgunTransactionData;
+  }> {
+    return POIValidation.isValidSpendableTransaction(
+      txidVersion,
+      chain,
+      this.prover,
+      transactionRequest,
+      useRelayAdapt,
+      verifierContractAddress,
+      pois,
+      this.getViewingKeyPair().privateKey,
+      this.addressKeys,
+      this.tokenDataGetter,
+    );
   }
 
   private static async getListPOIMerkleProofs(
