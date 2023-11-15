@@ -2007,7 +2007,7 @@ abstract class AbstractWallet extends EventEmitter {
   async isValidSpendableTransaction(
     txidVersion: TXIDVersion,
     chain: Chain,
-    verifierContractAddress: string,
+    contractAddress: string,
     transactionRequest: ContractTransaction,
     useRelayAdapt: boolean,
     pois: PreTransactionPOIsPerTxidLeafPerList,
@@ -2022,7 +2022,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.prover,
       transactionRequest,
       useRelayAdapt,
-      verifierContractAddress,
+      contractAddress,
       pois,
       this.getViewingKeyPair().privateKey,
       this.addressKeys,
