@@ -611,8 +611,9 @@ export const processAccumulatorEvent = async (
 
     // Trigger wallet scans after all events are processed.
     await triggerWalletBalanceDecryptions(txidVersion);
-  } catch (err) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  } catch (cause) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const err = new Error('Failed to process V3 accumulator update event', { cause });
     EngineDebug.error(err);
     throw err;
   }

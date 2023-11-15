@@ -392,9 +392,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
         this.getPOILaunchSnapshotNodeDBPath(level),
         'json',
       )) as POILaunchSnapshotNode;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown in getPOILaunchSnapshotNode', { cause });
       }
       return undefined;
     }
@@ -570,9 +570,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
         this.getHistoricalMerklerootDBPath(tree, index),
       )) as string;
       return merkleroot;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown in getHistoricalMerkleroot', { cause });
       }
       return undefined;
     }

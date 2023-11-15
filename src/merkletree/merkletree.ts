@@ -237,12 +237,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       await this.db.put(this.getDataDBPath(tree, index), data, 'json');
 
       this.lockUpdates = false;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown in Merkletree updateData', { cause });
       }
       this.lockUpdates = false;
-      throw new Error(err.message);
+      throw new Error('Failed to update merkletree data', { cause });
     }
   }
 
@@ -250,11 +250,11 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     try {
       const data = (await this.db.get(this.getDataDBPath(tree, index), 'json')) as T;
       return data;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown in Merkletree getData', { cause });
       }
-      throw new Error(err.message);
+      throw new Error('Failed to get merkletree data', { cause });
     }
   }
 
@@ -334,14 +334,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   async storeMerkletreesMetadata(metadata: MerkletreesMetadata): Promise<void> {
     try {
       await this.db.put(this.getMerkletreeDBPrefix(), msgpack.encode(metadata));
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown in Merkletree storeMerkletreesMetadata', { cause });
       }
       if (EngineDebug.isTestRun()) {
         return;
       }
-      throw new Error(err.message);
+      throw new Error('Failed to store merkletrees metadata', { cause });
     }
   }
 
@@ -696,14 +696,15 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
           EngineDebug.log(`${processWriteQueuePrefix} No more events to process.`);
           break;
         }
-      } catch (err) {
-        if (!(err instanceof Error)) {
-          EngineDebug.log(`${processWriteQueuePrefix} Unknown error found.`);
+      } catch (cause) {
+        if (!(cause instanceof Error)) {
+          EngineDebug.log(`${processWriteQueuePrefix} Unknown error found. ${cause as string}`);
           return;
         }
         const ignoreInTests = true;
+        const err = new Error('Failed to process merkletree write queue', { cause });
         EngineDebug.error(err, ignoreInTests);
-        if (err.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE)) {
+        if (cause.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE)) {
           const nextProcessingGroupSize = Merkletree.nextProcessingGroupSize(processingGroupSize);
           if (nextProcessingGroupSize) {
             EngineDebug.log(
@@ -718,7 +719,6 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
           }
         } else {
           // Unknown error.
-          EngineDebug.error(err);
           EngineDebug.log(
             `${processWriteQueuePrefix} Unable to process more events. Unknown error.`,
           );

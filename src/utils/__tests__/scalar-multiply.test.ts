@@ -14,7 +14,7 @@ describe('scalar-multiply', () => {
     ]);
     const scalar = 10928541092740192740192704n;
     expect(() => scalarMultiplyWasmFallbackToJavascript(point, scalar)).to.throw(
-      /invalid y coordinate/,
+      /scalarMultiply failed/,
     );
   });
 });

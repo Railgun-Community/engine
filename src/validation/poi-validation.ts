@@ -62,13 +62,13 @@ export class POIValidation {
       }
 
       return { isValid: true, extractedRailgunTransactionData };
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown from isValidSpendableTransaction', { cause });
       }
       return {
         isValid: false,
-        error: `Could not validate spendable TXID: ${err.message}`,
+        error: `Could not validate spendable TXID: ${cause.message}`,
       };
     }
   }

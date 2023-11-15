@@ -257,12 +257,12 @@ export class RelayAdaptV3Contract {
     try {
       const gasEstimate = await provider.estimateGas(transaction);
       return gasEstimate;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown from estimateGas', { cause });
       }
       const { callFailedIndexString, errorMessage } =
-        RelayAdaptV3Contract.extractGasEstimateCallFailedIndexAndErrorText(err.message);
+        RelayAdaptV3Contract.extractGasEstimateCallFailedIndexAndErrorText(cause.message);
       throw new Error(
         `RelayAdapt multicall failed at index ${callFailedIndexString} with ${errorMessage}`,
       );
@@ -357,12 +357,13 @@ export class RelayAdaptV3Contract {
           }
         }
       }
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown from getRelayAdaptCallError.', { cause });
       }
+      const err = new Error('Relay Adapt log parsing error', { cause });
       EngineDebug.error(err);
-      throw new Error(`Relay Adapt log parsing error: ${err.message}.`);
+      throw err;
     }
     return undefined;
   }
