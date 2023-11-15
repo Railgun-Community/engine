@@ -67,6 +67,20 @@ export class RailgunVersionedSmartContracts {
     throw new Error('Unsupported txidVersion');
   }
 
+  static getRelayAdaptContract(txidVersion: TXIDVersion, chain: Chain) {
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
+        return contractV2;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        const contractV3TokenVault = ContractStore.getRelayAdaptV3Contract(chain);
+        return contractV3TokenVault;
+      }
+    }
+    throw new Error('Unsupported txidVersion');
+  }
+
   static getHistoricalEvents(
     txidVersion: TXIDVersion,
     chain: Chain,
