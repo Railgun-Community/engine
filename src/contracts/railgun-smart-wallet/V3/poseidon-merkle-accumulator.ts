@@ -87,8 +87,9 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
       //   );
       // }
       return isValidMerkleroot;
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      const err = new Error('Failed to validate V3 Poseidon merkleroot', { cause });
+      EngineDebug.error(err);
       throw err;
     }
   }
@@ -156,11 +157,12 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
         args: recursivelyDecodeResult(event.args as unknown as Result),
       }));
       return eventsWithDecodedArgs;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error was thrown during scanAllUpdateV3Events', {cause})
       }
-      if (retryCount < MAX_SCAN_RETRIES && err.message === SCAN_TIMEOUT_ERROR_MESSAGE) {
+      const err = new Error('Failed to scan all V3 update events', { cause });
+      if (retryCount < MAX_SCAN_RETRIES && cause.message === SCAN_TIMEOUT_ERROR_MESSAGE) {
         const retry = retryCount + 1;
         EngineDebug.log(
           `[Chain ${this.chain.type}:${

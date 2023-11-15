@@ -17,13 +17,13 @@ const initCurve25519Wasm = (): Promise<void> => {
   try {
     // Try WASM implementation.
     return typeof initCurve25519wasm === 'function' ? initCurve25519wasm() : Promise.resolve();
-  } catch (err) {
-    if (!(err instanceof Error)) {
-      throw err;
+  } catch (cause) {
+    if (!(cause instanceof Error)) {
+      throw new Error('Non-error thrown from initCurve25519Wasm', { cause });
     }
     // Fallback to Javascript. No init needed.
     EngineDebug.log('curve25519-scalarmult-wasm init failed: Fallback to JavaScript');
-    EngineDebug.error(err);
+    EngineDebug.error(cause);
     return Promise.resolve();
   }
 };
@@ -41,17 +41,17 @@ export const scalarMultiplyWasmFallbackToJavascript = (
     // Try WASM implementation.
     const scalarUint8Array = nToBytes(scalar, ByteLength.UINT_256);
     return scalarMultiplyWasm(point, scalarUint8Array);
-  } catch (err) {
-    if (!(err instanceof Error)) {
-      throw err;
+  } catch (cause) {
+    if (!(cause instanceof Error)) {
+      throw new Error('Non-error thrown from scalarMultiplyWasmFallbackToJavascript', { cause });
     }
-    if (err.message.includes('invalid y coordinate')) {
+    if (cause.message.includes('invalid y coordinate')) {
       // Noble/ed25519 would also throw this error, so no need to call Noble
-      throw err;
+      throw new Error('scalarMultiply failed', { cause });
     }
     // Fallback to Javascript.
     EngineDebug.log('curve25519-scalarmult-wasm scalarMultiply failed: Fallback to JavaScript');
-    EngineDebug.error(err);
+    EngineDebug.error(cause);
     return scalarMultiplyJavascript(point, scalar);
   }
 };

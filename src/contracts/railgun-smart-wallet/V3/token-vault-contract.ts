@@ -39,8 +39,9 @@ export class TokenVaultContract {
     try {
       const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
       return await this.contract.tokenIDMapping(formattedTokenHash);
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      const err = new Error('Failed to get V3 NFT token data', { cause });
+      EngineDebug.error(err);
       throw err;
     }
   }

@@ -71,14 +71,14 @@ class Database {
       }
       const key = Database.pathToKey(path);
       await this.level.put(key, value, { valueEncoding: encoding });
-    } catch (err) {
-      if (!(err instanceof Error)) {
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
         return;
       }
-      if (EngineDebug.isTestRun() && err.message.includes('Database is not open')) {
+      if (EngineDebug.isTestRun() && cause.message.includes('Database is not open')) {
         return;
       }
-      throw err;
+      throw new Error('Failed to put value in database', { cause });
     }
   }
 
@@ -120,14 +120,14 @@ class Database {
         EngineDebug.log('Database is clearing a namespace - batch action is dangerous');
       }
       await this.level.batch(ops, { valueEncoding: encoding });
-    } catch (err) {
-      if (!(err instanceof Error)) {
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
         return;
       }
-      if (EngineDebug.isTestRun() && err.message.includes('Database is not open')) {
+      if (EngineDebug.isTestRun() && cause.message.includes('Database is not open')) {
         return;
       }
-      throw err;
+      throw new Error('Failed to perform batch operation on database', { cause });
     }
   }
 
@@ -211,7 +211,7 @@ class Database {
       this.isClearingNamespace = false;
     } catch (err) {
       this.isClearingNamespace = false;
-      throw err;
+      throw new Error('Failed to clear database namespace', { cause: err });
     }
   }
 

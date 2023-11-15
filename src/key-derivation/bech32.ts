@@ -116,11 +116,11 @@ function decodeAddress(address: string): AddressData {
     };
 
     return result;
-  } catch (err) {
-    if (err instanceof Error && err.message && err.message.includes('Invalid checksum')) {
+  } catch (cause) {
+    if (cause instanceof Error && cause.message && cause.message.includes('Invalid checksum')) {
       throw new Error('Invalid checksum');
     }
-    throw err;
+    throw new Error('Failed to decode bech32 address', { cause });
   }
 }
 

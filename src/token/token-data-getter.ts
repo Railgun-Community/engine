@@ -80,9 +80,9 @@ export class TokenDataGetter {
         'json',
       )) as TokenData;
       return tokenData;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown from getCachedNFTTokenData', { cause });
       }
       return undefined;
     }

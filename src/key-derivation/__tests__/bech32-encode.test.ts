@@ -70,6 +70,6 @@ describe('bech32-encode', () => {
       decodeAddress(
         'rg1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsfhuuw',
       );
-    }).to.throw('Invalid address prefix');
+    }).to.throw('Failed to decode bech32 address');
   });
 });

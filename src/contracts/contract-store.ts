@@ -22,48 +22,48 @@ export class ContractStore {
   static getRailgunSmartWalletContract(chain: Chain): RailgunSmartWalletContract {
     try {
       return this.railgunSmartWalletContracts[chain.type][chain.id];
-    } catch {
-      throw new Error('No RailgunSmartWalletContract loaded.');
+    } catch (cause) {
+      throw new Error('No RailgunSmartWalletContract loaded.', { cause });
     }
   }
 
   static getRelayAdaptV2Contract(chain: Chain): RelayAdaptV2Contract {
     try {
       return this.relayAdaptV2Contracts[chain.type][chain.id];
-    } catch {
-      throw new Error('No RelayAdaptV2Contract loaded.');
+    } catch (cause) {
+      throw new Error('No RelayAdaptV2Contract loaded.', { cause });
     }
   }
 
   static getRelayAdaptV3Contract(chain: Chain): RelayAdaptV3Contract {
     try {
       return this.relayAdaptV3Contracts[chain.type][chain.id];
-    } catch {
-      throw new Error('No RelayAdaptV3Contract loaded.');
+    } catch (cause) {
+      throw new Error('No RelayAdaptV3Contract loaded.', { cause });
     }
   }
 
   static getPoseidonMerkleAccumulatorV3Contract(chain: Chain): PoseidonMerkleAccumulatorContract {
     try {
       return this.poseidonMerkleAccumulatorV3Contracts[chain.type][chain.id];
-    } catch {
-      throw new Error('No PoseidonMerkleAccumulatorV3Contract loaded.');
+    } catch (cause) {
+      throw new Error('No PoseidonMerkleAccumulatorV3Contract loaded.', { cause });
     }
   }
 
   static getPoseidonMerkleVerifierV3Contract(chain: Chain): PoseidonMerkleVerifierContract {
     try {
       return this.poseidonMerkleVerifierV3Contracts[chain.type][chain.id];
-    } catch {
-      throw new Error('No PoseidonMerkleVerifierV3Contract loaded.');
+    } catch (cause) {
+      throw new Error('No PoseidonMerkleVerifierV3Contract loaded.', { cause });
     }
   }
 
   static getTokenVaultV3Contract(chain: Chain): TokenVaultContract {
     try {
       return this.tokenVaultV3Contracts[chain.type][chain.id];
-    } catch {
-      throw new Error('No TokenVaultV3Contract loaded.');
+    } catch (cause) {
+      throw new Error('No TokenVaultV3Contract loaded.', { cause });
     }
   }
 }

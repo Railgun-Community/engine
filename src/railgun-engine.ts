@@ -461,15 +461,12 @@ class RailgunEngine extends EventEmitter {
         await utxoMerkletree.updateTreesFromWriteQueue();
         this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.8); // 40% / 50%
       }
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
-      }
+    } catch (cause) {
       if (retryCount < 1) {
         await this.performQuickSync(txidVersion, chain, endProgress, retryCount + 1);
         return;
       }
-      EngineDebug.error(err);
+      EngineDebug.error(new Error('Failed to quick sync', { cause }));
     }
   }
 
@@ -959,11 +956,11 @@ class RailgunEngine extends EventEmitter {
 
       // Finish
       this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw cause
       }
-      EngineDebug.error(err);
+      EngineDebug.error(new Error('Failed to sync Railgun transactions V2', { cause }));
 
       const scanIncompleteData: MerkletreeHistoryScanEventData = {
         scanStatus: MerkletreeScanStatus.Incomplete,
@@ -1504,10 +1501,13 @@ class RailgunEngine extends EventEmitter {
         10000,
         'Timed out waiting for default RPC provider to connect.',
       );
-    } catch (err) {
-      EngineDebug.error(err as Error);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      throw new Error(err.message);
+    } catch (cause) {
+      const err = new Error(
+        'Failed to get block number from default provider when loading network',
+        { cause },
+      );
+      EngineDebug.error(err);
+      throw err;
     }
 
     assertIsPollingProvider(pollingProvider);
@@ -1517,10 +1517,15 @@ class RailgunEngine extends EventEmitter {
         10000,
         'Timed out waiting for polling RPC provider to connect.',
       );
-    } catch (err) {
-      EngineDebug.error(err as Error);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      throw new Error(err.message);
+    } catch (cause) {
+      const err = new Error(
+        'Failed to get block number from polling provider when loading network',
+        {
+          cause,
+        },
+      );
+      EngineDebug.error(cause as Error);
+      throw err;
     }
 
     if (supportsV3) {

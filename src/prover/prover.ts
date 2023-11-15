@@ -121,9 +121,9 @@ export class Prover {
           );
           progressService.stop();
           return proof;
-        } catch (err) {
+        } catch (cause) {
           progressService.stop();
-          throw err;
+          throw new Error('SnarkJS failed to fullProveRailgun', { cause });
         }
       },
       fullProvePOI: async (
@@ -154,9 +154,9 @@ export class Prover {
           );
           progressService.stop();
           return proof;
-        } catch (err) {
+        } catch (cause) {
           progressService.stop();
-          throw err;
+          throw new Error('SnarkJS failed to fullProvePOI', { cause });
         }
       },
       verify: snarkJSGroth16.verify,
@@ -220,12 +220,12 @@ export class Prover {
         logger.debug(`Proof lapsed ${Date.now() - start} ms`);
 
         return Promise.resolve({ proof });
-      } catch (err) {
-        if (!(err instanceof Error)) {
-          throw err;
+      } catch (cause) {
+        if (!(cause instanceof Error)) {
+          throw new Error('Non-error thrown by native prover fullProveRailgun', { cause });
         }
-        logger.debug(err.message);
-        throw new Error(`Unable to generate proof: ${err.message}`);
+        logger.debug(cause.message);
+        throw new Error('Native-prover failed to fullProveRailgun', { cause });
       }
     };
 
@@ -279,12 +279,12 @@ export class Prover {
         logger.debug(`Proof lapsed ${Date.now() - start} ms`);
 
         return Promise.resolve({ proof });
-      } catch (err) {
-        if (!(err instanceof Error)) {
-          throw err;
+      } catch (cause) {
+        if (!(cause instanceof Error)) {
+          throw new Error('Non-error thrown by native prover fullProvePOI', { cause });
         }
-        logger.debug(err.message);
-        throw new Error(`Unable to generate proof: ${err.message}`);
+        logger.debug(cause.message);
+        throw new Error('Native-prover failed to fullProvePOI', { cause });
       }
     };
 
@@ -595,9 +595,9 @@ export class Prover {
         proof: snarkProof,
         publicInputs,
       };
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error thrown by provePOIForInputsOutputs', { cause });
       }
 
       EngineDebug.log('Formatted POI proof inputs:');
@@ -607,7 +607,7 @@ export class Prover {
       EngineDebug.log('blindedCommitmentsOut');
       EngineDebug.log(JSON.stringify(blindedCommitmentsOut));
 
-      throw new Error(`Unable to generate POI proof: ${err.message}`);
+      throw new Error('Unable to generate POI proof', { cause });
     }
   }
 

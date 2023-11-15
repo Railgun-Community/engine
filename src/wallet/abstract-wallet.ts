@@ -1640,6 +1640,11 @@ abstract class AbstractWallet extends EventEmitter {
             generatePOIsDatas.length,
           );
         } catch (err) {
+          if (!(err instanceof Error)) {
+            throw new Error('Non-error thrown in generatePOIsAllSentCommitmentsAndUnshieldEvents', {
+              cause: err,
+            });
+          }
           // Capture error, but continue with all POIs. Throw the error after.
           generatePOIErrors.push({
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
@@ -1670,9 +1675,13 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       return generatePOIsDatas.length;
-    } catch (err) {
+    } catch (cause) {
       this.generatingPOIsForChain[chain.type][chain.id] = false;
-      EngineDebug.error(err as Error);
+      const err = new Error(
+        'Failed to generate POIs for all sent commitments and unshield events',
+        { cause },
+      );
+      EngineDebug.error(err);
       throw err;
     }
   }
@@ -2004,9 +2013,9 @@ abstract class AbstractWallet extends EventEmitter {
         blindedCommitmentsOut,
         railgunTxidIfHasUnshield,
       );
-    } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-unsafe-member-access
-      EngineDebug.error(new Error(`Error generating proof - txid ${railgunTxid}: ${err.message}`));
+    } catch (cause) {
+      const err = new Error(`Failed to generate POIs for txid ${railgunTxid}`, { cause });
+      EngineDebug.error(err);
       throw err;
     }
   }
@@ -2972,8 +2981,9 @@ abstract class AbstractWallet extends EventEmitter {
         0,
         undefined, // errorMsg
       );
-    } catch (err) {
+    } catch (cause) {
       (this.isRefreshingPOIs[txidVersion] as boolean[][])[chain.type][chain.id] = false;
+      const err = new Error('Failed to refresh POIs', { cause });
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       EngineDebug.error(err, true /* ignoreInTests */);
       throw err;
@@ -3150,8 +3160,8 @@ abstract class AbstractWallet extends EventEmitter {
 
       const spendingPublicKey = unpackPoint(Buffer.from(spendingPublicKeyString, 'hex'));
       return { viewingPrivateKey, spendingPublicKey };
-    } catch (err) {
-      throw new Error('Invalid shareable private key.');
+    } catch (cause) {
+      throw new Error('Invalid shareable private key.', { cause });
     }
   }
 

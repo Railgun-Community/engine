@@ -157,8 +157,9 @@ export class RailgunSmartWalletContract extends EventEmitter {
       //   );
       // }
       return isValidMerkleroot;
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      const err = new Error('Failed to validate V2 merkleroot', { cause });
+      EngineDebug.error(err);
       throw err;
     }
   }
@@ -172,8 +173,9 @@ export class RailgunSmartWalletContract extends EventEmitter {
     try {
       const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
       return await this.contract.tokenIDMapping(formattedTokenHash);
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      const err = new Error('Failed to get NFT token data', { cause });
+      EngineDebug.error(err);
       throw err;
     }
   }
@@ -356,11 +358,12 @@ export class RailgunSmartWalletContract extends EventEmitter {
         args: recursivelyDecodeResult(event.args),
       }));
       return eventsWithDecodedArgs;
-    } catch (err) {
-      if (!(err instanceof Error)) {
-        throw err;
+    } catch (cause) {
+      if (!(cause instanceof Error)) {
+        throw new Error('Non-error was thrown during scanAllEvents', { cause });
       }
-      if (retryCount < MAX_SCAN_RETRIES && err.message === SCAN_TIMEOUT_ERROR_MESSAGE) {
+      const err = new Error('Failed to scan V2 events', { cause });
+      if (retryCount < MAX_SCAN_RETRIES && cause.message === SCAN_TIMEOUT_ERROR_MESSAGE) {
         const retry = retryCount + 1;
         EngineDebug.log(
           `[Chain ${this.chain.type}:${
