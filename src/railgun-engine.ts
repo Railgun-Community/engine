@@ -1125,8 +1125,11 @@ class RailgunEngine extends EventEmitter {
 
       toQueue.push(railgunTransactionWithTxid);
 
-      const progress = index / railgunTransactionsLength;
-      emitNewRailgunTransactionsProgress(progress);
+      // Only emit progress every 30 TXIDs.
+      if (index % 30 === 0) {
+        const progress = index / railgunTransactionsLength;
+        emitNewRailgunTransactionsProgress(progress);
+      }
     }
 
     await txidMerkletree.queueRailgunTransactions(toQueue, latestValidatedTxidIndex);
