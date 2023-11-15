@@ -217,7 +217,14 @@ describe('railgun-engine', function test() {
           utxoBatchStartPosition += transaction.commitments.length;
 
           // eslint-disable-next-line no-await-in-loop
-          await engine.handleNewRailgunTransactionsV2(txidVersion, chain, [railgunTransaction]);
+          await engine.handleNewRailgunTransactionsV2(
+            txidVersion,
+            chain,
+            [railgunTransaction],
+            undefined, // latestVerificationHash
+            0.5, // startScanPercentage
+            0.9, // endScanPercentage
+          );
         }
       }
 

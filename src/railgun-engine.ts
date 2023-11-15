@@ -890,13 +890,17 @@ class RailgunEngine extends EventEmitter {
         latestRailgunTransaction?.graphID,
       );
 
-      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.4); // 40%
+      const txidMerkletreeStartScanPercentage = 0.4; // 40%
+      const txidMerkletreeEndScanPercentage = 0.99; // 99%
+      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, txidMerkletreeStartScanPercentage);
 
       await this.handleNewRailgunTransactionsV2(
         txidVersion,
         chain,
         railgunTransactions,
         latestRailgunTransaction?.verificationHash,
+        txidMerkletreeStartScanPercentage,
+        txidMerkletreeEndScanPercentage,
       );
 
       const scanCompleteData: MerkletreeHistoryScanEventData = {
@@ -938,7 +942,9 @@ class RailgunEngine extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransactionV2[],
-    latestVerificationHash?: string,
+    latestVerificationHash: Optional<string>,
+    startScanPercentage: number,
+    endScanPercentage: number,
   ) {
     const latestValidatedTxidIndex = await this.getLatestValidatedTxidIndex(txidVersion, chain);
     EngineDebug.log(
@@ -975,8 +981,16 @@ class RailgunEngine extends EventEmitter {
 
     let previousVerificationHash = latestVerificationHash;
 
+    const emitNewRailgunTransactionsProgress = (progress: number) => {
+      const overallProgress =
+        progress * (endScanPercentage - startScanPercentage) + startScanPercentage;
+      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress);
+    };
+
+    const railgunTransactionsLength = railgunTransactions.length;
+
     // eslint-disable-next-line no-restricted-syntax
-    for (const railgunTransaction of railgunTransactions) {
+    for (const [index, railgunTransaction] of railgunTransactions.entries()) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
       if (railgunTransactionWithTxid.version !== RailgunTransactionVersion.V2) {
         return;
@@ -1110,6 +1124,12 @@ class RailgunEngine extends EventEmitter {
       previousVerificationHash = expectedVerificationHash;
 
       toQueue.push(railgunTransactionWithTxid);
+
+      // Only emit progress every 30 TXIDs.
+      if (index % 30 === 0) {
+        const progress = index / railgunTransactionsLength;
+        emitNewRailgunTransactionsProgress(progress);
+      }
     }
 
     await txidMerkletree.queueRailgunTransactions(toQueue, latestValidatedTxidIndex);
