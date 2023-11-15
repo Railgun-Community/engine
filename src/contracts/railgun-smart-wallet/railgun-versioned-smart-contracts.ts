@@ -38,6 +38,21 @@ export class RailgunVersionedSmartContracts {
     throw new Error('Unsupported txidVersion');
   }
 
+  static getVerifier(txidVersion: TXIDVersion, chain: Chain) {
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle: {
+        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        return contractV2;
+      }
+      case TXIDVersion.V3_PoseidonMerkle: {
+        const contractV3PoseidonMerkleVerifier =
+          ContractStore.getPoseidonMerkleVerifierV3Contract(chain);
+        return contractV3PoseidonMerkleVerifier;
+      }
+    }
+    throw new Error('Unsupported txidVersion');
+  }
+
   static getShieldApprovalContract(txidVersion: TXIDVersion, chain: Chain) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
