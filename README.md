@@ -36,11 +36,11 @@ For simple implementations, use [RAILGUN Wallet SDK](https://github.com/Railgun-
 
 ### Run unit tests
 
-`npm test` OR `yarn test`
+`npm test-V2` OR `yarn test-V2`
 
 ### Run all tests, including contract integration tests (requires Hardhat setup below)
 
-`npm run test-hardhat` OR `yarn test-hardhat`
+`npm run test-hardhat-V2` OR `yarn test-hardhat-V2`
 
 ### Hardhat setup
 
