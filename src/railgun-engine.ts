@@ -217,9 +217,11 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const event of events) {
       const { treeNumber, startPosition, commitments } = event;
-      EngineDebug.log(
-        `[commitmentListener: ${chain.type}:${chain.id}]: ${commitments.length} leaves at ${startPosition}`,
-      );
+      if (EngineDebug.verboseScanLogging()) {
+        EngineDebug.log(
+          `[commitmentListener: ${chain.type}:${chain.id}]: ${commitments.length} leaves at ${startPosition}`,
+        );
+      }
       commitments.forEach((commitment) => {
         // eslint-disable-next-line no-param-reassign
         commitment.txid = formatToByteLength(commitment.txid, ByteLength.UINT_256, false);

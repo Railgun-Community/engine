@@ -836,9 +836,11 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       // If starting index is greater or equal to tree length, insert to queue
       this.writeQueue[tree][startingIndex] = leaves;
 
-      EngineDebug.log(
-        `[${this.merkletreeType} queueLeaves: ${this.chain.type}:${this.chain.id}] treeLength ${treeLength}, startingIndex ${startingIndex}`,
-      );
+      if (EngineDebug.verboseScanLogging()) {
+        EngineDebug.log(
+          `[${this.merkletreeType} queueLeaves: ${this.chain.type}:${this.chain.id}] treeLength ${treeLength}, startingIndex ${startingIndex}`,
+        );
+      }
     }
   }
 

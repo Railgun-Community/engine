@@ -26,4 +26,8 @@ export default class EngineDebug {
   static isTestRun() {
     return process.env.NODE_ENV === 'test';
   }
+
+  static verboseScanLogging() {
+    return this.engineDebugger?.verboseScanLogging ?? false;
+  }
 }

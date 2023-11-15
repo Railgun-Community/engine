@@ -561,7 +561,11 @@ abstract class AbstractWallet extends EventEmitter {
     let serializedNoteReceive: Optional<NoteSerialized | LegacyNoteSerialized>;
     let serializedNoteSend: Optional<NoteSerialized | LegacyNoteSerialized>;
 
-    EngineDebug.log(`Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`);
+    if (EngineDebug.verboseScanLogging()) {
+      EngineDebug.log(
+        `Trying to decrypt commitment. Current index ${position}/${totalLeaves - 1}.`,
+      );
+    }
 
     const walletAddress = this.getAddress();
     const commitmentType: CommitmentType = AbstractWallet.getCommitmentType(leaf);

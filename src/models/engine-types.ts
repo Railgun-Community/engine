@@ -1,6 +1,7 @@
 export type EngineDebugger = {
   log: (msg: string) => void;
   error: (error: Error) => void;
+  verboseScanLogging: boolean;
 };
 
 export type KeyNode = {
