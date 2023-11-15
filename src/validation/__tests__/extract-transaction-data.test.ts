@@ -58,7 +58,10 @@ let tokenDataGetter: TokenDataGetter;
 
 const MOCK_ETH_WALLET_ADDRESS = '0x9E9F988356f46744Ee0374A17a5Fa1a3A3cC3777';
 
-describe('extract-transaction-data', () => {
+// TODO: enable these tests. Currently they depend on a localhost server running
+// at 8545, but it's unclear what this server is. If it's hardhat, then this
+// test needs to be marked as a hardhat-only (HH) test.
+describe.skip('extract-transaction-data', () => {
   const createGoerliTransferTransactions = async (
     receiverAddressData: AddressData,
     senderAddressData: AddressData,
@@ -361,4 +364,4 @@ describe('extract-transaction-data', () => {
     restoreEngineStubs();
     await engine.unload();
   });
-}).timeout(120000);
+}); // .timeout(120_000);
