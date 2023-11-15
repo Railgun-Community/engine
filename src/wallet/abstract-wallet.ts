@@ -141,6 +141,7 @@ import {
 } from '../transaction/railgun-txid';
 import { ExtractedRailgunTransactionData } from '../models/transaction-types';
 import { POIValidation } from '../validation/poi-validation';
+import { extractFirstNoteERC20AmountMapFromTransactionRequest } from '../validation/extract-transaction-data';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -2195,6 +2196,25 @@ abstract class AbstractWallet extends EventEmitter {
       }
       return txo.note.blockNumber >= startingBlock;
     });
+  }
+
+  async extractFirstNoteERC20AmountMap(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    transactionRequest: ContractTransaction,
+    useRelayAdapt: boolean,
+    verifierAddress: string,
+  ) {
+    return extractFirstNoteERC20AmountMapFromTransactionRequest(
+      txidVersion,
+      chain,
+      transactionRequest,
+      useRelayAdapt,
+      verifierAddress,
+      this.getViewingKeyPair().privateKey,
+      this.addressKeys,
+      this.tokenDataGetter,
+    );
   }
 
   /**
