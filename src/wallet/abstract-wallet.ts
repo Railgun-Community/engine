@@ -2203,14 +2203,14 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     transactionRequest: ContractTransaction,
     useRelayAdapt: boolean,
-    verifierAddress: string,
+    contractAddress: string,
   ) {
     return extractFirstNoteERC20AmountMapFromTransactionRequest(
       txidVersion,
       chain,
       transactionRequest,
       useRelayAdapt,
-      verifierAddress,
+      contractAddress,
       this.getViewingKeyPair().privateKey,
       this.addressKeys,
       this.tokenDataGetter,
