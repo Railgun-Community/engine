@@ -1216,6 +1216,7 @@ describe('relay-adapt', function test() {
       txResponse.wait(),
       awaitRailgunSmartWalletTransact(txidVersion, chain),
     ]);
+
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
     }
@@ -1230,6 +1231,7 @@ describe('relay-adapt', function test() {
     const relayAdaptAddressBalance: bigint = await wethTokenContract.balanceOf(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
     );
+
     expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);

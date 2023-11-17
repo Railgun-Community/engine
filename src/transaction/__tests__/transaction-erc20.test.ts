@@ -154,7 +154,7 @@ describe('transaction-erc20', function test() {
     await utxoMerkletree.updateTreesFromWriteQueue();
 
     let scanProgress = 0;
-    await wallet.scanBalances(txidVersion, chain, (progress: number) => {
+    await wallet.decryptBalances(txidVersion, chain, (progress: number) => {
       scanProgress = progress;
     });
     expect(scanProgress).to.equal(1);

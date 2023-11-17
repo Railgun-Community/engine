@@ -8,7 +8,7 @@ import { Chain } from './engine-types';
 import { POIsPerList, TXIDVersion } from './poi-types';
 
 export enum EngineEvent {
-  WalletScanComplete = 'scanned',
+  WalletDecryptBalancesComplete = 'decrypted-balances',
   ContractNullifierReceived = 'nullified',
   UTXOMerkletreeHistoryScanUpdate = 'utxo-merkletree-history-scan-update',
   TXIDMerkletreeHistoryScanUpdate = 'txid-merkletree-history-scan-update',
