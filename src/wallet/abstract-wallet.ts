@@ -251,7 +251,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Kick off a synchronous refresh.
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.scanBalances(txidVersion, chain, () => {});
+      this.scanBalances(txidVersion, chain, () => {}); // TODO-PETE: Potentially remove this if we are always calling scanHistory after this anyway. Test it out
       return;
     }
 
@@ -2739,6 +2739,9 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     progressCallback: Optional<(progress: number) => void>,
   ) {
+    // TODO-PETE: Set which chain is scanning — Monday talk part 3 35:10
+    // TODO-PETE: New idea, maybe to prevent multiple scans on same wallet chain, set a "currentScanEventId" at start and save to the wallet level store. At the start of each patch, check if our current scan id still matches the one in the store. If not, return early because a different scan has superceded us (this will work for setting to undefined too).
+    // TODO-PETE: Or, instead of having the new one cancel the old one, make the new one not be able to start... But that ALWAYS needs to get reset at the end. This is not as good.
     try {
       if (this.isClearingBalances[chain.type]?.[chain.id] === true) {
         EngineDebug.log('Clearing balances... cannot scan wallet balances.');
@@ -2795,6 +2798,9 @@ abstract class AbstractWallet extends EventEmitter {
           startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
         }
 
+        // TODO-PETE: Batch fetcher, 1000 at a time, all the way through await this.db.put, at start of each loop, check if scanning this chain is still defined. If not, return early with log
+        // TODO-PETE: Monday talk part 3 35:45
+        // TODO-PETE: Also send back incremental progress with the promise.all on the fetcher batch and then also after each leaf scan
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
         const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
