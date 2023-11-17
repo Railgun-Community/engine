@@ -526,7 +526,7 @@ class RailgunEngine extends EventEmitter {
    * Scan contract history and sync
    * @param chain - chain type/id to scan
    */
-  async scanHistory(chain: Chain) {
+  async scanContractHistory(chain: Chain) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
