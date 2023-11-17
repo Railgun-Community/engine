@@ -145,7 +145,7 @@ describe('railgun-smart-wallet', function runTests() {
       0,
       !isV2Test(), // supportsV3
     );
-    await engine.scanHistory(chain);
+    await engine.scanContractHistory(chain);
 
     ethersWallet = getEthersWallet(config.mnemonic, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
@@ -942,7 +942,7 @@ describe('railgun-smart-wallet', function runTests() {
       }
     };
     engine.on(EngineEvent.UTXOMerkletreeHistoryScanUpdate, historyScanListener);
-    await engine.scanHistory(chain);
+    await engine.scanContractHistory(chain);
     expect(historyScanCompletedForChain).to.equal(chain);
     expect(await engine.getStartScanningBlock(txidVersion, chain)).to.be.above(0);
 

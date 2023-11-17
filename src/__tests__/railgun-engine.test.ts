@@ -339,7 +339,7 @@ describe('railgun-engine', function test() {
       balance,
     );
 
-    await engine.scanHistory(chain);
+    await engine.scanContractHistory(chain);
     utxoMerkletree = engine.getUTXOMerkletree(txidVersion, chain);
     txidMerkletree = engine.getTXIDMerkletree(txidVersion, chain);
   });
