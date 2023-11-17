@@ -243,7 +243,7 @@ abstract class AbstractWallet extends EventEmitter {
       !isDefined(utxoMerkletreeHistoryVersion) ||
       utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
-      await this.clearScannedBalancesAllTXIDVersions(chain);
+      await this.clearDecryptedBalancesAllTXIDVersions(chain);
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
 
       this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
@@ -2731,14 +2731,11 @@ abstract class AbstractWallet extends EventEmitter {
     return tokenBalance;
   }
 
-  async scanBalances(
+  async decryptBalances(
     txidVersion: TXIDVersion,
     chain: Chain,
     progressCallback: Optional<(progress: number) => void>,
   ) {
-    // TODO-PETE: Set which chain is scanning — Monday talk part 3 35:10
-    // TODO-PETE: New idea, maybe to prevent multiple scans on same wallet chain, set a "currentScanEventId" at start and save to the wallet level store. At the start of each patch, check if our current scan id still matches the one in the store. If not, return early because a different scan has superceded us (this will work for setting to undefined too).
-    // TODO-PETE: Or, instead of having the new one cancel the old one, make the new one not be able to start... But that ALWAYS needs to get reset at the end. This is not as good.
     try {
       if (this.isClearingBalances[chain.type]?.[chain.id] === true) {
         EngineDebug.log('Clearing balances... cannot scan wallet balances.');
@@ -2800,57 +2797,77 @@ abstract class AbstractWallet extends EventEmitter {
         // TODO-PETE: Also send back incremental progress with the promise.all on the fetcher batch and then also after each leaf scan
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
-        const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
-        // Fetch each leaf we need to scan
-        for (let index = startScanHeight; index < treeHeight; index += 1) {
-          fetcher[index] = utxoMerkletree.getCommitment(treeIndex, index);
-        }
+        const batchSize = 1000;
+        const numBatches = Math.ceil((treeHeight - startScanHeight) / batchSize);
+        let batchNumber = 0;
 
-        // Wait until all leaves are fetched
-        const leaves = await Promise.all(fetcher);
+        for (let batchStart = startScanHeight; batchStart < treeHeight; batchStart += batchSize) {
+          // TODO-PETE: Check here if we should return early. i.e.: If we are not scanning this chain anymore, return early with log
+          batchNumber += 1;
+          const batchEnd = Math.min(batchStart + batchSize, treeHeight);
+          const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
-        const leavesToScan = treeHeight - startScanHeight;
-        let finishedLeafCount = 0;
-        let timeSinceLastProgressCallback = Date.now() - 500;
+          for (let index = batchStart; index < batchEnd; index += 1) {
+            fetcher[index] = utxoMerkletree.getCommitment(treeIndex, index);
+          }
 
-        await this.scanLeaves(
-          txidVersion,
-          leaves,
-          treeIndex,
-          chain,
-          startScanHeight,
-          treeHeight,
-          () => {
-            // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
-            if (progressCallback) {
-              // Throttle progressCallback, at most every 500ms.
-              if (Date.now() - timeSinceLastProgressCallback >= 500) {
-                // 100ms since last progressCallback call.
-                timeSinceLastProgressCallback = Date.now();
-                const finishedTreeCount = treeIndex - startScanTree;
-                const finishedTreesProgress = finishedTreeCount / treesToScan;
+          const leaves = await Promise.all(fetcher);
+
+          const finishedTreeCount = treeIndex - startScanTree;
+          const finishedTreesProgress = finishedTreeCount / treesToScan;
+          const afterFetchLeavesProgress = 0.5; // After Promise.all to get leaves, say we are 50% done with this batch.
+          const batchRatio = batchNumber / numBatches;
+          let newTreeProgress = (afterFetchLeavesProgress * batchRatio) / treesToScan;
+          if (progressCallback) {
+            progressCallback(finishedTreesProgress + newTreeProgress);
+          }
+
+          const leavesToScan = batchEnd - batchStart;
+          let finishedLeafCount = 0;
+          let timeSinceLastProgressCallback = Date.now() - 500;
+
+          await this.scanLeaves(
+            txidVersion,
+            leaves,
+            treeIndex,
+            chain,
+            startScanHeight,
+            treeHeight,
+            () => {
+              // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
+              if (progressCallback) {
                 finishedLeafCount += 1;
-                const newTreeProgress = finishedLeafCount / leavesToScan / treesToScan;
-                progressCallback(finishedTreesProgress + newTreeProgress);
+                // Throttle progressCallback, at most every 500ms.
+                if (Date.now() - timeSinceLastProgressCallback >= 500) {
+                  // 100ms since last progressCallback call.
+                  timeSinceLastProgressCallback = Date.now();
+                  const leafScanProgress = finishedLeafCount / leavesToScan;
+                  const endProgress = 1.0;
+                  const currentBatchProgress =
+                    leafScanProgress * (endProgress - afterFetchLeavesProgress) +
+                    afterFetchLeavesProgress;
+                  newTreeProgress = (currentBatchProgress * batchRatio) / treesToScan;
+                  progressCallback(finishedTreesProgress + newTreeProgress);
+                }
               }
-            }
-          },
-        );
+            },
+          );
 
-        // Commit new scanned height
-        const walletDetailsMap = await this.getWalletDetailsMap(chain);
-        walletDetails.treeScannedHeights[treeIndex] = leaves.length;
-        walletDetailsMap[txidVersion] = walletDetails;
+          // Commit new scanned height
+          const walletDetailsMap = await this.getWalletDetailsMap(chain);
+          walletDetails.treeScannedHeights[treeIndex] = leaves.length;
+          walletDetailsMap[txidVersion] = walletDetails;
 
-        // Write new wallet details to db
-        await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
+          // Write new wallet details to db
+          await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
+        }
       }
 
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
       const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
-      this.emit(EngineEvent.WalletScanComplete, walletScannedEventData);
+      this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.refreshPOIsForTXIDVersion(chain, txidVersion); // Synchronous
@@ -3018,13 +3035,13 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Clears balances scanned from merkletrees and stored to database.
+   * Clears balances decrypted from merkletrees and stored to database.
    * @param chain - chain type/id to clear
    */
-  async clearScannedBalancesAllTXIDVersions(chain: Chain) {
+  async clearDecryptedBalancesAllTXIDVersions(chain: Chain) {
     const walletDetailsMap = await this.getWalletDetailsMap(chain);
 
-    // Clear wallet namespace, including scanned TXOs and all details
+    // Clear wallet namespace, including decrypted TXOs and all details
     const namespace = this.getWalletDBPrefix(chain);
     this.isClearingBalances[chain.type] ??= [];
     this.isClearingBalances[chain.type][chain.id] = true;
@@ -3041,14 +3058,14 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Clears stored balances and re-scans fully.
+   * Clears stored balances and re-decrypts fully.
    * @param chain - chain type/id to rescan
    */
-  async fullRescanBalancesAllTXIDVersions(
+  async fullRedecryptBalancesAllTXIDVersions(
     chain: Chain,
     progressCallback: Optional<(progress: number) => void>,
   ) {
-    await this.clearScannedBalancesAllTXIDVersions(chain);
+    await this.clearDecryptedBalancesAllTXIDVersions(chain);
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of Object.values(TXIDVersion)) {
@@ -3056,7 +3073,7 @@ abstract class AbstractWallet extends EventEmitter {
         continue;
       }
 
-      await this.scanBalances(txidVersion, chain, progressCallback);
+      await this.decryptBalances(txidVersion, chain, progressCallback);
     }
   }
 

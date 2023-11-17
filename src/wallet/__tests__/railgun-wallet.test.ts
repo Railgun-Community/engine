@@ -56,8 +56,8 @@ describe('railgun-wallet', () => {
       new Prover(testArtifactsGetter),
     );
     await viewOnlyWallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
-    await wallet.clearScannedBalancesAllTXIDVersions(chain);
-    await viewOnlyWallet.clearScannedBalancesAllTXIDVersions(chain);
+    await wallet.clearDecryptedBalancesAllTXIDVersions(chain);
+    await viewOnlyWallet.clearDecryptedBalancesAllTXIDVersions(chain);
   });
 
   it('Should load existing wallet', async () => {

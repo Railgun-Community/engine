@@ -377,7 +377,7 @@ export const processAccumulatorEvent = async (
   eventsNullifierListener: EventsNullifierListener,
   eventsUnshieldListener: EventsUnshieldListener,
   eventsRailgunTransactionsV3Listener: EventsRailgunTransactionListenerV3,
-  triggerWalletScans: (txidVersion: TXIDVersion) => Promise<void>,
+  triggerWalletBalanceDecryptions: (txidVersion: TXIDVersion) => Promise<void>,
 ) => {
   try {
     const { update, accumulatorNumber, startPosition } = getAccumulatorEventObject(args);
@@ -610,7 +610,7 @@ export const processAccumulatorEvent = async (
     await eventsCommitmentListener(txidVersion, allCommitmentEvents);
 
     // Trigger wallet scans after all events are processed.
-    await triggerWalletScans(txidVersion);
+    await triggerWalletBalanceDecryptions(txidVersion);
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     EngineDebug.error(err);

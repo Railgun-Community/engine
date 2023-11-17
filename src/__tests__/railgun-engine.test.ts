@@ -411,7 +411,7 @@ describe('railgun-engine', function test() {
     await utxoMerkletree.queueLeaves(0, 0, [commitment]);
     await utxoMerkletree.updateTreesFromWriteQueue();
 
-    await wallet.scanBalances(txidVersion, chain, undefined);
+    await wallet.decryptBalances(txidVersion, chain, undefined);
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
@@ -419,14 +419,14 @@ describe('railgun-engine', function test() {
     const value = hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
-    await wallet.fullRescanBalancesAllTXIDVersions(chain, undefined);
+    await wallet.fullRedecryptBalancesAllTXIDVersions(chain, undefined);
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     const balanceRescan = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
     expect(balanceRescan).to.equal(value);
 
-    await wallet.clearScannedBalancesAllTXIDVersions(chain);
+    await wallet.clearDecryptedBalancesAllTXIDVersions(chain);
     const balanceClear = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
@@ -475,7 +475,7 @@ describe('railgun-engine', function test() {
     await utxoMerkletree.queueLeaves(0, 0, [commitment]);
     await utxoMerkletree.updateTreesFromWriteQueue();
 
-    await wallet.scanBalances(txidVersion, chain, undefined);
+    await wallet.decryptBalances(txidVersion, chain, undefined);
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
@@ -487,14 +487,14 @@ describe('railgun-engine', function test() {
     expect(walletDetails.creationTree).to.equal(0);
     expect(walletDetails.creationTreeHeight).to.equal(0);
 
-    await wallet.fullRescanBalancesAllTXIDVersions(chain, undefined);
+    await wallet.fullRedecryptBalancesAllTXIDVersions(chain, undefined);
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     const balanceRescan = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
     expect(balanceRescan).to.equal(value);
 
-    await wallet.clearScannedBalancesAllTXIDVersions(chain);
+    await wallet.clearDecryptedBalancesAllTXIDVersions(chain);
     const balanceCleared = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);

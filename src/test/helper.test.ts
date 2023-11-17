@@ -107,7 +107,7 @@ export const mockGetLatestValidatedRailgunTxid: GetLatestValidatedRailgunTxid = 
 export const awaitScan = (wallet: AbstractWallet, chain: Chain) =>
   new Promise((resolve, reject) =>
     wallet.once(
-      EngineEvent.WalletScanComplete,
+      EngineEvent.WalletDecryptBalancesComplete,
       ({ chain: returnedChain }: WalletScannedEventData) =>
         returnedChain.type === chain.type && returnedChain.id === chain.id
           ? resolve(returnedChain)

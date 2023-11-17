@@ -131,7 +131,7 @@ export class RailgunVersionedSmartContracts {
     eventsNullifierListener: EventsNullifierListener,
     eventsUnshieldListener: EventsUnshieldListener,
     eventsRailgunTransactionsV3Listener: EventsRailgunTransactionListenerV3,
-    triggerWalletScans: (txidVersion: TXIDVersion) => Promise<void>,
+    triggerWalletBalanceDecryptions: (txidVersion: TXIDVersion) => Promise<void>,
   ) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
@@ -150,7 +150,7 @@ export class RailgunVersionedSmartContracts {
           eventsNullifierListener,
           eventsUnshieldListener,
           eventsRailgunTransactionsV3Listener,
-          triggerWalletScans,
+          triggerWalletBalanceDecryptions,
         );
       }
     }

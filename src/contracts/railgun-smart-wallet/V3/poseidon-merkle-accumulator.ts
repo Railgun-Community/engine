@@ -101,7 +101,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
     eventsNullifierListener: EventsNullifierListener,
     eventsUnshieldListener: EventsUnshieldListener,
     eventsRailgunTransactionsV3Listener: EventsRailgunTransactionListenerV3,
-    triggerWalletScans: (txidVersion: TXIDVersion) => Promise<void>,
+    triggerWalletBalanceDecryptions: (txidVersion: TXIDVersion) => Promise<void>,
   ): Promise<void> {
     await this.contractForListeners.on(this.eventTopic as any, (event: ContractEventPayload) => {
       try {
@@ -123,7 +123,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
           },
           eventsUnshieldListener,
           eventsRailgunTransactionsV3Listener,
-          triggerWalletScans,
+          triggerWalletBalanceDecryptions,
         );
       } catch (err) {
         if (err instanceof Error) {
