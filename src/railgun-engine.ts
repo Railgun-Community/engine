@@ -622,7 +622,10 @@ class RailgunEngine extends EventEmitter {
       }
 
       // Final scan after all leaves added.
-      await this.scanAllWallets(txidVersion, chain, undefined); // TODO-PETE: Add progress callback here. 0.9 to 1.0
+      await this.scanAllWallets(txidVersion, chain, (progress: number) => {
+        const overallProgress = progress * (0.99 - 0.9) + 0.9;
+        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 90-100%
+      });
 
       this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 1.0); // 100%
 
