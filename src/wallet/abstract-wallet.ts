@@ -249,9 +249,6 @@ abstract class AbstractWallet extends EventEmitter {
       this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
         utxoMerkletree;
 
-      // Kick off a synchronous refresh.
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.scanBalances(txidVersion, chain, () => {}); // TODO-PETE: Potentially remove this if we are always calling scanHistory after this anyway. Test it out
       return;
     }
 
