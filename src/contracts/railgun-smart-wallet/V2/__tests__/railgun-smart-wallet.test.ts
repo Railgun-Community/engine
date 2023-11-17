@@ -145,7 +145,10 @@ describe('railgun-smart-wallet', function runTests() {
       0,
       !isV2Test(), // supportsV3
     );
-    await engine.scanContractHistory(chain);
+    await engine.scanContractHistory(
+      chain,
+      undefined, // walletIdFilter
+    );
 
     ethersWallet = getEthersWallet(config.mnemonic, provider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
@@ -942,7 +945,10 @@ describe('railgun-smart-wallet', function runTests() {
       }
     };
     engine.on(EngineEvent.UTXOMerkletreeHistoryScanUpdate, historyScanListener);
-    await engine.scanContractHistory(chain);
+    await engine.scanContractHistory(
+      chain,
+      undefined, // walletIdFilter
+    );
     expect(historyScanCompletedForChain).to.equal(chain);
     expect(await engine.getStartScanningBlock(txidVersion, chain)).to.be.above(0);
 
@@ -952,7 +958,10 @@ describe('railgun-smart-wallet', function runTests() {
 
     const forceRefresh = true;
     await wallet.refreshPOIsForAllTXIDVersions(chain, forceRefresh);
-    await engine.fullRescanUTXOMerkletreesAndWallets(chain);
+    await engine.fullRescanUTXOMerkletreesAndWallets(
+      chain,
+      undefined, // walletIdFilter
+    );
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
   });
 
