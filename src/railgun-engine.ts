@@ -424,7 +424,7 @@ class RailgunEngine extends EventEmitter {
         `[${txidVersion}] Start scanning block for QuickSync: ${startScanningBlockQuickSync}`,
       );
 
-      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.1); // 5% / 50%
+      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.2); // 10% / 50%
 
       // Fetch events
       const { commitmentEvents, unshieldEvents, nullifierEvents, railgunTransactionEvents } =
@@ -437,12 +437,12 @@ class RailgunEngine extends EventEmitter {
         await this.handleNewRailgunTransactionsV3(txidVersion, chain, railgunTransactionEvents);
       }
 
-      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.2); // 10% / 50%
+      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.4); // 20% / 50%
 
       await this.unshieldListener(txidVersion, chain, unshieldEvents);
       await this.nullifierListener(txidVersion, chain, nullifierEvents);
 
-      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.24); // 12% / 50%
+      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.48); // 24% / 50%
 
       EngineDebug.log(`[${txidVersion}] QuickSync commitments: ${commitmentEvents.length}`);
 
@@ -457,19 +457,9 @@ class RailgunEngine extends EventEmitter {
 
       // Scan after all leaves added.
       if (commitmentEvents.length) {
-        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.3); // 15% / 50%
+        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.6); // 30% / 50%
         await utxoMerkletree.updateTreesFromWriteQueue();
-        const preScanProgressMultiplier = 0.4;
-        this.emitUTXOMerkletreeScanUpdateEvent(
-          txidVersion,
-          chain,
-          endProgress * preScanProgressMultiplier,
-        ); // 20% / 50%
-        await this.decryptBalancesAllWallets(txidVersion, chain, (progress: number) => {
-          const overallProgress =
-            progress * (endProgress - preScanProgressMultiplier) + preScanProgressMultiplier;
-          this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 20 - 50% / 50%
-        });
+        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.8); // 40% / 50%
       }
     } catch (err) {
       if (!(err instanceof Error)) {
