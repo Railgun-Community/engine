@@ -515,8 +515,9 @@ class RailgunEngine extends EventEmitter {
   /**
    * Scan contract history and sync
    * @param chain - chain type/id to scan
+   * @param walletIdFilter - optional list of wallet ids to decrypt balances
    */
-  async scanContractHistory(chain: Chain) {
+  async scanContractHistory(chain: Chain, walletIdFilter: Optional<string[]>) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
@@ -524,7 +525,7 @@ class RailgunEngine extends EventEmitter {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await this.scanEventHistory(txidVersion, chain);
+      await this.scanEventHistory(txidVersion, chain, walletIdFilter);
     }
 
     if (this.pollingRailgunTransactionsV2[chain.type]?.[chain.id] !== true) {
@@ -532,7 +533,11 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async scanEventHistory(txidVersion: TXIDVersion, chain: Chain) {
+  async scanEventHistory(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+    walletIdFilter: Optional<string[]>,
+  ) {
     if (this.skipMerkletreeScans) {
       EngineDebug.log(`Skipping merkletree scan: skipMerkletreeScans set on RAILGUN Engine.`);
       return;
@@ -612,10 +617,15 @@ class RailgunEngine extends EventEmitter {
       }
 
       // Final balance decryption after all leaves added.
-      await this.decryptBalancesAllWallets(txidVersion, chain, (progress: number) => {
-        const overallProgress = progress * (0.99 - 0.9) + 0.9;
-        this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 90-100%
-      });
+      await this.decryptBalancesAllWallets(
+        txidVersion,
+        chain,
+        walletIdFilter,
+        (progress: number) => {
+          const overallProgress = progress * (0.99 - 0.9) + 0.9;
+          this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 90-100%
+        },
+      );
 
       this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 1.0); // 100%
 
@@ -632,7 +642,12 @@ class RailgunEngine extends EventEmitter {
       }
       EngineDebug.log(`Scan incomplete for chain ${chain.type}:${chain.id}`);
       EngineDebug.error(err);
-      await this.decryptBalancesAllWallets(txidVersion, chain, undefined);
+      await this.decryptBalancesAllWallets(
+        txidVersion,
+        chain,
+        walletIdFilter,
+        undefined, // progressCallback
+      );
       const scanIncompleteData: MerkletreeHistoryScanEventData = {
         scanStatus: MerkletreeScanStatus.Incomplete,
         txidVersion,
@@ -915,7 +930,12 @@ class RailgunEngine extends EventEmitter {
         if (!utxoMerkletree.isScanning) {
           // Decrypt balances for all wallets - kicks off a POI refresh.
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.decryptBalancesAllWallets(txidVersion, chain, () => {});
+          this.decryptBalancesAllWallets(
+            txidVersion,
+            chain,
+            undefined, // walletIdFilter
+            undefined, // progressCallback
+          );
         }
       }
 
@@ -1294,7 +1314,11 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to rescan
    * @param forceRescanDevOnly - can corrupt an existing scan, so only recommended in extreme cases (DEV only)
    */
-  async fullRescanUTXOMerkletreesAndWallets(chain: Chain, forceRescanDevOnly = false) {
+  async fullRescanUTXOMerkletreesAndWallets(
+    chain: Chain,
+    walletIdFilter: Optional<string[]>,
+    forceRescanDevOnly = false,
+  ) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
@@ -1339,7 +1363,7 @@ class RailgunEngine extends EventEmitter {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await this.scanEventHistory(txidVersion, chain);
+      await this.scanEventHistory(txidVersion, chain, walletIdFilter);
 
       if (txidVersion === TXIDVersion.V2_PoseidonMerkle) {
         // Must reset txid merkletree which is mapped to UTXO commitments in V2.
@@ -1647,7 +1671,12 @@ class RailgunEngine extends EventEmitter {
       // Only start wallet balance decryption if utxoMerkletree is not already scanning
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
       if (!utxoMerkletree.isScanning) {
-        await this.decryptBalancesAllWallets(txidVersion, chain, undefined);
+        await this.decryptBalancesAllWallets(
+          txidVersion,
+          chain,
+          undefined, // walletIdFilter
+          undefined, // progressCallback
+        );
       }
     };
     const nullifierListener = async (txidVersion: TXIDVersion, nullifiers: Nullifier[]) => {
@@ -1655,7 +1684,12 @@ class RailgunEngine extends EventEmitter {
       // Only start wallet balance decryption if utxoMerkletree is not already scanning
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
       if (!utxoMerkletree.isScanning) {
-        await this.decryptBalancesAllWallets(txidVersion, chain, undefined);
+        await this.decryptBalancesAllWallets(
+          txidVersion,
+          chain,
+          undefined, // walletIdFilter
+          undefined, // progressCallback
+        );
       }
     };
     const unshieldListener = async (txidVersion: TXIDVersion, unshields: UnshieldStoredEvent[]) => {
@@ -1692,7 +1726,12 @@ class RailgunEngine extends EventEmitter {
       const triggerWalletBalanceDecryptions = async (txidVersion: TXIDVersion) => {
         const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
         if (!utxoMerkletree.isScanning) {
-          await this.decryptBalancesAllWallets(txidVersion, chain, undefined);
+          await this.decryptBalancesAllWallets(
+            txidVersion,
+            chain,
+            undefined, // walletIdFilter
+            undefined, // progressCallback
+          );
         }
       };
       await ContractStore.poseidonMerkleAccumulatorV3Contracts[chain.type][
@@ -1911,11 +1950,17 @@ class RailgunEngine extends EventEmitter {
   async decryptBalancesAllWallets(
     txidVersion: TXIDVersion,
     chain: Chain,
+    walletIdFilter: Optional<string[]>,
     progressCallback: Optional<(progress: number) => void>,
   ) {
     const wallets = this.allWallets();
     // eslint-disable-next-line no-restricted-syntax
     for (let i = 0; i < wallets.length; i += 1) {
+      if (isDefined(walletIdFilter) && !walletIdFilter.includes(wallets[i].id)) {
+        // Skip wallets not in filter
+        continue;
+      }
+
       // eslint-disable-next-line no-await-in-loop
       await wallets[i].decryptBalances(txidVersion, chain, (walletProgress: number) => {
         if (progressCallback) {

@@ -149,7 +149,10 @@ describe('relay-adapt', function test() {
       undefined,
       !isV2Test(), // supportsV3
     );
-    await engine.scanContractHistory(chain);
+    await engine.scanContractHistory(
+      chain,
+      undefined, // walletIdFilter
+    );
 
     ethersWallet = getEthersWallet(config.mnemonic, fallbackProvider);
     snapshot = (await provider.send('evm_snapshot', [])) as number;
