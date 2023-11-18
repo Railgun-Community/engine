@@ -2782,6 +2782,12 @@ abstract class AbstractWallet extends EventEmitter {
       // Loop through each tree and scan
       for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
         // Get scanned height
+        // TODO-PETE: Should you move this and creationtreeheight inside the batch loop.
+        // TODO-PETE: This will be getting updated at the end of each batch loop.
+        // TODO-PETE: How to handle if another process called decryptBalances and we are updating startScannedHeight via those batches at the same time?
+        // TODO-PETE: Maybe something with checking the startScanHeight at the start of each batch to make sure it is what we expect?
+        // TODO-PETE: Or maybe we shouldn't write to db and update walletDetails.treeScannedHeights[treeIndex] until after all of the batch loops finish
+        // TODO-PETE: Or maybe we really should implement a check system for not allowing another process to call decryptBalances while one is ongoing?
         let startScanHeight = walletDetails.treeScannedHeights[treeIndex];
 
         // If creationTreeHeight exists, check if it is higher than default startScanHeight and start there if needed
