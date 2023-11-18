@@ -622,7 +622,7 @@ class RailgunEngine extends EventEmitter {
         chain,
         walletIdFilter,
         (progress: number) => {
-          const overallProgress = progress * (0.99 - 0.9) + 0.9;
+          const overallProgress = progress * (0.99 - 0.8) + 0.8;
           this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 90-100%
         },
       );
@@ -700,7 +700,7 @@ class RailgunEngine extends EventEmitter {
 
         const progress =
           postQuickSyncProgress +
-          ((1 - postQuickSyncProgress - 0.1) * scannedBlocks) / totalBlocksToScan;
+          ((1 - postQuickSyncProgress - 0.2) * scannedBlocks) / totalBlocksToScan;
         this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, progress);
 
         if (utxoMerkletree.getFirstInvalidMerklerootTree() != null) {
@@ -757,7 +757,7 @@ class RailgunEngine extends EventEmitter {
         const scannedBlocks = syncedBlock - startScanningBlockSlowScan;
         const progress =
           postQuickSyncProgress +
-          ((1 - postQuickSyncProgress - 0.1) * scannedBlocks) / totalBlocksToScan;
+          ((1 - postQuickSyncProgress - 0.2) * scannedBlocks) / totalBlocksToScan;
         this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, progress);
 
         if (utxoMerkletree.getFirstInvalidMerklerootTree() != null) {
