@@ -867,7 +867,7 @@ abstract class AbstractWallet extends EventEmitter {
     chain: Chain,
     startScanHeight: number,
     treeHeight: number,
-    scanTicker: () => void,
+    scanTicker: Optional<() => void>,
   ): Promise<void> {
     EngineDebug.log(
       `wallet:scanLeaves tree:${tree} chain:${chain.type}:${chain.id} leaves:${leaves.length}, startScanHeight:${startScanHeight}`,
@@ -879,7 +879,9 @@ abstract class AbstractWallet extends EventEmitter {
     for (let position = startScanHeight; position < treeHeight; position += 1) {
       const leaf = leaves[position];
       if (leaf == null) {
-        scanTicker();
+        if (scanTicker) {
+          scanTicker();
+        }
         continue;
       }
       const scanPromiseWithTicker = async () => {
@@ -892,7 +894,9 @@ abstract class AbstractWallet extends EventEmitter {
           position,
           leaves.length,
         );
-        scanTicker();
+        if (scanTicker) {
+          scanTicker();
+        }
         return scanned;
       };
       leafSyncPromises.push(scanPromiseWithTicker());
@@ -2804,13 +2808,13 @@ abstract class AbstractWallet extends EventEmitter {
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
 
-        const batchSize = 1000;
-        const numBatches = Math.ceil((treeHeight - startScanHeight) / batchSize);
-        let batchNumber = 0;
+        const batchSize = 500;
+        const totalLeavesToScan = treeHeight - startScanHeight;
+        const totalBatches = Math.ceil(totalLeavesToScan / batchSize);
 
-        for (let batchStart = startScanHeight; batchStart < treeHeight; batchStart += batchSize) {
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
           // TODO-PETE: Check here if we should return early. i.e.: If we are not scanning this chain anymore, return early with log
-          batchNumber += 1;
+          const batchStart = startScanHeight + batchIndex * batchSize;
           const batchEnd = Math.min(batchStart + batchSize, treeHeight);
           const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
@@ -2823,46 +2827,31 @@ abstract class AbstractWallet extends EventEmitter {
           const finishedTreeCount = treeIndex - startScanTree;
           const finishedTreesProgress = finishedTreeCount / treesToScan;
           const afterFetchLeavesProgress = 0.5; // After Promise.all to get leaves, say we are 50% done with this batch.
-          const batchRatio = batchNumber / numBatches;
-          let newTreeProgress = (afterFetchLeavesProgress * batchRatio) / treesToScan;
+          let newTreeProgress =
+            (batchIndex + afterFetchLeavesProgress) / totalBatches / treesToScan;
           if (progressCallback) {
             progressCallback(finishedTreesProgress + newTreeProgress);
           }
-
-          const leavesToScan = batchEnd - batchStart;
-          let finishedLeafCount = 0;
-          let timeSinceLastProgressCallback = Date.now() - 500;
 
           await this.scanLeaves(
             txidVersion,
             leaves,
             treeIndex,
             chain,
-            startScanHeight,
-            treeHeight,
-            () => {
-              // Scan ticker. Triggers every time leaf is scanned successfully or skipped.
-              if (progressCallback) {
-                finishedLeafCount += 1;
-                // Throttle progressCallback, at most every 500ms.
-                if (Date.now() - timeSinceLastProgressCallback >= 500) {
-                  // 100ms since last progressCallback call.
-                  timeSinceLastProgressCallback = Date.now();
-                  const leafScanProgress = finishedLeafCount / leavesToScan;
-                  const endProgress = 1.0;
-                  const currentBatchProgress =
-                    leafScanProgress * (endProgress - afterFetchLeavesProgress) +
-                    afterFetchLeavesProgress;
-                  newTreeProgress = (currentBatchProgress * batchRatio) / treesToScan;
-                  progressCallback(finishedTreesProgress + newTreeProgress);
-                }
-              }
-            },
+            batchStart,
+            batchEnd,
+            undefined, // scanTicker
           );
+
+          const afterScanLeavesProgress = 1.0;
+          newTreeProgress = (batchIndex + afterScanLeavesProgress) / totalBatches / treesToScan;
+          if (progressCallback) {
+            progressCallback(finishedTreesProgress + newTreeProgress);
+          }
 
           // Commit new scanned height
           const walletDetailsMap = await this.getWalletDetailsMap(chain);
-          walletDetails.treeScannedHeights[treeIndex] = leaves.length;
+          walletDetails.treeScannedHeights[treeIndex] = batchEnd;
           walletDetailsMap[txidVersion] = walletDetails;
 
           // Write new wallet details to db
