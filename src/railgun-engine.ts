@@ -437,12 +437,11 @@ class RailgunEngine extends EventEmitter {
         await this.handleNewRailgunTransactionsV3(txidVersion, chain, railgunTransactionEvents);
       }
 
-      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.4); // 20% / 50%
+      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.3); // 15% / 50%
 
       await this.unshieldListener(txidVersion, chain, unshieldEvents);
+      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.5); // 25% / 50%
       await this.nullifierListener(txidVersion, chain, nullifierEvents);
-
-      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, endProgress * 0.48); // 24% / 50%
 
       EngineDebug.log(`[${txidVersion}] QuickSync commitments: ${commitmentEvents.length}`);
 
