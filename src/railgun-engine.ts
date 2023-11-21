@@ -31,7 +31,6 @@ import {
   QuickSyncRailgunTransactionsV2,
   UTXOScanDecryptBalancesCompleteEventData,
   UnshieldStoredEvent,
-  WalletScannedEventData,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
@@ -632,6 +631,7 @@ class RailgunEngine extends EventEmitter {
       );
 
       utxoMerkletree.isScanning = false;
+      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 0.97); // 97%
 
       // The handler of EngineEvent.UTXOScanDecryptBalancesComplete will
       // call emitScanEventHistoryComplete when it is done processing balances since that can take some time.
