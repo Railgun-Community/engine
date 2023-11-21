@@ -666,6 +666,7 @@ class RailgunEngine extends EventEmitter {
   }
 
   emitScanEventHistoryComplete(txidVersion: TXIDVersion, chain: Chain) {
+    this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 1.0); // 100%
     const scanCompleteData: MerkletreeHistoryScanEventData = {
       scanStatus: MerkletreeScanStatus.Complete,
       txidVersion,
