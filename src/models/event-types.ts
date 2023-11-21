@@ -13,6 +13,7 @@ export enum EngineEvent {
   UTXOMerkletreeHistoryScanUpdate = 'utxo-merkletree-history-scan-update',
   TXIDMerkletreeHistoryScanUpdate = 'txid-merkletree-history-scan-update',
   POIProofUpdate = 'POIProofUpdate',
+  UTXOScanDecryptBalancesComplete = 'UTXOScanDecryptBalancesComplete',
 }
 
 export type QuickSyncEvents = (
@@ -80,7 +81,12 @@ export type AccumulatedEvents = {
 export type WalletScannedEventData = {
   txidVersion: TXIDVersion;
   chain: Chain;
-  isEventHistoryScan?: boolean;
+};
+
+export type UTXOScanDecryptBalancesCompleteEventData = {
+  txidVersion: TXIDVersion;
+  chain: Chain;
+  walletIdFilter: Optional<string[]>;
 };
 
 export type MerkletreeHistoryScanEventData = {
