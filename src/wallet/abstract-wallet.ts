@@ -57,7 +57,7 @@ import {
   numberify,
   padToLength,
 } from '../utils/bytes';
-import { getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
+import { generateSimpleKey, getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   AddressKeys,
   TokenBalancesAllTxidVersions,
@@ -192,6 +192,8 @@ abstract class AbstractWallet extends EventEmitter {
   private readonly prover: Prover;
 
   private readonly isClearingBalances: boolean[][] = [];
+
+  private readonly decryptBalancesKeyForChain: Optional<string>[][] = [];
 
   private creationBlockNumbers: Optional<number[][]>;
 
@@ -2748,6 +2750,12 @@ abstract class AbstractWallet extends EventEmitter {
 
       EngineDebug.log(`scan wallet balances: chain ${chain.type}:${chain.id}`);
 
+      // Set a simple key for this run of decryptBalances, so we can return early if it changes
+      // This will change if another decryptBalances is called for this chain, and we don't need multiple running at once
+      const decryptingBalancesKey = generateSimpleKey();
+      this.decryptBalancesKeyForChain[chain.type] ??= [];
+      this.decryptBalancesKeyForChain[chain.type][chain.id] = decryptingBalancesKey;
+
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
       // Fetch wallet details and latest tree.
@@ -2786,12 +2794,6 @@ abstract class AbstractWallet extends EventEmitter {
       // Loop through each tree and scan
       for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
         // Get scanned height
-        // TODO-PETE: Should you move this and creationtreeheight inside the batch loop.
-        // TODO-PETE: This will be getting updated at the end of each batch loop.
-        // TODO-PETE: How to handle if another process called decryptBalances and we are updating startScannedHeight via those batches at the same time?
-        // TODO-PETE: Maybe something with checking the startScanHeight at the start of each batch to make sure it is what we expect?
-        // TODO-PETE: Or maybe we shouldn't write to db and update walletDetails.treeScannedHeights[treeIndex] until after all of the batch loops finish
-        // TODO-PETE: Or maybe we really should implement a check system for not allowing another process to call decryptBalances while one is ongoing?
         let startScanHeight = walletDetails.treeScannedHeights[treeIndex];
 
         // If creationTreeHeight exists, check if it is higher than default startScanHeight and start there if needed
@@ -2802,9 +2804,6 @@ abstract class AbstractWallet extends EventEmitter {
           startScanHeight = Math.max(walletDetails.creationTreeHeight, startScanHeight);
         }
 
-        // TODO-PETE: Batch fetcher, 1000 at a time, all the way through await this.db.put, at start of each loop, check if scanning this chain is still defined. If not, return early with log
-        // TODO-PETE: Monday talk part 3 35:45
-        // TODO-PETE: Also send back incremental progress with the promise.all on the fetcher batch and then also after each leaf scan
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
 
@@ -2813,7 +2812,6 @@ abstract class AbstractWallet extends EventEmitter {
         const totalBatches = Math.ceil(totalLeavesToScan / batchSize);
 
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
-          // TODO-PETE: Check here if we should return early. i.e.: If we are not scanning this chain anymore, return early with log
           const batchStart = startScanHeight + batchIndex * batchSize;
           const batchEnd = Math.min(batchStart + batchSize, treeHeight);
           const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
@@ -2849,6 +2847,15 @@ abstract class AbstractWallet extends EventEmitter {
             progressCallback(finishedTreesProgress + newTreeProgress);
           }
 
+          if (this.decryptBalancesKeyForChain[chain.type]?.[chain.id] !== decryptingBalancesKey) {
+            // Key changed because some other decryptBalances run has started.
+            // No need to run multiple decrypt balances at once, return early.
+            EngineDebug.log(
+              `wallet: decryptBalances key changed, returning early. ${chain.type}:${chain.id}`,
+            );
+            return;
+          }
+
           // Commit new scanned height
           const walletDetailsMap = await this.getWalletDetailsMap(chain);
           walletDetails.treeScannedHeights[treeIndex] = batchEnd;
@@ -2859,6 +2866,10 @@ abstract class AbstractWallet extends EventEmitter {
         }
       }
 
+      // Reset decryptBalancesKeyForChain
+      this.decryptBalancesKeyForChain[chain.type] ??= [];
+      this.decryptBalancesKeyForChain[chain.type][chain.id] = undefined;
+
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
       const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
@@ -2867,6 +2878,10 @@ abstract class AbstractWallet extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.refreshPOIsForTXIDVersion(chain, txidVersion); // Synchronous
     } catch (err) {
+      // Reset decryptBalancesKeyForChain
+      this.decryptBalancesKeyForChain[chain.type] ??= [];
+      this.decryptBalancesKeyForChain[chain.type][chain.id] = undefined;
+
       if (err instanceof Error) {
         EngineDebug.log(`wallet.scan error: ${err.message}`);
         EngineDebug.error(err, true /* ignoreInTests */);
