@@ -29,6 +29,7 @@ import {
   MerkletreeScanStatus,
   QuickSyncEvents,
   QuickSyncRailgunTransactionsV2,
+  UTXOScanDecryptBalancesCompleteEventData,
   UnshieldStoredEvent,
   WalletScannedEventData,
 } from './models/event-types';
@@ -632,16 +633,15 @@ class RailgunEngine extends EventEmitter {
 
       utxoMerkletree.isScanning = false;
 
-      // The handler of EngineEvent.WalletDecryptBalancesComplete checks isEventHistoryScan
-      // and will call emitScanEventHistoryComplete when it is done processing balances since that can take some time.
+      // The handler of EngineEvent.UTXOScanDecryptBalancesComplete will
+      // call emitScanEventHistoryComplete when it is done processing balances since that can take some time.
       // This is better UX than calling MerkletreeScanStatus.Complete 5-10 sec before balances are actually passed to front end.
-      const isEventHistoryScan = true;
-      const walletScannedEventData: WalletScannedEventData = {
+      const decryptBalancesCompleteEventData: UTXOScanDecryptBalancesCompleteEventData = {
         txidVersion,
         chain,
-        isEventHistoryScan,
+        walletIdFilter,
       };
-      this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
+      this.emit(EngineEvent.UTXOScanDecryptBalancesComplete, decryptBalancesCompleteEventData);
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
