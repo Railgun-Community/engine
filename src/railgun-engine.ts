@@ -30,6 +30,7 @@ import {
   QuickSyncEvents,
   QuickSyncRailgunTransactionsV2,
   UnshieldStoredEvent,
+  WalletScannedEventData,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
@@ -623,20 +624,24 @@ class RailgunEngine extends EventEmitter {
         walletIdFilter,
         (progress: number) => {
           const overallProgress =
-            progress * (0.99 - decryptStartingProgress) + decryptStartingProgress;
-          this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 90-100%
+            progress * (0.97 - decryptStartingProgress) + decryptStartingProgress;
+          this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, overallProgress); // 90-97%
         },
+        true, // deferCompletionEvent
       );
 
-      this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, 1.0); // 100%
+      utxoMerkletree.isScanning = false;
 
-      const scanCompleteData: MerkletreeHistoryScanEventData = {
-        scanStatus: MerkletreeScanStatus.Complete,
+      // The handler of EngineEvent.WalletDecryptBalancesComplete checks isEventHistoryScan
+      // And will call the MerkletreeScanStatus.Complete event when it is done processing balances since that can take some time.
+      // This is better UX than calling MerkletreeScanStatus.Complete 5-10 sec before balances are actually passed to front end.
+      const isEventHistoryScan = true;
+      const walletScannedEventData: WalletScannedEventData = {
         txidVersion,
         chain,
+        isEventHistoryScan,
       };
-      this.emit(EngineEvent.UTXOMerkletreeHistoryScanUpdate, scanCompleteData);
-      utxoMerkletree.isScanning = false;
+      this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
     } catch (err) {
       if (!(err instanceof Error)) {
         throw err;
@@ -648,6 +653,7 @@ class RailgunEngine extends EventEmitter {
         chain,
         walletIdFilter,
         undefined, // progressCallback
+        false, // deferCompletionEvent
       );
       const scanIncompleteData: MerkletreeHistoryScanEventData = {
         scanStatus: MerkletreeScanStatus.Incomplete,
@@ -936,6 +942,7 @@ class RailgunEngine extends EventEmitter {
             chain,
             undefined, // walletIdFilter
             undefined, // progressCallback
+            false, // deferCompletionEvent
           );
         }
       }
@@ -1677,6 +1684,7 @@ class RailgunEngine extends EventEmitter {
           chain,
           undefined, // walletIdFilter
           undefined, // progressCallback
+          false, // deferCompletionEvent
         );
       }
     };
@@ -1690,6 +1698,7 @@ class RailgunEngine extends EventEmitter {
           chain,
           undefined, // walletIdFilter
           undefined, // progressCallback
+          false, // deferCompletionEvent
         );
       }
     };
@@ -1732,6 +1741,7 @@ class RailgunEngine extends EventEmitter {
             chain,
             undefined, // walletIdFilter
             undefined, // progressCallback
+            false, // deferCompletionEvent
           );
         }
       };
@@ -1953,6 +1963,7 @@ class RailgunEngine extends EventEmitter {
     chain: Chain,
     walletIdFilter: Optional<string[]>,
     progressCallback: Optional<(progress: number) => void>,
+    deferCompletionEvent: boolean,
   ) {
     const wallets = this.allWallets();
     // eslint-disable-next-line no-restricted-syntax
@@ -1963,13 +1974,18 @@ class RailgunEngine extends EventEmitter {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await wallets[i].decryptBalances(txidVersion, chain, (walletProgress: number) => {
-        if (progressCallback) {
-          const finishedWalletsProgress = i / wallets.length;
-          const newWalletProgress = walletProgress / wallets.length;
-          progressCallback(finishedWalletsProgress + newWalletProgress);
-        }
-      });
+      await wallets[i].decryptBalances(
+        txidVersion,
+        chain,
+        (walletProgress: number) => {
+          if (progressCallback) {
+            const finishedWalletsProgress = i / wallets.length;
+            const newWalletProgress = walletProgress / wallets.length;
+            progressCallback(finishedWalletsProgress + newWalletProgress);
+          }
+        },
+        deferCompletionEvent,
+      );
     }
   }
 

@@ -2741,6 +2741,7 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     chain: Chain,
     progressCallback: Optional<(progress: number) => void>,
+    deferCompletionEvent: boolean, // the caller will handle emitting EngineEvent.WalletDecryptBalancesComplete
   ) {
     try {
       if (this.isClearingBalances[chain.type]?.[chain.id] === true) {
@@ -2872,8 +2873,10 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
-      const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
-      this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
+      if (!deferCompletionEvent) {
+        const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
+        this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.refreshPOIsForTXIDVersion(chain, txidVersion); // Synchronous
@@ -3083,7 +3086,12 @@ abstract class AbstractWallet extends EventEmitter {
         continue;
       }
 
-      await this.decryptBalances(txidVersion, chain, progressCallback);
+      await this.decryptBalances(
+        txidVersion,
+        chain,
+        progressCallback,
+        false, // deferCompletionEvent
+      );
     }
   }
 

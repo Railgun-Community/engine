@@ -80,6 +80,7 @@ export type AccumulatedEvents = {
 export type WalletScannedEventData = {
   txidVersion: TXIDVersion;
   chain: Chain;
+  isEventHistoryScan?: boolean;
 };
 
 export type MerkletreeHistoryScanEventData = {

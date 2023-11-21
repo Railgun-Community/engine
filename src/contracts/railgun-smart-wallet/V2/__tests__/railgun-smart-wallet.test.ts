@@ -48,6 +48,7 @@ import {
   MerkletreeHistoryScanEventData,
   MerkletreeScanStatus,
   UnshieldStoredEvent,
+  WalletScannedEventData,
 } from '../../../../models/event-types';
 import { Memo } from '../../../../note/memo';
 import { ViewOnlyWallet } from '../../../../wallet/view-only-wallet';
@@ -939,12 +940,12 @@ describe('railgun-smart-wallet', function runTests() {
 
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(1);
     let historyScanCompletedForChain!: Chain;
-    const historyScanListener = (data: MerkletreeHistoryScanEventData) => {
-      if (data.scanStatus === MerkletreeScanStatus.Complete) {
+    const historyScanListener = (data: WalletScannedEventData) => {
+      if (data.isEventHistoryScan ?? false) {
         historyScanCompletedForChain = data.chain;
       }
     };
-    engine.on(EngineEvent.UTXOMerkletreeHistoryScanUpdate, historyScanListener);
+    engine.on(EngineEvent.WalletDecryptBalancesComplete, historyScanListener);
     await engine.scanContractHistory(
       chain,
       undefined, // walletIdFilter

@@ -414,7 +414,12 @@ describe('railgun-engine', function test() {
     await utxoMerkletree.queueLeaves(0, 0, [commitment]);
     await utxoMerkletree.updateTreesFromWriteQueue();
 
-    await wallet.decryptBalances(txidVersion, chain, undefined);
+    await wallet.decryptBalances(
+      txidVersion,
+      chain,
+      undefined, // progressCallback
+      false, // deferCompletionEvent
+    );
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
@@ -478,7 +483,12 @@ describe('railgun-engine', function test() {
     await utxoMerkletree.queueLeaves(0, 0, [commitment]);
     await utxoMerkletree.updateTreesFromWriteQueue();
 
-    await wallet.decryptBalances(txidVersion, chain, undefined);
+    await wallet.decryptBalances(
+      txidVersion,
+      chain,
+      undefined, // progressCallback
+      false, // deferCompletionEvent
+    );
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
