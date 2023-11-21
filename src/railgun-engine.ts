@@ -633,7 +633,7 @@ class RailgunEngine extends EventEmitter {
       utxoMerkletree.isScanning = false;
 
       // The handler of EngineEvent.WalletDecryptBalancesComplete checks isEventHistoryScan
-      // And will call the MerkletreeScanStatus.Complete event when it is done processing balances since that can take some time.
+      // and will call emitScanEventHistoryComplete when it is done processing balances since that can take some time.
       // This is better UX than calling MerkletreeScanStatus.Complete 5-10 sec before balances are actually passed to front end.
       const isEventHistoryScan = true;
       const walletScannedEventData: WalletScannedEventData = {
@@ -663,6 +663,15 @@ class RailgunEngine extends EventEmitter {
       this.emit(EngineEvent.UTXOMerkletreeHistoryScanUpdate, scanIncompleteData);
       utxoMerkletree.isScanning = false;
     }
+  }
+
+  emitScanEventHistoryComplete(txidVersion: TXIDVersion, chain: Chain) {
+    const scanCompleteData: MerkletreeHistoryScanEventData = {
+      scanStatus: MerkletreeScanStatus.Complete,
+      txidVersion,
+      chain,
+    };
+    this.emit(EngineEvent.UTXOMerkletreeHistoryScanUpdate, scanCompleteData);
   }
 
   async slowSyncV2(
