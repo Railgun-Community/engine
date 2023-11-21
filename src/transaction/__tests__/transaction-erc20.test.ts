@@ -154,9 +154,14 @@ describe('transaction-erc20', function test() {
     await utxoMerkletree.updateTreesFromWriteQueue();
 
     let scanProgress = 0;
-    await wallet.decryptBalances(txidVersion, chain, (progress: number) => {
-      scanProgress = progress;
-    });
+    await wallet.decryptBalances(
+      txidVersion,
+      chain,
+      (progress: number) => {
+        scanProgress = progress;
+      },
+      false, // deferCompletionCallback
+    );
     expect(scanProgress).to.equal(1);
 
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
