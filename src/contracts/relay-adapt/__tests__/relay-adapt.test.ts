@@ -1418,7 +1418,7 @@ describe('relay-adapt', function test() {
     const { callFailedIndexString, errorMessage } =
       RelayAdaptV2Contract.extractGasEstimateCallFailedIndexAndErrorText(errorText);
     expect(callFailedIndexString).to.equal('UNKNOWN');
-    expect(errorMessage).to.equal('error: not a parseable error');
+    expect(errorMessage).to.equal('not a parseable error');
   });
 
   afterEach(async () => {
