@@ -324,8 +324,8 @@ const decryptReceiverNoteSafeV3 = async (
       transactCommitmentBatchIndexV3,
     );
     return note;
-  } catch (err) {
-    EngineDebug.error(err as Error);
+  } catch (cause) {
+    EngineDebug.error(new Error('Failed to decrypt receiver note safe V3', { cause }));
     return undefined;
   }
 };

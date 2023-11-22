@@ -295,9 +295,12 @@ const decryptReceiverNoteSafeV2 = async (
       undefined, // transactCommitmentBatchIndexV3 - not used
     );
     return note;
-  } catch (err) {
+  } catch (cause) {
     const ignoreInTests = true;
-    EngineDebug.error(err as Error, ignoreInTests);
+    EngineDebug.error(
+      new Error('Failed to decrypt receiver note safe V2', { cause }),
+      ignoreInTests,
+    );
     return undefined;
   }
 };
