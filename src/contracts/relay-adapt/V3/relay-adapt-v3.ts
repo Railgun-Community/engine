@@ -415,7 +415,8 @@ export class RelayAdaptV3Contract {
       }
       return utf8;
     } catch (err) {
-      return `Unknown Relay Adapt error.`;
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      return `Unknown Relay Adapt error: ${err?.message ?? err}`;
     }
   }
 }

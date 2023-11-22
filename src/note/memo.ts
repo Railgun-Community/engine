@@ -9,7 +9,15 @@ import {
   XChaChaEncryptionAlgorithm,
 } from '../models/formatted-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
-import { ByteLength, arrayify, fastHexToBytes, hexlify, nToHex, prefix0x, strip0x } from '../utils/bytes';
+import {
+  ByteLength,
+  arrayify,
+  fastHexToBytes,
+  hexlify,
+  nToHex,
+  prefix0x,
+  strip0x,
+} from '../utils/bytes';
 import { AES } from '../utils/encryption/aes';
 import { XChaCha20 } from '../utils/encryption/x-cha-cha-20';
 import { isDefined } from '../utils/is-defined';
@@ -63,8 +71,8 @@ export class Memo {
       }
 
       return noteAnnotationData;
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      EngineDebug.error(new Error('Failed to decrypt node annotation data', { cause }));
       return undefined;
     }
   }
@@ -105,8 +113,8 @@ export class Memo {
         outputType,
       };
       return senderAnnotation;
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      EngineDebug.error(new Error('Failed to decrypt sender ciphertext V3', { cause }));
       return undefined;
     }
   }

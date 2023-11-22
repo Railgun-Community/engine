@@ -209,9 +209,9 @@ class Database {
         lte: `${pathkey}~`,
       });
       this.isClearingNamespace = false;
-    } catch (err) {
+    } catch (cause) {
       this.isClearingNamespace = false;
-      throw new Error('Failed to clear database namespace', { cause: err });
+      throw new Error('Failed to clear database namespace', { cause });
     }
   }
 

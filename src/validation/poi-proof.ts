@@ -59,8 +59,8 @@ export class POIProof {
         maxInputs,
         maxOutputs,
       );
-    } catch (err) {
-      EngineDebug.error(err as Error);
+    } catch (cause) {
+      EngineDebug.error(new Error('Failed to verify POI proof', { cause }));
       return false;
     }
   };

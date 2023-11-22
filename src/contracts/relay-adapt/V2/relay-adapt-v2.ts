@@ -247,17 +247,17 @@ export class RelayAdaptV2Contract {
       }
       const { callFailedIndexString, errorMessage } =
         RelayAdaptV2Contract.extractGasEstimateCallFailedIndexAndErrorText(cause.message);
-      throw new Error(
-        `RelayAdapt multicall failed at index ${callFailedIndexString} with ${errorMessage}`,
-      );
+      throw new Error(`RelayAdapt multicall failed at index ${callFailedIndexString}.`, {
+        cause: new Error(errorMessage),
+      });
     }
   }
 
-  static extractGasEstimateCallFailedIndexAndErrorText(errMessage: string) {
+  static extractGasEstimateCallFailedIndexAndErrorText(errorMessage: string) {
     try {
       // Sample error text from ethers v6.4.0: 'execution reverted (unknown custom error) (action="estimateGas", data="0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000", reason=null, transaction={ "data": "0x28223a77000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000007a00000000000000000000000000000000000000000000000000…00000000004640cd6086ade3e984b011b4e8c7cab9369b90499ab88222e673ec1ae4d2c3bf78ae96e95f9171653e5b1410273269edd64a0ab792a5d355093caa9cb92406125c7803a48028503783f2ab5e84f0ea270ce770860e436b77c942ed904a5d577d021cf0fd936183e0298175679d63d73902e116484e10c7b558d4dc84e113380500000000000000000000000000000000000000000000000000000000", "from": "0x000000000000000000000000000000000000dEaD", "to": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726" }, invocation=null, revert=null, code=CALL_EXCEPTION, version=6.4.0)'
       const prefixSplit = ` (action="estimateGas", data="`;
-      const splitResult = errMessage.split(prefixSplit);
+      const splitResult = errorMessage.split(prefixSplit);
       const callFailedMessage = splitResult[0]; // execution reverted (unknown custom error)
       const dataMessage = splitResult[1].split(`"`)[0]; // 0x5c0dee5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000
       const parsedDataMessage = this.parseRelayAdaptReturnValue(dataMessage);
@@ -269,7 +269,7 @@ export class RelayAdaptV2Contract {
     } catch (err) {
       return {
         callFailedIndexString: 'UNKNOWN',
-        errorMessage: `error: ${errMessage}`,
+        errorMessage,
       };
     }
   }
@@ -395,7 +395,8 @@ export class RelayAdaptV2Contract {
       }
       return utf8;
     } catch (err) {
-      return `Unknown Relay Adapt error.`;
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      return `Unknown Relay Adapt error: ${err?.message ?? err}`;
     }
   }
 }
