@@ -3047,18 +3047,16 @@ abstract class AbstractWallet extends EventEmitter {
 
         if (!isDefined(earliestCommitmentIndex)) {
           // Search through leaves (descending) for first blockNumber before creation.
-          const creationBlockIndex = binarySearchForUpperBoundIndex(
-            leaves,
-            (commitment) =>
-              commitment != null &&
-              commitment.blockNumber != null &&
-              commitment.blockNumber <= creationBlockNumber,
-          );
-
-          if (creationBlockIndex > -1) {
-            earliestCommitmentIndex = creationBlockIndex;
-            creationBlockIndexBlockNumber =
-              leaves[earliestCommitmentIndex]?.blockNumber ?? creationBlockNumber;
+          // Do this linearly, as we don't expect many commitments in a single block.
+          for (let index = leaves.length - 1; index >= batchStart; index -= 1) {
+            const commitment = leaves[index];
+            if (commitment != null && commitment.blockNumber != null) {
+              if (commitment.blockNumber <= creationBlockNumber) {
+                earliestCommitmentIndex = index;
+                creationBlockIndexBlockNumber = commitment.blockNumber;
+                break;
+              }
+            }
           }
         }
 
