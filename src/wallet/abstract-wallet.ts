@@ -3024,29 +3024,69 @@ abstract class AbstractWallet extends EventEmitter {
     // Loop through each tree, descending, and search commitments for creation tree height <= block number
     for (let tree = latestTree; tree > -1; tree -= 1) {
       const treeHeight = await utxoMerkletree.getTreeLength(tree);
-      const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
-      // Build reverse list.
-      for (let index = 0; index < treeHeight; index += 1) {
-        fetcher[index] = utxoMerkletree.getCommitment(tree, index);
-      }
+      const batchSize = 500;
+      const totalBatches = Math.ceil(treeHeight / batchSize);
+      let earliestCommitmentIndex: Optional<number>; // Store the earliest commitment index found for this tree with <= creationBlockNumber.
+      let creationBlockIndexBlockNumber = 0; // Store the blockNumber of the earliest commitment index found for this tree with <= creationBlockNumber.
 
-      const leaves = await Promise.all(fetcher);
-      if (!leaves.length) {
-        return undefined;
-      }
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
+        // Start batches at the end of the tree and work backwards
+        const batchStart = Math.max(0, treeHeight - (batchIndex + 1) * batchSize);
+        const batchEnd = treeHeight - batchIndex * batchSize;
+        const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
-      // Search through leaves (descending) for first blockNumber before creation.
-      const creationBlockIndex = binarySearchForUpperBoundIndex(
-        leaves,
-        (commitment) =>
-          commitment != null &&
-          commitment.blockNumber != null &&
-          commitment.blockNumber <= creationBlockNumber,
-      );
+        for (let index = batchStart; index < batchEnd; index += 1) {
+          fetcher[index] = utxoMerkletree.getCommitment(tree, index);
+        }
 
-      if (creationBlockIndex > -1) {
-        return { tree, position: creationBlockIndex };
+        const leaves = await Promise.all(fetcher);
+        if (!leaves.length) {
+          return undefined;
+        }
+
+        if (!isDefined(earliestCommitmentIndex)) {
+          // Search through leaves (descending) for first blockNumber before creation.
+          const creationBlockIndex = binarySearchForUpperBoundIndex(
+            leaves,
+            (commitment) =>
+              commitment != null &&
+              commitment.blockNumber != null &&
+              commitment.blockNumber <= creationBlockNumber,
+          );
+
+          if (creationBlockIndex > -1) {
+            earliestCommitmentIndex = creationBlockIndex;
+            creationBlockIndexBlockNumber =
+              leaves[earliestCommitmentIndex]?.blockNumber ?? creationBlockNumber;
+          }
+        }
+
+        if (earliestCommitmentIndex != null) {
+          // Check if any commitments earlier in the leaves array are also equal to creationBlockIndex's blockNumber.
+          // This can happen if there are multiple commitments in the same block.
+          // If so, return the earliest one.
+          for (let index: number = earliestCommitmentIndex - 1; index > -1; index -= 1) {
+            if (index < batchStart) {
+              // We've gone too far, stop.
+              break;
+            }
+
+            const commitment = leaves[index];
+            if (commitment != null && commitment.blockNumber != null) {
+              if (commitment.blockNumber === creationBlockIndexBlockNumber) {
+                earliestCommitmentIndex = index;
+              } else if (commitment.blockNumber < creationBlockIndexBlockNumber) {
+                // We've gone too far, stop.
+                break;
+              }
+            }
+          }
+
+          if (earliestCommitmentIndex > batchStart) {
+            return { tree, position: earliestCommitmentIndex };
+          }
+        }
       }
     }
 

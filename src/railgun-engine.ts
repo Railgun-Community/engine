@@ -958,7 +958,7 @@ class RailgunEngine extends EventEmitter {
       this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
     } catch (cause) {
       if (!(cause instanceof Error)) {
-        throw cause
+        throw cause;
       }
       EngineDebug.error(new Error('Failed to sync Railgun transactions V2', { cause }));
 
