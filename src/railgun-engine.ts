@@ -995,13 +995,7 @@ class RailgunEngine extends EventEmitter {
           latestValidatedTxidIndex ?? 0
         }`,
       );
-      const scanCompleteData: MerkletreeHistoryScanEventData = {
-        scanStatus: MerkletreeScanStatus.Complete,
-        progress: 1,
-        txidVersion,
-        chain,
-      };
-      this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, scanCompleteData);
+      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 1);
       return;
     }
 
