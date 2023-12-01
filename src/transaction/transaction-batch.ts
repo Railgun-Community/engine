@@ -571,22 +571,29 @@ export class TransactionBatch {
       data: '0x', // TODO-V3: Add RelayAdapt encoded calldata
     };
 
-    const dummyProvedTransactionPromises: Promise<TransactionStructV2 | TransactionStructV3>[] =
-      spendingSolutionGroups.map(async (spendingSolutionGroup) => {
-        const changeOutput = TransactionBatch.getChangeOutput(wallet, spendingSolutionGroup);
-        const transaction = this.generateTransactionForSpendingSolutionGroup(
-          spendingSolutionGroup,
-          changeOutput,
-        );
-        const transactionRequest = await transaction.generateTransactionRequest(
-          wallet,
-          txidVersion,
-          encryptionKey,
-          globalBoundParams,
-        );
-        return transaction.generateDummyProvedTransaction(prover, transactionRequest);
-      });
-    return Promise.all(dummyProvedTransactionPromises);
+    const dummyProvedTransactions: (TransactionStructV2 | TransactionStructV3)[] = [];
+    for (let i = 0; i < spendingSolutionGroups.length; i += 1) {
+      const spendingSolutionGroup = spendingSolutionGroups[i];
+      const changeOutput = TransactionBatch.getChangeOutput(wallet, spendingSolutionGroup);
+      const transaction = this.generateTransactionForSpendingSolutionGroup(
+        spendingSolutionGroup,
+        changeOutput,
+      );
+      // eslint-disable-next-line no-await-in-loop
+      const transactionRequest = await transaction.generateTransactionRequest(
+        wallet,
+        txidVersion,
+        encryptionKey,
+        globalBoundParams,
+      );
+      // eslint-disable-next-line no-await-in-loop
+      const dummyProvedTransaction = await transaction.generateDummyProvedTransaction(
+        prover,
+        transactionRequest,
+      );
+      dummyProvedTransactions.push(dummyProvedTransaction);
+    }
+    return dummyProvedTransactions;
   }
 
   generateTransactionForSpendingSolutionGroup(
