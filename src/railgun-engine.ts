@@ -261,7 +261,7 @@ class RailgunEngine extends EventEmitter {
     // Scan for 3 times total
     if (scanCount < 2) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.triggerDelayedTXIDMerkletreeSyncV2(chain, scanCount - 1);
+      this.triggerDelayedTXIDMerkletreeSyncV2(chain, scanCount + 1);
     }
   }
 
