@@ -73,7 +73,7 @@ export class POIValidation {
     }
   }
 
-  private static async assertIsValidSpendableTXID(
+  static async assertIsValidSpendableTXID(
     txidVersion: TXIDVersion,
     listKey: string,
     chain: Chain,
