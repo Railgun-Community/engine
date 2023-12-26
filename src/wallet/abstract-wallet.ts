@@ -909,6 +909,8 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Write to DB
     await this.db.batch(writeBatch);
+
+    this.invalidateTXOsCache(chain);
   }
 
   private async keySplits(namespace: string[], fieldCount: number): Promise<string[][]> {
@@ -1182,11 +1184,11 @@ abstract class AbstractWallet extends EventEmitter {
     position: number,
     receiveCommitment: StoredReceiveCommitment,
   ): Promise<void> {
-    this.invalidateTXOsCache(chain);
     await this.db.put(
       this.getWalletReceiveCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(receiveCommitment),
     );
+    this.invalidateTXOsCache(chain);
   }
 
   private async updateSentCommitmentInDB(
@@ -1195,11 +1197,11 @@ abstract class AbstractWallet extends EventEmitter {
     position: number,
     sentCommitment: StoredSendCommitment,
   ): Promise<void> {
-    this.invalidateTXOsCache(chain);
     await this.db.put(
       this.getWalletSentCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(sentCommitment),
     );
+    this.invalidateTXOsCache(chain);
   }
 
   async getTXOsReceivedPOIStatusInfo(
@@ -2916,8 +2918,6 @@ abstract class AbstractWallet extends EventEmitter {
           await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
         }
       }
-
-      this.invalidateTXOsCache(chain);
 
       // Reset decryptBalancesKeyForChain
       this.decryptBalancesKeyForChain[chain.type] ??= [];
