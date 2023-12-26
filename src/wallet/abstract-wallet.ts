@@ -82,7 +82,6 @@ import { packPoint, unpackPoint } from '../key-derivation/babyjubjub';
 import { Chain } from '../models/engine-types';
 import { assertChainSupportsV3, getChainFullNetworkID, getChainSupportsV3 } from '../chain/chain';
 import { TransactNote } from '../note/transact-note';
-import { binarySearchForUpperBoundIndex } from '../utils/search';
 import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import {
@@ -201,6 +200,8 @@ abstract class AbstractWallet extends EventEmitter {
   private: CachedStoredReceiveCommitment[][][] = [];
 
   private generatingPOIsForChain: boolean[][] = [];
+
+  private TXOsCache: { [txidVersion: string]: Optional<TXO[]>[][] } = {};
 
   /**
    * Create Wallet controller
@@ -974,6 +975,32 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
+   * Sets TXOs in cache
+   */
+  setTXOsCache(txidVersion: TXIDVersion, chain: Chain, TXOs: Optional<TXO[]>) {
+    this.TXOsCache[txidVersion] ??= [];
+    this.TXOsCache[txidVersion][chain.type] ??= [];
+    this.TXOsCache[txidVersion][chain.type][chain.id] = TXOs;
+  }
+
+  /**
+   * Fetches cached TXOs
+   */
+  getTXOsFromCache(txidVersion: TXIDVersion, chain: Chain): Optional<TXO[]> {
+    return this.TXOsCache[txidVersion]?.[chain.type]?.[chain.id];
+  }
+
+  /**
+   * Clears TXOs cache
+   */
+  invalidateTXOsCache(chain: Chain) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      this.setTXOsCache(txidVersion, chain, undefined);
+    }
+  }
+
+  /**
    * Get TXOs list of a chain
    * @param chain - chain type/id to get UTXOs for
    * @returns UTXOs list
@@ -981,6 +1008,11 @@ abstract class AbstractWallet extends EventEmitter {
   async TXOs(txidVersion: TXIDVersion, chain: Chain): Promise<TXO[]> {
     if (!this.hasUTXOMerkletree(txidVersion, chain)) {
       return [];
+    }
+
+    const cachedTXOs = this.getTXOsFromCache(txidVersion, chain);
+    if (isDefined(cachedTXOs)) {
+      return cachedTXOs;
     }
 
     const recipientAddress = encodeAddress(this.addressKeys);
@@ -992,7 +1024,7 @@ abstract class AbstractWallet extends EventEmitter {
       chain,
     );
 
-    return Promise.all(
+    const TXOs = await Promise.all(
       storedReceiveCommitments.map(async ({ storedReceiveCommitment, tree, position }) => {
         const receiveCommitment = storedReceiveCommitment;
 
@@ -1056,9 +1088,14 @@ abstract class AbstractWallet extends EventEmitter {
           commitmentType: receiveCommitment.commitmentType,
           transactCreationRailgunTxid: receiveCommitment.transactCreationRailgunTxid,
         };
+
         return txo;
       }),
     );
+
+    this.setTXOsCache(txidVersion, chain, TXOs);
+
+    return TXOs;
   }
 
   /**
@@ -1145,6 +1182,7 @@ abstract class AbstractWallet extends EventEmitter {
     position: number,
     receiveCommitment: StoredReceiveCommitment,
   ): Promise<void> {
+    this.invalidateTXOsCache(chain);
     await this.db.put(
       this.getWalletReceiveCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(receiveCommitment),
@@ -1157,6 +1195,7 @@ abstract class AbstractWallet extends EventEmitter {
     position: number,
     sentCommitment: StoredSendCommitment,
   ): Promise<void> {
+    this.invalidateTXOsCache(chain);
     await this.db.put(
       this.getWalletSentCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(sentCommitment),
@@ -1482,6 +1521,8 @@ abstract class AbstractWallet extends EventEmitter {
       }
       unshieldEvent.poisPerList = poisPerList;
       await utxoMerkletree.updateUnshieldEvent(unshieldEvent);
+
+      this.invalidateTXOsCache(chain);
     }
   }
 
@@ -2876,6 +2917,8 @@ abstract class AbstractWallet extends EventEmitter {
         }
       }
 
+      this.invalidateTXOsCache(chain);
+
       // Reset decryptBalancesKeyForChain
       this.decryptBalancesKeyForChain[chain.type] ??= [];
       this.decryptBalancesKeyForChain[chain.type][chain.id] = undefined;
@@ -3116,6 +3159,8 @@ abstract class AbstractWallet extends EventEmitter {
       }
     });
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
+
+    this.invalidateTXOsCache(chain);
   }
 
   /**

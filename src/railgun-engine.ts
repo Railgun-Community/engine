@@ -291,6 +291,8 @@ class RailgunEngine extends EventEmitter {
     });
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.nullify(nullifiers);
+
+    this.invalidateTXOsCacheAllWallets(chain);
   }
 
   /**
@@ -316,6 +318,8 @@ class RailgunEngine extends EventEmitter {
     });
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.addUnshieldEvents(unshields);
+
+    this.invalidateTXOsCacheAllWallets(chain);
   }
 
   /**
@@ -1079,6 +1083,8 @@ class RailgunEngine extends EventEmitter {
 
           // eslint-disable-next-line no-await-in-loop
           await utxoMerkletree.addUnshieldEvents([unshieldEvent]);
+
+          this.invalidateTXOsCacheAllWallets(chain);
         } else {
           // V2 has unshield events. Map to existing event.
 
@@ -1093,6 +1099,8 @@ class RailgunEngine extends EventEmitter {
               matchingUnshieldEvent.railgunTxid = railgunTxid;
               // eslint-disable-next-line no-await-in-loop
               await utxoMerkletree.updateUnshieldEvent(matchingUnshieldEvent);
+
+              this.invalidateTXOsCacheAllWallets(chain);
             }
           } else {
             EngineDebug.log(
@@ -1995,6 +2003,14 @@ class RailgunEngine extends EventEmitter {
         },
         deferCompletionEvent,
       );
+    }
+  }
+
+  invalidateTXOsCacheAllWallets(chain: Chain) {
+    const wallets = this.allWallets();
+    // eslint-disable-next-line no-restricted-syntax
+    for (let i = 0; i < wallets.length; i += 1) {
+      wallets[i].invalidateTXOsCache(chain);
     }
   }
 
