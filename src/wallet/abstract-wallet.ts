@@ -1070,6 +1070,8 @@ abstract class AbstractWallet extends EventEmitter {
 
           if (
             isTransactCommitment(commitment) &&
+            (isDefined(receiveCommitment.transactCreationRailgunTxid) ||
+              isDefined(commitment.railgunTxid)) &&
             receiveCommitment.transactCreationRailgunTxid !== commitment.railgunTxid
           ) {
             receiveCommitment.transactCreationRailgunTxid = commitment.railgunTxid;
@@ -1082,7 +1084,10 @@ abstract class AbstractWallet extends EventEmitter {
             globalTreePosition,
           );
 
-          if (receiveCommitment.blindedCommitment !== blindedCommitment) {
+          if (
+            (isDefined(receiveCommitment.blindedCommitment) || isDefined(blindedCommitment)) &&
+            receiveCommitment.blindedCommitment !== blindedCommitment
+          ) {
             receiveCommitment.blindedCommitment = blindedCommitment;
             hasUpdate = true;
           }
