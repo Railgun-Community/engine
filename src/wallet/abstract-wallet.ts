@@ -1154,8 +1154,9 @@ abstract class AbstractWallet extends EventEmitter {
               getGlobalTreePosition(commitment.utxoTree, commitment.utxoIndex),
             );
             sentCommitment.railgunTxid = commitment.railgunTxid;
+
+            await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
           }
-          await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
         }
 
         sentCommitments.push({
@@ -2111,8 +2112,12 @@ abstract class AbstractWallet extends EventEmitter {
     const dbPath = this.getWalletReceiveCommitmentDBPrefix(chain, tree, position);
     const data = (await this.db.get(dbPath)) as BytesData;
     const receiveCommitment = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
-    receiveCommitment.poisPerList = poisPerList;
-    await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+
+    if (JSON.stringify(receiveCommitment.poisPerList) !== JSON.stringify(poisPerList)) {
+      // Update receiveCommitment if POIs have changed.
+      receiveCommitment.poisPerList = poisPerList;
+      await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+    }
   }
 
   private async updateSentCommitmentSpentPOIs(
@@ -2124,8 +2129,12 @@ abstract class AbstractWallet extends EventEmitter {
     const dbPath = this.getWalletSentCommitmentDBPrefix(chain, tree, position);
     const data = (await this.db.get(dbPath)) as BytesData;
     const sentCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
-    sentCommitment.poisPerList = poisPerList;
-    await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
+
+    if (JSON.stringify(sentCommitment.poisPerList) !== JSON.stringify(poisPerList)) {
+      // Update sentCommitment if POIs have changed.
+      sentCommitment.poisPerList = poisPerList;
+      await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
+    }
   }
 
   private static getPossibleChangeTokenAmounts(
