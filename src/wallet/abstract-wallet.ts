@@ -82,7 +82,6 @@ import { packPoint, unpackPoint } from '../key-derivation/babyjubjub';
 import { Chain } from '../models/engine-types';
 import { assertChainSupportsV3, getChainFullNetworkID, getChainSupportsV3 } from '../chain/chain';
 import { TransactNote } from '../note/transact-note';
-import { binarySearchForUpperBoundIndex } from '../utils/search';
 import { getSharedSymmetricKeyLegacy } from '../utils/keys-utils-legacy';
 import { ShieldNote } from '../note';
 import {
@@ -201,6 +200,8 @@ abstract class AbstractWallet extends EventEmitter {
   private: CachedStoredReceiveCommitment[][][] = [];
 
   private generatingPOIsForChain: boolean[][] = [];
+
+  private TXOsCache: { [txidVersion: string]: Optional<TXO[]>[][] } = {};
 
   /**
    * Create Wallet controller
@@ -908,6 +909,8 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Write to DB
     await this.db.batch(writeBatch);
+
+    this.invalidateTXOsCache(chain);
   }
 
   private async keySplits(namespace: string[], fieldCount: number): Promise<string[][]> {
@@ -974,6 +977,32 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
+   * Sets TXOs in cache
+   */
+  setTXOsCache(txidVersion: TXIDVersion, chain: Chain, TXOs: Optional<TXO[]>) {
+    this.TXOsCache[txidVersion] ??= [];
+    this.TXOsCache[txidVersion][chain.type] ??= [];
+    this.TXOsCache[txidVersion][chain.type][chain.id] = TXOs;
+  }
+
+  /**
+   * Fetches cached TXOs
+   */
+  getTXOsFromCache(txidVersion: TXIDVersion, chain: Chain): Optional<TXO[]> {
+    return this.TXOsCache[txidVersion]?.[chain.type]?.[chain.id];
+  }
+
+  /**
+   * Clears TXOs cache
+   */
+  invalidateTXOsCache(chain: Chain) {
+    // eslint-disable-next-line no-restricted-syntax
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
+      this.setTXOsCache(txidVersion, chain, undefined);
+    }
+  }
+
+  /**
    * Get TXOs list of a chain
    * @param chain - chain type/id to get UTXOs for
    * @returns UTXOs list
@@ -981,6 +1010,11 @@ abstract class AbstractWallet extends EventEmitter {
   async TXOs(txidVersion: TXIDVersion, chain: Chain): Promise<TXO[]> {
     if (!this.hasUTXOMerkletree(txidVersion, chain)) {
       return [];
+    }
+
+    const cachedTXOs = this.getTXOsFromCache(txidVersion, chain);
+    if (isDefined(cachedTXOs)) {
+      return cachedTXOs;
     }
 
     const recipientAddress = encodeAddress(this.addressKeys);
@@ -992,7 +1026,7 @@ abstract class AbstractWallet extends EventEmitter {
       chain,
     );
 
-    return Promise.all(
+    const TXOs = await Promise.all(
       storedReceiveCommitments.map(async ({ storedReceiveCommitment, tree, position }) => {
         const receiveCommitment = storedReceiveCommitment;
 
@@ -1031,15 +1065,36 @@ abstract class AbstractWallet extends EventEmitter {
             // Should never happen
             throw new Error('Fatal - Invalid commitment type');
           }
-          if (isTransactCommitment(commitment)) {
+
+          let hasUpdate = false;
+
+          if (
+            isTransactCommitment(commitment) &&
+            (isDefined(receiveCommitment.transactCreationRailgunTxid) ||
+              isDefined(commitment.railgunTxid)) &&
+            receiveCommitment.transactCreationRailgunTxid !== commitment.railgunTxid
+          ) {
             receiveCommitment.transactCreationRailgunTxid = commitment.railgunTxid;
+            hasUpdate = true;
           }
-          receiveCommitment.blindedCommitment = getBlindedCommitmentForShieldOrTransact(
+
+          const blindedCommitment = getBlindedCommitmentForShieldOrTransact(
             commitment.hash,
             note.notePublicKey,
             globalTreePosition,
           );
-          await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+
+          if (
+            (isDefined(receiveCommitment.blindedCommitment) || isDefined(blindedCommitment)) &&
+            receiveCommitment.blindedCommitment !== blindedCommitment
+          ) {
+            receiveCommitment.blindedCommitment = blindedCommitment;
+            hasUpdate = true;
+          }
+
+          if (hasUpdate) {
+            await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+          }
         }
 
         const txo: TXO = {
@@ -1056,9 +1111,14 @@ abstract class AbstractWallet extends EventEmitter {
           commitmentType: receiveCommitment.commitmentType,
           transactCreationRailgunTxid: receiveCommitment.transactCreationRailgunTxid,
         };
+
         return txo;
       }),
     );
+
+    this.setTXOsCache(txidVersion, chain, TXOs);
+
+    return TXOs;
   }
 
   /**
@@ -1115,8 +1175,9 @@ abstract class AbstractWallet extends EventEmitter {
               getGlobalTreePosition(commitment.utxoTree, commitment.utxoIndex),
             );
             sentCommitment.railgunTxid = commitment.railgunTxid;
+
+            await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
           }
-          await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
         }
 
         sentCommitments.push({
@@ -1149,6 +1210,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.getWalletReceiveCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(receiveCommitment),
     );
+    this.invalidateTXOsCache(chain);
   }
 
   private async updateSentCommitmentInDB(
@@ -1161,6 +1223,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.getWalletSentCommitmentDBPrefix(chain, tree, position),
       msgpack.encode(sentCommitment),
     );
+    this.invalidateTXOsCache(chain);
   }
 
   async getTXOsReceivedPOIStatusInfo(
@@ -1482,6 +1545,8 @@ abstract class AbstractWallet extends EventEmitter {
       }
       unshieldEvent.poisPerList = poisPerList;
       await utxoMerkletree.updateUnshieldEvent(unshieldEvent);
+
+      this.invalidateTXOsCache(chain);
     }
   }
 
@@ -2068,8 +2133,12 @@ abstract class AbstractWallet extends EventEmitter {
     const dbPath = this.getWalletReceiveCommitmentDBPrefix(chain, tree, position);
     const data = (await this.db.get(dbPath)) as BytesData;
     const receiveCommitment = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
-    receiveCommitment.poisPerList = poisPerList;
-    await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+
+    if (JSON.stringify(receiveCommitment.poisPerList) !== JSON.stringify(poisPerList)) {
+      // Update receiveCommitment if POIs have changed.
+      receiveCommitment.poisPerList = poisPerList;
+      await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+    }
   }
 
   private async updateSentCommitmentSpentPOIs(
@@ -2081,8 +2150,12 @@ abstract class AbstractWallet extends EventEmitter {
     const dbPath = this.getWalletSentCommitmentDBPrefix(chain, tree, position);
     const data = (await this.db.get(dbPath)) as BytesData;
     const sentCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
-    sentCommitment.poisPerList = poisPerList;
-    await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
+
+    if (JSON.stringify(sentCommitment.poisPerList) !== JSON.stringify(poisPerList)) {
+      // Update sentCommitment if POIs have changed.
+      sentCommitment.poisPerList = poisPerList;
+      await this.updateSentCommitmentInDB(chain, tree, position, sentCommitment);
+    }
   }
 
   private static getPossibleChangeTokenAmounts(
@@ -3116,6 +3189,8 @@ abstract class AbstractWallet extends EventEmitter {
       }
     });
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
+
+    this.invalidateTXOsCache(chain);
   }
 
   /**
