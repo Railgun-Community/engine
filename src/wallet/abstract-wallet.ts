@@ -1065,15 +1065,31 @@ abstract class AbstractWallet extends EventEmitter {
             // Should never happen
             throw new Error('Fatal - Invalid commitment type');
           }
-          if (isTransactCommitment(commitment)) {
+
+          let hasUpdate = false;
+
+          if (
+            isTransactCommitment(commitment) &&
+            receiveCommitment.transactCreationRailgunTxid !== commitment.railgunTxid
+          ) {
             receiveCommitment.transactCreationRailgunTxid = commitment.railgunTxid;
+            hasUpdate = true;
           }
-          receiveCommitment.blindedCommitment = getBlindedCommitmentForShieldOrTransact(
+
+          const blindedCommitment = getBlindedCommitmentForShieldOrTransact(
             commitment.hash,
             note.notePublicKey,
             globalTreePosition,
           );
-          await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+
+          if (receiveCommitment.blindedCommitment !== blindedCommitment) {
+            receiveCommitment.blindedCommitment = blindedCommitment;
+            hasUpdate = true;
+          }
+
+          if (hasUpdate) {
+            await this.updateReceiveCommitmentInDB(chain, tree, position, receiveCommitment);
+          }
         }
 
         const txo: TXO = {
