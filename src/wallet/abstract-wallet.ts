@@ -2953,15 +2953,14 @@ abstract class AbstractWallet extends EventEmitter {
       this.decryptBalancesKeyForChain[chain.type] ??= [];
       this.decryptBalancesKeyForChain[chain.type][chain.id] = undefined;
 
+      await this.refreshPOIsForTXIDVersion(chain, txidVersion);
+
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
       if (!deferCompletionEvent) {
         const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
         this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
       }
-
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.refreshPOIsForTXIDVersion(chain, txidVersion); // Synchronous
     } catch (err) {
       // Reset decryptBalancesKeyForChain
       this.decryptBalancesKeyForChain[chain.type] ??= [];
