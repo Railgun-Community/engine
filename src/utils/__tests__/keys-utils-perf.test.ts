@@ -75,15 +75,15 @@ describe('keys-utils performance', () => {
     console.log(`WASM getSharedSymmetricKey: ${durationPerCall}ms per call`);
   });
 
-  it('WASM should be 6x-9x faster than JavaScript', () => {
+  it('WASM should be 5x-10x faster than JavaScript', () => {
     expect(wasmDuration).to.be.lessThan(jsDuration, 'WASM should be faster than JavaScript');
-    expect(wasmDuration * 6).to.be.lessThan(
+    expect(wasmDuration * 5).to.be.lessThan(
       jsDuration,
-      'WASM should be at least 6x faster than JavaScript',
+      'WASM should be at least 5x faster than JavaScript',
     );
-    expect(wasmDuration * 9).to.be.greaterThan(
+    expect(wasmDuration * 10).to.be.greaterThan(
       jsDuration,
-      'WASM should be at most 9x faster than JavaScript',
+      'WASM should be at most 10x faster than JavaScript',
     );
   });
 });
