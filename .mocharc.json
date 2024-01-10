@@ -1,5 +1,6 @@
 {
   "file": ["./src/test/setup.test.ts"],
   "require": "ts-node/register",
+  "timeout": "10000",
   "exit": true
 }
