@@ -1091,8 +1091,13 @@ class RailgunEngine extends EventEmitter {
           // eslint-disable-next-line no-await-in-loop
           const unshieldEventsForTxid = await utxoMerkletree.getAllUnshieldEventsForTxid(txid);
           const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
+            // Check if tokenHash matches, if toAddress matches, and if amount matches
             const tokenHash = getUnshieldTokenHash(unshieldEvent);
-            return tokenHash === unshieldTokenHash;
+            const tokenHasMatch = tokenHash === unshieldTokenHash
+            const toAddressHasMatch = unshieldEvent.toAddress.toLowerCase() === unshield.toAddress.toLowerCase();
+            const amountHasMatch = (hexToBigInt(unshieldEvent.amount) + hexToBigInt(unshieldEvent.fee)).toString() === unshield.value;
+
+            return tokenHasMatch && toAddressHasMatch && amountHasMatch;
           });
           if (matchingUnshieldEvent) {
             if (matchingUnshieldEvent.railgunTxid !== railgunTxid) {
