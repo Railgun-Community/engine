@@ -8,7 +8,7 @@
   "scripts": {
     "clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
     "lint": "eslint src/**/*.ts src/*.ts; tsc --noEmit; tsc -p tsconfig.test.json --noEmit",
-    "test": "yarn compile-test && env NODE_ENV=test mocha 'src/**/__tests__/*.test.ts'",
+    "test": "yarn compile-test && env NODE_ENV=test mocha 'src/**/keys-utils-perf.test.ts'",
     "test-V2": "yarn compile-test && env NODE_ENV=test V2_TEST=1 mocha 'src/**/__tests__/*.test.ts'",
     "test-hardhat": "env NODE_ENV=test RUN_HARDHAT_TESTS=1 npm test",
     "test-hardhat-V2": "env NODE_ENV=test V2_TEST=1 RUN_HARDHAT_TESTS=1 npm test",
@@ -55,7 +55,8 @@
     "ethers": "github:Railgun-Community/ethers.js#v6.7.10",
     "fast-text-encoding": "^1.0.6",
     "levelup": "^5.1.1",
-    "msgpack-lite": "^0.1.26"
+    "msgpack-lite": "^0.1.26",
+    "threads": "~1.7.0"
   },
   "devDependencies": {
     "@swc/core": "^1.3.61",

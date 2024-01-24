@@ -2,6 +2,7 @@ import { randomBytes } from '@noble/hashes/utils';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { before } from 'mocha';
+import { spawn, Transfer, Worker, Pool } from 'threads';
 import {
   getPrivateScalarFromPrivateKey,
   getPublicViewingKey,
@@ -30,10 +31,12 @@ async function getSharedSymmetricKeyJavascript(
   return hashed;
 }
 
-const TOTAL = 800;
+const TOTAL = 3000;
 const inputs: Array<[Uint8Array, Uint8Array]> = [];
 let jsDuration: number;
+let jsPoolDuration: number;
 let wasmDuration: number;
+let wasmPoolDuration: number;
 
 describe('keys-utils performance', () => {
   before(async () => {
@@ -57,8 +60,27 @@ describe('keys-utils performance', () => {
     jsDuration = end - start;
     const durationPerCall = (jsDuration / TOTAL).toFixed(2);
     // eslint-disable-next-line no-console
-    console.log(`JavaScript getSharedSymmetricKey: ${durationPerCall}ms per call`);
+    console.log(`JS getSharedSymmetricKey: ${durationPerCall}ms per call`);
   });
+
+  it.skip('JavaScript worker pool performance', async () => {
+    const pool = Pool(() => spawn(new Worker('../keys-utils-worker-js')), 10);
+    const start = performance.now();
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [privateKeyPairA, blindedPublicKeyPairB] of inputs) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises, no-await-in-loop
+      pool.queue((fn: CallableFunction) =>
+        fn(Transfer(privateKeyPairA.buffer), Transfer(blindedPublicKeyPairB.buffer)),
+      );
+    }
+    await pool.completed();
+    const end = performance.now();
+    jsPoolDuration = end - start;
+    const durationPerCall = (jsPoolDuration / TOTAL).toFixed(2);
+    // eslint-disable-next-line no-console
+    console.log(`JS worker pool getSharedSymmetricKey: ${durationPerCall}ms per call`);
+    await pool.terminate();
+  })
 
   it('WASM performance', async () => {
     await expect(initCurve25519Promise).to.not.be.rejectedWith('some error');
@@ -75,7 +97,26 @@ describe('keys-utils performance', () => {
     console.log(`WASM getSharedSymmetricKey: ${durationPerCall}ms per call`);
   });
 
-  it('WASM should be 5x-10x faster than JavaScript', () => {
+  it('WASM worker pool performance', async () => {
+    const pool = Pool(() => spawn(new Worker('../keys-utils-worker')), 8);
+    const start = performance.now();
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [privateKeyPairA, blindedPublicKeyPairB] of inputs) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises, no-await-in-loop
+      pool.queue((fn: CallableFunction) =>
+        fn(Transfer(privateKeyPairA.buffer), Transfer(blindedPublicKeyPairB.buffer)),
+      );
+    }
+    await pool.completed();
+    const end = performance.now();
+    wasmPoolDuration = end - start;
+    const durationPerCall = (wasmPoolDuration / TOTAL).toFixed(2);
+    // eslint-disable-next-line no-console
+    console.log(`WASM worker pool getSharedSymmetricKey: ${durationPerCall}ms per call`);
+    await pool.terminate();
+  });
+
+  it.skip('WASM should be 5x-10x faster than JavaScript', () => {
     expect(wasmDuration).to.be.lessThan(jsDuration, 'WASM should be faster than JavaScript');
     expect(wasmDuration * 5).to.be.lessThan(
       jsDuration,

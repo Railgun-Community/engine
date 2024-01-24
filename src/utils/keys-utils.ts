@@ -1,6 +1,6 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
 import { eddsa, poseidon, Signature } from 'circomlibjs';
-import { bytesToN, hexlify, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
+import { bytesToN, fastHexToBytes, hexlify, hexToBigInt, nToBytes } from './bytes';
 import { sha256, sha512 } from './hash';
 import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
@@ -184,19 +184,30 @@ async function getSharedSymmetricKey(
   blindedPublicKeyPairB: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
   try {
+    const A = performance.now();
     await initCurve25519Promise;
+    const B = performance.now();
 
     // Retrieve private scalar from private key
     const scalar: bigint = await getPrivateScalarFromPrivateKey(privateKeyPairA);
+    const C = performance.now();
 
     // Multiply ephemeral key by private scalar to get shared key
     const keyPreimage: Uint8Array = scalarMultiplyWasmFallbackToJavascript(
       blindedPublicKeyPairB,
       scalar,
     );
+    const D = performance.now();
 
     // SHA256 hash to get the final key
-    const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    const hashed: Uint8Array = fastHexToBytes(sha256(keyPreimage));
+    // const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    const E = performance.now();
+    // console.log(`                 initCurve25519Promise: ${B - A}ms`);
+    // console.log(`        getPrivateScalarFromPrivateKey: ${C - B}ms`);
+    // console.log(`scalarMultiplyWasmFallbackToJavascript: ${D - C}ms`);
+    // console.log(`                                sha256: ${E - E}ms`);
+    // console.log(`----------------------------------------`);
     return hashed;
   } catch (err) {
     return undefined;
