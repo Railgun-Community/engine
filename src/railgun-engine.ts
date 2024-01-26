@@ -53,7 +53,7 @@ import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
-import { delay, isTransactCommitment, promiseTimeout } from './utils';
+import { delay, isTransactCommitment, promiseTimeout, stringToBigInt } from './utils';
 import {
   calculateRailgunTransactionVerificationHash,
   createRailgunTransactionWithHash,
@@ -1095,7 +1095,7 @@ class RailgunEngine extends EventEmitter {
             const tokenHash = getUnshieldTokenHash(unshieldEvent);
             const tokenHasMatch = tokenHash === unshieldTokenHash
             const toAddressHasMatch = unshieldEvent.toAddress.toLowerCase() === unshield.toAddress.toLowerCase();
-            const amountHasMatch = (hexToBigInt(unshieldEvent.amount) + hexToBigInt(unshieldEvent.fee)).toString() === unshield.value;
+            const amountHasMatch = (stringToBigInt(unshieldEvent.amount) + stringToBigInt(unshieldEvent.fee)).toString() === unshield.value;
 
             return tokenHasMatch && toAddressHasMatch && amountHasMatch;
           });
