@@ -3,7 +3,7 @@ import { eddsa, Signature } from 'circomlibjs';
 import { poseidonHex } from './poseidon';
 import { bytesToN, fastBytesToHex, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
 import { sha256, sha512 } from './hash';
-import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
+import { scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
 
@@ -185,8 +185,6 @@ async function getSharedSymmetricKey(
   blindedPublicKeyPairB: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
   try {
-    await initCurve25519Promise;
-
     // Retrieve private scalar from private key
     const scalar: bigint = await getPrivateScalarFromPrivateKey(privateKeyPairA);
 

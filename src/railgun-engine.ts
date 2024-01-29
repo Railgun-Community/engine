@@ -1,7 +1,6 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import EventEmitter from 'events';
 import { FallbackProvider } from 'ethers';
-import { initPoseidonPromise } from './utils/poseidon';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
 import { Database, DatabaseNamespace } from './database/database';
@@ -55,6 +54,8 @@ import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
 import { delay, isTransactCommitment, promiseTimeout, stringToBigInt } from './utils';
+import { initPoseidonPromise } from './utils/poseidon';
+import { initCurve25519Promise } from './utils/scalar-multiply';
 import {
   calculateRailgunTransactionVerificationHash,
   createRailgunTransactionWithHash,
@@ -155,6 +156,7 @@ class RailgunEngine extends EventEmitter {
     skipMerkletreeScans: boolean = false,
   ) {
     await initPoseidonPromise;
+    await initCurve25519Promise;
     return new RailgunEngine(
       walletSource,
       leveldown,
@@ -177,6 +179,7 @@ class RailgunEngine extends EventEmitter {
     engineDebugger: Optional<EngineDebugger>,
   ) {
     await initPoseidonPromise;
+    await initCurve25519Promise;
     return new RailgunEngine(
       'poinode',
       leveldown,
