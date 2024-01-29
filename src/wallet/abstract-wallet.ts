@@ -1,10 +1,11 @@
 /* eslint-disable no-await-in-loop */
-import { Signature, poseidon } from 'circomlibjs';
+import { Signature } from 'circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
 import { BigNumberish, ContractTransaction } from 'ethers';
+import { poseidonHex } from '../utils/poseidon';
 import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
 import { encodeAddress } from '../key-derivation/bech32';
@@ -47,11 +48,13 @@ import {
   arrayify,
   ByteLength,
   combine,
+  fastBytesToHex,
   fastHexToBytes,
   formatToByteLength,
   fromUTF8String,
   hexlify,
   hexStringToBytes,
+  hexToBigInt,
   hexToBytes,
   nToHex,
   numberify,
@@ -223,7 +226,7 @@ abstract class AbstractWallet extends EventEmitter {
     this.tokenDataGetter = new TokenDataGetter(db);
     this.viewingKeyPair = viewingKeyPair;
     this.spendingPublicKey = spendingPublicKey;
-    this.nullifyingKey = poseidon([BigInt(hexlify(this.viewingKeyPair.privateKey, true))]);
+    this.nullifyingKey = hexToBigInt(poseidonHex([fastBytesToHex(this.viewingKeyPair.privateKey)]));
     this.masterPublicKey = WalletNode.getMasterPublicKey(spendingPublicKey, this.nullifyingKey);
     this.creationBlockNumbers = creationBlockNumbers;
     this.prover = prover;

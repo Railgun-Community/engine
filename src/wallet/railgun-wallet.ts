@@ -1,5 +1,6 @@
 import { HDNodeWallet, Mnemonic } from 'ethers';
-import { Signature, poseidon } from 'circomlibjs';
+import { Signature } from 'circomlibjs';
+import { poseidon } from '../utils/poseidon';
 import { Database } from '../database/database';
 import { deriveNodes, SpendingKeyPair, WalletNode } from '../key-derivation/wallet-node';
 import { WalletData } from '../models/wallet-types';

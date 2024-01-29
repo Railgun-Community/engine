@@ -104,7 +104,7 @@ describe('relay-adapt', function test() {
   this.timeout(45000);
 
   beforeEach(async () => {
-    engine = RailgunEngine.initForWallet(
+    engine = await RailgunEngine.initForWallet(
       'TestRelayAdapt',
       memdown(),
       testArtifactsGetter,

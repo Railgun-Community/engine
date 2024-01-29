@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '../utils/poseidon';
 import { NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';

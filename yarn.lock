@@ -610,6 +610,10 @@
   resolved "https://registry.yarnpkg.com/@railgun-community/curve25519-scalarmult-wasm/-/curve25519-scalarmult-wasm-0.1.5.tgz#edb5e40a8f1fdb7f7e0de1d04e8badabe41cb2a8"
   integrity sha512-Cur8uM/IdNW3WzUwdPloDG1CF0rpSBDWq2yGXJMZ7IMeBGdc4Jj0h9tnNMFRZ35ZuCVVbZ3yClmqSa4PsbpdGQ==
 
+"@railgun-community/poseidon-hash-wasm@http://localhost:58502/railgun-community-poseidon-hash-wasm-0.1.0z.tgz":
+  version "0.1.0"
+  resolved "http://localhost:58502/railgun-community-poseidon-hash-wasm-0.1.0z.tgz#549427f7b8d1259e27a9edfc25a2a74b0a9aceca"
+
 "@scure/base@^1.1.1", "@scure/base@~1.1.0":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@scure/base/-/base-1.1.1.tgz#ebb651ee52ff84f420097055f4bf46cfba403938"

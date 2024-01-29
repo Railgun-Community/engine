@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '../utils/poseidon';
 import { AddressData, decodeAddress, encodeAddress } from '../key-derivation/bech32';
 import {
   Ciphertext,

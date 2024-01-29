@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '../utils/poseidon';
 import { MerkleProof } from '../models/formatted-types';
 import { TREE_DEPTH } from '../models/merkletree-types';
 import { ByteLength, hexToBigInt, hexlify, nToHex, numberify } from '../utils/bytes';

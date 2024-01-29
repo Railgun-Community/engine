@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '../utils/poseidon';
 import { RailgunTransaction, RailgunTransactionWithHash } from '../models/formatted-types';
 import {
   ByteLength,

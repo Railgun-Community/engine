@@ -93,7 +93,7 @@ describe('railgun-smart-wallet-events', function runTests() {
   this.timeout(20000);
 
   beforeEach(async () => {
-    engine = RailgunEngine.initForWallet(
+    engine = await RailgunEngine.initForWallet(
       'Test RSW',
       memdown(),
       testArtifactsGetter,

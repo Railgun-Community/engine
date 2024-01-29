@@ -1,6 +1,7 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import EventEmitter from 'events';
 import { FallbackProvider } from 'ethers';
+import { initPoseidonPromise } from './utils/poseidon';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
 import { Database, DatabaseNamespace } from './database/database';
@@ -142,7 +143,7 @@ class RailgunEngine extends EventEmitter {
    * @param skipMerkletreeScans - whether to skip UTXO merkletree scans - useful for shield-only interfaces without Railgun wallets.
    * @param isPOINode - run as POI node with full Railgun Txid merkletrees. set to false for all wallet implementations.
    */
-  static initForWallet(
+  static async initForWallet(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
@@ -153,6 +154,7 @@ class RailgunEngine extends EventEmitter {
     engineDebugger: Optional<EngineDebugger>,
     skipMerkletreeScans: boolean = false,
   ) {
+    await initPoseidonPromise;
     return new RailgunEngine(
       walletSource,
       leveldown,
@@ -167,13 +169,14 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  static initForPOINode(
+  static async initForPOINode(
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
     quickSyncEvents: QuickSyncEvents,
     quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2,
     engineDebugger: Optional<EngineDebugger>,
   ) {
+    await initPoseidonPromise;
     return new RailgunEngine(
       'poinode',
       leveldown,
