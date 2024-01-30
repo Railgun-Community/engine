@@ -267,7 +267,7 @@ describe('railgun-engine', function test() {
   };
 
   beforeEach(async () => {
-    engine = RailgunEngine.initForWallet(
+    engine = await RailgunEngine.initForWallet(
       'Test Wallet',
       memdown(),
       testArtifactsGetter,

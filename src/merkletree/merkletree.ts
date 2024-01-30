@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop */
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
-import { poseidon } from 'circomlibjs';
 import msgpack from 'msgpack-lite';
+import { poseidonHex } from '../utils/poseidon';
 import type { Database } from '../database/database';
 import {
   fromUTF8String,
@@ -10,7 +10,6 @@ import {
   formatToByteLength,
   ByteLength,
   nToHex,
-  hexToBigInt,
   arrayify,
 } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
@@ -138,7 +137,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Hash 2 elements together
    */
   static hashLeftRight(left: string, right: string): string {
-    return nToHex(poseidon([hexToBigInt(left), hexToBigInt(right)]), ByteLength.UINT_256);
+    return poseidonHex([left, right]);
   }
 
   private getTXIDVersionPrefix(): string {

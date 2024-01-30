@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '../utils/poseidon';
 import { ByteLength, formatToByteLength, hexToBigInt, nToHex } from '../utils/bytes';
 
 const formatHash = (hash: bigint): string => {

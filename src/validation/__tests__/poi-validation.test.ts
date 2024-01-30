@@ -40,7 +40,7 @@ describe('poi-validation', () => {
 
     getActiveListsStub = Sinon.stub(POI, 'getActiveListKeys').returns(['test_list']);
 
-    engine = RailgunEngine.initForWallet(
+    engine = await RailgunEngine.initForWallet(
       'Test RSW',
       memdown(),
       testArtifactsGetter,

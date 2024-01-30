@@ -54,6 +54,8 @@ import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
 import { delay, isTransactCommitment, promiseTimeout, stringToBigInt } from './utils';
+import { initPoseidonPromise } from './utils/poseidon';
+import { initCurve25519Promise } from './utils/scalar-multiply';
 import {
   calculateRailgunTransactionVerificationHash,
   createRailgunTransactionWithHash,
@@ -142,7 +144,7 @@ class RailgunEngine extends EventEmitter {
    * @param skipMerkletreeScans - whether to skip UTXO merkletree scans - useful for shield-only interfaces without Railgun wallets.
    * @param isPOINode - run as POI node with full Railgun Txid merkletrees. set to false for all wallet implementations.
    */
-  static initForWallet(
+  static async initForWallet(
     walletSource: string,
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
@@ -153,6 +155,8 @@ class RailgunEngine extends EventEmitter {
     engineDebugger: Optional<EngineDebugger>,
     skipMerkletreeScans: boolean = false,
   ) {
+    await initPoseidonPromise;
+    await initCurve25519Promise;
     return new RailgunEngine(
       walletSource,
       leveldown,
@@ -167,13 +171,15 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  static initForPOINode(
+  static async initForPOINode(
     leveldown: AbstractLevelDOWN,
     artifactGetter: ArtifactGetter,
     quickSyncEvents: QuickSyncEvents,
     quickSyncRailgunTransactionsV2: QuickSyncRailgunTransactionsV2,
     engineDebugger: Optional<EngineDebugger>,
   ) {
+    await initPoseidonPromise;
+    await initCurve25519Promise;
     return new RailgunEngine(
       'poinode',
       leveldown,

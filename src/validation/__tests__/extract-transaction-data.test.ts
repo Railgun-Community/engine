@@ -117,7 +117,7 @@ describe('extract-transaction-data', () => {
   before(async function run() {
     this.timeout(10000);
 
-    engine = RailgunEngine.initForWallet(
+    engine = await RailgunEngine.initForWallet(
       'Test RSW',
       memdown(),
       testArtifactsGetter,

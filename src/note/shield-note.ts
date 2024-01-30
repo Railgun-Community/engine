@@ -1,5 +1,5 @@
-import { poseidon } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
+import { poseidon } from '../utils/poseidon';
 import { ShieldCiphertext, TokenData } from '../models/formatted-types';
 import { AES, getPublicViewingKey, getSharedSymmetricKey } from '../utils';
 import { ByteLength, combine, hexlify, hexToBigInt, nToHex } from '../utils/bytes';

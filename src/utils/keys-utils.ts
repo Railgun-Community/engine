@@ -1,8 +1,9 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
-import { eddsa, poseidon, Signature } from 'circomlibjs';
-import { bytesToN, hexlify, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
+import { eddsa, Signature } from 'circomlibjs';
+import { poseidonHex } from './poseidon';
+import { bytesToN, fastBytesToHex, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
 import { sha256, sha512 } from './hash';
-import { initCurve25519Promise, scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
+import { scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 const { bytesToHex, randomBytes } = utilsEd25519;
 
@@ -16,7 +17,7 @@ async function getPublicViewingKey(privateViewingKey: Uint8Array): Promise<Uint8
 }
 
 function getRandomScalar(): bigint {
-  return poseidon([BigInt(hexlify(randomBytes(32), true))]);
+  return hexToBigInt(poseidonHex([fastBytesToHex(randomBytes(32))]));
 }
 
 function signEDDSA(privateKey: Uint8Array, message: bigint): Signature {
@@ -184,8 +185,6 @@ async function getSharedSymmetricKey(
   blindedPublicKeyPairB: Uint8Array,
 ): Promise<Optional<Uint8Array>> {
   try {
-    await initCurve25519Promise;
-
     // Retrieve private scalar from private key
     const scalar: bigint = await getPrivateScalarFromPrivateKey(privateKeyPairA);
 

@@ -1,5 +1,5 @@
-import { poseidon } from 'circomlibjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
+import { poseidon } from '../utils/poseidon';
 import { KeyNode } from '../models/engine-types';
 import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } from './bip32';
 import { hexStringToBytes, hexToBigInt } from '../utils/bytes';

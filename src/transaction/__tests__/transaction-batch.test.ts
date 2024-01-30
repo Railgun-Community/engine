@@ -97,7 +97,7 @@ describe('transaction-batch', function run() {
       return;
     }
 
-    const engine = RailgunEngine.initForWallet(
+    const engine = await RailgunEngine.initForWallet(
       'Tx Batch Tests',
       memdown(),
       testArtifactsGetter,
