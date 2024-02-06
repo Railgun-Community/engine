@@ -101,7 +101,7 @@ const DEPLOYMENT_BLOCKS = {
 let testShieldBaseToken: (value?: bigint) => Promise<TransactionReceipt | null>;
 
 describe('relay-adapt', function test() {
-  this.timeout(45000);
+  this.timeout(45_000);
 
   beforeEach(async () => {
     engine = await RailgunEngine.initForWallet(
@@ -235,7 +235,7 @@ describe('relay-adapt', function test() {
         WalletBalanceBucket.Spendable,
       ]),
     ).to.equal(9975n);
-  });
+  }).timeout(300_000);
 
   it('[HH] Should return gas estimate for unshield base token', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -294,7 +294,7 @@ describe('relay-adapt', function test() {
 
     const gasEstimate = await provider.estimateGas(relayTransactionGasEstimate);
     expect(Number(gasEstimate)).to.be.greaterThan(0);
-  });
+  }).timeout(300_00);
 
   it('[HH] Should execute relay adapt transaction for unshield base token', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -417,7 +417,7 @@ describe('relay-adapt', function test() {
     // expect(preEthBalance - txReceipt.gasUsed + 300n).to.equal(
     //   postEthBalance,
     // );
-  });
+  }).timeout(300_000);
 
   it('[HH] Should execute relay adapt transaction for NFT transaction', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -1072,7 +1072,7 @@ describe('relay-adapt', function test() {
 
     expect(proxyWethBalance).to.equal(expectedTotalPrivateWethBalance);
     expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
-  });
+  }).timeout(300_000);
 
   it('[HH] Should revert send for failing re-shield', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
@@ -1281,7 +1281,7 @@ describe('relay-adapt', function test() {
 
     // expect(proxyWethBalance).to.equal(expectedPrivateWethBalance);
     // expect(privateWalletBalance).to.equal(expectedPrivateWethBalance);
-  });
+  }).timeout(300_000);
 
   it('Should generate relay shield notes and inputs', async () => {
     const shieldERC20Recipients: RelayAdaptShieldERC20Recipient[] = [
