@@ -1,6 +1,6 @@
 import circom from 'circomlibjs';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, hexToBigInt, nToHex, padToLength } from './bytes';
+import { ByteLength, hexToBigInt, nToHex, padToLength, strip0x } from './bytes';
 import { isReactNative } from './runtime';
 
 interface PoseidonModule {
@@ -53,7 +53,12 @@ export const poseidonHex = (args: Array<string>): string => {
     return nToHex(circom.poseidon(args.map(hexToBigInt)), ByteLength.UINT_256);
   }
   try {
-    return padToLength(poseidonHexWasm(args), ByteLength.UINT_256) as string;
+    // We need to strip 0x prefix from hex strings before passing to WASM,
+    // however, let's first make sure we actually need to do this, to avoid
+    // creating an unnecessary copy of the array (via `map`)
+    const needsStripping = args.some((arg) => arg.startsWith('0x'));
+    const strippedArgs = needsStripping ? args.map(strip0x) : args;
+    return padToLength(poseidonHexWasm(strippedArgs), ByteLength.UINT_256) as string;
   } catch (cause) {
     if (!(cause instanceof Error)) {
       throw new Error('Non-error thrown from poseidonHex', { cause });
