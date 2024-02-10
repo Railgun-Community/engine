@@ -1099,9 +1099,13 @@ class RailgunEngine extends EventEmitter {
           const matchingUnshieldEvent = unshieldEventsForTxid.find((unshieldEvent) => {
             // Check if tokenHash matches, if toAddress matches, and if amount matches
             const tokenHash = getUnshieldTokenHash(unshieldEvent);
-            const tokenHasMatch = tokenHash === unshieldTokenHash
-            const toAddressHasMatch = unshieldEvent.toAddress.toLowerCase() === unshield.toAddress.toLowerCase();
-            const amountHasMatch = (stringToBigInt(unshieldEvent.amount) + stringToBigInt(unshieldEvent.fee)).toString() === unshield.value;
+            const tokenHasMatch = tokenHash === unshieldTokenHash;
+            const toAddressHasMatch =
+              unshieldEvent.toAddress.toLowerCase() === unshield.toAddress.toLowerCase();
+            const amountHasMatch =
+              (
+                stringToBigInt(unshieldEvent.amount) + stringToBigInt(unshieldEvent.fee)
+              ).toString() === unshield.value;
 
             return tokenHasMatch && toAddressHasMatch && amountHasMatch;
           });
@@ -2021,7 +2025,7 @@ class RailgunEngine extends EventEmitter {
     const wallets = this.allWallets();
     // eslint-disable-next-line no-restricted-syntax
     for (let i = 0; i < wallets.length; i += 1) {
-      wallets[i].invalidateTXOsCache(chain);
+      wallets[i].invalidateCommitmentsCache(chain);
     }
   }
 
