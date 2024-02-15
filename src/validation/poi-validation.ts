@@ -16,7 +16,20 @@ import { POIProof, TransactProofData } from './poi-proof';
 import { AddressData } from '../key-derivation';
 import { TokenDataGetter } from '../token';
 
+export type POIMerklerootsValidator = (
+  txidVersion: TXIDVersion,
+  chain: Chain,
+  listKey: string,
+  poiMerkleroots: string[],
+) => Promise<boolean>;
+
 export class POIValidation {
+  static validatePOIMerkleroots: Optional<POIMerklerootsValidator>;
+
+  static initForPOINode(validatePOIMerkleroots: POIMerklerootsValidator) {
+    this.validatePOIMerkleroots = validatePOIMerkleroots;
+  }
+
   static async isValidSpendableTransaction(
     txidVersion: TXIDVersion,
     chain: Chain,
@@ -119,12 +132,25 @@ export class POIValidation {
       }
 
       // 4. Validate POI merkleroots for each list
-      const validPOIMerkleroots = await POI.validatePOIMerkleroots(
-        txidVersion,
-        chain,
-        listKey,
-        poiMerkleroots,
-      );
+      let validPOIMerkleroots: boolean;
+
+      if (isDefined(POIValidation.validatePOIMerkleroots)) {
+        // Use supplied validator if it exists
+        validPOIMerkleroots = await POIValidation.validatePOIMerkleroots(
+          txidVersion,
+          chain,
+          listKey,
+          poiMerkleroots,
+        );
+      } else {
+        // Fallback to making request through POI nodes
+        validPOIMerkleroots = await POI.validatePOIMerkleroots(
+          txidVersion,
+          chain,
+          listKey,
+          poiMerkleroots,
+        );
+      }
       if (!validPOIMerkleroots) {
         throw new Error(`Invalid POI merkleroots: list ${listKey}`);
       }
