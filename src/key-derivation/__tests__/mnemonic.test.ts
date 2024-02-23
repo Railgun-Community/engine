@@ -1,6 +1,6 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { mnemonicToPrivateKey } from '../mnemonic';
+import { mnemonicTo0xPrivateKey } from '../mnemonic';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -22,7 +22,7 @@ describe('mnemonic', () => {
     ];
 
     vectors.forEach((vector) => {
-      expect(mnemonicToPrivateKey(vector.mnemonic, vector.derivationIndex)).to.equal(vector.seed);
+      expect(mnemonicTo0xPrivateKey(vector.mnemonic, vector.derivationIndex)).to.equal(vector.seed);
     });
   });
 });
