@@ -25,9 +25,9 @@ export enum DatabaseNamespace {
 type Path = BytesData[];
 
 /** These properties exist on the level-js instance in the browser. */
-type MaybeIndexedDB = {
-  db?: {
-    db?: {
+type LevelWithIndexedDB = {
+  db: {
+    db: {
       location: string;
       db: IDBDatabase;
     };
@@ -43,6 +43,16 @@ type MaybeIndexedDB = {
       >;
     };
   };
+};
+
+type MaybeIndexedDB = {
+  [Key1 in keyof LevelWithIndexedDB]?: {
+    [Key2 in keyof LevelWithIndexedDB[Key1]]?: LevelWithIndexedDB[Key1][Key2];
+  };
+};
+
+type DatabaseWithIndexedDB = Database & {
+  readonly level: LevelUp & LevelWithIndexedDB;
 };
 
 /** Database class */
@@ -73,18 +83,15 @@ class Database {
    * cache. Otherwise, does nothing.
    */
   async preload() {
-    if (typeof indexedDB === 'undefined') return;
-    if (typeof this.level.db?.db?.db === 'undefined') return;
+    if (!this.usesIndexedDB()) return;
 
     this.preloaded ??= new Promise((resolve, reject) => {
-      if (typeof this.level.db?.db?.db === 'undefined') return;
-      const { location } = this.level.db.db;
-      const idb = this.level.db.db.db;
-      const transaction = idb.transaction([location], 'readwrite');
-      const store = transaction.objectStore(location);
-      const range = IDBKeyRange.lowerBound(0);
+      if (!this.usesIndexedDB()) return;
+      const store = this.getIndexedDBStore();
       let preloadedKeys: ArrayBuffer[] | undefined;
       let preloadedValues: ArrayBuffer[] | undefined;
+
+      // Combine keys and values together into a Map
       const done = () => {
         this.preloadedMap = new Map();
         if (!preloadedKeys) return;
@@ -97,24 +104,39 @@ class Database {
         preloadedValues = undefined;
         resolve();
       };
-      const keysRequest = store.getAllKeys(range);
+
+      // Load all keys into memory
+      const keysRequest = store.getAllKeys();
       keysRequest.onsuccess = (ev: Event) => {
         preloadedKeys = (ev.target as IDBRequest<ArrayBuffer[]>).result;
         if (typeof preloadedValues !== 'undefined') done();
       };
       keysRequest.onerror = (ev: Event) => {
         reject((ev.target as IDBRequest).error);
-      }
-      const valuesRequest = store.getAll(range);
+      };
+
+      // Load all values into memory
+      const valuesRequest = store.getAll();
       valuesRequest.onsuccess = (ev: Event) => {
         preloadedValues = (ev.target as IDBRequest<ArrayBuffer[]>).result;
         if (typeof preloadedKeys !== 'undefined') done();
       };
       valuesRequest.onerror = (ev: Event) => {
         reject((ev.target as IDBRequest).error);
-      }
+      };
     });
     await this.preloaded;
+  }
+
+  private usesIndexedDB(): this is DatabaseWithIndexedDB {
+    return typeof indexedDB !== 'undefined' && typeof this.level.db?.db?.db !== 'undefined';
+  }
+
+  private getIndexedDBStore(this: DatabaseWithIndexedDB): IDBObjectStore {
+    const { location } = this.level.db.db;
+    const idb = this.level.db.db.db;
+    const transaction = idb.transaction([location], 'readonly');
+    return transaction.objectStore(location);
   }
 
   /**
@@ -133,8 +155,7 @@ class Database {
    * @param encoding - data encoding to use
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  encode(value: any, encoding: Encoding): ArrayBuffer {
-    if (!this.level.db?.codec) throw new Error('encode called on non-indexeddb database');
+  private encode(this: DatabaseWithIndexedDB, value: any, encoding: Encoding): ArrayBuffer {
     const { encodings } = this.level.db.codec;
     if (typeof encodings[encoding] === 'undefined') throw new Error(`Unknown encoding ${encoding}`);
     return encodings[encoding].encode(value);
@@ -145,8 +166,7 @@ class Database {
    * @param encoding - data encoding to use
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  decode(value: ArrayBuffer, encoding: Encoding): any {
-    if (!this.level.db?.codec) throw new Error('decode called on non-indexeddb database');
+  private decode(this: DatabaseWithIndexedDB, value: ArrayBuffer, encoding: Encoding): any {
     const { encodings } = this.level.db.codec;
     if (typeof encodings[encoding] === 'undefined') throw new Error(`Unknown encoding ${encoding}`);
     // Special case for decoding already-decoded JSON objects:
@@ -175,7 +195,7 @@ class Database {
       }
       const key = Database.pathToKey(path);
       try {
-        if (this.preloadedMap) {
+        if (this.usesIndexedDB() && this.preloadedMap) {
           this.preloadedMap.set(key, this.encode(value, encoding));
         }
       } catch {
@@ -202,7 +222,7 @@ class Database {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get(path: Path, encoding: Encoding = 'hex'): Promise<any> {
     const key = Database.pathToKey(path);
-    if (this.preloadedMap) {
+    if (this.usesIndexedDB() && this.preloadedMap) {
       const value = this.preloadedMap.get(key);
       if (!value) return Promise.reject(new Error('NotFound'));
       let decoded;
@@ -245,10 +265,13 @@ class Database {
       if (this.isClearingNamespace) {
         EngineDebug.log('Database is clearing a namespace - batch action is dangerous');
       }
-      if (this.preloadedMap) {
+      if (this.usesIndexedDB() && this.preloadedMap) {
         ops.forEach((op) => {
           if (op.type === 'put') {
-            this.preloadedMap?.set(op.key as string, this.encode(op.value, encoding));
+            this.preloadedMap?.set(
+              op.key as string,
+              (this as DatabaseWithIndexedDB).encode(op.value, encoding),
+            );
           } else if (op.type === 'del') {
             this.preloadedMap?.delete(op.key as string);
           }
@@ -315,20 +338,16 @@ class Database {
    * @returns list of keys
    */
   getNamespaceKeys(namespace: string[]): Promise<string[]> {
-    return new Promise((resolve) => {
-      const keyList: string[] = [];
-
-      if (typeof indexedDB !== 'undefined' && typeof this.level.db?.db?.db !== 'undefined') {
-        // Web-only (IndexedDB) optimization to use getAllKeys (fast)
+    return new Promise((resolve, reject) => {
+      if (this.usesIndexedDB()) {
+        // Web-only (IndexedDB) optimization to use getAllKeys() (fast)
         const pathkey = Database.pathToKey(namespace);
-        const { location } = this.level.db.db;
-        const idb = this.level.db.db.db;
-        const transaction = idb.transaction([location], 'readonly');
-        const store = transaction.objectStore(location);
+        const store = this.getIndexedDBStore();
         const lower = new TextEncoder().encode(`${pathkey}`);
         const upper = new TextEncoder().encode(`${pathkey}~`);
         const range = IDBKeyRange.bound(lower, upper);
-        store.getAllKeys(range).onsuccess = (ev: Event) => {
+        const request = store.getAllKeys(range);
+        request.onsuccess = (ev: Event) => {
           const keys: Array<ArrayBuffer> = (ev.target as IDBRequest<ArrayBuffer[]>).result;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const keysStrings: Array<string> = keys as any as Array<string>;
@@ -337,8 +356,12 @@ class Database {
           }
           resolve(keysStrings);
         };
+        request.onerror = (ev: Event) => {
+          reject((ev.target as IDBRequest).error);
+        };
       } else {
         // Stream list of keys and resolve on end
+        const keyList: string[] = [];
         this.streamNamespace(namespace)
           .on('data', (key: string) => {
             keyList.push(key);
