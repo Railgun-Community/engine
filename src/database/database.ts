@@ -407,10 +407,24 @@ class Database {
    * @returns number of keys in namespace
    */
   countNamespace(namespace: string[]): Promise<number> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      if (this.usesIndexedDB()) {
+        // Web-only (IndexedDB) optimization to use count() (fast)
+        const pathkey = Database.pathToKey(namespace);
+        const store = this.getIndexedDBStore();
+        const lower = new TextEncoder().encode(`${pathkey}`);
+        const upper = new TextEncoder().encode(`${pathkey}~`);
+        const range = IDBKeyRange.bound(lower, upper);
+        const request = store.count(range);
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        request.onerror = (ev: Event) => {
+          reject((ev.target as IDBRequest).error);
+        }
+      }
+      // Stream list of keys for namespace* and counts them
       let keyNumber = 0;
-
-      // Create read stream for namespace*
       this.streamNamespace(namespace)
         .on('data', () => {
           // Increment keynumber
