@@ -421,19 +421,20 @@ class Database {
         };
         request.onerror = (ev: Event) => {
           reject((ev.target as IDBRequest).error);
-        }
+        };
+      } else {
+        // Stream list of keys for namespace* and counts them
+        let keyNumber = 0;
+        this.streamNamespace(namespace)
+          .on('data', () => {
+            // Increment keynumber
+            keyNumber += 1;
+          })
+          .on('end', () => {
+            // Return keynumber
+            resolve(keyNumber);
+          });
       }
-      // Stream list of keys for namespace* and counts them
-      let keyNumber = 0;
-      this.streamNamespace(namespace)
-        .on('data', () => {
-          // Increment keynumber
-          keyNumber += 1;
-        })
-        .on('end', () => {
-          // Return keynumber
-          resolve(keyNumber);
-        });
     });
   }
 
