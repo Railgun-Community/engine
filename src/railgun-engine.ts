@@ -991,7 +991,9 @@ class RailgunEngine extends EventEmitter {
   ) {
     const latestValidatedTxidIndex = await this.getLatestValidatedTxidIndex(txidVersion, chain);
     EngineDebug.log(
-      `syncing railgun transactions to validated index: ${latestValidatedTxidIndex ?? 'NOT FOUND'}`,
+      `syncing railgun transactions to validated index (Chain: ${
+        chain.id
+      }. txidVersion: ${txidVersion}): ${latestValidatedTxidIndex ?? 'NOT FOUND'}`,
     );
 
     const shouldAddNewRailgunTransactions = await this.shouldAddNewRailgunTransactions(
