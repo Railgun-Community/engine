@@ -249,26 +249,17 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async triggerDelayedTXIDMerkletreeSyncV2(chain: Chain, scanCount: number = 0): Promise<void> {
+  async triggerDelayedTXIDMerkletreeSyncV2(chain: Chain): Promise<void> {
     // Delay and then trigger a Railgun Txid Merkletree sync.
     if (this.isPOINode) {
       // POI node should scan faster because POI node is the data source for wallets
-      await delay(3000);
-    } else if (scanCount === 0) {
-      // Delay for 10 seconds on first scan for wallet
-      await delay(10000);
-    } else {
-      // Delay for 5 seconds on for subsequent scans for wallet
       await delay(5000);
+    } else {
+      // Delay for 10 seconds for wallet
+      await delay(10000);
     }
 
     await this.syncRailgunTransactionsV2(chain, 'delayed sync after new utxo');
-
-    // Scan for 3 times total
-    if (scanCount < 2) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.triggerDelayedTXIDMerkletreeSyncV2(chain, scanCount + 1);
-    }
   }
 
   /**
