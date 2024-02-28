@@ -93,6 +93,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   protected async init(): Promise<void> {
+    await this.db.preload().catch((err: Error) => {
+      EngineDebug.log(
+        `Warning. Merkletree failed to preload database: ${err.message ?? err}. ` +
+          'Queries may be slower.',
+      );
+    });
     await this.getMetadataFromStorage();
   }
 
