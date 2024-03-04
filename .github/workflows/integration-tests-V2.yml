@@ -38,3 +38,5 @@ jobs:
         with:
           command: cd engine && yarn test-hardhat-V2
           start: cd contract && npx hardhat node >/dev/null, cd contract && sleep 5 && npx hardhat deploy:test --network localhost >/dev/null
+          wait-on: 'http://localhost:8545'
+          wait-on-timeout: 120
