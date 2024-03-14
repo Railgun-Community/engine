@@ -264,8 +264,8 @@ class RailgunEngine extends EventEmitter {
 
     await this.syncRailgunTransactionsV2(chain, 'delayed sync after new utxo');
 
-    // Scan for 3 times total
-    if (scanCount < 2) {
+    // Scan for 2 times total
+    if (scanCount < 1) {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.triggerDelayedTXIDMerkletreeSyncV2(chain, scanCount + 1);
     }
