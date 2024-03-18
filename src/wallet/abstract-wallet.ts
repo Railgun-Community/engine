@@ -3122,7 +3122,7 @@ abstract class AbstractWallet extends EventEmitter {
     latestTree: number,
     creationBlockNumber: number,
   ): Promise<Optional<{ tree: number; position: number }>> {
-    if (creationBlockNumber == null) {
+    if (!isDefined(creationBlockNumber)) {
       return undefined;
     }
 
@@ -3153,9 +3153,9 @@ abstract class AbstractWallet extends EventEmitter {
         if (!isDefined(earliestCommitmentIndex)) {
           // Search through leaves (descending) for first blockNumber before creation.
           // Do this linearly, as we don't expect many commitments in a single block.
-          for (let index = leaves.length - 1; index >= batchStart; index -= 1) {
+          for (let index = batchEnd - 1; index >= batchStart; index -= 1) {
             const commitment = leaves[index];
-            if (commitment != null && commitment.blockNumber != null) {
+            if (isDefined(commitment?.blockNumber)) {
               if (commitment.blockNumber <= creationBlockNumber) {
                 earliestCommitmentIndex = index;
                 creationBlockIndexBlockNumber = commitment.blockNumber;
@@ -3165,7 +3165,7 @@ abstract class AbstractWallet extends EventEmitter {
           }
         }
 
-        if (earliestCommitmentIndex != null) {
+        if (isDefined(earliestCommitmentIndex)) {
           // Check if any commitments earlier in the leaves array are also equal to creationBlockIndex's blockNumber.
           // This can happen if there are multiple commitments in the same block.
           // If so, return the earliest one.
@@ -3176,7 +3176,7 @@ abstract class AbstractWallet extends EventEmitter {
             }
 
             const commitment = leaves[index];
-            if (commitment != null && commitment.blockNumber != null) {
+            if (isDefined(commitment?.blockNumber)) {
               if (commitment.blockNumber === creationBlockIndexBlockNumber) {
                 earliestCommitmentIndex = index;
               } else if (commitment.blockNumber < creationBlockIndexBlockNumber) {
@@ -3186,7 +3186,7 @@ abstract class AbstractWallet extends EventEmitter {
             }
           }
 
-          if (earliestCommitmentIndex > batchStart) {
+          if (earliestCommitmentIndex >= batchStart) {
             return { tree, position: earliestCommitmentIndex };
           }
         }
