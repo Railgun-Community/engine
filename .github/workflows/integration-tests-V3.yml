@@ -34,7 +34,7 @@ jobs:
           cmd: install
           dir: 'contract'
       - name: Compile contract
-        run: cd contract && $(npm bin)/hardhat compile
+        run: cd contract && npm run compile
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
