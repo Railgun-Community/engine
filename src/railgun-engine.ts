@@ -2186,7 +2186,7 @@ class RailgunEngine extends EventEmitter {
 
     // TODO: use blockNumber to find exact starting position... But the logic is currently broken.
 
-    // const treeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
+    // const treeInfo = await AbstractWallet.getCreationTreeAndPosition(
     //   merkletree,
     //   latestTree,
     //   startingBlock,

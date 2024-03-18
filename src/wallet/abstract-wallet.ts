@@ -2892,7 +2892,7 @@ abstract class AbstractWallet extends EventEmitter {
         (walletDetails.creationTree == null || walletDetails.creationTreeHeight == null)
       ) {
         const creationBlockNumber = this.creationBlockNumbers[chain.type][chain.id];
-        const creationTreeInfo = await AbstractWallet.getTreeAndPositionBeforeBlock(
+        const creationTreeInfo = await AbstractWallet.getCreationTreeAndPosition(
           utxoMerkletree,
           latestTree,
           creationBlockNumber,
@@ -3113,11 +3113,13 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Searches for creation tree height for given merkletree.
+   * Searches for creation tree height for given merkletree based on creationBlockNumber.
+   * Will return the latest position that is <= creationBlockNumber. May return an index that has blockNumber < creationBlockNumber,
+   * but that is okay for purposes of creationTreeHeight. We just need to guarantee we don't return a position that misses some commitments in the creation block.
    * @param merkletree - Merkletree
    * @param latestTree - number
    */
-  static async getTreeAndPositionBeforeBlock(
+  static async getCreationTreeAndPosition(
     utxoMerkletree: UTXOMerkletree,
     latestTree: number,
     creationBlockNumber: number,
@@ -3186,7 +3188,7 @@ abstract class AbstractWallet extends EventEmitter {
             }
           }
 
-          if (earliestCommitmentIndex >= batchStart) {
+          if (earliestCommitmentIndex > batchStart) {
             return { tree, position: earliestCommitmentIndex };
           }
         }
