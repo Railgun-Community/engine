@@ -92,7 +92,7 @@
     "snarkjs": "^0.7.0",
     "ts-node": "^10.9.1",
     "typechain": "^8.2.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.4.2"
   },
   "react-native": {
     "@railgun-community/curve25519-scalarmult-wasm": false,

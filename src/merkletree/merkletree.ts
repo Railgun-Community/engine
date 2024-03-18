@@ -356,12 +356,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * @returns tree length
    */
   async getTreeLength(treeIndex: number): Promise<number> {
-    if (this.treeLengths[treeIndex] != null) {
+    if (isDefined(this.treeLengths[treeIndex])) {
       return this.treeLengths[treeIndex];
     }
 
     const storedMetadata = await this.getMerkletreesMetadata();
-    if (isDefined(storedMetadata) && isDefined(storedMetadata.trees[treeIndex])) {
+    if (isDefined(storedMetadata?.trees[treeIndex])) {
       this.treeLengths[treeIndex] = storedMetadata.trees[treeIndex].scannedHeight;
       return this.treeLengths[treeIndex];
     }
