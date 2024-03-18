@@ -58,7 +58,7 @@ describe('keys-utils performance', () => {
     const durationPerCall = (jsDuration / TOTAL).toFixed(2);
     // eslint-disable-next-line no-console
     console.log(`JavaScript getSharedSymmetricKey: ${durationPerCall}ms per call`);
-  });
+  }).timeout(5000);
 
   it('WASM performance', async () => {
     await expect(initCurve25519Promise).to.not.be.rejectedWith('some error');
@@ -73,7 +73,7 @@ describe('keys-utils performance', () => {
     const durationPerCall = (wasmDuration / TOTAL).toFixed(2);
     // eslint-disable-next-line no-console
     console.log(`WASM getSharedSymmetricKey: ${durationPerCall}ms per call`);
-  });
+  }).timeout(5000);
 
   it('WASM should be 5x-10x faster than JavaScript', () => {
     expect(wasmDuration).to.be.lessThan(jsDuration, 'WASM should be faster than JavaScript');

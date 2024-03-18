@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-mutable-exports
 let config = {
-  rpc: 'http://localhost:8545/',
+  rpc: 'http://127.0.0.1:8545/',
   chainId: 31337,
   mnemonic: 'test test test test test test test test test test test junk',
   encryptionKey: '0101010101010101010101010101010101010101010101010101010101010101',
