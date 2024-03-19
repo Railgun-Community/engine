@@ -2930,13 +2930,12 @@ abstract class AbstractWallet extends EventEmitter {
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
           const batchStart = startScanHeight + batchIndex * batchSize;
           const batchEnd = Math.min(batchStart + batchSize, treeHeight);
-          const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
-          for (let index = batchStart; index < batchEnd; index += 1) {
-            fetcher[index] = utxoMerkletree.getCommitment(treeIndex, index);
-          }
-
-          const leaves = await Promise.all(fetcher);
+          const leaves = await utxoMerkletree.getCommitmentRange(
+            treeIndex,
+            batchStart,
+            batchEnd - 1,
+          );
 
           const finishedTreeCount = treeIndex - startScanTree;
           const finishedTreesProgress = finishedTreeCount / treesToScan;
@@ -3141,22 +3140,14 @@ abstract class AbstractWallet extends EventEmitter {
         // Start batches at the end of the tree and work backwards
         const batchStart = Math.max(0, treeHeight - (batchIndex + 1) * batchSize);
         const batchEnd = treeHeight - batchIndex * batchSize;
-        const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
-        for (let index = batchStart; index < batchEnd; index += 1) {
-          fetcher[index] = utxoMerkletree.getCommitment(tree, index);
-        }
-
-        const leaves = await Promise.all(fetcher);
-        if (!leaves.length) {
-          return undefined;
-        }
+        const leaves = await utxoMerkletree.getCommitmentRange(tree, batchStart, batchEnd - 1);
 
         if (!isDefined(earliestCommitmentIndex)) {
           // Search through leaves (descending) for first blockNumber before creation.
           // Do this linearly, as we don't expect many commitments in a single block.
           for (let index = batchEnd - 1; index >= batchStart; index -= 1) {
-            const commitment = leaves[index];
+            const commitment = leaves[index - batchStart];
             if (isDefined(commitment?.blockNumber)) {
               if (commitment.blockNumber <= creationBlockNumber) {
                 earliestCommitmentIndex = index;
