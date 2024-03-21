@@ -129,7 +129,9 @@ class Database {
   }
 
   private usesIndexedDB(): this is DatabaseWithIndexedDB {
-    return typeof indexedDB !== 'undefined' && typeof this.level.db?.db?.db !== 'undefined';
+    return (
+      typeof indexedDB !== 'undefined' && typeof this.level.db?.db?.db !== 'undefined' && false
+    ); // TODO: Profile indexedDB changes against older devices, then remove false
   }
 
   private getIndexedDBStore(this: DatabaseWithIndexedDB): IDBObjectStore {
