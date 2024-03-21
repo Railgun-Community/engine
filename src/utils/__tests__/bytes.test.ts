@@ -134,6 +134,9 @@ describe('bytes', () => {
       // Test prefixed hex string to hex string
       expect(hexlify(`0x${vector.hex}`)).to.equal(vector.hex);
 
+      // Test prefixed hex string to prefixed hex string
+      expect(hexlify(`0x${vector.hex}`, true)).to.equal(`0x${vector.hex}`);
+
       // Test hex string to hex string
       expect(hexlify(vector.hex)).to.equal(vector.hex);
 
@@ -207,12 +210,16 @@ describe('bytes', () => {
   it('Should pad to length', () => {
     padVectors.forEach((vector) => {
       expect(padToLength(vector.original, 16)).to.deep.equal(vector.left16);
+      expect(padToLength(vector.left16, 16)).to.deep.equal(vector.left16);
 
       expect(padToLength(vector.original, 32)).to.deep.equal(vector.left32);
+      expect(padToLength(vector.left32, 32)).to.deep.equal(vector.left32);
 
       expect(padToLength(vector.original, 16, 'right')).to.deep.equal(vector.right16);
+      expect(padToLength(vector.right16, 16, 'right')).to.deep.equal(vector.right16);
 
       expect(padToLength(vector.original, 32, 'right')).to.deep.equal(vector.right32);
+      expect(padToLength(vector.right32, 32, 'right')).to.deep.equal(vector.right32);
     });
 
     expect(padToLength('0x00', 4)).to.equal('0x00000000');
@@ -344,9 +351,13 @@ describe('bytes', () => {
     }).to.throw('Can\t trim BN from right');
     expect(trim(new BN(861), 1).toString(10)).to.equal('93');
     expect(trim('17b3c8d9', 2)).to.equal('c8d9');
+    expect(trim('17b3c8d9', 4)).to.equal('17b3c8d9');
     expect(trim('17b3c8d9', 2, 'right')).to.equal('17b3');
+    expect(trim('17b3c8d9', 4, 'right')).to.equal('17b3c8d9');
     expect(trim('0x17b3c8d9', 2)).to.equal('0xc8d9');
+    expect(trim('0x17b3c8d9', 4)).to.equal('0x17b3c8d9');
     expect(trim('0x17b3c8d9', 2, 'right')).to.equal('0x17b3');
+    expect(trim('0x17b3c8d9', 4, 'right')).to.equal('0x17b3c8d9');
     expect(trim([12, 4, 250], 2)).to.deep.equal([4, 250]);
     expect(trim([12, 4, 250], 2, 'right')).to.deep.equal([12, 4]);
   });
