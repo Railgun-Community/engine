@@ -2923,7 +2923,7 @@ abstract class AbstractWallet extends EventEmitter {
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
 
-        const batchSize = 500;
+        const batchSize = 2000;
         const totalLeavesToScan = treeHeight - startScanHeight;
         const totalBatches = Math.ceil(totalLeavesToScan / batchSize);
 
@@ -3130,7 +3130,7 @@ abstract class AbstractWallet extends EventEmitter {
     for (let tree = latestTree; tree > -1; tree -= 1) {
       const treeHeight = await utxoMerkletree.getTreeLength(tree);
 
-      const batchSize = 500;
+      const batchSize = 2000;
       const totalBatches = Math.ceil(treeHeight / batchSize);
       let earliestCommitmentIndex: Optional<number>; // Store the earliest commitment index found for this tree with <= creationBlockNumber.
       let creationBlockIndexBlockNumber = 0; // Store the blockNumber of the earliest commitment index found for this tree with <= creationBlockNumber.
