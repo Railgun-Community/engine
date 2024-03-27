@@ -32,6 +32,15 @@ type LevelWithIndexedDB = {
       location: string;
       db: IDBDatabase;
     };
+    codec: {
+      encodings: Record<
+        string,
+        {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          decode: (value: ArrayBuffer) => any;
+        }
+      >;
+    };
   };
 };
 
@@ -189,6 +198,21 @@ class Database {
 
     // Decrypt and return
     return combine(AES.decryptGCM(encrypted, encryptionKey));
+  }
+
+  /**
+   * @param value - value to decode
+   * @param encoding - data encoding to use
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private decode(this: DatabaseWithIndexedDB, value: ArrayBuffer, encoding: Encoding): any {
+    const { encodings } = this.level.db.codec;
+    if (typeof encodings[encoding] === 'undefined') throw new Error(`Unknown encoding ${encoding}`);
+    // Special case for decoding already-decoded JSON objects:
+    if (encoding === 'json' && !ArrayBuffer.isView(value) && typeof value === 'object') {
+      return value;
+    }
+    return encodings[encoding].decode(Buffer.from(value));
   }
 
   /**

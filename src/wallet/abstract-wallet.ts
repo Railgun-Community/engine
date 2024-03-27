@@ -874,7 +874,6 @@ abstract class AbstractWallet extends EventEmitter {
     tree: number,
     chain: Chain,
     startScanHeight: number,
-    treeHeight: number,
     scanTicker: Optional<() => void>,
   ): Promise<void> {
     EngineDebug.log(
@@ -884,8 +883,9 @@ abstract class AbstractWallet extends EventEmitter {
 
     const leafSyncPromises: Promise<ScannedDBCommitment[]>[] = [];
 
-    for (let position = startScanHeight; position < treeHeight; position += 1) {
-      const leaf = leaves[position];
+    for (let i = 0; i < leaves.length; i += 1) {
+      const leaf = leaves[i];
+      const position = startScanHeight + i;
       if (leaf == null) {
         if (scanTicker) {
           scanTicker();
@@ -2952,7 +2952,6 @@ abstract class AbstractWallet extends EventEmitter {
             treeIndex,
             chain,
             batchStart,
-            batchEnd,
             undefined, // scanTicker
           );
 
