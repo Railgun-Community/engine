@@ -75,9 +75,13 @@ import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-va
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
 
-  private readonly utxoMerkletrees: { [txidVersion: string]: UTXOMerkletree[][] } = {};
+  private readonly utxoMerkletrees: {
+    [txidVersion: string]: { [chainType: string]: { [chainID: number]: UTXOMerkletree } };
+  } = {};
 
-  private readonly txidMerkletrees: { [txidVersion: string]: TXIDMerkletree[][] } = {};
+  private readonly txidMerkletrees: {
+    [txidVersion: string]: { [chainType: string]: { [chainID: number]: TXIDMerkletree } };
+  } = {};
 
   readonly prover: Prover;
 
@@ -1622,8 +1626,8 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS) {
       // Create utxo merkletrees
-      this.utxoMerkletrees[txidVersion] ??= [];
-      this.utxoMerkletrees[txidVersion][chain.type] ??= [];
+      this.utxoMerkletrees[txidVersion] ??= {};
+      this.utxoMerkletrees[txidVersion][chain.type] ??= {};
 
       // eslint-disable-next-line no-await-in-loop
       const utxoMerkletree = await UTXOMerkletree.create(
@@ -1645,8 +1649,8 @@ class RailgunEngine extends EventEmitter {
       );
 
       // Create railgun txid merkletrees
-      this.txidMerkletrees[txidVersion] ??= [];
-      this.txidMerkletrees[txidVersion][chain.type] ??= [];
+      this.txidMerkletrees[txidVersion] ??= {};
+      this.txidMerkletrees[txidVersion][chain.type] ??= {};
 
       let txidMerkletree: Optional<TXIDMerkletree>;
 
@@ -2080,20 +2084,20 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       // Load UTXO and TXID merkletrees for wallet
-      const utxoMerkletrees = this.utxoMerkletrees[txidVersion] ?? [];
+      const utxoMerkletrees = Object.values(this.utxoMerkletrees[txidVersion] ?? {});
 
       // eslint-disable-next-line no-await-in-loop
       await Promise.all(
         utxoMerkletrees.map(async (merkletreesForChainType) => {
           await Promise.all(
-            merkletreesForChainType.map(async (merkletree) => {
+            Object.values(merkletreesForChainType ?? {}).map(async (merkletree) => {
               await wallet.loadUTXOMerkletree(txidVersion, merkletree);
             }),
           );
         }),
       );
-      this.txidMerkletrees[txidVersion]?.forEach((merkletreesForChainType) => {
-        merkletreesForChainType.forEach((merkletree) => {
+      Object.values(this.txidMerkletrees[txidVersion] ?? {}).forEach((merkletreesForChainType) => {
+        Object.values(merkletreesForChainType).forEach((merkletree) => {
           wallet.loadRailgunTXIDMerkletree(txidVersion, merkletree);
         });
       });
