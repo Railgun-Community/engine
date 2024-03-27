@@ -22,11 +22,14 @@ export enum ByteLength {
   UINT_256 = 32,
 }
 
+const PREFIX = '0x';
+const PREFIX_SIZE = PREFIX.length
+
 // returns true if string is prefixed with '0x'
-const isPrefixed = (str: string): boolean => str.startsWith('0x');
+const isPrefixed = (str: string): boolean => str.startsWith(PREFIX);
 
 // add 0x if it str isn't already prefixed
-export const prefix0x = (str: string): string => (isPrefixed(str) ? str : `0x${str}`);
+export const prefix0x = (str: string): string => (isPrefixed(str) ? str : `${PREFIX}${str}`);
 
 // remove 0x prefix if it exists
 export const strip0x = (str: string): string => (isPrefixed(str) ? str.slice(2) : str);
@@ -73,7 +76,7 @@ function hexlify(data: BytesData, prefix = false): string {
 
   // Return 0x prefixed hex string if specified
   if (prefix) {
-    return `0x${hexString}`.toLowerCase();
+    return prefix0x(hexString).toLowerCase();
   }
 
   // Else return plain hex string
@@ -163,19 +166,25 @@ function padToLength(
   const dataFormatted = data instanceof BN ? hexlify(data) : data;
 
   if (typeof dataFormatted === 'string') {
-    const dataFormattedString = strip0x(dataFormatted);
+    const lengthChars = length * 2;
+    if (isPrefixed(dataFormatted) && dataFormatted.length === PREFIX_SIZE + lengthChars) {
+      return dataFormatted;
+    }
+    if (dataFormatted.length === lengthChars) {
+      return dataFormatted;
+    }
 
     // If we're requested to pad to left, pad left and return
     if (side === 'left') {
-      return dataFormatted.startsWith('0x')
-        ? `0x${dataFormattedString.padStart(length * 2, '0')}`
-        : dataFormattedString.padStart(length * 2, '0');
+      return isPrefixed(dataFormatted)
+        ? prefix0x(strip0x(dataFormatted).padStart(lengthChars, '0'))
+        : dataFormatted.padStart(lengthChars, '0');
     }
 
     // Else pad right and return
-    return dataFormatted.startsWith('0x')
-      ? `0x${dataFormattedString.padEnd(length * 2, '0')}`
-      : dataFormattedString.padEnd(length * 2, '0');
+    return isPrefixed(dataFormatted)
+      ? dataFormatted.padEnd(PREFIX_SIZE + lengthChars, '0')
+      : dataFormatted.padEnd(lengthChars, '0');
   }
 
   // Coerce data into array
@@ -292,19 +301,28 @@ function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'):
     // Can't trim from right as we don't know the byte length of BN objects
     throw new Error('Can\t trim BN from right');
   } else if (typeof data === 'string') {
-    const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
+    const lengthChars = length * 2;
+    if (isPrefixed(data) && data.length === PREFIX_SIZE + lengthChars) {
+      return data;
+    }
+    if (data.length === lengthChars) {
+      return data;
+    }
 
     if (side === 'left') {
       // If side is left return the last length bytes
-      return data.startsWith('0x')
-        ? `0x${dataFormatted.slice(dataFormatted.length - length * 2)}`
-        : dataFormatted.slice(dataFormatted.length - length * 2);
+      if (isPrefixed(data)) {
+        const dataStripped = strip0x(data);
+        return prefix0x(dataStripped.slice(dataStripped.length - lengthChars));
+      }
+      return data.slice(data.length - lengthChars);
     }
 
     // Side is right, return the start of the string to length
-    return data.startsWith('0x')
-      ? `0x${dataFormatted.slice(0, length * 2)}`
-      : dataFormatted.slice(0, length * 2);
+    if (isPrefixed(data)) {
+      return data.slice(0, PREFIX_SIZE + lengthChars);
+    }
+    return data.slice(0, lengthChars);
   }
 
   // Coerce to array
