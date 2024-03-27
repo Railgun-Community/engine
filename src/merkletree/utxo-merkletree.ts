@@ -47,6 +47,10 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     return this.getData(tree, index);
   }
 
+  async getCommitmentRange(tree: number, start: number, end: number): Promise<Commitment[]> {
+    return this.getDataRange(tree, start, end);
+  }
+
   /**
    * Gets Commitment from UTXO tree
    */

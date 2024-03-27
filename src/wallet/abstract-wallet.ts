@@ -874,7 +874,6 @@ abstract class AbstractWallet extends EventEmitter {
     tree: number,
     chain: Chain,
     startScanHeight: number,
-    treeHeight: number,
     scanTicker: Optional<() => void>,
   ): Promise<void> {
     EngineDebug.log(
@@ -884,8 +883,9 @@ abstract class AbstractWallet extends EventEmitter {
 
     const leafSyncPromises: Promise<ScannedDBCommitment[]>[] = [];
 
-    for (let position = startScanHeight; position < treeHeight; position += 1) {
-      const leaf = leaves[position];
+    for (let i = 0; i < leaves.length; i += 1) {
+      const leaf = leaves[i];
+      const position = startScanHeight + i;
       if (leaf == null) {
         if (scanTicker) {
           scanTicker();
@@ -2923,20 +2923,19 @@ abstract class AbstractWallet extends EventEmitter {
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
 
-        const batchSize = 500;
+        const batchSize = 2000;
         const totalLeavesToScan = treeHeight - startScanHeight;
         const totalBatches = Math.ceil(totalLeavesToScan / batchSize);
 
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
           const batchStart = startScanHeight + batchIndex * batchSize;
           const batchEnd = Math.min(batchStart + batchSize, treeHeight);
-          const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
-          for (let index = batchStart; index < batchEnd; index += 1) {
-            fetcher[index] = utxoMerkletree.getCommitment(treeIndex, index);
-          }
-
-          const leaves = await Promise.all(fetcher);
+          const leaves = await utxoMerkletree.getCommitmentRange(
+            treeIndex,
+            batchStart,
+            batchEnd - 1,
+          );
 
           const finishedTreeCount = treeIndex - startScanTree;
           const finishedTreesProgress = finishedTreeCount / treesToScan;
@@ -2953,7 +2952,6 @@ abstract class AbstractWallet extends EventEmitter {
             treeIndex,
             chain,
             batchStart,
-            batchEnd,
             undefined, // scanTicker
           );
 
@@ -3132,7 +3130,7 @@ abstract class AbstractWallet extends EventEmitter {
     for (let tree = latestTree; tree > -1; tree -= 1) {
       const treeHeight = await utxoMerkletree.getTreeLength(tree);
 
-      const batchSize = 500;
+      const batchSize = 2000;
       const totalBatches = Math.ceil(treeHeight / batchSize);
       let earliestCommitmentIndex: Optional<number>; // Store the earliest commitment index found for this tree with <= creationBlockNumber.
       let creationBlockIndexBlockNumber = 0; // Store the blockNumber of the earliest commitment index found for this tree with <= creationBlockNumber.
@@ -3141,22 +3139,14 @@ abstract class AbstractWallet extends EventEmitter {
         // Start batches at the end of the tree and work backwards
         const batchStart = Math.max(0, treeHeight - (batchIndex + 1) * batchSize);
         const batchEnd = treeHeight - batchIndex * batchSize;
-        const fetcher = new Array<Promise<Optional<Commitment>>>(batchEnd);
 
-        for (let index = batchStart; index < batchEnd; index += 1) {
-          fetcher[index] = utxoMerkletree.getCommitment(tree, index);
-        }
-
-        const leaves = await Promise.all(fetcher);
-        if (!leaves.length) {
-          return undefined;
-        }
+        const leaves = await utxoMerkletree.getCommitmentRange(tree, batchStart, batchEnd - 1);
 
         if (!isDefined(earliestCommitmentIndex)) {
           // Search through leaves (descending) for first blockNumber before creation.
           // Do this linearly, as we don't expect many commitments in a single block.
           for (let index = batchEnd - 1; index >= batchStart; index -= 1) {
-            const commitment = leaves[index];
+            const commitment = leaves[index - batchStart];
             if (isDefined(commitment?.blockNumber)) {
               if (commitment.blockNumber <= creationBlockNumber) {
                 earliestCommitmentIndex = index;

@@ -2199,20 +2199,20 @@ class RailgunEngine extends EventEmitter {
     for (let treeIndex = startScanTree; treeIndex <= latestTree; treeIndex += 1) {
       // eslint-disable-next-line no-await-in-loop
       const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
-      const fetcher = new Array<Promise<Optional<Commitment>>>(treeHeight);
 
       // const isInitialTree = treeIndex === startScanTree;
       // const startScanHeight = isInitialTree && treeInfo ? treeInfo.position : 0;
       const startScanHeight = 0;
 
-      for (let index = startScanHeight; index < treeHeight; index += 1) {
-        fetcher[index] = utxoMerkletree.getCommitment(treeIndex, index);
-      }
-
       // eslint-disable-next-line no-await-in-loop
-      const leaves: Optional<Commitment>[] = await Promise.all(fetcher);
+      const leaves = await utxoMerkletree.getCommitmentRange(
+        treeIndex,
+        startScanHeight,
+        treeHeight - 1,
+      );
+
       leaves.forEach((leaf) => {
-        if (!leaf) {
+        if (!isDefined(leaf)) {
           return;
         }
         if (leaf.blockNumber < startingBlock) {
