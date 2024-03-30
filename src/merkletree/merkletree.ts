@@ -257,6 +257,30 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+  protected getDataRange(tree: number, start: number, end: number): Promise<T[]> {
+    return new Promise((resolve, reject) => {
+      const datas: T[] = [];
+      try {
+        this.db
+          .streamRange(this.getDataDBPath(tree, start), this.getDataDBPath(tree, end), 'json')
+          .on('data', (data: T) => {
+            datas.push(data);
+          })
+          .on('error', (cause) => {
+            reject(new Error('Failed to stream merkletree data range', { cause }));
+          })
+          .on('end', () => {
+            resolve(datas);
+          });
+      } catch (cause) {
+        if (!(cause instanceof Error)) {
+          throw new Error('Non-error thrown in Merkletree getDataRange', { cause });
+        }
+        throw new Error('Failed to stream merkletree data range', { cause });
+      }
+    });
+  }
+
   // eslint-disable-next-line class-methods-use-this
   sortMerkletreeDataByHash(array: T[]): T[] {
     return array.sort((a, b) => (a.hash > b.hash ? 1 : -1));
@@ -558,13 +582,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Cannot used cached treeLength value here because it is stale.
     const treeLength = await this.getTreeLengthFromDBCount(tree);
 
-    const fetcher = new Array<Promise<Optional<T>>>(treeLength);
-
-    // Fetch each leaf we need to scan
-    for (let index = 0; index < treeLength; index += 1) {
-      fetcher[index] = this.getData(tree, index);
-    }
-    const leaves = await Promise.all(fetcher);
+    const leaves = await this.getDataRange(tree, 0, treeLength - 1);
 
     // Push values to leaves of write index
     leaves.forEach((leaf, index) => {

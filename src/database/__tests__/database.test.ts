@@ -101,6 +101,25 @@ describe('database', () => {
     expect(await db.countNamespace(['a'])).to.equal(3);
   });
 
+  it('Should stream values in a range', async () => {
+    await db.put(['a', 'a'], '01');
+    await db.put(['a', 'b'], '02');
+    await db.put(['a', 'c'], '03');
+
+    const stream = db.streamRange(['a', 'a'], ['a', 'c']);
+
+    const datas: string[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream
+        .on('data', (data: string) => datas.push(data))
+        .on('end', () => resolve())
+        .on('error', (err) => reject(err));
+    });
+
+    expect(datas).to.have.lengthOf(3);
+    expect(datas).to.have.members(['01', '02', '03']);
+  });
+
   it('Should clear values in a namespace', async () => {
     // Insert values in foo namespace
     await db.put(['a', 'a'], '01');

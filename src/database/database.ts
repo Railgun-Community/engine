@@ -2,6 +2,7 @@ import type { AbstractBatch, AbstractLevelDOWN } from 'abstract-leveldown';
 import encode from 'encoding-down';
 import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
+import EventEmitter from 'events';
 import { BytesData, Ciphertext } from '../models/formatted-types';
 import { chunk, combine, hexlify } from '../utils/bytes';
 import { AES } from '../utils/encryption/aes';
@@ -30,6 +31,15 @@ type LevelWithIndexedDB = {
     db: {
       location: string;
       db: IDBDatabase;
+    };
+    codec: {
+      encodings: Record<
+        string,
+        {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          decode: (value: ArrayBuffer) => any;
+        }
+      >;
     };
   };
 };
@@ -191,9 +201,26 @@ class Database {
   }
 
   /**
+   * @param value - value to decode
+   * @param encoding - data encoding to use
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private decode(this: DatabaseWithIndexedDB, value: ArrayBuffer, encoding: Encoding): any {
+    const { encodings } = this.level.db.codec;
+    if (typeof encodings[encoding] === 'undefined') throw new Error(`Unknown encoding ${encoding}`);
+    // Special case for decoding already-decoded JSON objects:
+    if (encoding === 'json' && !ArrayBuffer.isView(value) && typeof value === 'object') {
+      return value;
+    }
+    return encodings[encoding].decode(Buffer.from(value));
+  }
+
+  /**
    * Gets stream of keys and/or values in namespace
    * @param namespace - namespace to stream from
-   * @returns namespace stream
+   * @param keys - whether or not to include keys in results (default true)
+   * @param values - whether or not to include values in results (default false)
+   * @returns namespace "Emitter" stream
    */
   streamNamespace(namespace: string[], keys: boolean = true, values: boolean = false) {
     const pathkey = Database.pathToKey(namespace);
@@ -202,6 +229,44 @@ class Database {
       lte: `${pathkey}~`,
       keys,
       values,
+    });
+  }
+
+  /**
+   * Gets stream of values in range between two keys
+   * @param start - start path (inclusive)
+   * @param end - end path (inclusive)
+   * @param encoding - data encoding to use
+   * @returns namespace "Emitter" stream
+   */
+  streamRange(start: Path, end: Path, encoding: Encoding = 'hex') {
+    const startKey = Database.pathToKey(start);
+    const endKey = Database.pathToKey(end);
+    if (this.usesIndexedDB()) {
+      const store = this.getIndexedDBStore();
+      const lower = new TextEncoder().encode(`${startKey}`);
+      const upper = new TextEncoder().encode(`${endKey}`);
+      const range = IDBKeyRange.bound(lower, upper);
+      const request = store.getAll(range);
+      const emitter = new EventEmitter();
+      request.onsuccess = (ev: Event) => {
+        const values: Array<ArrayBuffer> = (ev.target as IDBRequest<ArrayBuffer[]>).result;
+        for (let i = 0; i < values.length; i += 1) {
+          emitter.emit('data', this.decode(values[i], encoding));
+        }
+        emitter.emit('end');
+      };
+      request.onerror = (ev: Event) => {
+        emitter.emit('error', (ev.target as IDBRequest).error);
+      };
+      return emitter;
+    }
+    return this.level.createReadStream({
+      gte: startKey,
+      lte: endKey,
+      keys: false,
+      values: true,
+      valueEncoding: encoding,
     });
   }
 
