@@ -1,5 +1,5 @@
 import { HDNodeWallet, Mnemonic } from 'ethers';
-import { Signature } from 'circomlibjs';
+import { Signature } from '@railgun-community/circomlibjs';
 import { poseidon } from '../utils/poseidon';
 import { Database } from '../database/database';
 import { deriveNodes, SpendingKeyPair, WalletNode } from '../key-derivation/wallet-node';

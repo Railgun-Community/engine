@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '@railgun-community/circomlibjs';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';

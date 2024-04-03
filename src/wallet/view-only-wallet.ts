@@ -1,4 +1,4 @@
-import { Signature } from 'circomlibjs';
+import { Signature } from '@railgun-community/circomlibjs';
 import { Database } from '../database/database';
 import { ViewingKeyPair } from '../key-derivation/wallet-node';
 import { PublicInputsRailgun } from '../models';

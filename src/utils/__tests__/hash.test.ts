@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '@railgun-community/circomlibjs';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { keccak256, sha256, sha512HMAC } from '../hash';

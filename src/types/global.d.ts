@@ -1,6 +1,6 @@
 declare type Optional<T> = T | undefined;
 
-declare module 'circomlibjs' {
+declare module '@railgun-community/circomlibjs' {
   export type Signature = {
     R8: [bigint, bigint];
     S: bigint;

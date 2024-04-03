@@ -1,4 +1,4 @@
-import { Signature } from 'circomlibjs';
+import { Signature } from '@railgun-community/circomlibjs';
 import { PublicInputsRailgun } from '../models';
 import { ViewOnlyWallet } from './view-only-wallet';
 

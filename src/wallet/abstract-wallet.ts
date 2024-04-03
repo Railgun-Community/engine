@@ -1,5 +1,5 @@
 /* eslint-disable no-await-in-loop */
-import { Signature } from 'circomlibjs';
+import { Signature } from '@railgun-community/circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import BN from 'bn.js';
 import EventEmitter from 'events';
