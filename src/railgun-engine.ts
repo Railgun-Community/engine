@@ -1517,7 +1517,7 @@ class RailgunEngine extends EventEmitter {
     try {
       await promiseTimeout(
         defaultProvider.getBlockNumber(),
-        10000,
+        60_000,
         'Timed out waiting for default RPC provider to connect.',
       );
     } catch (cause) {
@@ -1533,7 +1533,7 @@ class RailgunEngine extends EventEmitter {
     try {
       await promiseTimeout(
         pollingProvider.getBlockNumber(),
-        10000,
+        60_000,
         'Timed out waiting for polling RPC provider to connect.',
       );
     } catch (cause) {
