@@ -2,7 +2,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '@railgun-community/circomlibjs';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { TXIDMerkletree } from '../txid-merkletree';

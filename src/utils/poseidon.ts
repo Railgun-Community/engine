@@ -1,4 +1,4 @@
-import circom from 'circomlibjs';
+import circom from '@railgun-community/circomlibjs';
 import EngineDebug from '../debugger/debugger';
 import { ByteLength, hexToBigInt, nToHex, padToLength, strip0x } from './bytes';
 import { isReactNative } from './runtime';

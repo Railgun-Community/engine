@@ -1,5 +1,5 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
-import { eddsa, Signature } from 'circomlibjs';
+import { eddsa, Signature } from '@railgun-community/circomlibjs';
 import { poseidonHex } from './poseidon';
 import { bytesToN, fastBytesToHex, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
 import { sha256, sha512 } from './hash';

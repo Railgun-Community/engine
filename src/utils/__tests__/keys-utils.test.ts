@@ -1,4 +1,4 @@
-import { poseidon } from 'circomlibjs';
+import { poseidon } from '@railgun-community/circomlibjs';
 import { bytesToHex, randomBytes, utf8ToBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
