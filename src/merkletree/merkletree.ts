@@ -47,7 +47,11 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   // {tree: {startingIndex: [leaves]}}
   protected writeQueue: T[][][] = [];
 
-  protected lockUpdates = false;
+  private lockPromise: Promise<void> | null = null;
+
+  private lockResolve: (() => void) | null = null;
+
+  private lockRefCount: number = 0;
 
   txidVersion: TXIDVersion;
 
@@ -94,6 +98,35 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   protected async init(): Promise<void> {
     await this.getMetadataFromStorage();
+  }
+
+  protected async waitForUpdatesLock(): Promise<void> {
+    if (this.lockPromise) {
+      await this.lockPromise;
+    }
+  }
+
+  protected acquireUpdatesLock(): unknown {
+    this.lockPromise ??= new Promise<void>((resolve) => {
+      this.lockResolve = resolve;
+    });
+    this.lockRefCount += 1;
+    return this.lockPromise;
+  }
+
+  protected releaseUpdatesLock(): void {
+    this.lockRefCount -= 1;
+    if (this.lockRefCount <= 0 && this.lockResolve) {
+      const resolve = this.lockResolve;
+      this.lockPromise = null;
+      this.lockResolve = null;
+      this.lockRefCount = 0;
+      resolve();
+    }
+  }
+
+  private isCurrentLock(lock: unknown): boolean {
+    return isDefined(lock) && lock === this.lockPromise;
   }
 
   /**
@@ -186,15 +219,18 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearAllNodeHashes(tree: number): Promise<void> {
-    this.lockUpdates = true;
-    for (let level = 0; level < TREE_DEPTH; level += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      await this.db.clearNamespace(this.getNodeHashLevelPath(tree, level));
+    this.acquireUpdatesLock();
+    try {
+      for (let level = 0; level < TREE_DEPTH; level += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.db.clearNamespace(this.getNodeHashLevelPath(tree, level));
+      }
+      if (isDefined(this.cachedNodeHashes[tree])) {
+        this.cachedNodeHashes[tree] = {};
+      }
+    } finally {
+      this.releaseUpdatesLock();
     }
-    if (isDefined(this.cachedNodeHashes[tree])) {
-      this.cachedNodeHashes[tree] = {};
-    }
-    this.lockUpdates = false;
   }
 
   static getGlobalPosition(tree: number, index: number): number {
@@ -223,25 +259,21 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async updateData(tree: number, index: number, data: T): Promise<void> {
+    await this.waitForUpdatesLock();
+    this.acquireUpdatesLock();
     try {
-      if (this.lockUpdates) {
-        throw new Error('Updates locked for merkletree');
-      }
-
-      this.lockUpdates = true;
       const oldData = await this.getData(tree, index);
       if (oldData.hash !== data.hash) {
         throw new Error('Cannot update merkletree data with different hash.');
       }
       await this.db.put(this.getDataDBPath(tree, index), data, 'json');
-
-      this.lockUpdates = false;
     } catch (cause) {
       if (!(cause instanceof Error)) {
         throw new Error('Non-error thrown in Merkletree updateData', { cause });
       }
-      this.lockUpdates = false;
       throw new Error('Failed to update merkletree data', { cause });
+    } finally {
+      this.releaseUpdatesLock();
     }
   }
 
@@ -437,11 +469,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async clearDataForMerkletree(): Promise<void> {
-    this.lockUpdates = true;
-    await this.db.clearNamespace(this.getMerkletreeDBPrefix());
-    this.lockUpdates = false;
-    this.cachedNodeHashes = {};
-    this.treeLengths = [];
+    this.acquireUpdatesLock();
+    try {
+      await this.db.clearNamespace(this.getMerkletreeDBPrefix());
+    } finally {
+      this.releaseUpdatesLock();
+      this.cachedNodeHashes = {};
+      this.treeLengths = [];
+    }
   }
 
   /**
@@ -461,6 +496,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     treeIndex: number,
     hashWriteGroup: string[][],
     dataWriteGroup: T[],
+    lock?: unknown,
   ): Promise<void> {
     const newTreeLength = hashWriteGroup[0].length;
 
@@ -486,8 +522,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       });
     });
 
-    if (this.lockUpdates) {
-      throw new Error('Updates locked for merkletree');
+    if (!this.isCurrentLock(lock)) {
+      await this.waitForUpdatesLock();
     }
 
     await Promise.all([
@@ -574,7 +610,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   /**
    * Rebuilds entire tree and writes to DB.
    */
-  async rebuildAndWriteTree(tree: number): Promise<void> {
+  async rebuildAndWriteTree(tree: number, lock?: unknown): Promise<void> {
     const firstLevelHashWriteGroup: string[][] = [];
 
     firstLevelHashWriteGroup[0] = [];
@@ -602,7 +638,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     const dataWriteGroup: T[] = [];
 
-    await this.writeTreeToDB(tree, hashWriteGroup, dataWriteGroup);
+    await this.writeTreeToDB(tree, hashWriteGroup, dataWriteGroup, lock);
   }
 
   private static async fillHashWriteGroup(
