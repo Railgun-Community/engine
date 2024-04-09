@@ -446,43 +446,42 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
   }
 
   async clearLeavesAfterTxidIndex(txidIndex: number): Promise<void> {
-    // Lock for updates
-    this.lockUpdates = true;
+    const lock = this.acquireUpdatesLock();
+    try {
+      // Remove any queued items
+      this.writeQueue = [];
 
-    // Remove any queued items
-    this.writeQueue = [];
+      const { tree, index } = TXIDMerkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
 
-    const { tree, index } = TXIDMerkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
+      const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
 
-    const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
+      for (let currentTree = tree; currentTree <= latestTree; currentTree += 1) {
+        const startIndex = currentTree === tree ? index + 1 : 0;
+        const max = currentTree === latestTree ? latestIndex : TREE_MAX_ITEMS - 1;
+        for (let currentIndex = startIndex; currentIndex <= max; currentIndex += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.db.del(this.getHistoricalMerklerootDBPath(currentTree, currentIndex));
 
-    for (let currentTree = tree; currentTree <= latestTree; currentTree += 1) {
-      const startIndex = currentTree === tree ? index + 1 : 0;
-      const max = currentTree === latestTree ? latestIndex : TREE_MAX_ITEMS - 1;
-      for (let currentIndex = startIndex; currentIndex <= max; currentIndex += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.db.del(this.getDataDBPath(currentTree, currentIndex));
+        }
         // eslint-disable-next-line no-await-in-loop
-        await this.db.del(this.getHistoricalMerklerootDBPath(currentTree, currentIndex));
-
-        // eslint-disable-next-line no-await-in-loop
-        await this.db.del(this.getDataDBPath(currentTree, currentIndex));
+        await this.clearAllNodeHashes(currentTree);
       }
-      // eslint-disable-next-line no-await-in-loop
-      await this.clearAllNodeHashes(currentTree);
+
+      for (let currentTree = tree; currentTree <= latestTree; currentTree += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.rebuildAndWriteTree(currentTree, lock);
+
+        // eslint-disable-next-line no-await-in-loop
+        await this.resetTreeLength(currentTree);
+
+        // eslint-disable-next-line no-await-in-loop
+        await this.updateStoredMerkletreesMetadata(currentTree);
+      }
+    } finally {
+      this.releaseUpdatesLock();
     }
-
-    for (let currentTree = tree; currentTree <= latestTree; currentTree += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      await this.rebuildAndWriteTree(currentTree);
-
-      // eslint-disable-next-line no-await-in-loop
-      await this.resetTreeLength(currentTree);
-
-      // eslint-disable-next-line no-await-in-loop
-      await this.updateStoredMerkletreesMetadata(currentTree);
-    }
-
-    // Unlock updates
-    this.lockUpdates = false;
   }
 
   async getCurrentTxidIndex(): Promise<number> {
