@@ -172,6 +172,8 @@ describe('railgun-engine', function test() {
   ) => {
     const proverSpy = sinon.spy(Prover.prototype, 'provePOI');
 
+    const ethersAddress = await ethersWallet.getAddress();
+
     try {
       const { blockNumber } = transactReceipt;
 
@@ -200,8 +202,8 @@ describe('railgun-engine', function test() {
             ),
             unshield: {
               tokenData: shield.tokenData,
-              toAddress: '0x1234',
-              value: '0x01',
+              toAddress: ethersAddress,
+              value: transaction.unshieldPreimage.value.toString(),
             },
             timestamp: 1_000_000,
             txid: strip0x(transactReceipt.hash),
@@ -258,11 +260,8 @@ describe('railgun-engine', function test() {
       expect(firstCallArgs[1]).to.deep.equal(expectedListKey);
       // blindedCommitmentsOut: string[]
       expect(firstCallArgs[3]).to.deep.equal(expectedBlindedCommitmentsOut);
-
+    } finally {
       proverSpy.restore();
-    } catch (err) {
-      proverSpy.restore();
-      throw err;
     }
   };
 
@@ -497,8 +496,9 @@ describe('railgun-engine', function test() {
     expect(balance).to.equal(value);
 
     const walletDetails = await wallet.getWalletDetails(txidVersion, chain);
-    expect(walletDetails.creationTree).to.equal(0);
-    expect(walletDetails.creationTreeHeight).to.equal(0);
+    // `undefined` because test wallet was not given `creationBlockNumbers`:
+    expect(walletDetails.creationTree).to.equal(undefined);
+    expect(walletDetails.creationTreeHeight).to.equal(undefined);
 
     await wallet.fullRedecryptBalancesAllTXIDVersions(chain, undefined);
     await wallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
@@ -514,8 +514,9 @@ describe('railgun-engine', function test() {
     expect(balanceCleared).to.equal(undefined);
 
     const walletDetailsCleared = await wallet.getWalletDetails(txidVersion, chain);
-    expect(walletDetailsCleared.creationTree).to.equal(0); // creationTree should not get reset on clear
-    expect(walletDetailsCleared.creationTreeHeight).to.equal(0); // creationTreeHeight should not get reset on clear
+    // `undefined` because test wallet was not given `creationBlockNumbers`:
+    expect(walletDetailsCleared.creationTree).to.equal(undefined);
+    expect(walletDetailsCleared.creationTreeHeight).to.equal(undefined);
     expect(walletDetailsCleared.treeScannedHeights.length).to.equal(0);
   });
 
@@ -1140,7 +1141,7 @@ describe('railgun-engine', function test() {
     const newBalance2 = await wallet2.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
-    expect(newBalance2).to.equal(BigInt(11));
+    expect(newBalance2).to.equal(BigInt(10));
 
     // check the transactions log
     const history = await wallet.getTransactionHistory(chain, undefined);

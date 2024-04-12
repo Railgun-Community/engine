@@ -1,5 +1,6 @@
 {
   "file": ["./src/test/setup.test.ts"],
   "require": "ts-node/register",
+  "bail": true,
   "exit": true
 }

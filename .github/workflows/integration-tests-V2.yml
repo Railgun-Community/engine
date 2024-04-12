@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '18.17.1'
       - name: Checkout engine repo
         uses: actions/checkout@v3
         with:
@@ -38,7 +38,7 @@ jobs:
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          command: cd engine && yarn test-hardhat-V2
-          start: cd contract && npx hardhat node >/dev/null, cd contract && sleep 5 && npx hardhat deploy:test --network localhost >/dev/null
+          command: cd contract && npx hardhat deploy:test --network localhost && cd ../engine && yarn test-hardhat-V2
+          start: cd contract && npx hardhat node >/dev/null
           wait-on: 'http://localhost:8545'
           wait-on-timeout: 120

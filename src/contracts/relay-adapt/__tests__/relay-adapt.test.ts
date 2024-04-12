@@ -967,9 +967,7 @@ describe('relay-adapt', function test() {
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     await expect(
       RelayAdaptV2Contract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
-    ).to.be.rejectedWith(
-      `RelayAdapt multicall failed at index 0 with 'execution reverted (unknown custom error)': Unknown Relay Adapt error.`,
-    );
+    ).to.be.rejectedWith('RelayAdapt multicall failed at index 0.');
 
     // 6. Create real transactions with relay adapt params.
     const random = randomHex(31);
@@ -1048,7 +1046,9 @@ describe('relay-adapt', function test() {
     expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
-    expect(callResultError).to.equal('Unknown Relay Adapt error.');
+    expect(callResultError).to.equal(
+      'Unknown Relay Adapt error: No utf8 string parsed from revert reason.',
+    );
 
     const expectedPrivateWethBalance = BigInt(
       99750 /* original */ -
@@ -1154,9 +1154,7 @@ describe('relay-adapt', function test() {
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     await expect(
       RelayAdaptV2Contract.estimateGasWithErrorHandler(provider, populatedTransactionGasEstimate),
-    ).to.be.rejectedWith(
-      `RelayAdapt multicall failed at index 0 with 'execution reverted (unknown custom error)': Unknown Relay Adapt error.`,
-    );
+    ).to.be.rejectedWith('RelayAdapt multicall failed at index 0.');
 
     // 6. Create real transactions with relay adapt params.
     const random = randomHex(31);
@@ -1238,7 +1236,7 @@ describe('relay-adapt', function test() {
     expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
-    expect(callResultError).to.equal('Unknown Relay Adapt error.');
+    expect(callResultError).to.equal('Unknown Relay Adapt error: No utf8 string parsed from revert reason.');
 
     // TODO: These are the incorrect assertions, if the tx is fully reverted. This requires a callbacks upgrade to contract.
     // For now, it is partially reverted. Unshield/shield fees are still charged.

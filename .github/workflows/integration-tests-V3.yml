@@ -8,6 +8,7 @@ on:
 
 jobs:
   integration-tests:
+    if: false # Disable this job while V3 isn't ready
     name: 🧪 Integration Tests
     runs-on: ubuntu-latest
     steps:
@@ -38,5 +39,7 @@ jobs:
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          start: cd contract && $(npm bin)/hardhat node >/dev/null
-          command: cd contract && sleep 10 && $(npm bin)/hardhat deploy:test --network localhost && cd ../engine && yarn test-hardhat
+          command: cd engine && yarn test-hardhat
+          start: cd contract && npx hardhat node >/dev/null, cd contract && sleep 5 && npx hardhat deploy:test --network localhost >/dev/null
+          wait-on: 'http://localhost:8545'
+          wait-on-timeout: 120

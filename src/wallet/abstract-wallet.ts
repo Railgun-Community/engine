@@ -1161,10 +1161,11 @@ abstract class AbstractWallet extends EventEmitter {
       return [];
     }
 
-    const cachedSentCommitments = this.getSentCommitmentsFromCache(txidVersion, chain);
-    if (isDefined(cachedSentCommitments)) {
-      return cachedSentCommitments;
-    }
+    // We have a cache invalidation problem elsewhere, so this is disabled for now:
+    // const cachedSentCommitments = this.getSentCommitmentsFromCache(txidVersion, chain);
+    // if (isDefined(cachedSentCommitments)) {
+    //   return cachedSentCommitments;
+    // }
 
     const vpk = this.getViewingKeyPair().privateKey;
 
