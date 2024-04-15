@@ -21,9 +21,7 @@ jobs:
       - name: Checkout contract repo
         uses: actions/checkout@v3
         with:
-          # repository: Railgun-Privacy/contract
-          repository: staltz/railgun-privacy-contract
-          ref: staltz/add-yarn-lock
+          repository: Railgun-Privacy/contract
           path: contract
       - name: Yarn in engine
         uses: borales/actions-yarn@v4
