@@ -40,7 +40,7 @@ jobs:
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          command: cd contract && npx hardhat deploy:test --network localhost && cd ../engine && yarn test-hardhat-V2
-          start: cd contract && npx hardhat node >/dev/null
+          command: cd contract && npm run compile && npm run deploy && cd ../engine && yarn test-hardhat-V2
+          start: cd contract && npm run node >/dev/null
           wait-on: 'http://localhost:8545'
           wait-on-timeout: 120
