@@ -36,11 +36,11 @@ jobs:
           cmd: install
           dir: 'contract'
       - name: Compile contract
-        run: cd contract && ./node_modules/.bin/hardhat compile
+        run: cd contract && npm run compile
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          command: cd contract && npm run compile && npm run deploy && cd ../engine && yarn test-hardhat-V2
+          command: cd contract && npm run deploy && cd ../engine && yarn test-hardhat-V2
           start: cd contract && npm run node >/dev/null
           wait-on: 'http://localhost:8545'
           wait-on-timeout: 120
