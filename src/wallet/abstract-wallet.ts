@@ -144,6 +144,7 @@ import {
 import { ExtractedRailgunTransactionData } from '../models/transaction-types';
 import { POIValidation } from '../validation/poi-validation';
 import { extractFirstNoteERC20AmountMapFromTransactionRequest } from '../validation/extract-transaction-data';
+import { Registry } from '../utils/registry';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -185,28 +186,28 @@ abstract class AbstractWallet extends EventEmitter {
 
   readonly nullifyingKey: bigint;
 
-  private readonly utxoMerkletrees: { [txidVersion: string]: UTXOMerkletree[][] } = {};
+  private readonly utxoMerkletrees: Registry<UTXOMerkletree> = new Registry();
 
-  private readonly txidMerkletrees: { [txidVersion: string]: TXIDMerkletree[][] } = {};
+  private readonly txidMerkletrees: Registry<TXIDMerkletree> = new Registry();
 
   readonly isRefreshingPOIs: Partial<Record<TXIDVersion, boolean[][]>> = {};
 
   private readonly prover: Prover;
 
-  private readonly isClearingBalances: boolean[][] = [];
+  private readonly isClearingBalances: Registry<boolean> = new Registry();
 
-  private readonly decryptBalancesKeyForChain: Optional<string>[][] = [];
+  private readonly decryptBalancesKeyForChain: Registry<Optional<string>> = new Registry();
 
   private creationBlockNumbers: Optional<number[][]>;
 
   // [type: [id: CachedStoredReceiveCommitment[]]]
   private: CachedStoredReceiveCommitment[][][] = [];
 
-  private generatingPOIsForChain: boolean[][] = [];
+  private generatingPOIsForChain: Registry<boolean> = new Registry();
 
-  private receiveCommitmentsCache: { [txidVersion: string]: Optional<TXO[]>[][] } = {};
+  private receiveCommitmentsCache: Registry<Optional<TXO[]>> = new Registry();
 
-  private sentCommitmentsCache: { [txidVersion: string]: Optional<SentCommitment[]>[][] } = {};
+  private sentCommitmentsCache: Registry<Optional<SentCommitment[]>> = new Registry();
 
   /**
    * Create Wallet controller
@@ -241,9 +242,6 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     utxoMerkletree: UTXOMerkletree,
   ): Promise<void> {
-    this.utxoMerkletrees[txidVersion] ??= [];
-    this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type] ??= [];
-
     // Remove balances if the UTXO merkletree is out of date for this wallet.
     const { chain } = utxoMerkletree;
     const utxoMerkletreeHistoryVersion = await this.getUTXOMerkletreeHistoryVersion(chain);
@@ -254,31 +252,33 @@ abstract class AbstractWallet extends EventEmitter {
       await this.clearDecryptedBalancesAllTXIDVersions(chain);
       await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
 
-      this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
-        utxoMerkletree;
+      this.utxoMerkletrees.set(txidVersion, utxoMerkletree.chain, utxoMerkletree);
 
       return;
     }
 
-    this.utxoMerkletrees[txidVersion][utxoMerkletree.chain.type][utxoMerkletree.chain.id] =
-      utxoMerkletree;
-  }
-
-  /**
-   * Loads txid merkle tree into wallet
-   */
-  loadRailgunTXIDMerkletree(txidVersion: TXIDVersion, txidMerkletree: TXIDMerkletree) {
-    this.txidMerkletrees[txidVersion] ??= [];
-    this.txidMerkletrees[txidVersion][txidMerkletree.chain.type] ??= [];
-    this.txidMerkletrees[txidVersion][txidMerkletree.chain.type][txidMerkletree.chain.id] =
-      txidMerkletree;
+    this.utxoMerkletrees.set(txidVersion, utxoMerkletree.chain, utxoMerkletree);
   }
 
   /**
    * Unload utxo merkle tree by chain
    */
   unloadUTXOMerkletree(txidVersion: TXIDVersion, chain: Chain) {
-    delete this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+    this.utxoMerkletrees.del(txidVersion, chain);
+  }
+
+  /**
+   * Loads txid merkle tree into wallet
+   */
+  loadRailgunTXIDMerkletree(txidVersion: TXIDVersion, txidMerkletree: TXIDMerkletree) {
+    this.txidMerkletrees.set(txidVersion, txidMerkletree.chain, txidMerkletree);
+  }
+
+  /**
+   * Unload txid merkle tree by chain
+   */
+  unloadRailgunTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain) {
+    this.txidMerkletrees.del(txidVersion, chain);
   }
 
   private getUTXOMerkletreeHistoryVersionDBPrefix(chain: Chain): string[] {
@@ -302,13 +302,6 @@ abstract class AbstractWallet extends EventEmitter {
       .get(this.getUTXOMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
-  }
-
-  /**
-   * Unload txid merkle tree by chain
-   */
-  unloadRailgunTXIDMerkletree(txidVersion: TXIDVersion, chain: Chain) {
-    delete this.txidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
   }
 
   private emitPOIProofUpdateEvent(
@@ -982,49 +975,13 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Sets receive commitments in cache
-   */
-  setReceiveCommitmentsCache(txidVersion: TXIDVersion, chain: Chain, commitments: Optional<TXO[]>) {
-    this.receiveCommitmentsCache[txidVersion] ??= [];
-    this.receiveCommitmentsCache[txidVersion][chain.type] ??= [];
-    this.receiveCommitmentsCache[txidVersion][chain.type][chain.id] = commitments;
-  }
-
-  /**
-   * Sets sent commitments in cache
-   */
-  setSentCommitmentsCache(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    commitments: Optional<SentCommitment[]>,
-  ) {
-    this.sentCommitmentsCache[txidVersion] ??= [];
-    this.sentCommitmentsCache[txidVersion][chain.type] ??= [];
-    this.sentCommitmentsCache[txidVersion][chain.type][chain.id] = commitments;
-  }
-
-  /**
-   * Fetches cached receive commitments
-   */
-  getReceiveCommitmentsFromCache(txidVersion: TXIDVersion, chain: Chain): Optional<TXO[]> {
-    return this.receiveCommitmentsCache[txidVersion]?.[chain.type]?.[chain.id];
-  }
-
-  /**
-   * Fetches cached sent commitments
-   */
-  getSentCommitmentsFromCache(txidVersion: TXIDVersion, chain: Chain): Optional<SentCommitment[]> {
-    return this.sentCommitmentsCache[txidVersion]?.[chain.type]?.[chain.id];
-  }
-
-  /**
    * Clears commitments cache
    */
   invalidateCommitmentsCache(chain: Chain) {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
-      this.setReceiveCommitmentsCache(txidVersion, chain, undefined);
-      this.setSentCommitmentsCache(txidVersion, chain, undefined);
+      this.receiveCommitmentsCache.del(txidVersion, chain);
+      this.sentCommitmentsCache.del(txidVersion, chain);
     }
   }
 
@@ -1038,7 +995,7 @@ abstract class AbstractWallet extends EventEmitter {
       return [];
     }
 
-    const cachedTXOs = this.getReceiveCommitmentsFromCache(txidVersion, chain);
+    const cachedTXOs = this.receiveCommitmentsCache.get(txidVersion, chain);
     if (isDefined(cachedTXOs)) {
       return cachedTXOs;
     }
@@ -1142,7 +1099,7 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    this.setReceiveCommitmentsCache(txidVersion, chain, TXOs);
+    this.receiveCommitmentsCache.set(txidVersion, chain, TXOs);
 
     return TXOs;
   }
@@ -1162,7 +1119,7 @@ abstract class AbstractWallet extends EventEmitter {
     }
 
     // We have a cache invalidation problem elsewhere, so this is disabled for now:
-    // const cachedSentCommitments = this.getSentCommitmentsFromCache(txidVersion, chain);
+    // const cachedSentCommitments = this.sentCommitmentsCache.get(txidVersion, chain);
     // if (isDefined(cachedSentCommitments)) {
     //   return cachedSentCommitments;
     // }
@@ -1229,7 +1186,7 @@ abstract class AbstractWallet extends EventEmitter {
       }),
     );
 
-    this.setSentCommitmentsCache(txidVersion, chain, sentCommitments);
+    this.sentCommitmentsCache.set(txidVersion, chain, sentCommitments);
 
     return sentCommitments;
   }
@@ -1592,11 +1549,10 @@ abstract class AbstractWallet extends EventEmitter {
     if (!this.hasUTXOMerkletree(txidVersion, chain)) {
       return 0;
     }
-    if (this.generatingPOIsForChain[chain.type]?.[chain.id]) {
+    if (this.generatingPOIsForChain.get(null, chain) === true) {
       return 0;
     }
-    this.generatingPOIsForChain[chain.type] ??= [];
-    this.generatingPOIsForChain[chain.type][chain.id] = true;
+    this.generatingPOIsForChain.set(null, chain, true);
 
     try {
       const {
@@ -1617,7 +1573,7 @@ abstract class AbstractWallet extends EventEmitter {
             `Railgun TXID ${railgunTxidFilter} not found in sent commitments / unshield events.`,
           );
         }
-        this.generatingPOIsForChain[chain.type][chain.id] = false;
+        this.generatingPOIsForChain.set(null, chain, false);
         return 0;
       }
 
@@ -1753,7 +1709,7 @@ abstract class AbstractWallet extends EventEmitter {
           });
         }
       }
-      this.generatingPOIsForChain[chain.type][chain.id] = false;
+      this.generatingPOIsForChain.set(null, chain, false);
 
       if (generatePOIErrors.length > 0) {
         const { index, errMessage, generatePOIData } = generatePOIErrors[0];
@@ -1775,7 +1731,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       return generatePOIsDatas.length;
     } catch (cause) {
-      this.generatingPOIsForChain[chain.type][chain.id] = false;
+      this.generatingPOIsForChain.set(null, chain, false);
       const err = new Error(
         'Failed to generate POIs for all sent commitments and unshield events',
         { cause },
@@ -2612,7 +2568,7 @@ abstract class AbstractWallet extends EventEmitter {
     if (txidVersion === TXIDVersion.V3_PoseidonMerkle) {
       assertChainSupportsV3(chain);
     }
-    const merkletree = this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+    const merkletree = this.utxoMerkletrees.get(txidVersion, chain);
     if (!isDefined(merkletree)) {
       throw new Error(`No utxo merkletree for chain ${chain.type}:${chain.id}, ${txidVersion}`);
     }
@@ -2629,7 +2585,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   getRailgunTXIDMerkletreeForChain(txidVersion: TXIDVersion, chain: Chain): TXIDMerkletree {
-    const merkletree = this.txidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+    const merkletree = this.txidMerkletrees.get(txidVersion, chain);
     if (!isDefined(merkletree)) {
       throw new Error(`No txid merkletree for chain ${chain.type}:${chain.id}`);
     }
@@ -2860,7 +2816,7 @@ abstract class AbstractWallet extends EventEmitter {
     deferCompletionEvent: boolean, // the caller will handle emitting EngineEvent.WalletDecryptBalancesComplete
   ) {
     try {
-      if (this.isClearingBalances[chain.type]?.[chain.id] === true) {
+      if (this.isClearingBalances.get(null, chain) === true) {
         EngineDebug.log('Clearing balances... cannot scan wallet balances.');
         return;
       }
@@ -2870,8 +2826,7 @@ abstract class AbstractWallet extends EventEmitter {
       // Set a simple key for this run of decryptBalances, so we can return early if it changes
       // This will change if another decryptBalances is called for this chain, and we don't need multiple running at once
       const decryptingBalancesKey = generateSimpleKey();
-      this.decryptBalancesKeyForChain[chain.type] ??= [];
-      this.decryptBalancesKeyForChain[chain.type][chain.id] = decryptingBalancesKey;
+      this.decryptBalancesKeyForChain.set(null, chain, decryptingBalancesKey)
 
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
@@ -2962,7 +2917,7 @@ abstract class AbstractWallet extends EventEmitter {
             progressCallback(finishedTreesProgress + newTreeProgress);
           }
 
-          if (this.decryptBalancesKeyForChain[chain.type]?.[chain.id] !== decryptingBalancesKey) {
+          if (this.decryptBalancesKeyForChain.get(null, chain) !== decryptingBalancesKey) {
             // Key changed because some other decryptBalances run has started.
             // No need to run multiple decrypt balances at once, return early.
             EngineDebug.log(
@@ -2982,8 +2937,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       // Reset decryptBalancesKeyForChain
-      this.decryptBalancesKeyForChain[chain.type] ??= [];
-      this.decryptBalancesKeyForChain[chain.type][chain.id] = undefined;
+      this.decryptBalancesKeyForChain.del(null, chain);
 
       await this.refreshPOIsForTXIDVersion(chain, txidVersion);
 
@@ -2995,8 +2949,7 @@ abstract class AbstractWallet extends EventEmitter {
       }
     } catch (err) {
       // Reset decryptBalancesKeyForChain
-      this.decryptBalancesKeyForChain[chain.type] ??= [];
-      this.decryptBalancesKeyForChain[chain.type][chain.id] = undefined;
+      this.decryptBalancesKeyForChain.del(null, chain);
 
       if (err instanceof Error) {
         EngineDebug.log(`wallet.scan error: ${err.message}`);
@@ -3202,10 +3155,9 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Clear wallet namespace, including decrypted TXOs and all details
     const namespace = this.getWalletDBPrefix(chain);
-    this.isClearingBalances[chain.type] ??= [];
-    this.isClearingBalances[chain.type][chain.id] = true;
+    this.isClearingBalances.set(null, chain, true)
     await this.db.clearNamespace(namespace);
-    this.isClearingBalances[chain.type][chain.id] = false;
+    this.isClearingBalances.set(null, chain, false)
 
     Object.values(TXIDVersion).forEach((txidVersion) => {
       if (walletDetailsMap[txidVersion]) {

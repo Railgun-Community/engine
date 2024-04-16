@@ -71,13 +71,14 @@ import { POI } from './poi';
 import { PoseidonMerkleAccumulatorContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-accumulator';
 import { PoseidonMerkleVerifierContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-verifier';
 import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-vault-contract';
+import { Registry } from './utils/registry';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
 
-  private readonly utxoMerkletrees: { [txidVersion: string]: UTXOMerkletree[][] } = {};
+  private readonly utxoMerkletrees: Registry<UTXOMerkletree> = new Registry();
 
-  private readonly txidMerkletrees: { [txidVersion: string]: TXIDMerkletree[][] } = {};
+  private readonly txidMerkletrees: Registry<TXIDMerkletree> = new Registry();
 
   readonly prover: Prover;
 
@@ -1621,10 +1622,6 @@ class RailgunEngine extends EventEmitter {
 
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS) {
-      // Create utxo merkletrees
-      this.utxoMerkletrees[txidVersion] ??= [];
-      this.utxoMerkletrees[txidVersion][chain.type] ??= [];
-
       // eslint-disable-next-line no-await-in-loop
       const utxoMerkletree = await UTXOMerkletree.create(
         this.db,
@@ -1634,7 +1631,7 @@ class RailgunEngine extends EventEmitter {
         (txidVersion, chain, tree, index, merkleroot) =>
           RailgunEngine.validateMerkleroot(txidVersion, chain, tree, index, merkleroot),
       );
-      this.utxoMerkletrees[txidVersion][chain.type][chain.id] = utxoMerkletree;
+      this.utxoMerkletrees.set(txidVersion, chain, utxoMerkletree);
 
       // Load utxo merkletree to all wallets
       // eslint-disable-next-line no-await-in-loop
@@ -1643,10 +1640,6 @@ class RailgunEngine extends EventEmitter {
           await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
         }),
       );
-
-      // Create railgun txid merkletrees
-      this.txidMerkletrees[txidVersion] ??= [];
-      this.txidMerkletrees[txidVersion][chain.type] ??= [];
 
       let txidMerkletree: Optional<TXIDMerkletree>;
 
@@ -1659,7 +1652,7 @@ class RailgunEngine extends EventEmitter {
           // POI Node Txid merkletree
           // eslint-disable-next-line no-await-in-loop
           txidMerkletree = await TXIDMerkletree.createForPOINode(this.db, chain, txidVersion);
-          this.txidMerkletrees[txidVersion][chain.type][chain.id] = txidMerkletree;
+          this.txidMerkletrees.set(txidVersion, chain, txidMerkletree);
         } else {
           // Wallet Txid merkletree
 
@@ -1677,7 +1670,7 @@ class RailgunEngine extends EventEmitter {
             // For V3, we receive events in realtime, and validation is done via on-chain verificationHash field.
             supportsV3 ? autoValidate : this.validateRailgunTxidMerkleroot,
           );
-          this.txidMerkletrees[txidVersion][chain.type][chain.id] = txidMerkletree;
+          this.txidMerkletrees.set(txidVersion, chain, txidMerkletree);
         }
 
         if (isDefined(txidMerkletree)) {
@@ -1828,10 +1821,8 @@ class RailgunEngine extends EventEmitter {
         return;
       }
 
-      // Delete UTXO merkletree
-      delete this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
-      // Delete Txid merkletree
-      delete this.txidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+      this.utxoMerkletrees.del(txidVersion, chain);
+      this.txidMerkletrees.del(txidVersion, chain);
     });
   }
 
@@ -1924,7 +1915,7 @@ class RailgunEngine extends EventEmitter {
     if (txidVersion === TXIDVersion.V3_PoseidonMerkle) {
       assertChainSupportsV3(chain);
     }
-    const merkletree = this.utxoMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+    const merkletree = this.utxoMerkletrees.get(txidVersion, chain);
     if (!isDefined(merkletree)) {
       throw new Error(
         `No utxo merkletree for txidVersion ${txidVersion}, chain ${chain.type}:${chain.id}`,
@@ -1946,7 +1937,7 @@ class RailgunEngine extends EventEmitter {
     if (txidVersion === TXIDVersion.V3_PoseidonMerkle) {
       assertChainSupportsV3(chain);
     }
-    const merkletree = this.txidMerkletrees[txidVersion]?.[chain.type]?.[chain.id];
+    const merkletree = this.txidMerkletrees.get(txidVersion, chain);
     if (!isDefined(merkletree)) {
       throw new Error(
         `No railgun txid merkletree for txidVersion ${txidVersion}, chain ${chain.type}:${chain.id}`,
@@ -2080,22 +2071,14 @@ class RailgunEngine extends EventEmitter {
     // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       // Load UTXO and TXID merkletrees for wallet
-      const utxoMerkletrees = this.utxoMerkletrees[txidVersion] ?? [];
-
       // eslint-disable-next-line no-await-in-loop
       await Promise.all(
-        utxoMerkletrees.map(async (merkletreesForChainType) => {
-          await Promise.all(
-            merkletreesForChainType.map(async (merkletree) => {
-              await wallet.loadUTXOMerkletree(txidVersion, merkletree);
-            }),
-          );
+        this.utxoMerkletrees.map(txidVersion, async (utxoMerkletree) => {
+          await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
         }),
       );
-      this.txidMerkletrees[txidVersion]?.forEach((merkletreesForChainType) => {
-        merkletreesForChainType.forEach((merkletree) => {
-          wallet.loadRailgunTXIDMerkletree(txidVersion, merkletree);
-        });
+      this.txidMerkletrees.forEach(txidVersion, (txidMerkletree) => {
+        wallet.loadRailgunTXIDMerkletree(txidVersion, txidMerkletree);
       });
     }
   }
