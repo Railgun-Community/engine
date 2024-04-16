@@ -11,12 +11,10 @@ export class RelayAdaptVersionedSmartContracts {
   static getRelayAdaptContract(txidVersion: TXIDVersion, chain: Chain) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
-        return contractV2;
+        return ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3PoseidonMerkleAccumulator = ContractStore.getRelayAdaptV3Contract(chain);
-        return contractV3PoseidonMerkleAccumulator;
+        return ContractStore.relayAdaptV3Contracts.getOrThrow(null, chain);
       }
     }
     throw new Error('Unsupported txidVersion');
@@ -39,7 +37,7 @@ export class RelayAdaptVersionedSmartContracts {
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
+        const contractV2 = ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
         return contractV2.populateUnshieldBaseToken(
           transactions as TransactionStructV2[],
           unshieldAddress,
@@ -47,7 +45,7 @@ export class RelayAdaptVersionedSmartContracts {
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3 = ContractStore.getRelayAdaptV3Contract(chain);
+        const contractV3 = ContractStore.relayAdaptV3Contracts.getOrThrow(null, chain);
         return contractV3.populateUnshieldBaseToken(
           transactions as TransactionStructV2[],
           unshieldAddress,
@@ -71,7 +69,7 @@ export class RelayAdaptVersionedSmartContracts {
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
+        const contractV2 = ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
         return contractV2.populateCrossContractCalls(
           unshieldTransactions as TransactionStructV2[],
           crossContractCalls,
@@ -83,7 +81,7 @@ export class RelayAdaptVersionedSmartContracts {
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3 = ContractStore.getRelayAdaptV3Contract(chain);
+        const contractV3 = ContractStore.relayAdaptV3Contracts.getOrThrow(null, chain);
         return contractV3.populateCrossContractCalls(
           unshieldTransactions as TransactionStructV2[],
           crossContractCalls,
@@ -107,7 +105,7 @@ export class RelayAdaptVersionedSmartContracts {
   ): Promise<string> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
+        const contractV2 = ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
         return contractV2.getRelayAdaptParamsUnshieldBaseToken(
           dummyUnshieldTransactions as TransactionStructV2[],
           unshieldAddress,
@@ -115,7 +113,7 @@ export class RelayAdaptVersionedSmartContracts {
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3 = ContractStore.getRelayAdaptV3Contract(chain);
+        const contractV3 = ContractStore.relayAdaptV3Contracts.getOrThrow(null, chain);
         return contractV3.getRelayAdaptParamsUnshieldBaseToken(
           dummyUnshieldTransactions as TransactionStructV2[],
           unshieldAddress,
@@ -138,7 +136,7 @@ export class RelayAdaptVersionedSmartContracts {
   ): Promise<string> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
+        const contractV2 = ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
         return contractV2.getRelayAdaptParamsCrossContractCalls(
           dummyUnshieldTransactions as TransactionStructV2[],
           crossContractCalls,
@@ -149,7 +147,7 @@ export class RelayAdaptVersionedSmartContracts {
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3 = ContractStore.getRelayAdaptV3Contract(chain);
+        const contractV3 = ContractStore.relayAdaptV3Contracts.getOrThrow(null, chain);
         return contractV3.getRelayAdaptParamsCrossContractCalls(
           dummyUnshieldTransactions as TransactionStructV2[],
           crossContractCalls,

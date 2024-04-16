@@ -152,9 +152,9 @@ const awaitPoseidonMerkleAccumulatorV3Update = async (txidVersion: TXIDVersion, 
   return awaitRailgunSmartWalletEvent(
     txidVersion,
     chain,
-    ContractStore.getPoseidonMerkleAccumulatorV3Contract(
-      chain,
-    ).contract.filters.AccumulatorStateUpdate(),
+    ContractStore.poseidonMerkleAccumulatorV3Contracts
+      .getOrThrow(null, chain)
+      .contract.filters.AccumulatorStateUpdate(),
   );
 };
 
@@ -164,7 +164,7 @@ export const awaitRailgunSmartWalletShield = async (txidVersion: TXIDVersion, ch
       return awaitRailgunSmartWalletEvent(
         txidVersion,
         chain,
-        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Shield(),
+        ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain).contract.filters.Shield(),
       );
 
     case TXIDVersion.V3_PoseidonMerkle:
@@ -179,7 +179,9 @@ export const awaitRailgunSmartWalletTransact = async (txidVersion: TXIDVersion, 
       return awaitRailgunSmartWalletEvent(
         txidVersion,
         chain,
-        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Transact(),
+        ContractStore.railgunSmartWalletContracts
+          .getOrThrow(null, chain)
+          .contract.filters.Transact(),
       );
 
     case TXIDVersion.V3_PoseidonMerkle:
@@ -194,7 +196,9 @@ export const awaitRailgunSmartWalletUnshield = async (txidVersion: TXIDVersion, 
       return awaitRailgunSmartWalletEvent(
         txidVersion,
         chain,
-        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Unshield(),
+        ContractStore.railgunSmartWalletContracts
+          .getOrThrow(null, chain)
+          .contract.filters.Unshield(),
       );
 
     case TXIDVersion.V3_PoseidonMerkle:
@@ -209,7 +213,9 @@ export const awaitRailgunSmartWalletNullified = async (txidVersion: TXIDVersion,
       return awaitRailgunSmartWalletEvent(
         txidVersion,
         chain,
-        ContractStore.getRailgunSmartWalletContract(chain).contract.filters.Nullified(),
+        ContractStore.railgunSmartWalletContracts
+          .getOrThrow(null, chain)
+          .contract.filters.Nullified(),
       );
 
     case TXIDVersion.V3_PoseidonMerkle:

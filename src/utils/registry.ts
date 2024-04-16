@@ -1,4 +1,5 @@
-import { Chain, TXIDVersion } from '../models';
+// eslint-disable-next-line import/no-cycle
+import { Chain, TXIDVersion } from '../models'; // This import cycle is just types
 import { isDefined } from './is-defined';
 
 const ANY_TXID_VERSION = 'any';
@@ -28,25 +29,40 @@ export class Registry<T> {
     return this.data[txidVersion ?? ANY_TXID_VERSION]?.[chain.type]?.[chain.id];
   }
 
+  getOrThrow(txidVersion: TXIDVersion | null, chain: Chain): T {
+    const value = this.get(txidVersion, chain);
+    if (!isDefined(value)) {
+      throw new Error(
+        `No value found for txidVersion=${String(txidVersion)} and chain=${chain.type}:${chain.id}`,
+      );
+    }
+    return value;
+  }
+
   del(txidVersion: TXIDVersion | null, chain: Chain) {
     delete this.data[txidVersion ?? ANY_TXID_VERSION]?.[chain.type]?.[chain.id];
   }
 
-  forEach(txidVersion: TXIDVersion | null, callback: (value: T) => void) {
-    const perChainType = this.data[txidVersion ?? ANY_TXID_VERSION] ?? [];
-    perChainType.forEach((perChainID) => {
-      perChainID.forEach((value) => {
-        if (isDefined(value)) {
-          callback(value);
-        }
+  forEach(callback: (value: T, txidVersion: TXIDVersion | null, chain: Chain) => void) {
+    Object.keys(this.data).forEach((txidVersion) => {
+      const declaredTxidVersion: TXIDVersion | null =
+        txidVersion === ANY_TXID_VERSION ? null : (txidVersion as TXIDVersion);
+      const perChainType = this.data[txidVersion] ?? [];
+      perChainType.forEach((perChainID, chainType) => {
+        perChainID.forEach((value, chainID) => {
+          if (isDefined(value)) {
+            const chain = { type: chainType, id: chainID };
+            callback(value, declaredTxidVersion, chain);
+          }
+        });
       });
     });
   }
 
-  map<R>(txidVersion: TXIDVersion | null, callback: (value: T) => R): R[] {
+  map<R>(callback: (value: T, txidVersion: TXIDVersion | null, chain: Chain) => R): R[] {
     const result: R[] = [];
-    this.forEach(txidVersion, (value) => {
-      result.push(callback(value));
+    this.forEach((value, txidVersion, chain) => {
+      result.push(callback(value, txidVersion, chain));
     });
     return result;
   }

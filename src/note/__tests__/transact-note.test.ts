@@ -325,18 +325,23 @@ describe('transact-note', () => {
     WalletInfo.setWalletSource('tester');
 
     // Load fake contracts
-    ContractStore.railgunSmartWalletContracts[chain.type] = [];
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+    ContractStore.railgunSmartWalletContracts.set(
+      null,
+      chain,
       new RailgunSmartWalletContract(
         config.contracts.proxy,
         new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
         new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
         chain,
-      );
-    ContractStore.tokenVaultV3Contracts[chain.type] = [];
-    ContractStore.tokenVaultV3Contracts[chain.type][chain.id] = new TokenVaultContract(
-      config.contracts.poseidonMerkleVerifierV3,
-      new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
+      ),
+    );
+    ContractStore.tokenVaultV3Contracts.set(
+      null,
+      chain,
+      new TokenVaultContract(
+        config.contracts.poseidonMerkleVerifierV3,
+        new PollingJsonRpcProvider(config.rpc, 1, 500, 1),
+      ),
     );
 
     tokenDataGetter = new TokenDataGetter(db);

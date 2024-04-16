@@ -124,14 +124,16 @@ describe('transaction-erc20', function test() {
     POI.setLaunchBlock(chain, 0);
 
     // Load fake contract
-    ContractStore.railgunSmartWalletContracts[chain.type] = [];
-    ContractStore.railgunSmartWalletContracts[chain.type][chain.id] =
+    ContractStore.railgunSmartWalletContracts.set(
+      null,
+      chain,
       new RailgunSmartWalletContract(
         config.contracts.proxy,
         new PollingJsonRpcProvider('abc', 1, 500),
         new PollingJsonRpcProvider('abc', 1, 500),
         chain,
-      );
+      ),
+    );
 
     tokenDataGetter = new TokenDataGetter(db);
 
