@@ -2826,7 +2826,7 @@ abstract class AbstractWallet extends EventEmitter {
       // Set a simple key for this run of decryptBalances, so we can return early if it changes
       // This will change if another decryptBalances is called for this chain, and we don't need multiple running at once
       const decryptingBalancesKey = generateSimpleKey();
-      this.decryptBalancesKeyForChain.set(null, chain, decryptingBalancesKey)
+      this.decryptBalancesKeyForChain.set(null, chain, decryptingBalancesKey);
 
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
@@ -3155,9 +3155,9 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Clear wallet namespace, including decrypted TXOs and all details
     const namespace = this.getWalletDBPrefix(chain);
-    this.isClearingBalances.set(null, chain, true)
+    this.isClearingBalances.set(null, chain, true);
     await this.db.clearNamespace(namespace);
-    this.isClearingBalances.set(null, chain, false)
+    this.isClearingBalances.set(null, chain, false);
 
     Object.values(TXIDVersion).forEach((txidVersion) => {
       if (walletDetailsMap[txidVersion]) {
