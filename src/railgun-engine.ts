@@ -1648,7 +1648,7 @@ class RailgunEngine extends EventEmitter {
 
       if (isDefined(poiLaunchBlock) || supportsV3) {
         if (isDefined(poiLaunchBlock)) {
-          POI.setLaunchBlock(chain, poiLaunchBlock);
+          POI.launchBlocks.set(null, chain, poiLaunchBlock);
         }
 
         if (this.isPOINode) {

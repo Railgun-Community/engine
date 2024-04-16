@@ -151,7 +151,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
     // Use the snapshot if this is a legacy transaction, and we have a snapshot.
     // (Ie., after POI has launched for this chain).
-    const poiLaunchBlock = POI.getLaunchBlock(this.chain);
+    const poiLaunchBlock = POI.launchBlocks.get(null, this.chain);
     const useSnapshot =
       isDefined(poiLaunchBlock) &&
       this.shouldSavePOILaunchSnapshot &&
@@ -357,7 +357,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       return;
     }
 
-    const poiLaunchBlock = POI.getLaunchBlock(this.chain);
+    const poiLaunchBlock = POI.launchBlocks.get(null, this.chain);
     if (!isDefined(poiLaunchBlock)) {
       return;
     }

@@ -1606,7 +1606,7 @@ abstract class AbstractWallet extends EventEmitter {
           );
           const { railgunTransaction } = txidMerkletreeData;
 
-          const poiLaunchBlock = POI.getLaunchBlock(txidMerkletree.chain);
+          const poiLaunchBlock = POI.launchBlocks.get(null, txidMerkletree.chain);
           if (!isDefined(poiLaunchBlock)) {
             throw new Error('No POI launch block for railgun txids');
           }

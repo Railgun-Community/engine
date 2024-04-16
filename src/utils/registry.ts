@@ -1,5 +1,5 @@
-// eslint-disable-next-line import/no-cycle
-import { Chain, TXIDVersion } from '../models'; // This import cycle is just types
+import { Chain } from '../models/engine-types';
+import { TXIDVersion } from '../models/poi-types';
 import { isDefined } from './is-defined';
 
 const ANY_TXID_VERSION = 'any';
