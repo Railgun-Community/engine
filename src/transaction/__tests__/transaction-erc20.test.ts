@@ -121,7 +121,7 @@ describe('transaction-erc20', function test() {
 
     await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
 
-    POI.setLaunchBlock(chain, 0);
+    POI.launchBlocks.set(null, chain, 0);
 
     // Load fake contract
     ContractStore.railgunSmartWalletContracts.set(

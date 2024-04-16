@@ -33,7 +33,7 @@ const chain: Chain = {
 describe('prover', () => {
   beforeEach(() => {
     ProofCachePOI.clear_TEST_ONLY();
-    POI.setLaunchBlock(chain, 0);
+    POI.launchBlocks.set(null, chain, 0);
   });
 
   it('Should generate and validate POI proof - 3x3', async () => {

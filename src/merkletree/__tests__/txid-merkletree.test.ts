@@ -40,7 +40,7 @@ describe('txid-merkletree', () => {
     // Create database
     db = new Database(memdown());
 
-    POI.setLaunchBlock(chain, poiLaunchBlock);
+    POI.launchBlocks.set(null, chain, poiLaunchBlock);
 
     merkletreePOINode = await TXIDMerkletree.createForPOINode(db, chain, txidVersion);
     expect(merkletreePOINode.shouldStoreMerkleroots).to.equal(true);
@@ -63,8 +63,8 @@ describe('txid-merkletree', () => {
       result: string[];
     };
 
-    POI.setLaunchBlock({ type: ChainType.EVM, id: 0 }, 10);
-    POI.setLaunchBlock({ type: ChainType.EVM, id: 4 }, 11);
+    POI.launchBlocks.set(null, { type: ChainType.EVM, id: 0 }, 10);
+    POI.launchBlocks.set(null, { type: ChainType.EVM, id: 4 }, 11);
 
     const vectors: Vector[] = [
       {
