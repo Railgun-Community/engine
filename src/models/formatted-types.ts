@@ -191,15 +191,51 @@ export enum RailgunTransactionVersion {
 export type RailgunTransactionV2 = {
   version: RailgunTransactionVersion.V2;
   graphID: string;
+
+  /**
+   * Array of commitment hashes (a.k.a. note hashes).
+   * See TransactNote.getHash for more details.
+   */
   commitments: string[];
+
+  /**
+   * Array of nullifiers (i.e. hash of nullifyingKey with leafIndex).
+   * See TransactNote.getNullifier for more details.
+   */
   nullifiers: string[];
+
+  /**
+   * For more details, see hashBoundParamsV2 in src/transaction/bound-params.ts
+   * and BoundParamsStruct from the ABI.
+   */
   boundParamsHash: string;
+
+  /** EVM block number */
   blockNumber: number;
+
+  /** EVM transaction ID */
   txid: string;
+
   unshield: Optional<UnshieldRailgunTransactionData>;
+
+  /**
+   * Index of the UTXO Merkletree where the "input UTXOs" (UTXOs about to be
+   * spent) are located.
+   */
   utxoTreeIn: number;
+
+  /**
+   * Index of the UTXO Merkletree where the "output UTXOs" (UTXOs about to be
+   * created) are located.
+   */
   utxoTreeOut: number;
+
+  /**
+   * Position in the "tree out" UTXO Merkletree where the new UTXOs are
+   * sequentially inserted into.
+   */
   utxoBatchStartPositionOut: number;
+
   timestamp: number;
   verificationHash: string;
 };
@@ -207,14 +243,49 @@ export type RailgunTransactionV2 = {
 // Comes from on-chain AccumulatorStateUpdate events
 export type RailgunTransactionV3 = {
   version: RailgunTransactionVersion.V3;
+
+  /**
+   * Array of commitment hashes (a.k.a. note hashes).
+   * See TransactNote.getHash for more details.
+   */
   commitments: string[];
+
+  /**
+   * Array of nullifiers (i.e. hash of nullifyingKey with leafIndex).
+   * See TransactNote.getNullifier for more details.
+   */
   nullifiers: string[];
+
+  /**
+   * For more details, see hashBoundParamsV3 in src/transaction/bound-params.ts
+   * and BoundParamsStruct from the ABI.
+   */
   boundParamsHash: string;
+
+  /** EVM block number */
   blockNumber: number;
+
+  /** EVM transaction ID */
   txid: string;
+
   unshield: Optional<UnshieldRailgunTransactionData>;
+
+  /**
+   * Index of the UTXO Merkletree where the "input UTXOs" (UTXOs about to be
+   * spent) are located.
+   */
   utxoTreeIn: number;
+
+  /**
+   * Index of the UTXO Merkletree where the "output UTXOs" (UTXOs about to be
+   * created) are located.
+   */
   utxoTreeOut: number;
+
+  /**
+   * Position in the "tree out" UTXO Merkletree where the new UTXOs are
+   * sequentially inserted into.
+   */
   utxoBatchStartPositionOut: number;
 
   // TODO-V3: This should be required, when it's available from on-chain data.
@@ -224,7 +295,20 @@ export type RailgunTransactionV3 = {
 export type RailgunTransaction = RailgunTransactionV2 | RailgunTransactionV3;
 
 export type RailgunTransactionWithHash = RailgunTransaction & {
+  /**
+   * The ID of a railgun transaction (RailgunTX) is the poseidon hash of:
+   * - poseidon hash of all nullifiers in this RailgunTX
+   * - poseidon hash of all commitments in this RailgunTX
+   * - boundParamsHash
+   */
   railgunTxid: string;
+
+  /**
+   * This hash is the poseidon hash of:
+   * - railgunTxid
+   * - utxoTreeIn (index of the UTXO Merkletree where the input UTXOs are located)
+   * - globalTreePosition (position in the "forest" for the output UTXOs)
+   */
   hash: string;
 };
 
