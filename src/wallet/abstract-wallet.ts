@@ -190,7 +190,7 @@ abstract class AbstractWallet extends EventEmitter {
 
   private readonly txidMerkletrees: Registry<TXIDMerkletree> = new Registry();
 
-  readonly isRefreshingPOIs: Partial<Record<TXIDVersion, boolean[][]>> = {};
+  readonly isRefreshingPOIs: Registry<boolean> = new Registry();
 
   private readonly prover: Prover;
 
@@ -2979,15 +2979,10 @@ abstract class AbstractWallet extends EventEmitter {
     if (!this.hasUTXOMerkletree(txidVersion, chain)) {
       return;
     }
-    if (
-      forceRefresh !== true &&
-      this.isRefreshingPOIs[txidVersion]?.[chain.type]?.[chain.id] === true
-    ) {
+    if (forceRefresh !== true && this.isRefreshingPOIs.get(txidVersion, chain) === true) {
       return;
     }
-    this.isRefreshingPOIs[txidVersion] ??= [];
-    (this.isRefreshingPOIs[txidVersion] as boolean[][])[chain.type] ??= [];
-    (this.isRefreshingPOIs[txidVersion] as boolean[][])[chain.type][chain.id] = true;
+    this.isRefreshingPOIs.set(txidVersion, chain, true);
 
     try {
       // eslint-disable-next-line no-restricted-syntax
@@ -3006,7 +3001,7 @@ abstract class AbstractWallet extends EventEmitter {
         txidVersion,
       );
 
-      (this.isRefreshingPOIs[txidVersion] as boolean[][])[chain.type][chain.id] = false;
+      this.isRefreshingPOIs.set(txidVersion, chain, false);
       if (numProofs > 0) {
         this.emitPOIProofUpdateEvent(
           POIProofEventStatus.LoadingNextBatch,
@@ -3039,7 +3034,7 @@ abstract class AbstractWallet extends EventEmitter {
         undefined, // errorMsg
       );
     } catch (cause) {
-      (this.isRefreshingPOIs[txidVersion] as boolean[][])[chain.type][chain.id] = false;
+      this.isRefreshingPOIs.set(txidVersion, chain, false);
       const err = new Error('Failed to refresh POIs', { cause });
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       EngineDebug.error(err, true /* ignoreInTests */);
