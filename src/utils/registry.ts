@@ -2,23 +2,47 @@ import { Chain } from '../models/engine-types';
 import { TXIDVersion } from '../models/poi-types';
 import { isDefined } from './is-defined';
 
-const ANY_TXID_VERSION = 'any';
+type ChainString = `${number}:${number}`;
 
 /**
  * A simple nested datastructure that holds information per-chain and per
  * RailgunTXIDVersion.
  */
 export class Registry<T> {
-  private data: { [txidVersion: string]: T[][] };
+  private v2Map: Map<ChainString, T>;
+
+  private v3Map: Map<ChainString, T>;
+
+  private anyMap: Map<ChainString, T>;
 
   constructor() {
-    this.data = {};
+    this.v2Map = new Map();
+    this.v3Map = new Map();
+    this.anyMap = new Map();
+  }
+
+  private selectMap(txidVersion: TXIDVersion | null): Map<ChainString, T> {
+    switch (txidVersion) {
+      case TXIDVersion.V2_PoseidonMerkle:
+        return this.v2Map;
+      case TXIDVersion.V3_PoseidonMerkle:
+        return this.v3Map;
+      default:
+        return this.anyMap;
+    }
+  }
+
+  private static serializeChain(chain: Chain): ChainString {
+    return `${chain.type}:${chain.id}`;
+  }
+
+  private static deserializeChain(chainString: ChainString): Chain {
+    const [type, id] = chainString.split(':').map(Number);
+    return { type, id };
   }
 
   set(txidVersion: TXIDVersion | null, chain: Chain, value: T) {
-    this.data[txidVersion ?? ANY_TXID_VERSION] ??= [];
-    this.data[txidVersion ?? ANY_TXID_VERSION][chain.type] ??= [];
-    this.data[txidVersion ?? ANY_TXID_VERSION][chain.type][chain.id] = value;
+    this.selectMap(txidVersion).set(Registry.serializeChain(chain), value);
   }
 
   has(txidVersion: TXIDVersion | null, chain: Chain): boolean {
@@ -26,37 +50,38 @@ export class Registry<T> {
   }
 
   get(txidVersion: TXIDVersion | null, chain: Chain): Optional<T> {
-    return this.data[txidVersion ?? ANY_TXID_VERSION]?.[chain.type]?.[chain.id];
+    return this.selectMap(txidVersion).get(Registry.serializeChain(chain));
   }
 
   getOrThrow(txidVersion: TXIDVersion | null, chain: Chain): T {
     const value = this.get(txidVersion, chain);
     if (!isDefined(value)) {
+      const chainStr = Registry.serializeChain(chain);
       throw new Error(
-        `No value found for txidVersion=${String(txidVersion)} and chain=${chain.type}:${chain.id}`,
+        `No value found for txidVersion=${String(txidVersion)} and chain=${chainStr}`,
       );
     }
     return value;
   }
 
   del(txidVersion: TXIDVersion | null, chain: Chain) {
-    delete this.data[txidVersion ?? ANY_TXID_VERSION]?.[chain.type]?.[chain.id];
+    this.selectMap(txidVersion).delete(Registry.serializeChain(chain));
   }
 
   forEach(callback: (value: T, txidVersion: TXIDVersion | null, chain: Chain) => void) {
-    Object.keys(this.data).forEach((txidVersion) => {
-      const declaredTxidVersion: TXIDVersion | null =
-        txidVersion === ANY_TXID_VERSION ? null : (txidVersion as TXIDVersion);
-      const perChainType = this.data[txidVersion] ?? [];
-      perChainType.forEach((perChainID, chainType) => {
-        perChainID.forEach((value, chainID) => {
-          if (isDefined(value)) {
-            const chain = { type: chainType, id: chainID };
-            callback(value, declaredTxidVersion, chain);
-          }
-        });
-      });
-    });
+    const taggedMaps: Array<[TXIDVersion | null, typeof this.v2Map]> = [
+      [TXIDVersion.V2_PoseidonMerkle, this.v2Map],
+      [TXIDVersion.V3_PoseidonMerkle, this.v3Map],
+      [null, this.anyMap],
+    ];
+    // eslint-disable-next-line no-restricted-syntax
+    for (const [txidVersion, map] of taggedMaps) {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const [chainStr, value] of map) {
+        const chain = Registry.deserializeChain(chainStr);
+        callback(value, txidVersion, chain);
+      }
+    }
   }
 
   map<R>(callback: (value: T, txidVersion: TXIDVersion | null, chain: Chain) => R): R[] {

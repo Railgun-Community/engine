@@ -200,9 +200,6 @@ abstract class AbstractWallet extends EventEmitter {
 
   private creationBlockNumbers: Optional<number[][]>;
 
-  // [type: [id: CachedStoredReceiveCommitment[]]]
-  private: CachedStoredReceiveCommitment[][][] = [];
-
   private generatingPOIsForChain: Registry<boolean> = new Registry();
 
   private receiveCommitmentsCache: Registry<Optional<TXO[]>> = new Registry();
