@@ -453,7 +453,7 @@ describe('railgun-engine', function test() {
     const creationBlockNumbers: number[][] = [];
     creationBlockNumbers[chain.type] = [];
     creationBlockNumbers[chain.type][chain.id] = 0;
-    wallet.setCreationBlockNumbers(creationBlockNumbers);
+    wallet.testSpecificSetCreationBlockNumbers(creationBlockNumbers);
 
     const commitment: LegacyGeneratedCommitment = {
       commitmentType: CommitmentType.LegacyGeneratedCommitment,

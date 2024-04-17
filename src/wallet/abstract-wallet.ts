@@ -198,6 +198,8 @@ abstract class AbstractWallet extends EventEmitter {
 
   private readonly decryptBalancesKeyForChain: Registry<Optional<string>> = new Registry();
 
+  // Not a `Registry` because these come from the database as nested arrays and
+  // we don't want to take risks associated with migrating the data format.
   private creationBlockNumbers: Optional<number[][]>;
 
   private generatingPOIsForChain: Registry<boolean> = new Registry();
@@ -3134,7 +3136,10 @@ abstract class AbstractWallet extends EventEmitter {
     return undefined;
   }
 
-  setCreationBlockNumbers(creationBlockNumbers: Optional<number[][]>): void {
+  /**
+   * @warning This method is ONLY intended for testing purposes.
+   */
+  testSpecificSetCreationBlockNumbers(creationBlockNumbers: Optional<number[][]>): void {
     this.creationBlockNumbers = creationBlockNumbers;
   }
 
