@@ -38,7 +38,12 @@ jobs:
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          command: cd contract && npm run deploy && cd ../engine && yarn test-hardhat-V2
+          command: cd contract && npm run deploy && cd ../engine && yarn coverage-hardhat-V2
           start: cd contract && npm run node >/dev/null
           wait-on: 'http://localhost:8545'
           wait-on-timeout: 120
+      - name: Report coverage
+        uses: romeovs/lcov-reporter-action@v0.2.16
+        with:
+          working-directory: engine
+          lcov-file: ./coverage/lcov.info
