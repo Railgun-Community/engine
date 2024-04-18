@@ -15,6 +15,7 @@ import { POINodeInterface } from './poi-node-interface';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { OutputType } from '../models';
 import { isShieldCommitmentType, isTransactCommitmentType } from '../utils/commitment';
+import { Registry } from '../utils/registry';
 
 export type POIList = {
   key: string;
@@ -33,20 +34,11 @@ export class POI {
 
   private static nodeInterface: POINodeInterface;
 
-  private static launchBlocks: number[][] = [];
+  static launchBlocks: Registry<number> = new Registry();
 
   static init(lists: POIList[], nodeInterface: POINodeInterface) {
     this.lists = lists;
     this.nodeInterface = nodeInterface;
-  }
-
-  static setLaunchBlock(chain: Chain, launchBlock: number) {
-    this.launchBlocks[chain.type] ??= [];
-    this.launchBlocks[chain.type][chain.id] = launchBlock;
-  }
-
-  static getLaunchBlock(chain: Chain): Optional<number> {
-    return this.launchBlocks[chain.type]?.[chain.id];
   }
 
   static getAllListKeys(): string[] {
@@ -210,7 +202,7 @@ export class POI {
   }
 
   static isLegacyTXO(chain: Chain, txo: TXO) {
-    const launchBlock = this.getLaunchBlock(chain);
+    const launchBlock = this.launchBlocks.get(null, chain);
     if (!isDefined(launchBlock) || txo.blockNumber < launchBlock) {
       return true;
     }

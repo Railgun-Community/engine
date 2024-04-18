@@ -26,13 +26,10 @@ export class RailgunVersionedSmartContracts {
   static getAccumulator(txidVersion: TXIDVersion, chain: Chain) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
-        return contractV2;
+        return ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3PoseidonMerkleAccumulator =
-          ContractStore.getPoseidonMerkleAccumulatorV3Contract(chain);
-        return contractV3PoseidonMerkleAccumulator;
+        return ContractStore.poseidonMerkleAccumulatorV3Contracts.getOrThrow(null, chain);
       }
     }
     throw new Error('Unsupported txidVersion');
@@ -41,13 +38,11 @@ export class RailgunVersionedSmartContracts {
   static getVerifier(txidVersion: TXIDVersion, chain: Chain) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2;
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3PoseidonMerkleVerifier =
-          ContractStore.getPoseidonMerkleVerifierV3Contract(chain);
-        return contractV3PoseidonMerkleVerifier;
+        return ContractStore.poseidonMerkleVerifierV3Contracts.getOrThrow(null, chain);
       }
     }
     throw new Error('Unsupported txidVersion');
@@ -56,12 +51,10 @@ export class RailgunVersionedSmartContracts {
   static getShieldApprovalContract(txidVersion: TXIDVersion, chain: Chain) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
-        return contractV2;
+        return ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3TokenVault = ContractStore.getTokenVaultV3Contract(chain);
-        return contractV3TokenVault;
+        return ContractStore.tokenVaultV3Contracts.getOrThrow(null, chain);
       }
     }
     throw new Error('Unsupported txidVersion');
@@ -70,12 +63,10 @@ export class RailgunVersionedSmartContracts {
   static getRelayAdaptContract(txidVersion: TXIDVersion, chain: Chain) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRelayAdaptV2Contract(chain);
-        return contractV2;
+        return ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3TokenVault = ContractStore.getRelayAdaptV3Contract(chain);
-        return contractV3TokenVault;
+        return ContractStore.relayAdaptV3Contracts.getOrThrow(null, chain);
       }
     }
     throw new Error('Unsupported txidVersion');
@@ -95,7 +86,7 @@ export class RailgunVersionedSmartContracts {
   ) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2.getHistoricalEvents(
           initialStartBlock,
           latestBlock,
@@ -107,9 +98,11 @@ export class RailgunVersionedSmartContracts {
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3PoseidonMerkleAccumulator =
-          ContractStore.getPoseidonMerkleAccumulatorV3Contract(chain);
-        return contractV3PoseidonMerkleAccumulator.getHistoricalEvents(
+        const contractV3 = ContractStore.poseidonMerkleAccumulatorV3Contracts.getOrThrow(
+          null,
+          chain,
+        );
+        return contractV3.getHistoricalEvents(
           initialStartBlock,
           latestBlock,
           getNextStartBlockFromValidMerkletree,
@@ -135,7 +128,7 @@ export class RailgunVersionedSmartContracts {
   ) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2.setTreeUpdateListeners(
           eventsCommitmentListener,
           eventsNullifierListener,
@@ -143,9 +136,11 @@ export class RailgunVersionedSmartContracts {
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractV3PoseidonMerkleAccumulator =
-          ContractStore.getPoseidonMerkleAccumulatorV3Contract(chain);
-        return contractV3PoseidonMerkleAccumulator.setTreeUpdateListeners(
+        const contractV3 = ContractStore.poseidonMerkleAccumulatorV3Contracts.getOrThrow(
+          null,
+          chain,
+        );
+        return contractV3.setTreeUpdateListeners(
           eventsCommitmentListener,
           eventsNullifierListener,
           eventsUnshieldListener,
@@ -163,11 +158,11 @@ export class RailgunVersionedSmartContracts {
   ): Promise<{ shield: bigint; unshield: bigint }> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2.fees();
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractTokenVaultV3 = ContractStore.getTokenVaultV3Contract(chain);
+        const contractTokenVaultV3 = ContractStore.tokenVaultV3Contracts.getOrThrow(null, chain);
         return contractTokenVaultV3.fees();
       }
     }
@@ -181,11 +176,11 @@ export class RailgunVersionedSmartContracts {
   ): Promise<TokenDataStructOutput> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2.getNFTTokenData(tokenHash);
       }
       case TXIDVersion.V3_PoseidonMerkle: {
-        const contractTokenVaultV3 = ContractStore.getTokenVaultV3Contract(chain);
+        const contractTokenVaultV3 = ContractStore.tokenVaultV3Contracts.getOrThrow(null, chain);
         return contractTokenVaultV3.getNFTTokenData(tokenHash);
       }
     }
@@ -199,13 +194,13 @@ export class RailgunVersionedSmartContracts {
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2.generateShield(shieldRequests);
       }
 
       case TXIDVersion.V3_PoseidonMerkle: {
         const contractV3PoseidonMerkleVerifier =
-          ContractStore.getPoseidonMerkleVerifierV3Contract(chain);
+          ContractStore.poseidonMerkleVerifierV3Contracts.getOrThrow(null, chain);
         const emptyGlobalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct = {
           minGasPrice: 0n,
           chainID: chain.id,
@@ -231,7 +226,7 @@ export class RailgunVersionedSmartContracts {
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
-        const contractV2 = ContractStore.getRailgunSmartWalletContract(chain);
+        const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
         return contractV2.generateTransact(transactions as TransactionStructV2[]);
       }
 
@@ -245,7 +240,7 @@ export class RailgunVersionedSmartContracts {
         }
         const globalBoundParams = (transactions[0] as TransactionStructV3).boundParams.global;
         const contractV3PoseidonMerkleVerifier =
-          ContractStore.getPoseidonMerkleVerifierV3Contract(chain);
+          ContractStore.poseidonMerkleVerifierV3Contracts.getOrThrow(null, chain);
         return contractV3PoseidonMerkleVerifier.generateExecute(
           transactionsV3,
           [],
