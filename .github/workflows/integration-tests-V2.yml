@@ -43,11 +43,6 @@ jobs:
           wait-on: 'http://localhost:8545'
           wait-on-timeout: 120
       - name: Report coverage
-        uses: romeovs/lcov-reporter-action@v0.2.16
-        with:
-          lcov-file: ./engine/coverage/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Report coverage
         uses: zgosalvez/github-actions-report-lcov@v3
         with:
           coverage-files: engine/coverage/lcov.info
