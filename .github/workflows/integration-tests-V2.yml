@@ -38,13 +38,7 @@ jobs:
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
-          command: cd contract && npm run deploy && cd ../engine && yarn coverage-hardhat-V2
+          command: cd contract && npm run deploy && cd ../engine && yarn test-hardhat-V2
           start: cd contract && npm run node >/dev/null
           wait-on: 'http://localhost:8545'
           wait-on-timeout: 120
-      - name: Report coverage
-        uses: zgosalvez/github-actions-report-lcov@v3
-        with:
-          coverage-files: engine/coverage/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          update-comment: true
