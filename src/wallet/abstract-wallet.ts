@@ -1775,6 +1775,7 @@ abstract class AbstractWallet extends EventEmitter {
       : '0x00';
 
     for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
+      if (!isDefined(listMerkleProof)) continue;
       if (!verifyMerkleProof(listMerkleProof)) {
         throw new Error(`Invalid list merkleproof: index ${i}`);
       }
@@ -1978,6 +1979,7 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
       for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
+        if (!isDefined(listMerkleProof)) continue;
         if (!verifyMerkleProof(listMerkleProof)) {
           throw new Error(`Invalid list merkleproof: index ${i}`);
         }

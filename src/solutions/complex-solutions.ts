@@ -131,6 +131,7 @@ export const createSpendingSolutionsForValue = (
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
   for (const [tree, treeBalance] of treeSortedBalances.entries()) {
+    if (!isDefined(treeBalance)) continue;
     while (amountToFill > 0n) {
       const utxos = findNextSolutionBatch(treeBalance, amountToFill, excludedUTXOIDPositions);
       if (!utxos) {

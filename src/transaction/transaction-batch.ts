@@ -253,10 +253,9 @@ export class TransactionBatch {
 
     // Find first tree with spending solutions.
     for (const [tree, treeBalance] of treeSortedBalances.entries()) {
+      if (!isDefined(treeBalance)) continue;
       const solutions = findExactSolutionsOverTargetValue(treeBalance, amountRequired);
-      if (!solutions) {
-        continue;
-      }
+      if (!isDefined(solutions)) continue;
       spendingTree = tree;
       utxos = solutions;
     }

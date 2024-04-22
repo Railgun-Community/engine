@@ -1025,7 +1025,7 @@ class RailgunEngine extends EventEmitter {
     for (const [index, railgunTransaction] of railgunTransactions.entries()) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
       if (railgunTransactionWithTxid.version !== RailgunTransactionVersion.V2) {
-        return;
+        continue;
       }
 
       const {

@@ -357,8 +357,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     if (!storedMetadata) {
       return;
     }
-    const trees = Object.keys(storedMetadata.trees).map((tree) => Number(tree));
-    for (const tree of trees) {
+    const treeKeys = Object.keys(storedMetadata.trees);
+    for (const treeKey of treeKeys) {
+      const tree = Number(treeKey);
       const treeMetadata = storedMetadata.trees[tree];
       this.treeLengths[tree] = treeMetadata.scannedHeight;
       if (treeMetadata.invalidMerklerootDetails) {
@@ -502,7 +503,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     const nodeWriteBatch: PutBatch[] = [];
     for (const [level, levelNodes] of hashWriteGroup.entries()) {
+      if (!isDefined(levelNodes)) continue;
       for (const [index, node] of levelNodes.entries()) {
+        if (!isDefined(node)) continue;
         nodeWriteBatch.push({
           type: 'put',
           key: this.getNodeHashDBPath(treeIndex, level, index).join(':'),
@@ -515,6 +518,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const dataWriteBatch: PutBatch[] = [];
     const globalHashLookupBatch: PutBatch[] = [];
     for (const [index, data] of dataWriteGroup.entries()) {
+      if (!isDefined(data)) continue;
       dataWriteBatch.push({
         type: 'put',
         key: this.getDataDBPath(treeIndex, index).join(':'),
@@ -622,6 +626,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     // Push values to leaves of write index
     for (const [index, leaf] of leaves.entries()) {
+      if (!isDefined(leaf)) continue;
       firstLevelHashWriteGroup[0][index] = leaf?.hash ?? this.zeros[0];
     }
 
@@ -713,13 +718,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
     const treeWriteQueue = this.writeQueue[treeIndex];
-    for (const writeQueueKey of Object.keys(treeWriteQueue)) {
-      const writeQueueIndex = Number(writeQueueKey);
+    treeWriteQueue.forEach((_writeQueue, writeQueueIndex) => {
+      // for (const writeQueueKey of Object.keys(treeWriteQueue)) {
+      // const writeQueueIndex = Number(writeQueueKey);
       const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
       if (alreadyAddedToTree) {
         delete treeWriteQueue[writeQueueIndex];
       }
-    }
+    });
 
     if (this.processingWriteQueueTrees[treeIndex]) {
       EngineDebug.log(
