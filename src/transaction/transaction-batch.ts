@@ -100,13 +100,13 @@ export class TransactionBatch {
     const unshieldTokenDatas: TokenData[] = Object.values(this.unshieldDataMap).map(
       (output) => output.tokenData,
     );
-    [...outputTokenDatas, ...unshieldTokenDatas].forEach((tokenData) => {
+    for (const tokenData of [...outputTokenDatas, ...unshieldTokenDatas]) {
       const tokenHash = getTokenDataHash(tokenData);
       if (!tokenHashes.includes(tokenHash)) {
         tokenHashes.push(tokenHash);
         tokenDatas.push(tokenData);
       }
-    });
+    }
     return tokenDatas;
   }
 
@@ -252,14 +252,14 @@ export class TransactionBatch {
     let utxos: Optional<TXO[]>;
 
     // Find first tree with spending solutions.
-    treeSortedBalances.forEach((treeBalance, tree) => {
+    for (const [tree, treeBalance] of treeSortedBalances.entries()) {
       const solutions = findExactSolutionsOverTargetValue(treeBalance, amountRequired);
       if (!solutions) {
-        return;
+        continue;
       }
       spendingTree = tree;
       utxos = solutions;
-    });
+    }
 
     if (utxos == null || spendingTree == null) {
       throw new Error('No spending solutions found. Must use complex UTXO aggregator.');

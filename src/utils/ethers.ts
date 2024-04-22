@@ -10,9 +10,9 @@ export const recursivelyDecodeResult = (result: Result): any => {
     if ('_' in obj) {
       throw new Error('Decode as array, not object');
     }
-    Object.keys(obj).forEach((key) => {
+    for (const key of Object.keys(obj)) {
       obj[key] = recursivelyDecodeResult(obj[key]);
-    });
+    }
     return obj;
   } catch (err) {
     // Result is array.

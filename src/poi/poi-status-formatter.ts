@@ -64,20 +64,20 @@ export const formatTXOsSpentPOIStatusInfo = async (
   const txidGroups: {
     [txid: string]: { sentCommitments: SentCommitment[]; unshieldEvents: UnshieldStoredEvent[] };
   } = {};
-  sentCommitments.forEach((sentCommitment) => {
+  for (const sentCommitment of sentCommitments) {
     txidGroups[sentCommitment.txid] ??= {
       sentCommitments: [],
       unshieldEvents: [],
     };
     txidGroups[sentCommitment.txid].sentCommitments.push(sentCommitment);
-  });
-  unshieldEvents.forEach((unshieldEvent) => {
+  }
+  for (const unshieldEvent of unshieldEvents) {
     txidGroups[unshieldEvent.txid] ??= {
       sentCommitments: [],
       unshieldEvents: [],
     };
     txidGroups[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
-  });
+  }
 
   const statusInfos: TXOsSpentPOIStatusInfo[] = [];
 
@@ -91,26 +91,26 @@ export const formatTXOsSpentPOIStatusInfo = async (
           unshieldEvents: UnshieldStoredEvent[];
         };
       } = {};
-      txidGroup.sentCommitments.forEach((sentCommitment) => {
+      for (const sentCommitment of txidGroup.sentCommitments) {
         if (!isDefined(sentCommitment.railgunTxid)) {
-          return;
+          continue;
         }
         railgunTxidGroups[sentCommitment.railgunTxid] ??= {
           sentCommitments: [],
           unshieldEvents: [],
         };
         railgunTxidGroups[sentCommitment.railgunTxid].sentCommitments.push(sentCommitment);
-      });
-      txidGroup.unshieldEvents.forEach((unshieldEvent) => {
+      }
+      for (const unshieldEvent of txidGroup.unshieldEvents) {
         if (!isDefined(unshieldEvent.railgunTxid)) {
-          return;
+          continue;
         }
         railgunTxidGroups[unshieldEvent.railgunTxid] ??= {
           sentCommitments: [],
           unshieldEvents: [],
         };
         railgunTxidGroups[unshieldEvent.railgunTxid].unshieldEvents.push(unshieldEvent);
-      });
+      }
 
       await Promise.all(
         Object.keys(railgunTxidGroups).map(async (railgunTxid) => {

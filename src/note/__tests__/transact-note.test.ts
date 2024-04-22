@@ -558,10 +558,10 @@ describe('transact-note', () => {
 
     const v = nullifierVectors[0];
     expect(TransactNote.getNullifier(hexToBigInt(v.privateKey), v.position)).to.be.a('bigint');
-    nullifierVectors.forEach((vector) => {
+    for (const vector of nullifierVectors) {
       const nullifier = TransactNote.getNullifier(hexToBigInt(vector.privateKey), vector.position);
       const hexNullifier = nToHex(nullifier, ByteLength.UINT_256);
       expect(hexNullifier).to.equal(vector.nullifier);
-    });
+    }
   });
 });

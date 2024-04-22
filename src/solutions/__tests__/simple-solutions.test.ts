@@ -20,22 +20,22 @@ describe('simple-solutions', () => {
       'No artifacts for inputs: 1-6',
     );
 
-    VALID_OUTPUT_COUNTS.forEach((outputCount) => {
-      VALID_INPUT_COUNTS.forEach((inputCount) => {
+    for (const outputCount of VALID_OUTPUT_COUNTS) {
+      for (const inputCount of VALID_INPUT_COUNTS) {
         if (inputCount === 10 && outputCount === 5) {
           // We don't have a circuit for this case.
           expect(() => testArtifactsGetter.assertArtifactExists(inputCount, outputCount)).to.throw(
             'No artifacts for inputs: 10-5',
           );
-          return;
+          continue;
         }
 
         // Test that artifacts exist for each INPUT x OUTPUT combination.
         expect(() =>
           testArtifactsGetter.assertArtifactExists(inputCount, outputCount),
         ).not.to.throw();
-      });
-    });
+      }
+    }
 
     // Other artifact combinations
     expect(() => testArtifactsGetter.assertArtifactExists(11, 1)).not.to.throw();

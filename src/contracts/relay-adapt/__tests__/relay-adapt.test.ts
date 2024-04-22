@@ -366,14 +366,14 @@ describe('relay-adapt', function test() {
       () => {},
       false, // shouldGeneratePreTransactionPOIs
     );
-    provedTransactions.forEach((transaction) => {
+    for (const transaction of provedTransactions) {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
         RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
       );
-    });
+    }
 
     // const preEthBalance = await ethersWallet.getBalanceERC20(txidVersion, );
 
@@ -556,14 +556,14 @@ describe('relay-adapt', function test() {
       () => {},
       false, // shouldGeneratePreTransactionPOIs
     );
-    provedTransactions.forEach((transaction) => {
+    for (const transaction of provedTransactions) {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
         RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
       );
-    });
+    }
 
     // 8. Generate real relay transaction for cross contract call.
     const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
@@ -806,14 +806,14 @@ describe('relay-adapt', function test() {
       () => {},
       false, // shouldGeneratePreTransactionPOIs
     );
-    provedTransactions.forEach((transaction) => {
+    for (const transaction of provedTransactions) {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
         RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
       );
-    });
+    }
 
     // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
@@ -993,14 +993,14 @@ describe('relay-adapt', function test() {
       () => {},
       false, // shouldGeneratePreTransactionPOIs
     );
-    provedTransactions.forEach((transaction) => {
+    for (const transaction of provedTransactions) {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
         RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
       );
-    });
+    }
 
     // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
@@ -1180,14 +1180,14 @@ describe('relay-adapt', function test() {
       () => {},
       false, // shouldGeneratePreTransactionPOIs
     );
-    provedTransactions.forEach((transaction) => {
+    for (const transaction of provedTransactions) {
       expect((transaction as TransactionStructV2).boundParams.adaptContract).to.equal(
         RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       );
       expect((transaction as TransactionStructV2).boundParams.adaptParams).to.equal(
         relayAdaptParams,
       );
-    });
+    }
 
     // 7. Generate real relay transaction for cross contract call.
     const relayTransaction = await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
@@ -1304,7 +1304,7 @@ describe('relay-adapt', function test() {
     expect(
       relayShieldInputs.map((shieldInput) => shieldInput.preimage.token.tokenAddress),
     ).to.deep.equal(shieldERC20Recipients.map((recipient) => recipient.tokenAddress.toLowerCase()));
-    relayShieldInputs.forEach((relayShieldInput) => {
+    for (const relayShieldInput of relayShieldInputs) {
       expect(relayShieldInput.preimage.npk).to.equal(
         nToHex(
           3348140451435708797167073859596593490034226162440317170509481065740328487080n,
@@ -1313,7 +1313,7 @@ describe('relay-adapt', function test() {
         ),
       );
       expect(relayShieldInput.preimage.token.tokenType).to.equal(0);
-    });
+    }
   });
 
   it('Should calculate relay adapt params', () => {

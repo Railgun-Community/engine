@@ -317,7 +317,7 @@ export const processUnshieldEvents = async (
   if (logs.length !== filtered.length) {
     throw new Error('Args required for Unshield events');
   }
-  filtered.forEach((log) => {
+  for (const log of filtered) {
     const { args, transactionHash, blockNumber } = log;
     unshields.push(
       formatUnshieldEvent(
@@ -328,7 +328,7 @@ export const processUnshieldEvents = async (
         undefined, // timestamp
       ),
     );
-  });
+  }
 
   await eventsUnshieldListener(txidVersion, unshields);
 };
@@ -340,14 +340,14 @@ export const formatNullifiedEvents = (
 ): Nullifier[] => {
   const nullifiers: Nullifier[] = [];
 
-  nullifierEventArgs.nullifier.forEach((nullifier: string) => {
+  for (const nullifier of nullifierEventArgs.nullifier) {
     nullifiers.push({
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       nullifier: formatToByteLength(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
     });
-  });
+  }
 
   return nullifiers;
 };
@@ -364,10 +364,10 @@ export const processNullifiedEvents = async (
     throw new Error('Args required for Nullified events');
   }
 
-  filtered.forEach((log) => {
+  for (const log of filtered) {
     const { args, transactionHash, blockNumber } = log;
     nullifiers.push(...formatNullifiedEvents(args, transactionHash, blockNumber));
-  });
+  }
 
   await eventsNullifierListener(txidVersion, nullifiers);
 };

@@ -21,8 +21,8 @@ describe('mnemonic', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(mnemonicTo0xPrivateKey(vector.mnemonic, vector.derivationIndex)).to.equal(vector.seed);
-    });
+    }
   });
 });

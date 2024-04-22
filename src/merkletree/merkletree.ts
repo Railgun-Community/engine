@@ -358,14 +358,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       return;
     }
     const trees = Object.keys(storedMetadata.trees).map((tree) => Number(tree));
-    trees.forEach((tree) => {
+    for (const tree of trees) {
       const treeMetadata = storedMetadata.trees[tree];
       this.treeLengths[tree] = treeMetadata.scannedHeight;
       if (treeMetadata.invalidMerklerootDetails) {
         this.invalidMerklerootDetailsByTree[tree] =
           treeMetadata.invalidMerklerootDetails ?? undefined;
       }
-    });
+    }
   }
 
   /**
@@ -501,26 +501,26 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const newTreeLength = hashWriteGroup[0].length;
 
     const nodeWriteBatch: PutBatch[] = [];
-    hashWriteGroup.forEach((levelNodes, level) => {
-      levelNodes.forEach((node, index) => {
+    for (const [level, levelNodes] of hashWriteGroup.entries()) {
+      for (const [index, node] of levelNodes.entries()) {
         nodeWriteBatch.push({
           type: 'put',
           key: this.getNodeHashDBPath(treeIndex, level, index).join(':'),
           value: node,
         });
         this.cacheNodeHash(treeIndex, level, index, node);
-      });
-    });
+      }
+    }
 
     const dataWriteBatch: PutBatch[] = [];
     const globalHashLookupBatch: PutBatch[] = [];
-    dataWriteGroup.forEach((data, index) => {
+    for (const [index, data] of dataWriteGroup.entries()) {
       dataWriteBatch.push({
         type: 'put',
         key: this.getDataDBPath(treeIndex, index).join(':'),
         value: data,
       });
-    });
+    }
 
     if (!this.isCurrentLock(lock)) {
       await this.waitForUpdatesLock();
@@ -564,7 +564,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     EngineDebug.log(`insertLeaves: startIndex ${startIndex}, group length ${leaves.length}`);
 
     // Push values to leaves of write index
-    leaves.forEach((leaf) => {
+    for (const leaf of leaves) {
       // Set writecache value
       firstLevelHashWriteGroup[0][index] = leaf.hash;
 
@@ -572,7 +572,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
       // Increment index
       index += 1;
-    });
+    }
 
     const hashWriteGroup: string[][] = await Merkletree.fillHashWriteGroup(
       firstLevelHashWriteGroup,
@@ -621,9 +621,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const leaves = await this.getDataRange(tree, 0, treeLength - 1);
 
     // Push values to leaves of write index
-    leaves.forEach((leaf, index) => {
+    for (const [index, leaf] of leaves.entries()) {
       firstLevelHashWriteGroup[0][index] = leaf?.hash ?? this.zeros[0];
-    });
+    }
 
     const startIndex = 0;
     const endIndex = treeLength - 1;
@@ -713,12 +713,13 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
     const treeWriteQueue = this.writeQueue[treeIndex];
-    treeWriteQueue.forEach((_writeQueue, writeQueueIndex) => {
+    for (const writeQueueKey of Object.keys(treeWriteQueue)) {
+      const writeQueueIndex = Number(writeQueueKey);
       const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
       if (alreadyAddedToTree) {
         delete treeWriteQueue[writeQueueIndex];
       }
-    });
+    }
 
     if (this.processingWriteQueueTrees[treeIndex]) {
       EngineDebug.log(
@@ -848,9 +849,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     // Delete the batch after processing it.
     // Ensures bad batches are deleted, therefore halting update loop if one is found.
-    commitmentGroupIndices.forEach((commitmentGroupIndex) => {
+    for (const commitmentGroupIndex of commitmentGroupIndices) {
       delete this.writeQueue[treeIndex][commitmentGroupIndex];
-    });
+    }
 
     return true;
   }

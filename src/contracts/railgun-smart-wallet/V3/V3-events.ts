@@ -170,14 +170,14 @@ export const formatNullifiedEventsV3 = (
 ): Nullifier[] => {
   const nullifiers: Nullifier[] = [];
 
-  nullifierHashes.forEach((nullifierHash: string) => {
+  for (const nullifierHash of nullifierHashes) {
     nullifiers.push({
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       nullifier: formatToByteLength(nullifierHash, ByteLength.UINT_256),
       treeNumber: spendAccumulatorNumber,
       blockNumber,
     });
-  });
+  }
 
   return nullifiers;
 };
@@ -404,7 +404,8 @@ export const processAccumulatorEvent = async (
     const treasuryFees = 'length' in unformattedTreasuryFees ? unformattedTreasuryFees : [];
 
     const treasuryFeeMap: { [tokenHash: string]: { shield: bigint; unshield: bigint } } = {};
-    treasuryFees.forEach(({ tokenID, fee }) => {
+
+    for (const {tokenID, fee} of treasuryFees) {
       const strippedTokenID = strip0x(tokenID);
       const unshield = transactions.find((transaction) => {
         const unshieldTokenHash = extractTokenHashFromCommitmentPreImageV3(
@@ -434,7 +435,7 @@ export const processAccumulatorEvent = async (
         shield: shieldFeePortion,
         unshield: unshieldFeePortion,
       };
-    });
+    }
 
     let commitmentsStartIndex = 0;
 

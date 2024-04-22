@@ -215,14 +215,14 @@ export function formatLegacyNullifierEvents(
 ): Nullifier[] {
   const nullifiers: Nullifier[] = [];
 
-  nullifierEventArgs.nullifier.forEach((nullifier: bigint) => {
+  for (const nullifier of nullifierEventArgs.nullifier) {
     nullifiers.push({
       txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
       nullifier: nToHex(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
     });
-  });
+  }
 
   return nullifiers;
 }
@@ -267,10 +267,10 @@ export async function processLegacyNullifierEvents(
   const nullifiers: Nullifier[] = [];
 
   const filtered = logs.filter((log) => log.args);
-  filtered.forEach((event) => {
+  for (const event of filtered) {
     const { args, transactionHash, blockNumber } = event;
     nullifiers.push(...formatLegacyNullifierEvents(args, transactionHash, blockNumber));
-  });
+  }
 
   await eventsNullifierListener(txidVersion, nullifiers);
 }

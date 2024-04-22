@@ -1571,16 +1571,16 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       const railgunTxidsNeedPOIs = new Set<string>();
-      sentCommitmentsNeedPOIs.forEach((sentCommitment) => {
+      for (const sentCommitment of sentCommitmentsNeedPOIs) {
         if (isDefined(sentCommitment.railgunTxid)) {
           railgunTxidsNeedPOIs.add(sentCommitment.railgunTxid);
         }
-      });
-      unshieldEventsNeedPOIs.forEach((unshieldEvent) => {
+      }
+      for (const unshieldEvent of unshieldEventsNeedPOIs) {
         if (isDefined(unshieldEvent.railgunTxid)) {
           railgunTxidsNeedPOIs.add(unshieldEvent.railgunTxid);
         }
-      });
+      }
       const railgunTxids = Array.from(railgunTxidsNeedPOIs);
 
       if (isDefined(railgunTxidFilter) && !railgunTxids.includes(railgunTxidFilter)) {
@@ -1774,11 +1774,11 @@ abstract class AbstractWallet extends EventEmitter {
       ? getBlindedCommitmentForUnshield(railgunTxidHex)
       : '0x00';
 
-    listPOIMerkleProofs.forEach((listMerkleProof, listMerkleProofIndex) => {
+    for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
       if (!verifyMerkleProof(listMerkleProof)) {
-        throw new Error(`Invalid list merkleproof: index ${listMerkleProofIndex}`);
+        throw new Error(`Invalid list merkleproof: index ${i}`);
       }
-    });
+    }
 
     const merkleProofForRailgunTxid = createDummyMerkleProof(txidLeafHash);
     if (!verifyMerkleProof(merkleProofForRailgunTxid)) {
@@ -1977,11 +1977,11 @@ abstract class AbstractWallet extends EventEmitter {
           isLegacyPOIProof ? 'Invalid TXID merkleproof (snapshot)' : 'Invalid TXID merkleproof',
         );
       }
-      listPOIMerkleProofs.forEach((listMerkleProof, listMerkleProofIndex) => {
+      for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
         if (!verifyMerkleProof(listMerkleProof)) {
-          throw new Error(`Invalid list merkleproof: index ${listMerkleProofIndex}`);
+          throw new Error(`Invalid list merkleproof: index ${i}`);
         }
-      });
+      }
 
       const poiProofInputs: POIEngineProofInputs = {
         // --- Public inputs ---
@@ -2194,15 +2194,15 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Merge "spent" history with "receive" history items.
     // We have to remove all "receive" items that are change outputs.
-    receiveHistory.forEach((receiveItem) => {
+    for (const receiveItem of receiveHistory) {
       let alreadyExistsInHistory = false;
 
-      history.forEach((existingHistoryItem) => {
+      for (const existingHistoryItem of history) {
         if (receiveItem.txid === existingHistoryItem.txid) {
           alreadyExistsInHistory = true;
           const changeTokenAmounts =
             AbstractWallet.getPossibleChangeTokenAmounts(existingHistoryItem);
-          receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
+          for (const receiveTokenAmount of receiveItem.receiveTokenAmounts) {
             const matchingChangeOutput = changeTokenAmounts.find(
               (ta) =>
                 ta.tokenHash === receiveTokenAmount.tokenHash &&
@@ -2229,9 +2229,9 @@ abstract class AbstractWallet extends EventEmitter {
               // Add it to the history item.
               existingHistoryItem.receiveTokenAmounts.push(receiveTokenAmount);
             }
-          });
+          }
         }
-      });
+      }
       if (!alreadyExistsInHistory) {
         history.unshift({
           ...receiveItem,
@@ -2241,7 +2241,7 @@ abstract class AbstractWallet extends EventEmitter {
           version: TransactionHistoryItemVersion.Unknown,
         });
       }
-    });
+    }
 
     return history;
   }
@@ -2296,10 +2296,10 @@ abstract class AbstractWallet extends EventEmitter {
   ): TransactionHistoryEntryReceived[] {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
-    filteredTXOs.forEach((txo) => {
+    for (const txo of filteredTXOs) {
       const { txid, timestamp, note } = txo;
       if (note.value === 0n) {
-        return;
+        continue;
       }
       if (!isDefined(txidTransactionMap[txid])) {
         txidTransactionMap[txid] = {
@@ -2321,7 +2321,7 @@ abstract class AbstractWallet extends EventEmitter {
         balanceBucket: POI.getBalanceBucket(txo),
         hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(txo.poisPerList),
       });
-    });
+    }
 
     const history: TransactionHistoryEntryReceived[] = Object.values(txidTransactionMap);
     return history;
@@ -2411,11 +2411,11 @@ abstract class AbstractWallet extends EventEmitter {
 
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    sentCommitments.forEach((sentCommitment) => {
+    for (const sentCommitment of sentCommitments) {
       const { txid, timestamp, note, isLegacyTransactNote, outputType, walletSource } =
         sentCommitment;
       if (note.value === 0n) {
-        return;
+        continue;
       }
       if (!isDefined(txidTransactionMap[txid])) {
         txidTransactionMap[txid] = {
@@ -2448,10 +2448,10 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
       txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
-    });
+    }
 
     // Add unshield events to txidTransactionMap
-    allUnshieldEvents.forEach((unshieldEvent) => {
+    for (const unshieldEvent of allUnshieldEvents) {
       const foundUnshieldTransactionInTransactCommitments = txidTransactionMap[unshieldEvent.txid];
       if (!isDefined(foundUnshieldTransactionInTransactCommitments)) {
         // This will occur on a self-signed unshield.
@@ -2464,7 +2464,7 @@ abstract class AbstractWallet extends EventEmitter {
           tokenAmounts: [],
           version: TransactionHistoryItemVersion.UpdatedNov2022,
         };
-        return;
+        continue;
       }
 
       // Unshield event exists. Add to its amount rather than creating a new event.
@@ -2477,10 +2477,10 @@ abstract class AbstractWallet extends EventEmitter {
         existingUnshieldEvent.amount = (
           BigInt(existingUnshieldEvent.amount) + BigInt(unshieldEvent.amount)
         ).toString();
-        return;
+        continue;
       }
       txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
-    });
+    }
 
     const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =
       Object.values(txidTransactionMap);
@@ -2491,11 +2491,11 @@ abstract class AbstractWallet extends EventEmitter {
         let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
-        tokenAmounts.forEach((tokenAmount) => {
+        for (const tokenAmount of tokenAmounts) {
           if (!isDefined(tokenAmount.outputType)) {
             // Legacy notes without extra data, consider as a simple "transfer".
             transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
-            return;
+            continue;
           }
 
           switch (tokenAmount.outputType) {
@@ -2512,7 +2512,7 @@ abstract class AbstractWallet extends EventEmitter {
               changeTokenAmounts.push(tokenAmount);
               break;
           }
-        });
+        }
 
         const unshieldTokenAmounts: TransactionHistoryUnshieldTokenAmount[] = unshieldEvents.map(
           (unshieldEvent) => {
@@ -2597,10 +2597,10 @@ abstract class AbstractWallet extends EventEmitter {
         balanceBucketFilter,
       );
 
-      Object.keys(balancesByTxidVersion).forEach((tokenHash) => {
+      for (const tokenHash of Object.keys(balancesByTxidVersion)) {
         balances[txidVersion] ??= {};
         balances[txidVersion][tokenHash] = balancesByTxidVersion[tokenHash];
-      });
+      }
     }
 
     return balances;
@@ -2663,7 +2663,7 @@ abstract class AbstractWallet extends EventEmitter {
     const tokenBalances: TokenBalances = {};
 
     // Loop through each TXO and add to balances if unspent
-    TXOs.forEach((txo) => {
+    for (const txo of TXOs) {
       const tokenHash = formatToByteLength(txo.note.tokenHash, ByteLength.UINT_256, false);
       // If we don't have an entry for this token yet, create one
       if (!isDefined(tokenBalances[tokenHash])) {
@@ -2676,7 +2676,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       const isSpent = txo.spendtxid !== false;
       if (isSpent) {
-        return;
+        continue;
       }
 
       const balanceBucket = POI.getBalanceBucket(txo);
@@ -2689,7 +2689,7 @@ abstract class AbstractWallet extends EventEmitter {
             formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
         ) {
           // Skip if txid doesn't match.
-          return;
+          continue;
         }
       } else if (!balanceBucketFilter.includes(balanceBucket)) {
         if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
@@ -2700,14 +2700,14 @@ abstract class AbstractWallet extends EventEmitter {
             ),
           );
         }
-        return;
+        continue;
       }
 
       // Store utxo
       tokenBalances[tokenHash].utxos.push(txo);
       // Increment balance
       tokenBalances[tokenHash].balance += txo.note.value;
-    });
+    }
 
     return tokenBalances;
   }
@@ -2749,12 +2749,12 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Loop through each token
 
-    Object.keys(tokenBalances).forEach((tokenHash) => {
+    for (const tokenHash of Object.keys(tokenBalances)) {
       // Create balances tree array
       totalBalancesByTreeNumber[tokenHash] = [];
 
       // Loop through each TXO and sort by tree
-      tokenBalances[tokenHash].utxos.forEach((utxo) => {
+      for (const utxo of tokenBalances[tokenHash].utxos) {
         if (!isDefined(totalBalancesByTreeNumber[tokenHash][utxo.tree])) {
           totalBalancesByTreeNumber[tokenHash][utxo.tree] = {
             balance: utxo.note.value,
@@ -2765,8 +2765,8 @@ abstract class AbstractWallet extends EventEmitter {
           totalBalancesByTreeNumber[tokenHash][utxo.tree].balance += utxo.note.value;
           totalBalancesByTreeNumber[tokenHash][utxo.tree].utxos.push(utxo);
         }
-      });
-    });
+      }
+    }
 
     return totalBalancesByTreeNumber;
   }
@@ -3142,12 +3142,12 @@ abstract class AbstractWallet extends EventEmitter {
     await this.db.clearNamespace(namespace);
     this.isClearingBalances.set(null, chain, false);
 
-    Object.values(TXIDVersion).forEach((txidVersion) => {
+    for (const txidVersion of Object.values(TXIDVersion)) {
       if (walletDetailsMap[txidVersion]) {
         // @ts-expect-error
         walletDetailsMap[txidVersion].treeScannedHeights = [];
       }
-    });
+    }
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
 
     this.invalidateCommitmentsCache(chain);

@@ -41,10 +41,10 @@ describe('bip39', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(mnemonicToEntropy(vector.mnemonic)).to.equal(vector.entropy);
       expect(entropyToMnemonic(vector.entropy)).to.equal(vector.mnemonic);
-    });
+    }
   });
 
   it('Should validate mnemonics', async () => {
@@ -60,13 +60,13 @@ describe('bip39', () => {
       'chicken',
     ];
 
-    valid.forEach((vector) => {
+    for (const vector of valid) {
       expect(validateMnemonic(vector)).to.equal(true);
-    });
+    }
 
-    invalid.forEach((vector) => {
+    for (const vector of invalid) {
       expect(validateMnemonic(vector)).to.equal(false);
-    });
+    }
   });
 
   it('Should convert mnemonic to seed', async () => {
@@ -94,8 +94,8 @@ describe('bip39', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(mnemonicToSeed(vector.mnemonic, vector.password || undefined)).to.equal(vector.seed);
-    });
+    }
   });
 });

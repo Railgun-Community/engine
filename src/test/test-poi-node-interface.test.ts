@@ -50,14 +50,14 @@ export class TestPOINodeInterface extends POINodeInterface {
     blindedCommitmentDatas: BlindedCommitmentData[],
   ): Promise<{ [blindedCommitment: string]: POIsPerList }> {
     const poisPerList: { [blindedCommitment: string]: POIsPerList } = {};
-    blindedCommitmentDatas.forEach((blindedCommitmentData) => {
+    for (const blindedCommitmentData of blindedCommitmentDatas) {
       poisPerList[blindedCommitmentData.blindedCommitment] ??= {};
-      listKeys.forEach((listKey) => {
+      for (const listKey of listKeys) {
         // Use 'override' value
         poisPerList[blindedCommitmentData.blindedCommitment][listKey] =
           TestPOINodeInterface.overridePOIsListStatus;
-      });
-    });
+      }
+    }
     return poisPerList;
   }
 
