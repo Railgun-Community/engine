@@ -157,10 +157,7 @@ class Transaction {
 
     const { utxos } = this;
 
-    for (let i = 0; i < utxos.length; i += 1) {
-      // Get UTXO
-      const utxo = utxos[i];
-
+    for (const utxo of utxos) {
       // Push spending key and nullifier
       nullifiers.push(TransactNote.getNullifier(nullifyingKey, utxo.position));
 

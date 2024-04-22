@@ -61,7 +61,6 @@ export class POIValidation {
 
       const activeListKeys = POI.getActiveListKeys();
 
-      // eslint-disable-next-line no-restricted-syntax
       for (const listKey of activeListKeys) {
         await this.assertIsValidSpendableTXID(
           txidVersion,
@@ -110,7 +109,6 @@ export class POIValidation {
 
     const poisForList = preTransactionPOIs[listKey];
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidLeafHash of txidLeafHashes) {
       // 2. Validate txid leaf hash
       if (!isDefined(poisForList[txidLeafHash])) {

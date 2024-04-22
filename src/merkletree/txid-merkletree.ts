@@ -281,15 +281,13 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
     const railgunTxidIndexLookupBatch: PutBatch[] = [];
 
-    for (let i = 0; i < railgunTransactionsWithTxids.length; i += 1) {
+    for (const railgunTransactionWithTxid of railgunTransactionsWithTxids) {
       const { tree, index } = TXIDMerkletree.nextTreeAndIndex(nextTree, nextIndex);
       nextTree = tree;
       nextIndex = index;
       if (TXIDMerkletree.isOutOfBounds(nextTree, nextIndex, maxTxidIndex)) {
         break;
       }
-
-      const railgunTransactionWithTxid = railgunTransactionsWithTxids[i];
 
       const txidIndex = TXIDMerkletree.getGlobalPosition(nextTree, nextIndex);
 

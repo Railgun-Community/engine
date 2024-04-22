@@ -254,7 +254,6 @@ export const processShieldEvents_LegacyShield_PreMar23 = async (
   const iface = new Interface(
     ABIRailgunSmartWallet_Legacy_PreMar23.filter((fragment) => fragment.type === 'event'),
   );
-  // eslint-disable-next-line no-restricted-syntax
   for (const log of logs) {
     const args = iface.decodeEventLog('Shield', log.data);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

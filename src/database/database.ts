@@ -251,8 +251,8 @@ class Database {
       const emitter = new EventEmitter();
       request.onsuccess = (ev: Event) => {
         const values: Array<ArrayBuffer> = (ev.target as IDBRequest<ArrayBuffer[]>).result;
-        for (let i = 0; i < values.length; i += 1) {
-          emitter.emit('data', this.decode(values[i], encoding));
+        for (const value of values) {
+          emitter.emit('data', this.decode(value, encoding));
         }
         emitter.emit('end');
       };

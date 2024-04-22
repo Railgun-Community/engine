@@ -977,7 +977,6 @@ abstract class AbstractWallet extends EventEmitter {
    * Clears commitments cache
    */
   invalidateCommitmentsCache(chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       this.receiveCommitmentsCache.del(txidVersion, chain);
       this.sentCommitmentsCache.del(txidVersion, chain);
@@ -1266,7 +1265,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txo of txosNeedLegacyCreationPOIs) {
       const txidIndex = await txidMerkletree.getTxidIndexByRailgunTxid(
         txo.transactCreationRailgunTxid as string,
@@ -1313,7 +1311,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const formattedCommitment = formatToByteLength(commitment, ByteLength.UINT_256);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const cachedStoredReceiveCommitment of cachedStoredReceiveCommitments) {
       const receiveCommitment = await utxoMerkletree.getCommitment(
         cachedStoredReceiveCommitment.tree,
@@ -1374,7 +1371,6 @@ abstract class AbstractWallet extends EventEmitter {
       blindedCommitmentDatas,
     );
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txo of txosNeedCreationPOIs) {
       if (!isDefined(txo.blindedCommitment)) {
         continue;
@@ -1503,7 +1499,6 @@ abstract class AbstractWallet extends EventEmitter {
       blindedCommitmentDatas.slice(0, 1000), // 1000 max in request
     );
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const sentCommitment of sentCommitmentsNeedPOIRefresh) {
       if (!isDefined(sentCommitment.blindedCommitment)) {
         continue;
@@ -1523,7 +1518,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const unshieldEvent of unshieldEventsNeedPOIRefresh) {
       if (!isDefined(unshieldEvent.railgunTxid)) {
         continue;
@@ -1597,7 +1591,6 @@ abstract class AbstractWallet extends EventEmitter {
 
       const generatePOIsDatas: GeneratePOIsData[] = [];
 
-      // eslint-disable-next-line no-restricted-syntax
       for (const railgunTxid of railgunTxids) {
         try {
           const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
@@ -1655,7 +1648,6 @@ abstract class AbstractWallet extends EventEmitter {
             ),
           );
 
-          // eslint-disable-next-line no-restricted-syntax
           for (const listKey of listKeys) {
             // Use this syntax to capture each index and totalCount.
             generatePOIsDatas.push({
@@ -1683,7 +1675,6 @@ abstract class AbstractWallet extends EventEmitter {
         generatePOIData: GeneratePOIsData;
       }[] = [];
 
-      // eslint-disable-next-line no-restricted-syntax
       for (let i = 0; i < generatePOIsDatas.length; i += 1) {
         try {
           await this.generatePOIsForRailgunTxidAndListKey(
@@ -2172,7 +2163,6 @@ abstract class AbstractWallet extends EventEmitter {
     startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntry[]> {
     const transactionHistory: TransactionHistoryEntry[] = [];
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -2597,7 +2587,6 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<TokenBalancesAllTxidVersions> {
     const balances: TokenBalancesAllTxidVersions = {};
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -2650,7 +2639,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const balancesByBucket: Partial<Record<WalletBalanceBucket, TokenBalances>> = {};
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const balanceBucket of Object.values(WalletBalanceBucket)) {
       const balanceBucketFilter = [balanceBucket];
       balancesByBucket[balanceBucket] = await AbstractWallet.getTokenBalancesByTxidVersion(
@@ -2958,7 +2946,6 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async refreshPOIsForAllTXIDVersions(chain: Chain, forceRefresh?: boolean) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -2984,7 +2971,6 @@ abstract class AbstractWallet extends EventEmitter {
     this.isRefreshingPOIs.set(txidVersion, chain, true);
 
     try {
-      // eslint-disable-next-line no-restricted-syntax
       // Refresh POIs - Receive commitments
       await this.refreshReceivePOIsAllTXOs(txidVersion, chain);
 
@@ -3177,7 +3163,6 @@ abstract class AbstractWallet extends EventEmitter {
   ) {
     await this.clearDecryptedBalancesAllTXIDVersions(chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of Object.values(TXIDVersion)) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;

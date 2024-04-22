@@ -474,7 +474,6 @@ export class TransactionBatch {
       }
 
       if (shouldGeneratePreTransactionPOIs) {
-        // eslint-disable-next-line no-restricted-syntax
         for (let i = 0; i < activeListKeys.length; i += 1) {
           const listKey = activeListKeys[i];
           preTransactionPOIsPerTxidLeafPerList[listKey] ??= {};
@@ -572,8 +571,7 @@ export class TransactionBatch {
     };
 
     const dummyProvedTransactions: (TransactionStructV2 | TransactionStructV3)[] = [];
-    for (let i = 0; i < spendingSolutionGroups.length; i += 1) {
-      const spendingSolutionGroup = spendingSolutionGroups[i];
+    for (const spendingSolutionGroup of spendingSolutionGroups) {
       const changeOutput = TransactionBatch.getChangeOutput(wallet, spendingSolutionGroup);
       const transaction = this.generateTransactionForSpendingSolutionGroup(
         spendingSolutionGroup,

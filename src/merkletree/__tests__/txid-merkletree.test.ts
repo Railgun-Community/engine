@@ -117,7 +117,6 @@ describe('txid-merkletree', () => {
   });
 
   it('Should update railgun txid merkle tree correctly', async () => {
-    // eslint-disable-next-line no-restricted-syntax
     for (const merkletree of [merkletreePOINode, merkletreeWallet]) {
       await merkletree.clearDataForMerkletree();
 

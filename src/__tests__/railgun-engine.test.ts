@@ -189,7 +189,6 @@ describe('railgun-engine', function test() {
 
         const transactionsV2 = transactions as TransactionStructV2[];
 
-        // eslint-disable-next-line no-restricted-syntax
         for (const transaction of transactionsV2) {
           const railgunTransaction: RailgunTransactionV2 = {
             version: RailgunTransactionVersion.V2,

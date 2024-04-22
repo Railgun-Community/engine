@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-await-in-loop */
 import { Proof } from '../models/prover-types';
 import { Chain } from '../models/engine-types';
 import {

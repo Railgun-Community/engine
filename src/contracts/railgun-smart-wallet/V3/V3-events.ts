@@ -562,7 +562,6 @@ export const processAccumulatorEvent = async (
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const shield of shields) {
       const totalShieldValuesForToken = shields.reduce((acc, curr) => {
         return acc + curr.preimage.value;

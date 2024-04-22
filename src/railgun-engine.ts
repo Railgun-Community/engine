@@ -222,7 +222,6 @@ class RailgunEngine extends EventEmitter {
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const event of events) {
       const { treeNumber, startPosition, commitments } = event;
       if (EngineDebug.verboseScanLogging()) {
@@ -528,7 +527,6 @@ class RailgunEngine extends EventEmitter {
    * @param walletIdFilter - optional list of wallet ids to decrypt balances
    */
   async scanContractHistory(chain: Chain, walletIdFilter: Optional<string[]>) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1028,7 +1026,6 @@ class RailgunEngine extends EventEmitter {
 
     const railgunTransactionsLength = railgunTransactions.length;
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const [index, railgunTransaction] of railgunTransactions.entries()) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
       if (railgunTransactionWithTxid.version !== RailgunTransactionVersion.V2) {
@@ -1130,7 +1127,6 @@ class RailgunEngine extends EventEmitter {
         }
       }
 
-      // eslint-disable-next-line no-restricted-syntax
       for (let i = 0; i < standardCommitments.length; i += 1) {
         const position = utxoBatchStartPositionOut + i;
         // eslint-disable-next-line no-await-in-loop
@@ -1223,7 +1219,6 @@ class RailgunEngine extends EventEmitter {
 
     const toQueue: RailgunTransactionWithHash[] = [];
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransaction of railgunTransactions) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
 
@@ -1308,7 +1303,6 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to clear
    */
   async clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of Object.values(TXIDVersion)) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1353,7 +1347,6 @@ class RailgunEngine extends EventEmitter {
     walletIdFilter: Optional<string[]>,
     forceRescanDevOnly = false,
   ) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1374,7 +1367,6 @@ class RailgunEngine extends EventEmitter {
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1426,7 +1418,6 @@ class RailgunEngine extends EventEmitter {
   }
 
   async clearTXIDMerkletreeData(txidVersion: TXIDVersion, chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
     if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
       return;
     }
@@ -1623,7 +1614,6 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS) {
       // eslint-disable-next-line no-await-in-loop
       const utxoMerkletree = await UTXOMerkletree.create(
@@ -1989,7 +1979,6 @@ class RailgunEngine extends EventEmitter {
     deferCompletionEvent: boolean,
   ) {
     const wallets = this.allWallets();
-    // eslint-disable-next-line no-restricted-syntax
     for (let i = 0; i < wallets.length; i += 1) {
       if (isDefined(walletIdFilter) && !walletIdFilter.includes(wallets[i].id)) {
         // Skip wallets not in filter
@@ -2014,9 +2003,8 @@ class RailgunEngine extends EventEmitter {
 
   invalidateTXOsCacheAllWallets(chain: Chain) {
     const wallets = this.allWallets();
-    // eslint-disable-next-line no-restricted-syntax
-    for (let i = 0; i < wallets.length; i += 1) {
-      wallets[i].invalidateCommitmentsCache(chain);
+    for (const wallet of wallets) {
+      wallet.invalidateCommitmentsCache(chain);
     }
   }
 
@@ -2062,7 +2050,6 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       // Load UTXO and TXID merkletrees for wallet
       // eslint-disable-next-line no-await-in-loop
