@@ -74,9 +74,7 @@ export class Registry<T> {
       [TXIDVersion.V3_PoseidonMerkle, this.v3Map],
       [null, this.anyMap],
     ];
-    // eslint-disable-next-line no-restricted-syntax
     for (const [txidVersion, map] of taggedMaps) {
-      // eslint-disable-next-line no-restricted-syntax
       for (const [chainStr, value] of map) {
         const chain = Registry.deserializeChain(chainStr);
         callback(value, txidVersion, chain);

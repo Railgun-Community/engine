@@ -28,13 +28,13 @@ describe('hash', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       // Test hex string hash
       expect(sha256(vector.preImage)).to.equal(vector.result);
 
       // Test bytes array hash
       expect(sha256(vector.array)).to.equal(vector.result);
-    });
+    }
   });
 
   it('Should perform keccak256 hashes', () => {
@@ -58,13 +58,13 @@ describe('hash', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       // Test hex string hash
       expect(keccak256(vector.preImage)).to.equal(vector.result);
 
       // Test bytes array hash
       expect(keccak256(vector.array)).to.equal(vector.result);
-    });
+    }
   });
 
   it('Should perform sha512 HMAC hashes', () => {
@@ -97,13 +97,13 @@ describe('hash', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       // Test hex string hash
       expect(sha512HMAC(vector.key, vector.preImage)).to.equal(vector.result);
 
       // Test bytes array hash
       expect(sha512HMAC(vector.keyArray, vector.array)).to.equal(vector.result);
-    });
+    }
   });
 
   it('Should perform poseidon hashes', () => {
@@ -122,8 +122,8 @@ describe('hash', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(poseidon(vector.preImage)).to.equal(vector.result);
-    });
+    }
   });
 });

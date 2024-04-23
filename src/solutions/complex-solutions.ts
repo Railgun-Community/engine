@@ -11,7 +11,7 @@ import { CommitmentType } from '../models/formatted-types';
 
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
-  treeSortedBalances.forEach((treeBalance) => {
+  for (const treeBalance of treeSortedBalances) {
     EngineDebug.log(`Token: ${treeBalance.tokenData.tokenAddress}`);
     EngineDebug.log(`Total balance: ${treeBalance.balance.toString()}`);
     EngineDebug.log(
@@ -19,7 +19,7 @@ const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
         .map((utxo) => utxo.note.value.toString())
         .join(', ')}`,
     );
-  });
+  }
 };
 
 const createSpendingSolutionGroup = (
@@ -130,7 +130,8 @@ export const createSpendingSolutionsForValue = (
 
   const spendingSolutionGroups: SpendingSolutionGroup[] = [];
 
-  treeSortedBalances.forEach((treeBalance, tree) => {
+  for (const [tree, treeBalance] of treeSortedBalances.entries()) {
+    if (!isDefined(treeBalance)) continue;
     while (amountToFill > 0n) {
       const utxos = findNextSolutionBatch(treeBalance, amountToFill, excludedUTXOIDPositions);
       if (!utxos) {
@@ -187,12 +188,9 @@ export const createSpendingSolutionsForValue = (
           // This will remove the secondary output, or update the value.
           replaceOrRemoveRemainingOutput(remainingOutputs, finalAmountToFill);
         }
-
-        // Break out from the forEach loop, and continue Solution search with next output.
-        return;
       }
     }
-  });
+  }
 
   if (amountToFill > 0n) {
     // Could not find enough solutions.

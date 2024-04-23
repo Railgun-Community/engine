@@ -48,7 +48,6 @@ describe('keys-utils performance', () => {
 
   it('JavaScript performance', async () => {
     const start = performance.now();
-    // eslint-disable-next-line no-restricted-syntax
     for (const [privateKeyPairA, blindedPublicKeyPairB] of inputs) {
       // eslint-disable-next-line no-await-in-loop
       await getSharedSymmetricKeyJavascript(privateKeyPairA, blindedPublicKeyPairB);
@@ -63,7 +62,6 @@ describe('keys-utils performance', () => {
   it('WASM performance', async () => {
     await expect(initCurve25519Promise).to.not.be.rejectedWith('some error');
     const start = performance.now();
-    // eslint-disable-next-line no-restricted-syntax
     for (const [privateKeyPairA, blindedPublicKeyPairB] of inputs) {
       // eslint-disable-next-line no-await-in-loop
       await getSharedSymmetricKey(privateKeyPairA, blindedPublicKeyPairB);

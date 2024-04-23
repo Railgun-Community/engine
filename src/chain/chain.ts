@@ -13,7 +13,6 @@ const getChainFullNetworkID = (chain: Chain): string => {
 };
 
 export const getChainSupportsV3 = (chain: Chain): boolean => {
-  // eslint-disable-next-line no-restricted-syntax
   for (const supportingV3Chain of chainsSupportingV3) {
     if (chain.id === supportingV3Chain.id && chain.type === supportingV3Chain.type) {
       return true;

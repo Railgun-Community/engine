@@ -118,7 +118,6 @@ const getRailgunTransactionRequestsV2 = (
   // eslint-disable-next-line no-underscore-dangle
   const railgunTxs: TransactionStructOutput[] = args._transactions;
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const railgunTx of railgunTxs) {
     if (!('length' in railgunTx.boundParams.commitmentCiphertext)) {
       // 'commitmentCiphertext' is potentially parsed as an object.

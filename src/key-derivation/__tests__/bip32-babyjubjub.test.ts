@@ -30,12 +30,12 @@ describe('bip32-babyjubjub', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       const masterKey = getMasterKeyFromSeed(vector.seed);
 
       expect(masterKey.chainCode).to.equal(vector.chainCode);
       expect(masterKey.chainKey).to.equal(vector.chainKey);
-    });
+    }
   });
 
   it('Should derive child keys directly', () => {
@@ -75,9 +75,9 @@ describe('bip32-babyjubjub', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(childKeyDerivationHardened(vector.parent, vector.index)).to.deep.equal(vector.child);
-    });
+    }
   });
 
   it('Should parse path segments', () => {
@@ -98,12 +98,12 @@ describe('bip32-babyjubjub', () => {
 
     const invalid = ['m/0/0', 'railgun', "m/0'/0'/x"];
 
-    valid.forEach((vector) => {
+    for (const vector of valid) {
       expect(getPathSegments(vector.path)).to.deep.equal(vector.segments);
-    });
+    }
 
-    invalid.forEach((vector) => {
+    for (const vector of invalid) {
       expect(() => getPathSegments(vector)).to.throw('Invalid derivation path');
-    });
+    }
   });
 });

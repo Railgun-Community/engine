@@ -328,7 +328,6 @@ export class RelayAdaptV2Contract {
   ): Optional<string> {
     const topic = this.getCallErrorTopic();
     try {
-      // eslint-disable-next-line no-restricted-syntax
       for (const log of receiptLogs) {
         if (log.topics[0] === topic) {
           const parsed = this.customRelayAdaptErrorParse(log.data);

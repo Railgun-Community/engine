@@ -40,7 +40,7 @@ describe('bech32-encode', () => {
       },
     ];
 
-    vectors.forEach((vector, index) => {
+    for (const [index, vector] of vectors.entries()) {
       const addressData: AddressData = {
         masterPublicKey: hexToBigInt(vector.pubkey),
         viewingPublicKey: hexStringToBytes(
@@ -56,7 +56,7 @@ describe('bech32-encode', () => {
         addressData,
         `Incorrect values for vector index ${index}`,
       );
-    });
+    }
   });
 
   it('Should throw error on invalid address checksum', () => {

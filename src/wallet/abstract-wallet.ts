@@ -977,7 +977,6 @@ abstract class AbstractWallet extends EventEmitter {
    * Clears commitments cache
    */
   invalidateCommitmentsCache(chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       this.receiveCommitmentsCache.del(txidVersion, chain);
       this.sentCommitmentsCache.del(txidVersion, chain);
@@ -1266,7 +1265,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const txidMerkletree = this.getRailgunTXIDMerkletreeForChain(txidVersion, chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txo of txosNeedLegacyCreationPOIs) {
       const txidIndex = await txidMerkletree.getTxidIndexByRailgunTxid(
         txo.transactCreationRailgunTxid as string,
@@ -1313,7 +1311,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const formattedCommitment = formatToByteLength(commitment, ByteLength.UINT_256);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const cachedStoredReceiveCommitment of cachedStoredReceiveCommitments) {
       const receiveCommitment = await utxoMerkletree.getCommitment(
         cachedStoredReceiveCommitment.tree,
@@ -1374,7 +1371,6 @@ abstract class AbstractWallet extends EventEmitter {
       blindedCommitmentDatas,
     );
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txo of txosNeedCreationPOIs) {
       if (!isDefined(txo.blindedCommitment)) {
         continue;
@@ -1503,7 +1499,6 @@ abstract class AbstractWallet extends EventEmitter {
       blindedCommitmentDatas.slice(0, 1000), // 1000 max in request
     );
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const sentCommitment of sentCommitmentsNeedPOIRefresh) {
       if (!isDefined(sentCommitment.blindedCommitment)) {
         continue;
@@ -1523,7 +1518,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const unshieldEvent of unshieldEventsNeedPOIRefresh) {
       if (!isDefined(unshieldEvent.railgunTxid)) {
         continue;
@@ -1577,16 +1571,16 @@ abstract class AbstractWallet extends EventEmitter {
       }
 
       const railgunTxidsNeedPOIs = new Set<string>();
-      sentCommitmentsNeedPOIs.forEach((sentCommitment) => {
+      for (const sentCommitment of sentCommitmentsNeedPOIs) {
         if (isDefined(sentCommitment.railgunTxid)) {
           railgunTxidsNeedPOIs.add(sentCommitment.railgunTxid);
         }
-      });
-      unshieldEventsNeedPOIs.forEach((unshieldEvent) => {
+      }
+      for (const unshieldEvent of unshieldEventsNeedPOIs) {
         if (isDefined(unshieldEvent.railgunTxid)) {
           railgunTxidsNeedPOIs.add(unshieldEvent.railgunTxid);
         }
-      });
+      }
       const railgunTxids = Array.from(railgunTxidsNeedPOIs);
 
       if (isDefined(railgunTxidFilter) && !railgunTxids.includes(railgunTxidFilter)) {
@@ -1597,7 +1591,6 @@ abstract class AbstractWallet extends EventEmitter {
 
       const generatePOIsDatas: GeneratePOIsData[] = [];
 
-      // eslint-disable-next-line no-restricted-syntax
       for (const railgunTxid of railgunTxids) {
         try {
           const txidMerkletreeData = await txidMerkletree.getRailgunTxidCurrentMerkletreeData(
@@ -1655,7 +1648,6 @@ abstract class AbstractWallet extends EventEmitter {
             ),
           );
 
-          // eslint-disable-next-line no-restricted-syntax
           for (const listKey of listKeys) {
             // Use this syntax to capture each index and totalCount.
             generatePOIsDatas.push({
@@ -1683,7 +1675,6 @@ abstract class AbstractWallet extends EventEmitter {
         generatePOIData: GeneratePOIsData;
       }[] = [];
 
-      // eslint-disable-next-line no-restricted-syntax
       for (let i = 0; i < generatePOIsDatas.length; i += 1) {
         try {
           await this.generatePOIsForRailgunTxidAndListKey(
@@ -1783,11 +1774,12 @@ abstract class AbstractWallet extends EventEmitter {
       ? getBlindedCommitmentForUnshield(railgunTxidHex)
       : '0x00';
 
-    listPOIMerkleProofs.forEach((listMerkleProof, listMerkleProofIndex) => {
+    for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
+      if (!isDefined(listMerkleProof)) continue;
       if (!verifyMerkleProof(listMerkleProof)) {
-        throw new Error(`Invalid list merkleproof: index ${listMerkleProofIndex}`);
+        throw new Error(`Invalid list merkleproof: index ${i}`);
       }
-    });
+    }
 
     const merkleProofForRailgunTxid = createDummyMerkleProof(txidLeafHash);
     if (!verifyMerkleProof(merkleProofForRailgunTxid)) {
@@ -1986,11 +1978,12 @@ abstract class AbstractWallet extends EventEmitter {
           isLegacyPOIProof ? 'Invalid TXID merkleproof (snapshot)' : 'Invalid TXID merkleproof',
         );
       }
-      listPOIMerkleProofs.forEach((listMerkleProof, listMerkleProofIndex) => {
+      for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
+        if (!isDefined(listMerkleProof)) continue;
         if (!verifyMerkleProof(listMerkleProof)) {
-          throw new Error(`Invalid list merkleproof: index ${listMerkleProofIndex}`);
+          throw new Error(`Invalid list merkleproof: index ${i}`);
         }
-      });
+      }
 
       const poiProofInputs: POIEngineProofInputs = {
         // --- Public inputs ---
@@ -2172,7 +2165,6 @@ abstract class AbstractWallet extends EventEmitter {
     startingBlock: Optional<number>,
   ): Promise<TransactionHistoryEntry[]> {
     const transactionHistory: TransactionHistoryEntry[] = [];
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -2204,15 +2196,15 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Merge "spent" history with "receive" history items.
     // We have to remove all "receive" items that are change outputs.
-    receiveHistory.forEach((receiveItem) => {
+    for (const receiveItem of receiveHistory) {
       let alreadyExistsInHistory = false;
 
-      history.forEach((existingHistoryItem) => {
+      for (const existingHistoryItem of history) {
         if (receiveItem.txid === existingHistoryItem.txid) {
           alreadyExistsInHistory = true;
           const changeTokenAmounts =
             AbstractWallet.getPossibleChangeTokenAmounts(existingHistoryItem);
-          receiveItem.receiveTokenAmounts.forEach((receiveTokenAmount) => {
+          for (const receiveTokenAmount of receiveItem.receiveTokenAmounts) {
             const matchingChangeOutput = changeTokenAmounts.find(
               (ta) =>
                 ta.tokenHash === receiveTokenAmount.tokenHash &&
@@ -2239,9 +2231,9 @@ abstract class AbstractWallet extends EventEmitter {
               // Add it to the history item.
               existingHistoryItem.receiveTokenAmounts.push(receiveTokenAmount);
             }
-          });
+          }
         }
-      });
+      }
       if (!alreadyExistsInHistory) {
         history.unshift({
           ...receiveItem,
@@ -2251,7 +2243,7 @@ abstract class AbstractWallet extends EventEmitter {
           version: TransactionHistoryItemVersion.Unknown,
         });
       }
-    });
+    }
 
     return history;
   }
@@ -2306,10 +2298,10 @@ abstract class AbstractWallet extends EventEmitter {
   ): TransactionHistoryEntryReceived[] {
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryReceived } = {};
 
-    filteredTXOs.forEach((txo) => {
+    for (const txo of filteredTXOs) {
       const { txid, timestamp, note } = txo;
       if (note.value === 0n) {
-        return;
+        continue;
       }
       if (!isDefined(txidTransactionMap[txid])) {
         txidTransactionMap[txid] = {
@@ -2331,7 +2323,7 @@ abstract class AbstractWallet extends EventEmitter {
         balanceBucket: POI.getBalanceBucket(txo),
         hasValidPOIForActiveLists: POI.hasValidPOIsActiveLists(txo.poisPerList),
       });
-    });
+    }
 
     const history: TransactionHistoryEntryReceived[] = Object.values(txidTransactionMap);
     return history;
@@ -2421,11 +2413,11 @@ abstract class AbstractWallet extends EventEmitter {
 
     const txidTransactionMap: { [txid: string]: TransactionHistoryEntryPreprocessSpent } = {};
 
-    sentCommitments.forEach((sentCommitment) => {
+    for (const sentCommitment of sentCommitments) {
       const { txid, timestamp, note, isLegacyTransactNote, outputType, walletSource } =
         sentCommitment;
       if (note.value === 0n) {
-        return;
+        continue;
       }
       if (!isDefined(txidTransactionMap[txid])) {
         txidTransactionMap[txid] = {
@@ -2458,10 +2450,10 @@ abstract class AbstractWallet extends EventEmitter {
         );
       }
       txidTransactionMap[txid].tokenAmounts.push(tokenAmount);
-    });
+    }
 
     // Add unshield events to txidTransactionMap
-    allUnshieldEvents.forEach((unshieldEvent) => {
+    for (const unshieldEvent of allUnshieldEvents) {
       const foundUnshieldTransactionInTransactCommitments = txidTransactionMap[unshieldEvent.txid];
       if (!isDefined(foundUnshieldTransactionInTransactCommitments)) {
         // This will occur on a self-signed unshield.
@@ -2474,7 +2466,7 @@ abstract class AbstractWallet extends EventEmitter {
           tokenAmounts: [],
           version: TransactionHistoryItemVersion.UpdatedNov2022,
         };
-        return;
+        continue;
       }
 
       // Unshield event exists. Add to its amount rather than creating a new event.
@@ -2487,10 +2479,10 @@ abstract class AbstractWallet extends EventEmitter {
         existingUnshieldEvent.amount = (
           BigInt(existingUnshieldEvent.amount) + BigInt(unshieldEvent.amount)
         ).toString();
-        return;
+        continue;
       }
       txidTransactionMap[unshieldEvent.txid].unshieldEvents.push(unshieldEvent);
-    });
+    }
 
     const preProcessHistory: TransactionHistoryEntryPreprocessSpent[] =
       Object.values(txidTransactionMap);
@@ -2501,11 +2493,11 @@ abstract class AbstractWallet extends EventEmitter {
         let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
-        tokenAmounts.forEach((tokenAmount) => {
+        for (const tokenAmount of tokenAmounts) {
           if (!isDefined(tokenAmount.outputType)) {
             // Legacy notes without extra data, consider as a simple "transfer".
             transferTokenAmounts.push(tokenAmount as TransactionHistoryTransferTokenAmount);
-            return;
+            continue;
           }
 
           switch (tokenAmount.outputType) {
@@ -2522,7 +2514,7 @@ abstract class AbstractWallet extends EventEmitter {
               changeTokenAmounts.push(tokenAmount);
               break;
           }
-        });
+        }
 
         const unshieldTokenAmounts: TransactionHistoryUnshieldTokenAmount[] = unshieldEvents.map(
           (unshieldEvent) => {
@@ -2597,7 +2589,6 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<TokenBalancesAllTxidVersions> {
     const balances: TokenBalancesAllTxidVersions = {};
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -2608,10 +2599,10 @@ abstract class AbstractWallet extends EventEmitter {
         balanceBucketFilter,
       );
 
-      Object.keys(balancesByTxidVersion).forEach((tokenHash) => {
+      for (const tokenHash of Object.keys(balancesByTxidVersion)) {
         balances[txidVersion] ??= {};
         balances[txidVersion][tokenHash] = balancesByTxidVersion[tokenHash];
-      });
+      }
     }
 
     return balances;
@@ -2650,7 +2641,6 @@ abstract class AbstractWallet extends EventEmitter {
 
     const balancesByBucket: Partial<Record<WalletBalanceBucket, TokenBalances>> = {};
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const balanceBucket of Object.values(WalletBalanceBucket)) {
       const balanceBucketFilter = [balanceBucket];
       balancesByBucket[balanceBucket] = await AbstractWallet.getTokenBalancesByTxidVersion(
@@ -2675,7 +2665,7 @@ abstract class AbstractWallet extends EventEmitter {
     const tokenBalances: TokenBalances = {};
 
     // Loop through each TXO and add to balances if unspent
-    TXOs.forEach((txo) => {
+    for (const txo of TXOs) {
       const tokenHash = formatToByteLength(txo.note.tokenHash, ByteLength.UINT_256, false);
       // If we don't have an entry for this token yet, create one
       if (!isDefined(tokenBalances[tokenHash])) {
@@ -2688,7 +2678,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       const isSpent = txo.spendtxid !== false;
       if (isSpent) {
-        return;
+        continue;
       }
 
       const balanceBucket = POI.getBalanceBucket(txo);
@@ -2701,7 +2691,7 @@ abstract class AbstractWallet extends EventEmitter {
             formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
         ) {
           // Skip if txid doesn't match.
-          return;
+          continue;
         }
       } else if (!balanceBucketFilter.includes(balanceBucket)) {
         if (EngineDebug.isTestRun() && balanceBucket === WalletBalanceBucket.Spendable) {
@@ -2712,14 +2702,14 @@ abstract class AbstractWallet extends EventEmitter {
             ),
           );
         }
-        return;
+        continue;
       }
 
       // Store utxo
       tokenBalances[tokenHash].utxos.push(txo);
       // Increment balance
       tokenBalances[tokenHash].balance += txo.note.value;
-    });
+    }
 
     return tokenBalances;
   }
@@ -2761,12 +2751,12 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Loop through each token
 
-    Object.keys(tokenBalances).forEach((tokenHash) => {
+    for (const tokenHash of Object.keys(tokenBalances)) {
       // Create balances tree array
       totalBalancesByTreeNumber[tokenHash] = [];
 
       // Loop through each TXO and sort by tree
-      tokenBalances[tokenHash].utxos.forEach((utxo) => {
+      for (const utxo of tokenBalances[tokenHash].utxos) {
         if (!isDefined(totalBalancesByTreeNumber[tokenHash][utxo.tree])) {
           totalBalancesByTreeNumber[tokenHash][utxo.tree] = {
             balance: utxo.note.value,
@@ -2777,8 +2767,8 @@ abstract class AbstractWallet extends EventEmitter {
           totalBalancesByTreeNumber[tokenHash][utxo.tree].balance += utxo.note.value;
           totalBalancesByTreeNumber[tokenHash][utxo.tree].utxos.push(utxo);
         }
-      });
-    });
+      }
+    }
 
     return totalBalancesByTreeNumber;
   }
@@ -2958,7 +2948,6 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   async refreshPOIsForAllTXIDVersions(chain: Chain, forceRefresh?: boolean) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -2984,7 +2973,6 @@ abstract class AbstractWallet extends EventEmitter {
     this.isRefreshingPOIs.set(txidVersion, chain, true);
 
     try {
-      // eslint-disable-next-line no-restricted-syntax
       // Refresh POIs - Receive commitments
       await this.refreshReceivePOIsAllTXOs(txidVersion, chain);
 
@@ -3156,12 +3144,12 @@ abstract class AbstractWallet extends EventEmitter {
     await this.db.clearNamespace(namespace);
     this.isClearingBalances.set(null, chain, false);
 
-    Object.values(TXIDVersion).forEach((txidVersion) => {
+    for (const txidVersion of Object.values(TXIDVersion)) {
       if (walletDetailsMap[txidVersion]) {
         // @ts-expect-error
         walletDetailsMap[txidVersion].treeScannedHeights = [];
       }
-    });
+    }
     await this.db.put(this.getWalletDetailsPath(chain), msgpack.encode(walletDetailsMap));
 
     this.invalidateCommitmentsCache(chain);
@@ -3177,7 +3165,6 @@ abstract class AbstractWallet extends EventEmitter {
   ) {
     await this.clearDecryptedBalancesAllTXIDVersions(chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of Object.values(TXIDVersion)) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;

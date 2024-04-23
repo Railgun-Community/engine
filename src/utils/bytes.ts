@@ -219,11 +219,11 @@ function reverseBytes(data: ArrayLike<number> | string): ArrayLike<number> | str
  * @throws if invalid character found
  */
 function assertBytesWithinRange(string: string) {
-  string.split('').forEach((char) => {
-    if (char.charCodeAt(0) > 0xd800) {
+  for (let i = 0; i < string.length; i += 1) {
+    if (string.charCodeAt(i) > 0xd800) {
       throw new Error('Invalid Unicode codepoint > 0xD800');
     }
-  });
+  }
 }
 
 /**

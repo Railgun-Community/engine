@@ -100,13 +100,13 @@ export class TransactionBatch {
     const unshieldTokenDatas: TokenData[] = Object.values(this.unshieldDataMap).map(
       (output) => output.tokenData,
     );
-    [...outputTokenDatas, ...unshieldTokenDatas].forEach((tokenData) => {
+    for (const tokenData of [...outputTokenDatas, ...unshieldTokenDatas]) {
       const tokenHash = getTokenDataHash(tokenData);
       if (!tokenHashes.includes(tokenHash)) {
         tokenHashes.push(tokenHash);
         tokenDatas.push(tokenData);
       }
-    });
+    }
     return tokenDatas;
   }
 
@@ -252,14 +252,13 @@ export class TransactionBatch {
     let utxos: Optional<TXO[]>;
 
     // Find first tree with spending solutions.
-    treeSortedBalances.forEach((treeBalance, tree) => {
+    for (const [tree, treeBalance] of treeSortedBalances.entries()) {
+      if (!isDefined(treeBalance)) continue;
       const solutions = findExactSolutionsOverTargetValue(treeBalance, amountRequired);
-      if (!solutions) {
-        return;
-      }
+      if (!isDefined(solutions)) continue;
       spendingTree = tree;
       utxos = solutions;
-    });
+    }
 
     if (utxos == null || spendingTree == null) {
       throw new Error('No spending solutions found. Must use complex UTXO aggregator.');
@@ -474,7 +473,6 @@ export class TransactionBatch {
       }
 
       if (shouldGeneratePreTransactionPOIs) {
-        // eslint-disable-next-line no-restricted-syntax
         for (let i = 0; i < activeListKeys.length; i += 1) {
           const listKey = activeListKeys[i];
           preTransactionPOIsPerTxidLeafPerList[listKey] ??= {};
@@ -572,8 +570,7 @@ export class TransactionBatch {
     };
 
     const dummyProvedTransactions: (TransactionStructV2 | TransactionStructV3)[] = [];
-    for (let i = 0; i < spendingSolutionGroups.length; i += 1) {
-      const spendingSolutionGroup = spendingSolutionGroups[i];
+    for (const spendingSolutionGroup of spendingSolutionGroups) {
       const changeOutput = TransactionBatch.getChangeOutput(wallet, spendingSolutionGroup);
       const transaction = this.generateTransactionForSpendingSolutionGroup(
         spendingSolutionGroup,

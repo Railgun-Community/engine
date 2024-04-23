@@ -130,7 +130,7 @@ describe('bytes', () => {
   });
 
   it('Should hexlify', () => {
-    convertVectors.forEach((vector) => {
+    for (const vector of convertVectors) {
       // Test prefixed hex string to hex string
       expect(hexlify(`0x${vector.hex}`)).to.equal(vector.hex);
 
@@ -151,11 +151,11 @@ describe('bytes', () => {
 
       // Test number to hex string prefixed
       expect(hexlify(vector.number, true)).to.equal(`0x${vector.hex}`);
-    });
+    }
   });
 
   it('Should arrayify', () => {
-    convertVectors.forEach((vector) => {
+    for (const vector of convertVectors) {
       // Test prefixed hex string to hex string
       expect(arrayify(`0x${vector.hex}`)).to.deep.equal(vector.array);
 
@@ -167,7 +167,7 @@ describe('bytes', () => {
 
       // Test number to byte array
       expect(arrayify(vector.number)).to.deep.equal(vector.array);
-    });
+    }
   });
 
   it('Should not arrayify invalid BytesData', () => {
@@ -177,13 +177,13 @@ describe('bytes', () => {
 
   it('Should not numberify bad input', () => {
     const vectors = [hexlify(' '), hexlify('-'), hexlify('')];
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(() => numberify(vector)).to.throw(/Invalid BytesData/);
-    });
+    }
   });
 
   it('Should numberify', () => {
-    convertVectors.forEach((vector) => {
+    for (const vector of convertVectors) {
       // Test prefixed hex string to hex string
       expect(numberify(`0x${vector.hex}`).eq(vector.number)).to.equal(true);
 
@@ -201,11 +201,11 @@ describe('bytes', () => {
 
       // Test number to number
       expect(numberify(vector.number).eq(vector.number)).to.equal(true);
-    });
+    }
   });
 
   it('Should pad to length', () => {
-    padVectors.forEach((vector) => {
+    for (const vector of padVectors) {
       expect(padToLength(vector.original, 16)).to.deep.equal(vector.left16);
 
       expect(padToLength(vector.original, 32)).to.deep.equal(vector.left32);
@@ -213,7 +213,7 @@ describe('bytes', () => {
       expect(padToLength(vector.original, 16, 'right')).to.deep.equal(vector.right16);
 
       expect(padToLength(vector.original, 32, 'right')).to.deep.equal(vector.right32);
-    });
+    }
 
     expect(padToLength('0x00', 4)).to.equal('0x00000000');
   });
@@ -234,20 +234,20 @@ describe('bytes', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(reverseBytes(vector.bytes)).to.deep.equal(vector.reversed);
-    });
+    }
   });
 
   it('Should convert to/from utf8 string', () => {
     const validVectors = stringVectors.slice(0, 1);
-    validVectors.forEach((vector) => {
+    for (const vector of validVectors) {
       // Test bytes -> string
       expect(toUTF8String(vector.hex)).to.equal(vector.utf8);
 
       // Test string -> bytes
       expect(fromUTF8String(vector.utf8)).to.equal(vector.hex);
-    });
+    }
 
     // Brute force test all characters
     let testString = '';
@@ -261,7 +261,7 @@ describe('bytes', () => {
     const vectors: string[] = testString.match(/.{1,20}/g) || [];
 
     // Loop through each group and test
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       // Test against Buffer output as reference
       const bytesdata = Buffer.from(vector, 'utf8').toString('hex');
 
@@ -270,7 +270,7 @@ describe('bytes', () => {
 
       // Test string -> bytes
       expect(fromUTF8String(vector)).to.equal(bytesdata);
-    });
+    }
 
     // Test full string
     const fullBytes = Buffer.from(testString, 'utf8').toString('hex');
@@ -284,11 +284,11 @@ describe('bytes', () => {
 
   it('Should throw if utf8 string contains invalid characters', () => {
     const invalidVectors = stringVectors.slice(2);
-    invalidVectors.forEach((vector) => {
+    for (const vector of invalidVectors) {
       expect(() => toUTF8String(vector.hex)).to.throw(/Invalid/);
       expect(() => assertBytesWithinRange(vector.utf8)).to.throw(/Invalid/);
       expect(() => fromUTF8String(vector.utf8)).to.throw(/Invalid/);
-    });
+    }
   });
 
   it('Should chunk and combine bytes', () => {
@@ -332,10 +332,10 @@ describe('bytes', () => {
 
     expect(chunk('5d0afa')).to.deep.equal(['5d0afa']);
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(chunk(vector.bytes, vector.size)).to.deep.equal(vector.chunked);
       expect(combine(vector.chunked)).to.equal(vector.bytes);
-    });
+    }
   });
 
   it('Should trim bytes', () => {

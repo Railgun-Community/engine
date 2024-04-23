@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-await-in-loop */
 import { Proof } from '../models/prover-types';
 import { Chain } from '../models/engine-types';
 import {
@@ -126,14 +124,14 @@ export class POI {
   private static getAllListKeysWithValidInputPOIs(inputPOIsPerList: POIsPerList[]): string[] {
     const listKeys = this.getAllListKeys();
     const listKeysShouldGenerateSpentPOIs: string[] = [];
-    listKeys.forEach((listKey) => {
+    for (const listKey of listKeys) {
       const everyInputPOIValid = inputPOIsPerList.every((poisPerList) => {
         return poisPerList[listKey] === TXOPOIListStatus.Valid;
       });
       if (everyInputPOIValid) {
         listKeysShouldGenerateSpentPOIs.push(listKey);
       }
-    });
+    }
     return listKeysShouldGenerateSpentPOIs;
   }
 

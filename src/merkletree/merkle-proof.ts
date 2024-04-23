@@ -12,8 +12,8 @@ export const createDummyMerkleProof = (leaf: string): MerkleProof => {
 
   let latestHash = hexToBigInt(leaf);
 
-  for (let level = 0; level < elements.length; level += 1) {
-    latestHash = poseidon([latestHash, elements[level]]);
+  for (const element of elements) {
+    latestHash = poseidon([latestHash, element]);
   }
 
   return {

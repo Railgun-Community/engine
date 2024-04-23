@@ -384,7 +384,7 @@ describe('complex-solutions', () => {
       await createMockNote(addressData2, 70n),
       await createMockNote(addressData3, 65n),
     ];
-    outputs1.forEach((output) => transactionBatch1.addOutput(output));
+    for (const output of outputs1) transactionBatch1.addOutput(output);
     const tokenOutputs = outputs1; // filtered by token
     const spendingSolutionGroups1 = transactionBatch1.createComplexSatisfyingSpendingSolutionGroups(
       tokenData,

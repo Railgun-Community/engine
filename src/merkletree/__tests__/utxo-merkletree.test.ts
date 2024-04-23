@@ -53,9 +53,9 @@ describe('utxo-merkletree', () => {
       },
     ];
 
-    vectors.forEach((vector) => {
+    for (const vector of vectors) {
       expect(Merkletree.hashLeftRight(vector.left, vector.right)).to.equal(vector.result);
-    });
+    }
   });
 
   it('Should calculate zero values', () => {

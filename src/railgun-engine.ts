@@ -222,7 +222,6 @@ class RailgunEngine extends EventEmitter {
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const event of events) {
       const { treeNumber, startPosition, commitments } = event;
       if (EngineDebug.verboseScanLogging()) {
@@ -230,10 +229,9 @@ class RailgunEngine extends EventEmitter {
           `[commitmentListener: ${chain.type}:${chain.id}]: ${commitments.length} leaves at ${startPosition}`,
         );
       }
-      commitments.forEach((commitment) => {
-        // eslint-disable-next-line no-param-reassign
+      for (const commitment of commitments) {
         commitment.txid = formatToByteLength(commitment.txid, ByteLength.UINT_256, false);
-      });
+      }
 
       // Queue leaves to merkle tree
       // eslint-disable-next-line no-await-in-loop
@@ -290,12 +288,10 @@ class RailgunEngine extends EventEmitter {
     }
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
 
-    nullifiers.forEach((nullifier) => {
-      // eslint-disable-next-line no-param-reassign
+    for (const nullifier of nullifiers) {
       nullifier.txid = formatToByteLength(nullifier.txid, ByteLength.UINT_256, false);
-      // eslint-disable-next-line no-param-reassign
       nullifier.nullifier = formatToByteLength(nullifier.nullifier, ByteLength.UINT_256, false);
-    });
+    }
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.nullify(nullifiers);
 
@@ -319,10 +315,9 @@ class RailgunEngine extends EventEmitter {
       return;
     }
     EngineDebug.log(`engine.unshieldListener[${chain.type}:${chain.id}] ${unshields.length}`);
-    unshields.forEach((unshield) => {
-      // eslint-disable-next-line no-param-reassign
+    for (const unshield of unshields) {
       unshield.txid = formatToByteLength(unshield.txid, ByteLength.UINT_256, false);
-    });
+    }
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.addUnshieldEvents(unshields);
 
@@ -528,7 +523,6 @@ class RailgunEngine extends EventEmitter {
    * @param walletIdFilter - optional list of wallet ids to decrypt balances
    */
   async scanContractHistory(chain: Chain, walletIdFilter: Optional<string[]>) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1028,11 +1022,10 @@ class RailgunEngine extends EventEmitter {
 
     const railgunTransactionsLength = railgunTransactions.length;
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const [index, railgunTransaction] of railgunTransactions.entries()) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
       if (railgunTransactionWithTxid.version !== RailgunTransactionVersion.V2) {
-        return;
+        continue;
       }
 
       const {
@@ -1130,7 +1123,6 @@ class RailgunEngine extends EventEmitter {
         }
       }
 
-      // eslint-disable-next-line no-restricted-syntax
       for (let i = 0; i < standardCommitments.length; i += 1) {
         const position = utxoBatchStartPositionOut + i;
         // eslint-disable-next-line no-await-in-loop
@@ -1223,7 +1215,6 @@ class RailgunEngine extends EventEmitter {
 
     const toQueue: RailgunTransactionWithHash[] = [];
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const railgunTransaction of railgunTransactions) {
       const railgunTransactionWithTxid = createRailgunTransactionWithHash(railgunTransaction);
 
@@ -1308,7 +1299,6 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to clear
    */
   async clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of Object.values(TXIDVersion)) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1353,7 +1343,6 @@ class RailgunEngine extends EventEmitter {
     walletIdFilter: Optional<string[]>,
     forceRescanDevOnly = false,
   ) {
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1374,7 +1363,6 @@ class RailgunEngine extends EventEmitter {
       }
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1426,7 +1414,6 @@ class RailgunEngine extends EventEmitter {
   }
 
   async clearTXIDMerkletreeData(txidVersion: TXIDVersion, chain: Chain) {
-    // eslint-disable-next-line no-restricted-syntax
     if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
       return;
     }
@@ -1480,18 +1467,14 @@ class RailgunEngine extends EventEmitter {
   ) {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle:
-        return (
-          ContractStore.railgunSmartWalletContracts
-            .getOrThrow(null, chain)
-            .validateMerkleroot(tree, merkleroot)
-        );
+        return ContractStore.railgunSmartWalletContracts
+          .getOrThrow(null, chain)
+          .validateMerkleroot(tree, merkleroot);
 
       case TXIDVersion.V3_PoseidonMerkle:
-        return (
-          ContractStore.poseidonMerkleAccumulatorV3Contracts
-            .getOrThrow(null, chain)
-            .validateMerkleroot(tree, merkleroot)
-        );
+        return ContractStore.poseidonMerkleAccumulatorV3Contracts
+          .getOrThrow(null, chain)
+          .validateMerkleroot(tree, merkleroot);
     }
     return false;
   }
@@ -1623,7 +1606,6 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_UTXO_MERKLETREE_TXID_VERSIONS) {
       // eslint-disable-next-line no-await-in-loop
       const utxoMerkletree = await UTXOMerkletree.create(
@@ -1678,9 +1660,9 @@ class RailgunEngine extends EventEmitter {
 
         if (isDefined(txidMerkletree)) {
           // Load txid merkletree to all wallets
-          Object.values(this.wallets).forEach((wallet) => {
-            wallet.loadRailgunTXIDMerkletree(txidVersion, txidMerkletree as TXIDMerkletree);
-          });
+          for (const wallet of Object.values(this.wallets)) {
+            wallet.loadRailgunTXIDMerkletree(txidVersion, txidMerkletree);
+          }
         }
       }
 
@@ -1792,16 +1774,16 @@ class RailgunEngine extends EventEmitter {
     }
 
     // Unload merkletrees from wallets
-    Object.values(this.wallets).forEach((wallet) => {
-      ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
+    for (const wallet of Object.values(this.wallets)) {
+      for (const txidVersion of ACTIVE_TXID_VERSIONS) {
         if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
-          return;
+          continue;
         }
 
         wallet.unloadUTXOMerkletree(txidVersion, chain);
         wallet.unloadRailgunTXIDMerkletree(txidVersion, chain);
-      });
-    });
+      }
+    }
 
     // Unload listeners
     await ContractStore.railgunSmartWalletContracts.get(null, chain)?.unload();
@@ -1814,14 +1796,14 @@ class RailgunEngine extends EventEmitter {
     ContractStore.poseidonMerkleVerifierV3Contracts.del(null, chain);
     ContractStore.tokenVaultV3Contracts.del(null, chain);
 
-    ACTIVE_TXID_VERSIONS.forEach((txidVersion) => {
+    for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
-        return;
+        continue;
       }
 
       this.utxoMerkletrees.del(txidVersion, chain);
       this.txidMerkletrees.del(txidVersion, chain);
-    });
+    }
   }
 
   private static getLastSyncedBlockDBPrefix(txidVersion: TXIDVersion, chain: Chain): string[] {
@@ -1989,7 +1971,6 @@ class RailgunEngine extends EventEmitter {
     deferCompletionEvent: boolean,
   ) {
     const wallets = this.allWallets();
-    // eslint-disable-next-line no-restricted-syntax
     for (let i = 0; i < wallets.length; i += 1) {
       if (isDefined(walletIdFilter) && !walletIdFilter.includes(wallets[i].id)) {
         // Skip wallets not in filter
@@ -2014,9 +1995,8 @@ class RailgunEngine extends EventEmitter {
 
   invalidateTXOsCacheAllWallets(chain: Chain) {
     const wallets = this.allWallets();
-    // eslint-disable-next-line no-restricted-syntax
-    for (let i = 0; i < wallets.length; i += 1) {
-      wallets[i].invalidateCommitmentsCache(chain);
+    for (const wallet of wallets) {
+      wallet.invalidateCommitmentsCache(chain);
     }
   }
 
@@ -2045,9 +2025,9 @@ class RailgunEngine extends EventEmitter {
     );
 
     // Unload wallets
-    Object.keys(this.wallets).forEach((walletID) => {
+    for (const walletID of Object.keys(this.wallets)) {
       this.unloadWallet(walletID);
-    });
+    }
 
     await this.db.close();
   }
@@ -2062,7 +2042,6 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const txidVersion of ACTIVE_TXID_VERSIONS) {
       // Load UTXO and TXID merkletrees for wallet
       // eslint-disable-next-line no-await-in-loop
@@ -2192,12 +2171,12 @@ class RailgunEngine extends EventEmitter {
         treeHeight - 1,
       );
 
-      leaves.forEach((leaf) => {
+      for (const leaf of leaves) {
         if (!isDefined(leaf)) {
-          return;
+          continue;
         }
         if (leaf.blockNumber < startingBlock) {
-          return;
+          continue;
         }
         if (
           leaf.commitmentType === CommitmentType.LegacyGeneratedCommitment ||
@@ -2205,7 +2184,7 @@ class RailgunEngine extends EventEmitter {
         ) {
           shieldCommitments.push(leaf);
         }
-      });
+      }
     }
 
     return shieldCommitments;
