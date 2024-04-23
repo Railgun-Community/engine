@@ -627,7 +627,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Push values to leaves of write index
     for (const [index, leaf] of leaves.entries()) {
       if (!isDefined(leaf)) continue;
-      firstLevelHashWriteGroup[0][index] = leaf?.hash ?? this.zeros[0];
+      firstLevelHashWriteGroup[0][index] = leaf.hash ?? this.zeros[0];
     }
 
     const startIndex = 0;
@@ -718,14 +718,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
     const treeWriteQueue = this.writeQueue[treeIndex];
-    treeWriteQueue.forEach((_writeQueue, writeQueueIndex) => {
-      // for (const writeQueueKey of Object.keys(treeWriteQueue)) {
-      // const writeQueueIndex = Number(writeQueueKey);
+    for (const writeQueueKey of Object.keys(treeWriteQueue)) {
+      if (!isDefined(writeQueueKey)) continue;
+      const writeQueueIndex = Number(writeQueueKey);
       const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
       if (alreadyAddedToTree) {
         delete treeWriteQueue[writeQueueIndex];
       }
-    });
+    }
 
     if (this.processingWriteQueueTrees[treeIndex]) {
       EngineDebug.log(
