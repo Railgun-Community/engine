@@ -9,7 +9,6 @@ export * from './note';
 export * from './prover/prover';
 export * from './poi';
 export * from './provider';
-export * from './solutions';
 export * from './transaction';
 export * from './token';
 export * from './utils';
