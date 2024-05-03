@@ -29,7 +29,7 @@ import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 import { isDefined } from '../utils/is-defined';
 import { POI } from '../poi';
 import { PoseidonMerkleVerifier } from '../abi/typechain';
-import { Memo } from '../note';
+import { Memo } from '../note/memo';
 import WalletInfo from '../wallet/wallet-info';
 import { ZERO_ADDRESS } from '../utils';
 
