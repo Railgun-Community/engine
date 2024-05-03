@@ -10,7 +10,7 @@ const CURVE_SEED = fromUTF8String('babyjubjub seed');
  * @param path - bath to test
  * @returns valid
  */
-export function isValidPath(path: string): boolean {
+function isValidPath(path: string): boolean {
   return /^m(\/[0-9]+')+$/g.test(path);
 }
 

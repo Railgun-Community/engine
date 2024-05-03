@@ -2,7 +2,7 @@ export * from './railgun-engine';
 export * from './abi/abi';
 export * from './contracts';
 export * from './database/database';
-export * from './key-derivation';
+export { Mnemonic } from './key-derivation';
 export * from './merkletree/merkletree';
 export * from './validation';
 export * from './models';
