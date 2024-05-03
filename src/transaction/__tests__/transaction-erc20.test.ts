@@ -36,7 +36,7 @@ import { Prover, SnarkJSGroth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
 import { hashBoundParamsV2, hashBoundParamsV3 } from '../bound-params';
-import { MEMO_SENDER_RANDOM_NULL, TXIDVersion } from '../../models';
+import { TXIDVersion } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20, getTokenDataHashERC20 } from '../../note/note-util';
@@ -51,6 +51,7 @@ import { POI } from '../../poi/poi';
 import { PoseidonMerkleVerifier } from '../../abi/typechain';
 import { addChainSupportsV3 } from '../../chain/chain';
 import { XChaCha20 } from '../../utils/encryption/x-cha-cha-20';
+import { MEMO_SENDER_RANDOM_NULL } from '../../models/transaction-constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
