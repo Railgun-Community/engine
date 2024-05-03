@@ -117,7 +117,7 @@ export const serializeTokenData = (
   };
 };
 
-export const formatValue = (value: bigint, prefix: boolean = false): string => {
+const formatValue = (value: bigint, prefix: boolean = false): string => {
   return nToHex(value, ByteLength.UINT_128, prefix);
 };
 
@@ -148,7 +148,7 @@ export const getUnshieldPreImageNoteHash = (
   );
 };
 
-export const getUnshieldTokenData = (unshieldEvent: UnshieldStoredEvent): TokenData => {
+const getUnshieldTokenData = (unshieldEvent: UnshieldStoredEvent): TokenData => {
   return serializeTokenData(
     unshieldEvent.tokenAddress,
     unshieldEvent.tokenType,
