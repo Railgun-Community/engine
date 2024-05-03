@@ -81,7 +81,7 @@ import {
   WalletDetails,
   WalletDetailsMap,
 } from '../models/wallet-types';
-import { packPoint, unpackPoint } from '../key-derivation/babyjubjub';
+import { Babyjubjub } from '../key-derivation/babyjubjub';
 import { Chain } from '../models/engine-types';
 import { assertChainSupportsV3, getChainFullNetworkID, getChainSupportsV3 } from '../chain/chain';
 import { TransactNote } from '../note/transact-note';
@@ -3229,7 +3229,7 @@ abstract class AbstractWallet extends EventEmitter {
       const { vpriv: viewingPrivateKey, spub: spendingPublicKeyString }: ShareableViewingKeyData =
         msgpack.decode(Buffer.from(shareableViewingKey, 'hex')) as ShareableViewingKeyData;
 
-      const spendingPublicKey = unpackPoint(Buffer.from(spendingPublicKeyString, 'hex'));
+      const spendingPublicKey = Babyjubjub.unpackPoint(Buffer.from(spendingPublicKeyString, 'hex'));
       return { viewingPrivateKey, spendingPublicKey };
     } catch (cause) {
       throw new Error('Invalid shareable private key.', { cause });
@@ -3237,7 +3237,7 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   generateShareableViewingKey(): string {
-    const spendingPublicKeyString = packPoint(this.spendingPublicKey).toString('hex');
+    const spendingPublicKeyString = Babyjubjub.packPoint(this.spendingPublicKey).toString('hex');
     const data: ShareableViewingKeyData = {
       vpriv: formatToByteLength(this.viewingKeyPair.privateKey, ByteLength.UINT_256),
       spub: spendingPublicKeyString,
