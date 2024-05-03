@@ -68,7 +68,7 @@ import { hashBoundParamsV2 } from '../transaction/bound-params';
 import { calculateRailgunTransactionVerificationHash } from '../transaction/railgun-txid';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import { POIEngineProofInputs, TXIDVersion, TXOPOIListStatus } from '../models/poi-types';
-import { getBlindedCommitmentForShieldOrTransact } from '../poi/blinded-commitment';
+import { BlindedCommitment } from '../poi/blinded-commitment';
 import {
   GLOBAL_UTXO_POSITION_UNSHIELD_EVENT_HARDCODED_VALUE,
   GLOBAL_UTXO_TREE_UNSHIELD_EVENT_HARDCODED_VALUE,
@@ -625,7 +625,7 @@ describe('railgun-engine', function test() {
       ),
       ByteLength.UINT_256,
     );
-    const blindedCommitmentIn = getBlindedCommitmentForShieldOrTransact(
+    const blindedCommitmentIn = BlindedCommitment.getForShieldOrTransact(
       shieldCommitment,
       shield.notePublicKey,
       getGlobalTreePosition(0, 0),
@@ -899,7 +899,7 @@ describe('railgun-engine', function test() {
       ),
       ByteLength.UINT_256,
     );
-    const blindedCommitmentIn = getBlindedCommitmentForShieldOrTransact(
+    const blindedCommitmentIn = BlindedCommitment.getForShieldOrTransact(
       shieldCommitment,
       shield.notePublicKey,
       getGlobalTreePosition(0, 0),

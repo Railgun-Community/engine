@@ -19,7 +19,7 @@ import { ShieldNote, TransactNote, getTokenDataERC20 } from '../../note';
 import { ByteLength, hexToBigInt, nToHex } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
-import { getBlindedCommitmentForShieldOrTransact } from '../../poi/blinded-commitment';
+import { BlindedCommitment } from '../../poi/blinded-commitment';
 import { PublicInputsPOI } from '../../models';
 import { ProofCachePOI } from '../proof-cache-poi';
 import { config } from '../../test/config.test';
@@ -195,7 +195,7 @@ describe('prover', () => {
       6442080113031815261226726790601252395803415545769290265212232865825296902085n,
     );
     const blindedCommitmentForShield = hexToBigInt(
-      getBlindedCommitmentForShieldOrTransact(
+      BlindedCommitment.getForShieldOrTransact(
         nToHex(shieldCommitment, ByteLength.UINT_256),
         notePublicKey,
         getGlobalTreePosition(0, 0),

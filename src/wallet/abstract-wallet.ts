@@ -103,10 +103,7 @@ import {
   isTransactCommitmentType,
 } from '../utils/commitment';
 import { POI } from '../poi/poi';
-import {
-  getBlindedCommitmentForShieldOrTransact,
-  getBlindedCommitmentForUnshield,
-} from '../poi/blinded-commitment';
+import { BlindedCommitment } from '../poi/blinded-commitment';
 import { TXIDMerkletree } from '../merkletree/txid-merkletree';
 import {
   ACTIVE_TXID_VERSIONS,
@@ -804,7 +801,7 @@ abstract class AbstractWallet extends EventEmitter {
           : undefined,
         commitmentType: leaf.commitmentType,
         poisPerList: undefined,
-        blindedCommitment: getBlindedCommitmentForShieldOrTransact(
+        blindedCommitment: BlindedCommitment.getForShieldOrTransact(
           leaf.hash,
           noteReceive.notePublicKey,
           getGlobalTreePosition(leaf.utxoTree, leaf.utxoIndex),
@@ -832,7 +829,7 @@ abstract class AbstractWallet extends EventEmitter {
         outputType: noteSend.outputType,
         recipientAddress: encodeAddress(noteSend.receiverAddressData),
         poisPerList: undefined,
-        blindedCommitment: getBlindedCommitmentForShieldOrTransact(
+        blindedCommitment: BlindedCommitment.getForShieldOrTransact(
           leaf.hash,
           noteSend.notePublicKey,
           getGlobalTreePosition(leaf.utxoTree, leaf.utxoIndex),
@@ -1059,7 +1056,7 @@ abstract class AbstractWallet extends EventEmitter {
             hasUpdate = true;
           }
 
-          const blindedCommitment = getBlindedCommitmentForShieldOrTransact(
+          const blindedCommitment = BlindedCommitment.getForShieldOrTransact(
             commitment.hash,
             note.notePublicKey,
             globalTreePosition,
@@ -1156,7 +1153,7 @@ abstract class AbstractWallet extends EventEmitter {
           const commitment = await utxoMerkletree.getCommitment(tree, position);
 
           if (isTransactCommitment(commitment) && isDefined(commitment.railgunTxid)) {
-            sentCommitment.blindedCommitment = getBlindedCommitmentForShieldOrTransact(
+            sentCommitment.blindedCommitment = BlindedCommitment.getForShieldOrTransact(
               commitment.hash,
               note.notePublicKey,
               getGlobalTreePosition(commitment.utxoTree, commitment.utxoIndex),
@@ -1490,7 +1487,7 @@ abstract class AbstractWallet extends EventEmitter {
       })),
       ...unshieldEventsNeedPOIRefresh.map((unshieldEvent) => ({
         type: BlindedCommitmentType.Unshield,
-        blindedCommitment: getBlindedCommitmentForUnshield(unshieldEvent.railgunTxid as string),
+        blindedCommitment: BlindedCommitment.getForUnshield(unshieldEvent.railgunTxid as string),
       })),
     ];
     const blindedCommitmentToPOIList = await POI.retrievePOIsForBlindedCommitments(
@@ -1522,7 +1519,7 @@ abstract class AbstractWallet extends EventEmitter {
       if (!isDefined(unshieldEvent.railgunTxid)) {
         continue;
       }
-      const blindedCommitment = getBlindedCommitmentForUnshield(unshieldEvent.railgunTxid);
+      const blindedCommitment = BlindedCommitment.getForUnshield(unshieldEvent.railgunTxid);
       const poisPerList = blindedCommitmentToPOIList[blindedCommitment];
       if (!isDefined(poisPerList)) {
         continue;
@@ -1771,7 +1768,7 @@ abstract class AbstractWallet extends EventEmitter {
     );
 
     const railgunTxidIfHasUnshield = hasUnshield
-      ? getBlindedCommitmentForUnshield(railgunTxidHex)
+      ? BlindedCommitment.getForUnshield(railgunTxidHex)
       : '0x00';
 
     for (const [i, listMerkleProof] of listPOIMerkleProofs.entries()) {
@@ -1788,7 +1785,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     const nonUnshieldCommitments = hasUnshield ? commitmentsOut.slice(0, -1) : commitmentsOut;
     const blindedCommitmentsOut = nonUnshieldCommitments.map((commitment, i) => {
-      return getBlindedCommitmentForShieldOrTransact(
+      return BlindedCommitment.getForShieldOrTransact(
         nToHex(commitment, ByteLength.UINT_256, true),
         privateInputs.npkOut[i],
         globalTreePosition + BigInt(i),
@@ -1919,7 +1916,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Use 0x00 if there is no unshield.
       const railgunTxidIfHasUnshield = hasUnshield
-        ? getBlindedCommitmentForUnshield(railgunTxid)
+        ? BlindedCommitment.getForUnshield(railgunTxid)
         : '0x00';
 
       if (!sentCommitmentsForRailgunTxid.length && !unshieldEventsForRailgunTxid.length) {
