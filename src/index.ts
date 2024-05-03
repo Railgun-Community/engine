@@ -1,6 +1,5 @@
 export * from './railgun-engine';
 export * from './abi/abi';
-export * from './chain/chain';
 export * from './contracts';
 export * from './database/database';
 export * from './key-derivation';
