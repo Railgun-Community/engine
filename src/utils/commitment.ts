@@ -1,7 +1,7 @@
 import { PoseidonMerkleAccumulator } from '../abi/typechain/PoseidonMerkleAccumulator';
 import { CommitmentCiphertextStructOutput } from '../abi/typechain/RailgunSmartWallet';
-import { formatCommitmentCiphertextV2 } from '../contracts/railgun-smart-wallet/V2/V2-events';
-import { formatCommitmentCiphertextV3 } from '../contracts/railgun-smart-wallet/V3/V3-events';
+import { V2Events } from '../contracts/railgun-smart-wallet/V2/V2-events';
+import { V3Events } from '../contracts/railgun-smart-wallet/V3/V3-events';
 import {
   Commitment,
   CommitmentCiphertextV2,
@@ -31,14 +31,14 @@ export const convertTransactionStructToCommitmentSummary = (
       const commitmentCiphertextStruct = transactionStruct.boundParams.commitmentCiphertext[
         commitmentIndex
       ] as CommitmentCiphertextStructOutput;
-      commitmentCiphertext = formatCommitmentCiphertextV2(commitmentCiphertextStruct);
+      commitmentCiphertext = V2Events.formatCommitmentCiphertext(commitmentCiphertextStruct);
       break;
     }
     case TXIDVersion.V3_PoseidonMerkle: {
       const commitmentCiphertextStruct = transactionStruct.boundParams.local.commitmentCiphertext[
         commitmentIndex
       ] as PoseidonMerkleAccumulator.CommitmentCiphertextStructOutput;
-      commitmentCiphertext = formatCommitmentCiphertextV3(commitmentCiphertextStruct);
+      commitmentCiphertext = V3Events.formatCommitmentCiphertext(commitmentCiphertextStruct);
       break;
     }
   }

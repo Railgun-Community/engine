@@ -15,7 +15,7 @@ import {
   EventsUnshieldListener,
 } from '../../../models/event-types';
 import { TXIDVersion } from '../../../models/poi-types';
-import { processAccumulatorEvent, processAccumulatorUpdateEventsV3 } from './V3-events';
+import { V3Events } from './V3-events';
 import { promiseTimeout } from '../../../utils';
 import { recursivelyDecodeResult } from '../../../utils/ethers';
 import { TypedContractEvent, TypedEventLog } from '../../../abi/typechain/common';
@@ -111,7 +111,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
         }
 
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        processAccumulatorEvent(
+        V3Events.processAccumulatorEvent(
           this.txidVersion,
           event.args,
           event.log.transactionHash,
@@ -220,7 +220,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
       const allUpdateV3EventLogs = await this.scanAllUpdateV3Events(currentStartBlock, endBlock);
 
       // eslint-disable-next-line no-await-in-loop
-      await processAccumulatorUpdateEventsV3(
+      await V3Events.processAccumulatorUpdateEvents(
         this.txidVersion,
         allUpdateV3EventLogs,
         eventsCommitmentListener,

@@ -5,7 +5,7 @@ import { TransactionStructOutput } from '../abi/typechain/RailgunSmartWallet';
 import { AddressData } from '../key-derivation';
 import { isDefined } from '../utils/is-defined';
 import EngineDebug from '../debugger/debugger';
-import { formatCommitmentCiphertextV2 } from '../contracts/railgun-smart-wallet/V2/V2-events';
+import { V2Events } from '../contracts/railgun-smart-wallet/V2/V2-events';
 import { ByteLength, formatToByteLength, hexStringToBytes, nToHex } from '../utils/bytes';
 import { CommitmentCiphertextV2, TokenType } from '../models/formatted-types';
 import { recursivelyDecodeResult } from '../utils/ethers';
@@ -159,7 +159,7 @@ const extractFirstNoteERC20AmountMapV2 = async (
         return;
       }
 
-      const commitmentCiphertext = formatCommitmentCiphertextV2(commitmentCiphertextStructOutput);
+      const commitmentCiphertext = V2Events.formatCommitmentCiphertext(commitmentCiphertextStructOutput);
 
       const decryptedReceiverNote = await decryptReceiverNoteSafeV2(
         chain,
@@ -232,7 +232,7 @@ const extractRailgunTransactionDataV2 = async (
         throw new Error('No ciphertext found for commitment at index 0');
       }
 
-      const commitmentCiphertext = formatCommitmentCiphertextV2(commitmentCiphertextStructOutput);
+      const commitmentCiphertext = V2Events.formatCommitmentCiphertext(commitmentCiphertextStructOutput);
 
       // Get NPK for first note, if addressed to current wallet.
       const firstCommitmentNotePublicKey = await extractNPKFromCommitmentCiphertextV2(
