@@ -77,7 +77,7 @@ export class V3Events {
     };
   }
 
-  static formatTransactCommitments(
+  private static formatTransactCommitments(
     transactionHash: string,
     blockNumber: number,
     commitmentHashes: string[],
@@ -273,7 +273,7 @@ export class V3Events {
     };
   }
 
-  static formatShieldCommitment(
+  private static formatShieldCommitment(
     transactionHash: string,
     blockNumber: number,
     from: string,

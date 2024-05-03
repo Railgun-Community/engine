@@ -30,7 +30,7 @@ import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../../abi/abi';
 import { TXIDVersion } from '../../../models/poi-types';
 
 export class V2Events {
-  static formatShieldCommitments(
+  private static formatShieldCommitments(
     transactionHash: string,
     preImages: CommitmentPreimageStructOutput[],
     shieldCiphertext: ShieldCiphertextStructOutput[],
@@ -134,7 +134,7 @@ export class V2Events {
     };
   }
 
-  static formatTransactCommitments(
+  private static formatTransactCommitments(
     transactionHash: string,
     hash: string[],
     commitments: CommitmentCiphertextStructOutput[],
