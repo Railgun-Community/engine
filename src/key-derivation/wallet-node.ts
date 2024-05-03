@@ -3,7 +3,7 @@ import { poseidon } from '../utils/poseidon';
 import { KeyNode } from '../models/engine-types';
 import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } from './bip32';
 import { hexStringToBytes, hexToBigInt } from '../utils/bytes';
-import { mnemonicToSeed } from './bip39';
+import { Mnemonic } from './bip39';
 import { getPublicSpendingKey, getPublicViewingKey } from '../utils/keys-utils';
 
 const HARDENED_OFFSET = 0x80000000;
@@ -58,7 +58,7 @@ export class WalletNode {
    * @returns {WalletNode}
    */
   static fromMnemonic(mnemonic: string): WalletNode {
-    const seed = mnemonicToSeed(mnemonic);
+    const seed = Mnemonic.toSeed(mnemonic);
     return new WalletNode(getMasterKeyFromSeed(seed));
   }
 

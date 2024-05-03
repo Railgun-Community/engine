@@ -1,26 +1,50 @@
+import { HDKey } from 'ethereum-cryptography/hdkey';
 import * as bip39 from 'ethereum-cryptography/bip39';
 import { wordlist } from 'ethereum-cryptography/bip39/wordlists/english';
-import { toHex } from 'ethereum-cryptography/utils';
+import { toHex, bytesToHex } from 'ethereum-cryptography/utils';
+import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
+import { HDNodeWallet, Mnemonic as EthersMnemonic } from 'ethers';
 import { hexStringToBytes } from '../utils/bytes';
 
-function generateMnemonic(strength: 128 | 192 | 256 = 128): string {
-  return bip39.generateMnemonic(wordlist, strength);
-}
+const getPath = (index = 0) => {
+  return `m/44'/60'/0'/0/${index}`;
+};
 
-function validateMnemonic(mnemonic: string): boolean {
-  return bip39.validateMnemonic(mnemonic, wordlist);
-}
+export class Mnemonic {
+  static generate(strength: 128 | 192 | 256 = 128): string {
+    return bip39.generateMnemonic(wordlist, strength);
+  }
 
-function mnemonicToSeed(mnemonic: string, password: string = ''): string {
-  return toHex(bip39.mnemonicToSeedSync(mnemonic, password));
-}
+  static validate(mnemonic: string): boolean {
+    return bip39.validateMnemonic(mnemonic, wordlist);
+  }
 
-function mnemonicToEntropy(mnemonic: string): string {
-  return toHex(bip39.mnemonicToEntropy(mnemonic, wordlist));
-}
+  static toSeed(mnemonic: string, password: string = ''): string {
+    return toHex(bip39.mnemonicToSeedSync(mnemonic, password));
+  }
 
-function entropyToMnemonic(entropy: string): string {
-  return bip39.entropyToMnemonic(hexStringToBytes(entropy), wordlist);
-}
+  static toEntropy(mnemonic: string): string {
+    return toHex(bip39.mnemonicToEntropy(mnemonic, wordlist));
+  }
 
-export { generateMnemonic, validateMnemonic, mnemonicToSeed, mnemonicToEntropy, entropyToMnemonic };
+  static fromEntropy(entropy: string): string {
+    return bip39.entropyToMnemonic(hexStringToBytes(entropy), wordlist);
+  }
+
+  /**
+   * For deriving 0x private key from mnemonic and derivation index. Not for use with 0zk.
+   */
+  static to0xPrivateKey(mnemonic: string, derivationIndex?: number): string {
+    const seed = mnemonicToSeedSync(mnemonic);
+    const path = getPath(derivationIndex);
+    const node = HDKey.fromMasterSeed(seed).derive(path);
+    const privateKey = bytesToHex(node.privateKey as Uint8Array);
+    return privateKey;
+  }
+
+  static to0xAddress(mnemonic: string, derivationIndex?: number): string {
+    const path = getPath(derivationIndex);
+    const hdnode = HDNodeWallet.fromMnemonic(EthersMnemonic.fromPhrase(mnemonic)).derivePath(path);
+    return hdnode.address;
+  }
+}

@@ -1,4 +1,3 @@
-import { HDNodeWallet, Mnemonic } from 'ethers';
 import { Signature } from '@railgun-community/circomlibjs';
 import { poseidon } from '../utils/poseidon';
 import { Database } from '../database/database';
@@ -7,7 +6,7 @@ import { WalletData } from '../models/wallet-types';
 import { combine } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
 import { AbstractWallet } from './abstract-wallet';
-import { mnemonicToSeed } from '../key-derivation/bip39';
+import { Mnemonic } from '../key-derivation/bip39';
 import { PublicInputsRailgun } from '../models';
 import { signEDDSA } from '../utils/keys-utils';
 import { Prover } from '../prover/prover';
@@ -53,9 +52,7 @@ class RailgunWallet extends AbstractWallet {
       this.id,
       encryptionKey,
     )) as WalletData;
-    const path = `m/44'/60'/0'/0/${index}`;
-    const hdnode = HDNodeWallet.fromMnemonic(Mnemonic.fromPhrase(mnemonic)).derivePath(path);
-    return hdnode.address;
+    return Mnemonic.to0xAddress(mnemonic, index);
   }
 
   /**
@@ -63,7 +60,7 @@ class RailgunWallet extends AbstractWallet {
    * @returns {string} hash of mnemonic and index
    */
   private static generateID(mnemonic: string, index: number): string {
-    return sha256(combine([mnemonicToSeed(mnemonic), index.toString(16)]));
+    return sha256(combine([Mnemonic.toSeed(mnemonic), index.toString(16)]));
   }
 
   private static async createWallet(

@@ -15,7 +15,7 @@ import {
 import { AbstractWallet } from '../wallet/abstract-wallet';
 import { Chain } from '../models/engine-types';
 import { ArtifactGetter, PublicInputsRailgun } from '../models/prover-types';
-import { mnemonicTo0xPrivateKey } from '../key-derivation';
+import { Mnemonic } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
 import { promiseTimeout } from '../utils';
 import { MerklerootValidator } from '../models/merkletree-types';
@@ -225,7 +225,7 @@ export const awaitRailgunSmartWalletNullified = async (txidVersion: TXIDVersion,
 };
 
 export const getEthersWallet = (mnemonic: string, provider?: Provider): Wallet => {
-  const privateKey = mnemonicTo0xPrivateKey(mnemonic);
+  const privateKey = Mnemonic.to0xPrivateKey(mnemonic);
   return new Wallet(privateKey, provider);
 };
 
