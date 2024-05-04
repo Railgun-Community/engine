@@ -11,7 +11,6 @@ import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
 import {
-  Commitment,
   CommitmentType,
   LegacyGeneratedCommitment,
   Nullifier,
@@ -53,7 +52,7 @@ import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
-import { delay, isTransactCommitment, promiseTimeout, stringToBigInt } from './utils';
+import { delay, isTransactCommitment, promiseTimeout } from './utils';
 import { initPoseidonPromise } from './utils/poseidon';
 import { initCurve25519Promise } from './utils/scalar-multiply';
 import {
@@ -72,6 +71,7 @@ import { PoseidonMerkleAccumulatorContract } from './contracts/railgun-smart-wal
 import { PoseidonMerkleVerifierContract } from './contracts/railgun-smart-wallet/V3/poseidon-merkle-verifier';
 import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-vault-contract';
 import { Registry } from './utils/registry';
+import { stringToBigInt } from './utils/bigint';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;

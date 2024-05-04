@@ -1,4 +1,3 @@
-export * from './bigint';
 export * from './bytes';
 export * from './encryption/ciphertext';
 export * from './commitment';
