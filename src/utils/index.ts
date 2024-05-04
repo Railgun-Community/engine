@@ -1,4 +1,3 @@
-export * from './average';
 export * from './bigint';
 export * from './bytes';
 export * from './encryption/ciphertext';
