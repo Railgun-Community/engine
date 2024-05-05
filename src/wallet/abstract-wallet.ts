@@ -1,7 +1,6 @@
 /* eslint-disable no-await-in-loop */
 import { Signature } from '@railgun-community/circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
-import BN from 'bn.js';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
 import { BigNumberish, ContractTransaction } from 'ethers';
@@ -57,7 +56,6 @@ import {
   hexToBigInt,
   hexToBytes,
   nToHex,
-  numberify,
   padToLength,
 } from '../utils/bytes';
 import { generateSimpleKey, getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
@@ -341,10 +339,10 @@ abstract class AbstractWallet extends EventEmitter {
       (el) => formatToByteLength(el, ByteLength.UINT_256),
     );
     if (tree != null) {
-      path.push(hexlify(padToLength(new BN(tree), 32)));
+      path.push(hexlify(padToLength(tree, 32)));
     }
     if (position != null) {
-      path.push(hexlify(padToLength(new BN(position), 32)));
+      path.push(hexlify(padToLength(position, 32)));
     }
     return path;
   }
@@ -373,10 +371,10 @@ abstract class AbstractWallet extends EventEmitter {
       getChainFullNetworkID(chain),
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
     if (tree != null) {
-      path.push(hexlify(padToLength(new BN(tree), 32)));
+      path.push(hexlify(padToLength(tree, 32)));
     }
     if (position != null) {
-      path.push(hexlify(padToLength(new BN(position), 32)));
+      path.push(hexlify(padToLength(position, 32)));
     }
     return path;
   }
@@ -932,8 +930,8 @@ abstract class AbstractWallet extends EventEmitter {
             return undefined;
           }
 
-          const tree = numberify(keySplit[3]).toNumber();
-          const position = numberify(keySplit[4]).toNumber();
+          const tree = parseInt(keySplit[3], 10);
+          const position = parseInt(keySplit[4], 10);
 
           return { storedReceiveCommitment, tree, position };
         }),
@@ -959,8 +957,8 @@ abstract class AbstractWallet extends EventEmitter {
             return undefined;
           }
 
-          const tree = numberify(keySplit[3]).toNumber();
-          const position = numberify(keySplit[4]).toNumber();
+          const tree = parseInt(keySplit[3], 10);
+          const position = parseInt(keySplit[4], 10);
 
           return { storedSendCommitment, tree, position };
         }),

@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import { KeyNode } from '../models/engine-types';
 import { fromUTF8String, padToLength } from '../utils/bytes';
 import { sha512HMAC } from '../utils/hash';
@@ -45,7 +44,7 @@ export function childKeyDerivationHardened(
   offset: number = 0x80000000,
 ): KeyNode {
   // Convert index to bytes as 32bit big endian
-  const indexFormatted = padToLength(new BN(index + offset), 4);
+  const indexFormatted = padToLength(index + offset, 4);
 
   // Calculate HMAC preImage
   const preImage = `00${node.chainKey}${indexFormatted as string}`;

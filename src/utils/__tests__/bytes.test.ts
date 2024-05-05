@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import {
@@ -10,7 +9,6 @@ import {
   formatToByteLength,
   fromUTF8String,
   hexlify,
-  numberify,
   padToLength,
   randomHex,
   reverseBytes,
@@ -25,20 +23,17 @@ const convertVectors = [
   {
     hex: '0138bc',
     array: [1, 56, 188],
-    number: new BN('80060', 10),
-    numberLe: new BN('80060', 10, 'le'),
+    number: BigInt('80060'),
   },
   {
     hex: '5241494c47554e',
     array: [82, 65, 73, 76, 71, 85, 78],
-    number: new BN('23152731158435150', 10),
-    numberLe: new BN('23152731158435150', 10, 'le'),
+    number: BigInt('23152731158435150'),
   },
   {
     hex: '50524956414359202620414e4f4e594d495459',
     array: [80, 82, 73, 86, 65, 67, 89, 32, 38, 32, 65, 78, 79, 78, 89, 77, 73, 84, 89],
-    number: new BN('1791227778594112336062762560780788585783186521', 10),
-    numberLe: new BN('1791227778594112336062762560780788585783186521', 10, 'le'),
+    number: BigInt('1791227778594112336062762560780788585783186521'),
   },
 ];
 
@@ -98,7 +93,7 @@ const padVectors = [
     right32: '0xf6fc84c9f21c24907d6bee6eec38caba00000000000000000000000000000000',
   },
   {
-    original: new BN('f6fc84c9f21c24907d6bee6eec38caba', 'hex'),
+    original: BigInt('0xf6fc84c9f21c24907d6bee6eec38caba'),
     left16: 'f6fc84c9f21c24907d6bee6eec38caba',
     left32: '00000000000000000000000000000000f6fc84c9f21c24907d6bee6eec38caba',
     right16: 'f6fc84c9f21c24907d6bee6eec38caba',
@@ -152,6 +147,11 @@ describe('bytes', () => {
       // Test number to hex string prefixed
       expect(hexlify(vector.number, true)).to.equal(`0x${vector.hex}`);
     }
+
+    expect(hexlify(123)).to.equal('7b');
+    expect(hexlify(123n)).to.equal('7b');
+    expect(hexlify(1234)).to.equal('04d2');
+    expect(hexlify(1234n)).to.equal('04d2');
   });
 
   it('Should arrayify', () => {
@@ -173,35 +173,6 @@ describe('bytes', () => {
   it('Should not arrayify invalid BytesData', () => {
     const invalid = 'zzzzza';
     expect(() => arrayify(invalid)).to.throw('Invalid BytesData');
-  });
-
-  it('Should not numberify bad input', () => {
-    const vectors = [hexlify(' '), hexlify('-'), hexlify('')];
-    for (const vector of vectors) {
-      expect(() => numberify(vector)).to.throw(/Invalid BytesData/);
-    }
-  });
-
-  it('Should numberify', () => {
-    for (const vector of convertVectors) {
-      // Test prefixed hex string to hex string
-      expect(numberify(`0x${vector.hex}`).eq(vector.number)).to.equal(true);
-
-      // Test hex string to number
-      expect(numberify(vector.hex).eq(vector.number)).to.equal(true);
-
-      // Test hex string to number little endian
-      expect(numberify(vector.hex, 'le').eq(vector.numberLe)).to.equal(true);
-
-      // Test byte array to number
-      expect(numberify(vector.array).eq(vector.number)).to.equal(true);
-
-      // Test byte array to number little endian
-      expect(numberify(vector.array, 'le').eq(vector.numberLe)).to.equal(true);
-
-      // Test number to number
-      expect(numberify(vector.number).eq(vector.number)).to.equal(true);
-    }
   });
 
   it('Should pad to length', () => {
@@ -339,10 +310,7 @@ describe('bytes', () => {
   });
 
   it('Should trim bytes', () => {
-    expect(() => {
-      trim(new BN(32), 1, 'right');
-    }).to.throw('Can\t trim BN from right');
-    expect(trim(new BN(861), 1).toString(10)).to.equal('93');
+    expect(trim(861n, 1).toString(10)).to.equal('93');
     expect(trim('17b3c8d9', 2)).to.equal('c8d9');
     expect(trim('17b3c8d9', 2, 'right')).to.equal('17b3');
     expect(trim('0x17b3c8d9', 2)).to.equal('0xc8d9');

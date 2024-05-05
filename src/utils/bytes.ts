@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import { bytesToHex, hexToBytes } from 'ethereum-cryptography/utils';
 import { getRandomBytesSync } from 'ethereum-cryptography/random';
 import crypto from 'crypto';
@@ -10,6 +9,8 @@ if (isReactNative) {
   // eslint-disable-next-line global-require
   require('fast-text-encoding');
 }
+
+export const FULL_32_BITS = BigInt(2 ** 32 - 1);
 
 export enum ByteLength {
   UINT_8 = 1,
@@ -58,10 +59,11 @@ function hexlify(data: BytesData, prefix = false): string {
     // If we're already a string return the string
     // Strip leading 0x if it exists before returning
     hexString = strip0x(data);
-  } else if (data instanceof BN) {
-    // If we're a BN object convert to string
-    // Return hex string 0 padded to even length, if length is 0 then set to 2
-    hexString = data.toString('hex', data.byteLength() * 2 || 2);
+  } else if (typeof data === 'bigint' || typeof data === 'number') {
+    hexString = data.toString(16);
+    if (hexString.length % 2 === 1) {
+      hexString = `0${hexString}`;
+    }
   } else {
     // We're an ArrayLike
     // Coerce ArrayLike to Array
@@ -86,19 +88,14 @@ function hexlify(data: BytesData, prefix = false): string {
  * @returns byte array
  */
 function arrayify(data: BytesData): number[] {
-  // If we're a BN object, convert to bytes array and return
-  if (data instanceof BN) {
-    // Else return bytes array
-    return data.toArray();
-  }
-
   // If we're already a byte array return array coerced data
-  if (typeof data !== 'string') {
+  if (typeof data !== 'string' && typeof data !== 'bigint' && typeof data !== 'number') {
     return Array.from(data);
   }
 
   // Remove leading 0x if exists
-  const dataFormatted = strip0x(data);
+  const dataFormatted =
+    typeof data === 'bigint' || typeof data === 'number' ? hexlify(data) : strip0x(data);
 
   // Create empty array
   const bytesArray: number[] = [];
@@ -118,36 +115,6 @@ function arrayify(data: BytesData): number[] {
 }
 
 /**
- * Coerces BytesData into BN.js object
- * @param data - bytes data to coerce
- * @param endian - bytes endianess
- * @returns BN.js object
- */
-function numberify(data: BytesData, endian: 'be' | 'le' = 'be'): BN {
-  // If we're a BN already, return
-  if (data instanceof BN) {
-    return data;
-  }
-
-  // If we're a hex string create a BN object from it and return
-  if (typeof data === 'string') {
-    // Remove leading 0x if exists
-    const dataFormatted = strip0x(data);
-    const invalid = [' ', '-', ''];
-    if (invalid.includes(dataFormatted)) {
-      throw new Error(`Invalid BytesData: ${dataFormatted}`);
-    }
-    return new BN(dataFormatted, 'hex', endian);
-  }
-
-  // Coerce ArrayLike to Array
-  const dataArray: number[] = Array.from(data);
-
-  // Create BN object from array and return
-  return new BN(dataArray, undefined, endian);
-}
-
-/**
  * Pads BytesData to specified length
  * @param data - bytes data
  * @param length - length in bytes to pad to
@@ -159,27 +126,31 @@ function padToLength(
   length: number,
   side: 'left' | 'right' = 'left',
 ): string | number[] {
-  // Can't pad a number, if we get a number convert to hex string
-  const dataFormatted = data instanceof BN ? hexlify(data) : data;
+  if (typeof data === 'bigint' || typeof data === 'number') {
+    if (side === 'left') {
+      return data.toString(16).padStart(length * 2, '0');
+    }
+    return data.toString(16).padEnd(length * 2, '0');
+  }
 
-  if (typeof dataFormatted === 'string') {
-    const dataFormattedString = strip0x(dataFormatted);
+  if (typeof data === 'string') {
+    const dataFormattedString = strip0x(data);
 
     // If we're requested to pad to left, pad left and return
     if (side === 'left') {
-      return dataFormatted.startsWith('0x')
+      return data.startsWith('0x')
         ? `0x${dataFormattedString.padStart(length * 2, '0')}`
         : dataFormattedString.padStart(length * 2, '0');
     }
 
     // Else pad right and return
-    return dataFormatted.startsWith('0x')
+    return data.startsWith('0x')
       ? `0x${dataFormattedString.padEnd(length * 2, '0')}`
       : dataFormattedString.padEnd(length * 2, '0');
   }
 
   // Coerce data into array
-  const dataArray = Array.from(dataFormatted);
+  const dataArray = Array.from(data);
 
   if (side === 'left') {
     // If side is left, unshift till length
@@ -283,15 +254,11 @@ function combine(data: BytesData[]): string {
  * @returns trimmed data
  */
 function trim(data: BytesData, length: number, side: 'left' | 'right' = 'left'): BytesData {
-  if (data instanceof BN) {
-    if (side === 'left') {
-      // If side is left, mask to byte length
-      return data.maskn(length * 8);
-    }
+  if (typeof data === 'bigint' || typeof data === 'number') {
+    return BigInt(`0x${trim(data.toString(16), length, side) as string}`);
+  }
 
-    // Can't trim from right as we don't know the byte length of BN objects
-    throw new Error('Can\t trim BN from right');
-  } else if (typeof data === 'string') {
+  if (typeof data === 'string') {
     const dataFormatted = data.startsWith('0x') ? data.slice(2) : data;
 
     if (side === 'left') {
@@ -421,7 +388,6 @@ export {
   randomHex,
   hexlify,
   arrayify,
-  numberify,
   padToLength,
   reverseBytes,
   assertBytesWithinRange,

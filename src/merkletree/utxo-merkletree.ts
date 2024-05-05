@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import type { PutBatch } from 'abstract-leveldown';
 import { Database } from '../database/database';
 import { Chain } from '../models/engine-types';
@@ -7,7 +6,7 @@ import {
   InvalidMerklerootDetails,
   MerklerootValidator,
 } from '../models/merkletree-types';
-import { ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
+import { FULL_32_BITS, ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
@@ -71,7 +70,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   getNullifierDBPath(tree: number, nullifier: string): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      hexlify(new BN(0).notn(32).subn(1)), // 2^32-2
+      hexlify(FULL_32_BITS - 1n), // 2^32-2
       hexlify(nullifier),
     ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
   }
@@ -88,7 +87,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   ): string[] {
     const path = [
       ...this.getMerkletreeDBPrefix(),
-      hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
+      hexlify(FULL_32_BITS - 2n), // 2^32-3
     ];
     if (txid != null) {
       path.push(hexlify(txid));

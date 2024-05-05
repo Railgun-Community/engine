@@ -1,4 +1,3 @@
-// import BN from 'bn.js';
 import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
 import { getChainFullNetworkID } from '../chain/chain';

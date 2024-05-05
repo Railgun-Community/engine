@@ -2,7 +2,7 @@ import { poseidon } from '../utils/poseidon';
 import { NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
-import { SNARK_PRIME_BIGINT } from '../utils/constants';
+import { SNARK_PRIME } from '../utils/constants';
 import {
   formatToByteLength,
   ByteLength,
@@ -172,7 +172,7 @@ const getTokenDataHashNFT = (tokenData: TokenData): string => {
     nToBytes(BigInt(tokenData.tokenSubID), ByteLength.UINT_256),
   ]);
   const hashed: string = keccak256(combinedData);
-  const modulo: bigint = hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
+  const modulo: bigint = hexToBigInt(hashed) % SNARK_PRIME;
   return nToHex(modulo, ByteLength.UINT_256);
 };
 

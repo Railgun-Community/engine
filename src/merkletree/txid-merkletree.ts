@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import { PutBatch } from 'abstract-leveldown';
 import { Database } from '../database/database';
 import { Chain } from '../models/engine-types';
@@ -501,7 +500,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
   private getPOILaunchSnapshotNodeDBPath(level: number): string[] {
     const snapshotPrefix = fromUTF8String('poi-launch-snapshot');
-    return [...this.getMerkletreeDBPrefix(), snapshotPrefix, new BN(level)].map((el) =>
+    return [...this.getMerkletreeDBPrefix(), snapshotPrefix, level].map((el) =>
       formatToByteLength(el, ByteLength.UINT_256),
     );
   }
@@ -541,12 +540,9 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {
     const merklerootPrefix = fromUTF8String('merkleroots');
-    return [
-      ...this.getMerkletreeDBPrefix(),
-      merklerootPrefix,
-      hexlify(new BN(tree)),
-      hexlify(new BN(index)),
-    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
+    return [...this.getMerkletreeDBPrefix(), merklerootPrefix, hexlify(tree), hexlify(index)].map(
+      (el) => formatToByteLength(el, ByteLength.UINT_256),
+    );
   }
 
   protected async newLeafRootTrigger(

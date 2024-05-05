@@ -1,7 +1,7 @@
 import { poseidon } from '../utils/poseidon';
 import { MerkleProof } from '../models/formatted-types';
 import { TREE_DEPTH } from '../models/merkletree-types';
-import { ByteLength, hexToBigInt, hexlify, nToHex, numberify } from '../utils/bytes';
+import { ByteLength, hexToBigInt, hexlify, nToHex } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 
 export const createDummyMerkleProof = (leaf: string): MerkleProof => {
@@ -31,13 +31,13 @@ export const createDummyMerkleProof = (leaf: string): MerkleProof => {
  */
 export const verifyMerkleProof = (proof: MerkleProof): boolean => {
   // Get indices as BN form
-  const indices = numberify(proof.indices);
+  const indices = hexToBigInt(proof.indices);
 
   // Calculate proof root and return if it matches the proof in the MerkleProof
   // Loop through each element and hash till we've reduced to 1 element
   const calculatedRoot = proof.elements.reduce((current, element, index) => {
     // If index is right
-    if (indices.testn(index)) {
+    if ((indices & (2n ** BigInt(index))) > 0n) {
       return Merkletree.hashLeftRight(element, current);
     }
 
