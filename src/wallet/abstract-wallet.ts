@@ -930,8 +930,8 @@ abstract class AbstractWallet extends EventEmitter {
             return undefined;
           }
 
-          const tree = parseInt(keySplit[3], 10);
-          const position = parseInt(keySplit[4], 10);
+          const tree = parseInt(keySplit[3], 16);
+          const position = parseInt(keySplit[4], 16);
 
           return { storedReceiveCommitment, tree, position };
         }),
@@ -957,8 +957,8 @@ abstract class AbstractWallet extends EventEmitter {
             return undefined;
           }
 
-          const tree = parseInt(keySplit[3], 10);
-          const position = parseInt(keySplit[4], 10);
+          const tree = parseInt(keySplit[3], 16);
+          const position = parseInt(keySplit[4], 16);
 
           return { storedSendCommitment, tree, position };
         }),
