@@ -1,8 +1,8 @@
 import { BytesLike, ethers } from 'ethers';
-import { arrayify } from './bytes';
+import { ByteUtils } from './bytes';
 
 const bytesLikeify = (data: BytesLike): Uint8Array => {
-  return new Uint8Array(arrayify(data));
+  return new Uint8Array(ByteUtils.arrayify(data));
 };
 
 /**

@@ -1,4 +1,4 @@
-export * from './bytes';
+export {ByteLength, ByteUtils} from './bytes';
 export * from './encryption/ciphertext';
 export * from './commitment';
 export * from './constants';

@@ -4,7 +4,7 @@ import { Chain } from '../../../models/engine-types';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { PoseidonMerkleAccumulator } from '../../../abi/typechain/PoseidonMerkleAccumulator';
 import { ABIPoseidonMerkleAccumulator } from '../../../abi/abi';
-import { ByteLength, formatToByteLength, hexlify } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import EngineDebug from '../../../debugger/debugger';
 import { assertIsPollingProvider } from '../../../provider/polling-util';
 import {
@@ -69,7 +69,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
    * Get current merkle root
    */
   async merkleRoot(): Promise<string> {
-    return hexlify(await this.contract.accumulatorRoot());
+    return ByteUtils.hexlify(await this.contract.accumulatorRoot());
   }
 
   /**
@@ -79,7 +79,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
     try {
       const isValidMerkleroot = await this.contract.rootHistory(
         tree,
-        formatToByteLength(root, ByteLength.UINT_256, true),
+        ByteUtils.formatToByteLength(root, ByteLength.UINT_256, true),
       );
       // if (!isValidMerkleroot && EngineDebug.isTestRun()) {
       //   EngineDebug.error(
@@ -159,7 +159,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
       return eventsWithDecodedArgs;
     } catch (cause) {
       if (!(cause instanceof Error)) {
-        throw new Error('Non-error was thrown during scanAllUpdateV3Events', {cause})
+        throw new Error('Non-error was thrown during scanAllUpdateV3Events', { cause });
       }
       const err = new Error('Failed to scan all V3 update events', { cause });
       if (retryCount < MAX_SCAN_RETRIES && cause.message === SCAN_TIMEOUT_ERROR_MESSAGE) {

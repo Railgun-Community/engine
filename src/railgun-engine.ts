@@ -6,7 +6,7 @@ import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2'
 import { Database, DatabaseNamespace } from './database/database';
 import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
-import { ByteLength, formatToByteLength, hexToBigInt, hexlify } from './utils/bytes';
+import { ByteLength, ByteUtils } from './utils/bytes';
 import { RailgunWallet } from './wallet/railgun-wallet';
 import EngineDebug from './debugger/debugger';
 import { Chain, EngineDebugger } from './models/engine-types';
@@ -230,7 +230,7 @@ class RailgunEngine extends EventEmitter {
         );
       }
       for (const commitment of commitments) {
-        commitment.txid = formatToByteLength(commitment.txid, ByteLength.UINT_256, false);
+        commitment.txid = ByteUtils.formatToByteLength(commitment.txid, ByteLength.UINT_256, false);
       }
 
       // Queue leaves to merkle tree
@@ -289,8 +289,12 @@ class RailgunEngine extends EventEmitter {
     EngineDebug.log(`engine.nullifierListener[${chain.type}:${chain.id}] ${nullifiers.length}`);
 
     for (const nullifier of nullifiers) {
-      nullifier.txid = formatToByteLength(nullifier.txid, ByteLength.UINT_256, false);
-      nullifier.nullifier = formatToByteLength(nullifier.nullifier, ByteLength.UINT_256, false);
+      nullifier.txid = ByteUtils.formatToByteLength(nullifier.txid, ByteLength.UINT_256, false);
+      nullifier.nullifier = ByteUtils.formatToByteLength(
+        nullifier.nullifier,
+        ByteLength.UINT_256,
+        false,
+      );
     }
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.nullify(nullifiers);
@@ -316,7 +320,7 @@ class RailgunEngine extends EventEmitter {
     }
     EngineDebug.log(`engine.unshieldListener[${chain.type}:${chain.id}] ${unshields.length}`);
     for (const unshield of unshields) {
-      unshield.txid = formatToByteLength(unshield.txid, ByteLength.UINT_256, false);
+      unshield.txid = ByteUtils.formatToByteLength(unshield.txid, ByteLength.UINT_256, false);
     }
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
     await utxoMerkletree.addUnshieldEvents(unshields);
@@ -385,7 +389,9 @@ class RailgunEngine extends EventEmitter {
           startScanningBlock = latestEvent.blockNumber;
         } else {
           // eslint-disable-next-line no-await-in-loop
-          const txReceipt = await provider.getTransactionReceipt(hexlify(latestEvent.txid, true));
+          const txReceipt = await provider.getTransactionReceipt(
+            ByteUtils.hexlify(latestEvent.txid, true),
+          );
           if (txReceipt) {
             startScanningBlock = txReceipt.blockNumber;
           }
@@ -1063,7 +1069,7 @@ class RailgunEngine extends EventEmitter {
           // Pre-V2 always had a 25n basis points fee for unshields.
           const preV2FeeBasisPoints = 25n;
           const { fee, amount } = UnshieldNote.getAmountFeeFromValue(
-            hexToBigInt(unshield.value),
+            ByteUtils.hexToBigInt(unshield.value),
             preV2FeeBasisPoints,
           );
 
@@ -1960,7 +1966,9 @@ class RailgunEngine extends EventEmitter {
 
     const matchingTxids = otherTxids.filter((txid) => txid === firstTxid);
     const allMatch = matchingTxids.length === nullifiers.length - 1;
-    return allMatch ? formatToByteLength(firstTxid, ByteLength.UINT_256, true) : undefined;
+    return allMatch
+      ? ByteUtils.formatToByteLength(firstTxid, ByteLength.UINT_256, true)
+      : undefined;
   }
 
   async decryptBalancesAllWallets(

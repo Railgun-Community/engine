@@ -1,5 +1,5 @@
 import { KeyNode } from '../models/engine-types';
-import { fromUTF8String, padToLength } from '../utils/bytes';
+import { fromUTF8String, ByteUtils } from '../utils/bytes';
 import { sha512HMAC } from '../utils/hash';
 
 const CURVE_SEED = fromUTF8String('babyjubjub seed');
@@ -44,7 +44,7 @@ export function childKeyDerivationHardened(
   offset: number = 0x80000000,
 ): KeyNode {
   // Convert index to bytes as 32bit big endian
-  const indexFormatted = padToLength(index + offset, 4);
+  const indexFormatted = ByteUtils.padToLength(index + offset, 4);
 
   // Calculate HMAC preImage
   const preImage = `00${node.chainKey}${indexFormatted as string}`;

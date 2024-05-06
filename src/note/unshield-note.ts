@@ -1,7 +1,7 @@
 import { CommitmentPreimageStruct } from '../abi/typechain/RailgunSmartWallet';
 import { UnshieldData } from '../models';
 import { TokenData } from '../models/formatted-types';
-import { ByteLength, nToHex } from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { assertValidNoteToken, getNoteHash, serializePreImage } from './note-util';
 
 export abstract class UnshieldNote {
@@ -50,7 +50,7 @@ export abstract class UnshieldNote {
   }
 
   get hashHex(): string {
-    return nToHex(this.hash, ByteLength.UINT_256);
+    return ByteUtils.nToHex(this.hash, ByteLength.UINT_256);
   }
 
   serialize(prefix: boolean = false) {

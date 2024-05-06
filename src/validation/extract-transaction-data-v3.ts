@@ -2,7 +2,7 @@ import { Contract, ContractTransaction } from 'ethers';
 import { Chain } from '../models/engine-types';
 import { AddressData } from '../key-derivation';
 import { isDefined } from '../utils/is-defined';
-import { ByteLength, hexStringToBytes, nToHex } from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { recursivelyDecodeResult } from '../utils/ethers';
 import { ExtractedRailgunTransactionData } from '../models/transaction-types';
 import { getRailgunTransactionIDHex } from '../transaction/railgun-txid';
@@ -212,7 +212,7 @@ const extractRailgunTransactionDataV3 = async (
       async (railgunTx: PoseidonMerkleVerifier.TransactionStructOutput, railgunTxIndex: number) => {
         const { commitments, nullifiers, boundParams } = railgunTx;
 
-        const boundParamsHash = nToHex(
+        const boundParamsHash = ByteUtils.nToHex(
           hashBoundParamsV3({
             global: globalBoundParams,
             local: boundParams,
@@ -296,8 +296,10 @@ const decryptReceiverNoteSafeV3 = async (
   transactCommitmentBatchIndexV3: number,
 ): Promise<Optional<TransactNote>> => {
   try {
-    const blindedSenderViewingKey = hexStringToBytes(commitmentCiphertext.blindedSenderViewingKey);
-    const blindedReceiverViewingKey = hexStringToBytes(
+    const blindedSenderViewingKey = ByteUtils.hexStringToBytes(
+      commitmentCiphertext.blindedSenderViewingKey,
+    );
+    const blindedReceiverViewingKey = ByteUtils.hexStringToBytes(
       commitmentCiphertext.blindedReceiverViewingKey,
     );
     const sharedKey = await getSharedSymmetricKey(

@@ -6,7 +6,7 @@ import {
   ShieldCommitment,
   TransactCommitmentV2,
 } from '../../../models/formatted-types';
-import { ByteLength, formatToByteLength, nToHex } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import EngineDebug from '../../../debugger/debugger';
 import {
   CommitmentEvent,
@@ -41,7 +41,7 @@ export class V2Events {
     timestamp: Optional<number>,
   ): ShieldCommitment[] {
     const shieldCommitments = preImages.map((commitmentPreImage, index) => {
-      const npk = formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
+      const npk = ByteUtils.formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
       const tokenData = serializeTokenData(
         commitmentPreImage.token.tokenAddress,
         commitmentPreImage.token.tokenType,
@@ -53,8 +53,8 @@ export class V2Events {
 
       const commitment: ShieldCommitment = {
         commitmentType: CommitmentType.ShieldCommitment,
-        hash: nToHex(noteHash, ByteLength.UINT_256),
-        txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+        hash: ByteUtils.nToHex(noteHash, ByteLength.UINT_256),
+        txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
         timestamp,
         blockNumber,
         preImage,
@@ -103,7 +103,7 @@ export class V2Events {
       timestamp,
     );
     return {
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       treeNumber: utxoTree,
       startPosition: utxoStartingIndex,
       commitments: formattedCommitments,
@@ -117,7 +117,7 @@ export class V2Events {
     const { blindedSenderViewingKey, blindedReceiverViewingKey, annotationData, memo } =
       commitmentCiphertext;
     const ciphertext = commitmentCiphertext.ciphertext.map(
-      (el) => formatToByteLength(el, ByteLength.UINT_256), // 32 bytes each.
+      (el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256), // 32 bytes each.
     );
     const ivTag = ciphertext[0];
 
@@ -127,8 +127,14 @@ export class V2Events {
         tag: ivTag.substring(32),
         data: ciphertext.slice(1),
       },
-      blindedSenderViewingKey: formatToByteLength(blindedSenderViewingKey, ByteLength.UINT_256), // 32 bytes each.
-      blindedReceiverViewingKey: formatToByteLength(blindedReceiverViewingKey, ByteLength.UINT_256), // 32 bytes each.
+      blindedSenderViewingKey: ByteUtils.formatToByteLength(
+        blindedSenderViewingKey,
+        ByteLength.UINT_256,
+      ), // 32 bytes each.
+      blindedReceiverViewingKey: ByteUtils.formatToByteLength(
+        blindedReceiverViewingKey,
+        ByteLength.UINT_256,
+      ), // 32 bytes each.
       annotationData,
       memo,
     };
@@ -146,8 +152,8 @@ export class V2Events {
     return commitments.map((commitment, index) => {
       return {
         commitmentType: CommitmentType.TransactCommitmentV2,
-        hash: formatToByteLength(hash[index], ByteLength.UINT_256),
-        txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+        hash: ByteUtils.formatToByteLength(hash[index], ByteLength.UINT_256),
+        txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
         timestamp,
         blockNumber,
         ciphertext: V2Events.formatCommitmentCiphertext(commitment),
@@ -184,7 +190,7 @@ export class V2Events {
       timestamp,
     );
     return {
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       treeNumber: utxoTree,
       startPosition: utxoStartingIndex,
       commitments: formattedCommitments,
@@ -201,7 +207,7 @@ export class V2Events {
   ): UnshieldStoredEvent {
     const { to, token, amount, fee } = unshieldEventArgs;
     return {
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       timestamp,
       toAddress: to,
       tokenType: Number(token.tokenType),
@@ -343,8 +349,8 @@ export class V2Events {
 
     for (const nullifier of nullifierEventArgs.nullifier) {
       nullifiers.push({
-        txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-        nullifier: formatToByteLength(nullifier, ByteLength.UINT_256),
+        txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
+        nullifier: ByteUtils.formatToByteLength(nullifier, ByteLength.UINT_256),
         treeNumber: Number(nullifierEventArgs.treeNumber),
         blockNumber,
       });

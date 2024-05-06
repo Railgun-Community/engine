@@ -1,11 +1,11 @@
 import { xchacha20, xchacha20poly1305 } from '@noble/ciphers/chacha';
 import { sha256 } from '@noble/hashes/sha256';
-import { fastBytesToHex, fastHexToBytes, randomHex } from '../bytes';
+import { ByteUtils } from '../bytes';
 import { CiphertextXChaCha, XChaChaEncryptionAlgorithm } from '../../models/formatted-types';
 
 export class XChaCha20 {
   static getRandomIV(): string {
-    const random = randomHex(16);
+    const random = ByteUtils.randomHex(16);
     if (random.length !== 32) {
       throw new Error('Incorrect nonce length');
     }
@@ -15,9 +15,9 @@ export class XChaCha20 {
   static encryptChaCha20(plaintext: string, key: Uint8Array): CiphertextXChaCha {
     const nonce = this.getRandomIV();
     const nonceExtended = sha256(nonce).slice(0, 24);
-    const plaintextFormatted = fastHexToBytes(plaintext);
+    const plaintextFormatted = ByteUtils.fastHexToBytes(plaintext);
     const bundleBytes = xchacha20(key, nonceExtended, plaintextFormatted);
-    const bundle = fastBytesToHex(bundleBytes);
+    const bundle = ByteUtils.fastBytesToHex(bundleBytes);
     return {
       algorithm: XChaChaEncryptionAlgorithm.XChaCha,
       nonce,
@@ -30,8 +30,8 @@ export class XChaCha20 {
       throw new Error(`Invalid ciphertext for XChaCha: ${ciphertext.algorithm}`);
     }
     const nonceExtended = sha256(ciphertext.nonce).slice(0, 24);
-    const bytes = xchacha20(key, nonceExtended, fastHexToBytes(ciphertext.bundle));
-    const plaintext = fastBytesToHex(bytes);
+    const bytes = xchacha20(key, nonceExtended, ByteUtils.fastHexToBytes(ciphertext.bundle));
+    const plaintext = ByteUtils.fastBytesToHex(bytes);
     return plaintext;
   }
 
@@ -39,9 +39,9 @@ export class XChaCha20 {
     const nonce = this.getRandomIV();
     const nonceExtended = sha256(nonce).slice(0, 24);
     const encrypter = xchacha20poly1305(key, nonceExtended);
-    const plaintextFormatted = fastHexToBytes(plaintext);
+    const plaintextFormatted = ByteUtils.fastHexToBytes(plaintext);
     const bundleBytes = encrypter.encrypt(plaintextFormatted);
-    const bundle = fastBytesToHex(bundleBytes);
+    const bundle = ByteUtils.fastBytesToHex(bundleBytes);
     return {
       algorithm: XChaChaEncryptionAlgorithm.XChaChaPoly1305,
       nonce,
@@ -55,8 +55,8 @@ export class XChaCha20 {
     }
     const nonceExtended = sha256(ciphertext.nonce).slice(0, 24);
     const encrypter = xchacha20poly1305(key, nonceExtended);
-    const bundleFormatted = fastHexToBytes(ciphertext.bundle);
-    const plaintext = fastBytesToHex(encrypter.decrypt(bundleFormatted));
+    const bundleFormatted = ByteUtils.fastHexToBytes(ciphertext.bundle);
+    const plaintext = ByteUtils.fastBytesToHex(encrypter.decrypt(bundleFormatted));
     return plaintext;
   }
 }

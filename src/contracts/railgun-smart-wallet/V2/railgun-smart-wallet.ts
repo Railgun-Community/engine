@@ -14,7 +14,7 @@ import {
   EventsUnshieldListener,
   EngineEvent,
 } from '../../../models/event-types';
-import { ByteLength, formatToByteLength, hexlify } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import { promiseTimeout } from '../../../utils/promises';
 import { ABIRailgunSmartWallet_Legacy_PreMar23, ABIRailgunSmartWallet } from '../../../abi/abi';
 import { V2Events } from './V2-events';
@@ -106,7 +106,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return hexlify(await this.contract.merkleRoot());
+    return ByteUtils.hexlify(await this.contract.merkleRoot());
   }
 
   /**
@@ -139,7 +139,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
     try {
       const isValidMerkleroot = await this.contract.rootHistory(
         tree,
-        formatToByteLength(root, ByteLength.UINT_256, true),
+        ByteUtils.formatToByteLength(root, ByteLength.UINT_256, true),
       );
       // if (!isValidMerkleroot && EngineDebug.isTestRun()) {
       //   EngineDebug.error(
@@ -161,7 +161,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
    */
   async getNFTTokenData(tokenHash: string): Promise<TokenDataStructOutput> {
     try {
-      const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
+      const formattedTokenHash = ByteUtils.formatToByteLength(tokenHash, ByteLength.UINT_256, true);
       return await this.contract.tokenIDMapping(formattedTokenHash);
     } catch (cause) {
       const err = new Error('Failed to get NFT token data', { cause });
@@ -624,7 +624,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
   async hashCommitment(commitment: CommitmentPreimageStruct): Promise<string> {
     return this.contract.hashCommitment({
       ...commitment,
-      npk: formatToByteLength(commitment.npk, ByteLength.UINT_256, true),
+      npk: ByteUtils.formatToByteLength(commitment.npk, ByteLength.UINT_256, true),
     });
   }
 

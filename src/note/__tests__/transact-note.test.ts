@@ -11,7 +11,7 @@ import { Chain, ChainType } from '../../models/engine-types';
 import { Ciphertext, LegacyNoteSerialized, OutputType } from '../../models/formatted-types';
 import { config } from '../../test/config.test';
 import { TokenDataGetter } from '../../token/token-data-getter';
-import { ByteLength, hexlify, hexStringToBytes, hexToBigInt, nToHex } from '../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../utils/bytes';
 import { getPublicViewingKey } from '../../utils/keys-utils';
 import { getTokenDataERC20 } from '../note-util';
 import { TransactNote } from '../transact-note';
@@ -350,11 +350,11 @@ describe('transact-note', () => {
   it('Should encrypt and decrypt notes', async () => {
     await Promise.all(
       ciphertextVectors.map(async (vector) => {
-        const viewingPublicKey = hexStringToBytes(vector.note.pubkey);
+        const viewingPublicKey = ByteUtils.hexStringToBytes(vector.note.pubkey);
 
         // Create Note object
         const address = {
-          masterPublicKey: hexToBigInt(vector.note.pubkey),
+          masterPublicKey: ByteUtils.hexToBigInt(vector.note.pubkey),
           viewingPublicKey,
         };
         const privateViewingKey = randomBytes(32);
@@ -371,7 +371,7 @@ describe('transact-note', () => {
         const note = TransactNote.createTransfer(
           address,
           address,
-          hexToBigInt(vector.note.amount),
+          ByteUtils.hexToBigInt(vector.note.amount),
           tokenData,
           false, // showSenderAddressToRecipient
           OutputType.RelayerFee,
@@ -380,7 +380,7 @@ describe('transact-note', () => {
 
         stubRandom.restore();
 
-        const sharedKeyBytes = hexStringToBytes(vector.sharedKey);
+        const sharedKeyBytes = ByteUtils.hexStringToBytes(vector.sharedKey);
 
         let noteCiphertext;
         let noteMemo;
@@ -473,7 +473,7 @@ describe('transact-note', () => {
   it('Should serialize and deserialize notes', async () => {
     await Promise.all(
       vectors.map(async (vector) => {
-        const vectorBytes = hexStringToBytes(vector.vpk);
+        const vectorBytes = ByteUtils.hexStringToBytes(vector.vpk);
 
         const note = await TransactNote.deserialize(
           txidVersion,
@@ -482,9 +482,9 @@ describe('transact-note', () => {
           vectorBytes,
           tokenDataGetter,
         );
-        expect(hexlify(note.random)).to.equal(vector.random);
+        expect(ByteUtils.hexlify(note.random)).to.equal(vector.random);
 
-        const hexHash = nToHex(note.hash, ByteLength.UINT_256);
+        const hexHash = ByteUtils.nToHex(note.hash, ByteLength.UINT_256);
         expect(hexHash).to.equal(vector.hash);
 
         const reserialized = note.serialize();
@@ -504,7 +504,7 @@ describe('transact-note', () => {
   it('Should serialize and deserialize notes (legacy V1-V2)', async () => {
     await Promise.all(
       vectors.map(async (vector) => {
-        const vectorBytes = hexStringToBytes(vector.vpk);
+        const vectorBytes = ByteUtils.hexStringToBytes(vector.vpk);
 
         const note = await TransactNote.deserialize(
           txidVersion,
@@ -513,9 +513,9 @@ describe('transact-note', () => {
           vectorBytes,
           tokenDataGetter,
         );
-        expect(hexlify(note.random)).to.equal(vector.random);
+        expect(ByteUtils.hexlify(note.random)).to.equal(vector.random);
 
-        const hexHash = nToHex(note.hash, ByteLength.UINT_256);
+        const hexHash = ByteUtils.nToHex(note.hash, ByteLength.UINT_256);
         expect(hexHash).to.equal(vector.hash);
 
         const reserialized = note.serializeLegacy(vectorBytes);
@@ -557,10 +557,15 @@ describe('transact-note', () => {
     ];
 
     const v = nullifierVectors[0];
-    expect(TransactNote.getNullifier(hexToBigInt(v.privateKey), v.position)).to.be.a('bigint');
+    expect(TransactNote.getNullifier(ByteUtils.hexToBigInt(v.privateKey), v.position)).to.be.a(
+      'bigint',
+    );
     for (const vector of nullifierVectors) {
-      const nullifier = TransactNote.getNullifier(hexToBigInt(vector.privateKey), vector.position);
-      const hexNullifier = nToHex(nullifier, ByteLength.UINT_256);
+      const nullifier = TransactNote.getNullifier(
+        ByteUtils.hexToBigInt(vector.privateKey),
+        vector.position,
+      );
+      const hexNullifier = ByteUtils.nToHex(nullifier, ByteLength.UINT_256);
       expect(hexNullifier).to.equal(vector.nullifier);
     }
   });

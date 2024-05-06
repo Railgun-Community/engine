@@ -7,7 +7,7 @@ import {
   getPublicViewingKey,
   getSharedSymmetricKey,
 } from '../keys-utils';
-import { hexStringToBytes } from '../bytes';
+import { ByteUtils } from '../bytes';
 import { sha256 } from '../hash';
 import { initCurve25519Promise, scalarMultiplyJavascript } from '../scalar-multiply';
 
@@ -26,7 +26,7 @@ async function getSharedSymmetricKeyJavascript(
   const keyPreimage: Uint8Array = scalarMultiplyJavascript(blindedPublicKeyPairB, scalar);
 
   // SHA256 hash to get the final key
-  const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+  const hashed: Uint8Array = ByteUtils.hexStringToBytes(sha256(keyPreimage));
   return hashed;
 }
 

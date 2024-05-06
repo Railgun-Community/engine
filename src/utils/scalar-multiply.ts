@@ -1,7 +1,7 @@
 import { Point } from '@noble/ed25519';
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, nToBytes } from './bytes';
+import { ByteLength, ByteUtils } from './bytes';
 import { isReactNative } from './runtime';
 
 interface ScalarMultMod {
@@ -39,7 +39,7 @@ export const scalarMultiplyWasmFallbackToJavascript = (
   }
   try {
     // Try WASM implementation.
-    const scalarUint8Array = nToBytes(scalar, ByteLength.UINT_256);
+    const scalarUint8Array = ByteUtils.nToBytes(scalar, ByteLength.UINT_256);
     return scalarMultiplyWasm(point, scalarUint8Array);
   } catch (cause) {
     if (!(cause instanceof Error)) {

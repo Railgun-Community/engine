@@ -16,7 +16,7 @@ import { TXIDVersion } from '../../models/poi-types';
 import { TXIDMerkletree } from '../../merkletree/txid-merkletree';
 import { Database } from '../../database/database';
 import { ShieldNote, TransactNote, getTokenDataERC20 } from '../../note';
-import { ByteLength, hexToBigInt, nToHex } from '../../utils';
+import { ByteLength, ByteUtils } from '../../utils';
 import { WalletNode } from '../../key-derivation/wallet-node';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
 import { BlindedCommitment } from '../../poi/blinded-commitment';
@@ -146,7 +146,7 @@ describe('prover', () => {
       utxoBatchStartPositionOut: 1,
       verificationHash: 'todo',
     });
-    expect(hexToBigInt(railgunTransaction.railgunTxid)).to.equal(
+    expect(ByteUtils.hexToBigInt(railgunTransaction.railgunTxid)).to.equal(
       BigInt(testVector.railgunTxidIfHasUnshield),
     );
 
@@ -172,7 +172,7 @@ describe('prover', () => {
       BigInt(testVector.nullifyingKey),
       testVector.utxoPositionsIn[0],
     );
-    expect(nullifier).to.equal(hexToBigInt(testVector.nullifiers[0]));
+    expect(nullifier).to.equal(ByteUtils.hexToBigInt(testVector.nullifiers[0]));
 
     // Verify shield note details
     const masterPublicKey = WalletNode.getMasterPublicKey(
@@ -194,9 +194,9 @@ describe('prover', () => {
     expect(shieldCommitment).to.equal(
       6442080113031815261226726790601252395803415545769290265212232865825296902085n,
     );
-    const blindedCommitmentForShield = hexToBigInt(
+    const blindedCommitmentForShield = ByteUtils.hexToBigInt(
       BlindedCommitment.getForShieldOrTransact(
-        nToHex(shieldCommitment, ByteLength.UINT_256),
+        ByteUtils.nToHex(shieldCommitment, ByteLength.UINT_256),
         notePublicKey,
         getGlobalTreePosition(0, 0),
       ),
@@ -204,6 +204,8 @@ describe('prover', () => {
     expect(blindedCommitmentForShield).to.equal(
       12151255948031648278500231754672666576376002857793985290167262750766640136930n,
     );
-    expect(blindedCommitmentForShield).to.equal(hexToBigInt(testVector.blindedCommitmentsIn[0]));
+    expect(blindedCommitmentForShield).to.equal(
+      ByteUtils.hexToBigInt(testVector.blindedCommitmentsIn[0]),
+    );
   });
 });

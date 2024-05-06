@@ -12,7 +12,7 @@ import { TransactNote } from '../../note/transact-note';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { OutputType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models';
-import { hexlify, padToLength, randomHex } from '../../utils/bytes';
+import { ByteUtils } from '../../utils/bytes';
 import {
   extractFirstNoteERC20AmountMapFromTransactionRequest,
   extractRailgunTransactionDataFromTransactionRequest,
@@ -49,7 +49,7 @@ let railgunWallet: RailgunWallet;
 
 const txidVersion = getTestTXIDVersion();
 
-const RANDOM_RELAY_ADAPT = randomHex(31);
+const RANDOM_RELAY_ADAPT = ByteUtils.randomHex(31);
 const MOCK_TOKEN_ADDRESS = config.contracts.rail;
 
 const TREE = 0;
@@ -139,7 +139,7 @@ describe('extract-transaction-data', () => {
       undefined,
     );
 
-    const tokenAddressHexlify = hexlify(padToLength(MOCK_TOKEN_ADDRESS, 32));
+    const tokenAddressHexlify = ByteUtils.hexlify(ByteUtils.padToLength(MOCK_TOKEN_ADDRESS, 32));
 
     await createEngineWalletBalancesStub(railgunWallet.addressKeys, tokenAddressHexlify, TREE);
     createEngineVerifyProofStub();

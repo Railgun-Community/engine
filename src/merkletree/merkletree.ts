@@ -3,15 +3,7 @@ import type { PutBatch } from 'abstract-leveldown';
 import msgpack from 'msgpack-lite';
 import { poseidonHex } from '../utils/poseidon';
 import type { Database } from '../database/database';
-import {
-  fromUTF8String,
-  formatToByteLength,
-  ByteLength,
-  nToHex,
-  arrayify,
-  FULL_32_BITS,
-  hexlify,
-} from '../utils/bytes';
+import { fromUTF8String, ByteLength, ByteUtils } from '../utils/bytes';
 import EngineDebug from '../debugger/debugger';
 import { BytesData, MerkleProof } from '../models/formatted-types';
 import { Chain } from '../models/engine-types';
@@ -152,7 +144,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     // Convert index to bytes data, the binary representation is the indices of the merkle path
     // Pad to 32 bytes
-    const indices = nToHex(BigInt(index), ByteLength.UINT_256);
+    const indices = ByteUtils.nToHex(BigInt(index), ByteLength.UINT_256);
 
     // Fetch root
     const root = await this.getRoot(tree);
@@ -188,7 +180,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const txidVersionPrefix = fromUTF8String(this.getTXIDVersionPrefix());
 
     return [merkletreePrefix, getChainFullNetworkID(this.chain), txidVersionPrefix].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
+      ByteUtils.formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -196,8 +188,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Construct DB prefix from tree number
    */
   getTreeDBPrefix(tree: number): string[] {
-    return [...this.getMerkletreeDBPrefix(), hexlify(tree)].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
+    return [...this.getMerkletreeDBPrefix(), ByteUtils.hexlify(tree)].map((el) =>
+      ByteUtils.formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -205,8 +197,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Construct node hash DB path from tree number and level
    */
   private getNodeHashLevelPath(tree: number, level: number): string[] {
-    return [...this.getTreeDBPrefix(tree), hexlify(level)].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
+    return [...this.getTreeDBPrefix(tree), ByteUtils.hexlify(level)].map((el) =>
+      ByteUtils.formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -214,8 +206,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * Construct node hash DB path from tree number, level, and index
    */
   getNodeHashDBPath(tree: number, level: number, index: number): string[] {
-    const dbPath = [...this.getNodeHashLevelPath(tree, level), hexlify(index)];
-    return dbPath.map((el) => formatToByteLength(el, ByteLength.UINT_256));
+    const dbPath = [...this.getNodeHashLevelPath(tree, level), ByteUtils.hexlify(index)];
+    return dbPath.map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
   }
 
   async clearAllNodeHashes(tree: number): Promise<void> {
@@ -253,9 +245,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   protected getDataDBPath(tree: number, index: number): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      hexlify(FULL_32_BITS), // 2^32-1
-      hexlify(index),
-    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
+      ByteUtils.hexlify(ByteUtils.FULL_32_BITS), // 2^32-1
+      ByteUtils.hexlify(index),
+    ].map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
   }
 
   async updateData(tree: number, index: number, data: T): Promise<void> {
@@ -376,7 +368,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   async getMerkletreesMetadata(): Promise<Optional<MerkletreesMetadata>> {
     try {
       const metadata = msgpack.decode(
-        arrayify((await this.db.get(this.getMerkletreeDBPrefix())) as BytesData),
+        ByteUtils.arrayify((await this.db.get(this.getMerkletreeDBPrefix())) as BytesData),
       ) as MerkletreesMetadata;
       return metadata;
     } catch {
@@ -454,7 +446,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   private async getTreeLengthFromDBCount(tree: number): Promise<number> {
     return this.db.countNamespace([
       ...this.getTreeDBPrefix(tree),
-      hexlify(FULL_32_BITS), // 2^32-1
+      ByteUtils.hexlify(ByteUtils.FULL_32_BITS), // 2^32-1
     ]);
   }
 

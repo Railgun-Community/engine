@@ -9,7 +9,7 @@ import { getGlobalTreePositionPreTransactionPOIProof } from '../poi/global-tree-
 import { POI } from '../poi/poi';
 import { Prover } from '../prover/prover';
 import { getRailgunTxidLeafHash } from '../transaction/railgun-txid';
-import { hexToBigInt } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 import { isDefined } from '../utils/is-defined';
 import { extractRailgunTransactionDataFromTransactionRequest } from './extract-transaction-data';
 import { POIProof, TransactProofData } from './poi-proof';
@@ -96,7 +96,7 @@ export class POIValidation {
   ): Promise<boolean> {
     const txidLeafHashes: string[] = railgunTxids.map((railgunTxid, index) =>
       getRailgunTxidLeafHash(
-        hexToBigInt(railgunTxid),
+        ByteUtils.hexToBigInt(railgunTxid),
         utxoTreesIn[index],
         getGlobalTreePositionPreTransactionPOIProof(),
       ),

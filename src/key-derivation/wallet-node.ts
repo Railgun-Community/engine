@@ -2,7 +2,7 @@ import { bytesToHex } from 'ethereum-cryptography/utils';
 import { poseidon } from '../utils/poseidon';
 import { KeyNode } from '../models/engine-types';
 import { childKeyDerivationHardened, getMasterKeyFromSeed, getPathSegments } from './bip32';
-import { hexStringToBytes, hexToBigInt } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 import { Mnemonic } from './bip39';
 import { getPublicSpendingKey, getPublicViewingKey } from '../utils/keys-utils';
 
@@ -88,7 +88,7 @@ export class WalletNode {
    * @returns keypair
    */
   getSpendingKeyPair(): SpendingKeyPair {
-    const privateKey = hexStringToBytes(this.chainKey);
+    const privateKey = ByteUtils.hexStringToBytes(this.chainKey);
     const pubkey = getPublicSpendingKey(privateKey);
     return {
       privateKey,
@@ -102,13 +102,13 @@ export class WalletNode {
 
   async getViewingKeyPair(): Promise<ViewingKeyPair> {
     // TODO: THIS should be a separate node chainkey
-    const privateKey = hexStringToBytes(this.chainKey);
+    const privateKey = ByteUtils.hexStringToBytes(this.chainKey);
     const pubkey = await getPublicViewingKey(privateKey);
     return { privateKey, pubkey };
   }
 
   async getNullifyingKey(): Promise<bigint> {
     const { privateKey } = await this.getViewingKeyPair();
-    return poseidon([hexToBigInt(bytesToHex(privateKey))]);
+    return poseidon([ByteUtils.hexToBigInt(bytesToHex(privateKey))]);
   }
 }

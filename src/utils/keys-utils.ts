@@ -1,7 +1,7 @@
 import { utils as utilsEd25519, Point, getPublicKey, sign, verify, CURVE } from '@noble/ed25519';
 import { eddsa, Signature } from '@railgun-community/circomlibjs';
 import { poseidonHex } from './poseidon';
-import { bytesToN, fastBytesToHex, hexStringToBytes, hexToBigInt, nToBytes } from './bytes';
+import { ByteUtils } from './bytes';
 import { sha256, sha512 } from './hash';
 import { scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
@@ -17,7 +17,7 @@ async function getPublicViewingKey(privateViewingKey: Uint8Array): Promise<Uint8
 }
 
 function getRandomScalar(): bigint {
-  return hexToBigInt(poseidonHex([fastBytesToHex(randomBytes(32))]));
+  return ByteUtils.hexToBigInt(poseidonHex([ByteUtils.fastBytesToHex(randomBytes(32))]));
 }
 
 function signEDDSA(privateKey: Uint8Array, message: bigint): Signature {
@@ -107,7 +107,7 @@ function seedToScalar(seed: Uint8Array): Uint8Array {
   const seedHash = sha512(seed);
 
   // Return (seedHash mod (n - 1)) + 1 to fit to range 0 < scalar < n
-  return nToBytes((hexToBigInt(seedHash) % CURVE.n) - 1n + 1n, 32);
+  return ByteUtils.nToBytes((ByteUtils.hexToBigInt(seedHash) % CURVE.n) - 1n + 1n, 32);
 }
 
 /**
@@ -124,8 +124,11 @@ function seedToScalar(seed: Uint8Array): Uint8Array {
  */
 
 function getBlindingScalar(sharedRandom: string, senderRandom: string): bigint {
-  const finalRandom = nToBytes(hexToBigInt(sharedRandom) ^ hexToBigInt(senderRandom), 32);
-  return bytesToN(seedToScalar(finalRandom));
+  const finalRandom = ByteUtils.nToBytes(
+    ByteUtils.hexToBigInt(sharedRandom) ^ ByteUtils.hexToBigInt(senderRandom),
+    32,
+  );
+  return ByteUtils.bytesToN(seedToScalar(finalRandom));
 }
 
 /**
@@ -195,7 +198,7 @@ async function getSharedSymmetricKey(
     );
 
     // SHA256 hash to get the final key
-    const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    const hashed: Uint8Array = ByteUtils.hexStringToBytes(sha256(keyPreimage));
     return hashed;
   } catch (err) {
     return undefined;

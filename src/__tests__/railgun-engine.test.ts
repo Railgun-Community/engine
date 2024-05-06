@@ -24,15 +24,7 @@ import {
   testArtifactsGetter,
 } from '../test/helper.test';
 import { ShieldNoteERC20 } from '../note/erc20/shield-note-erc20';
-import {
-  ByteLength,
-  formatToByteLength,
-  hexToBigInt,
-  hexToBytes,
-  nToHex,
-  randomHex,
-  strip0x,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import {
   CommitmentType,
   LegacyGeneratedCommitment,
@@ -126,7 +118,7 @@ describe('railgun-engine', function test() {
     const receiverViewingPublicKey = wallet.getViewingKeyPair().pubkey;
     const shield = new ShieldNoteERC20(mpk, random, value, tokenAddress);
 
-    const shieldPrivateKey = hexToBytes(randomHex(32));
+    const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, receiverViewingPublicKey);
 
     const erc20Token = new Contract(erc20Address, erc20Abi, ethersWallet) as unknown as TestERC20;
@@ -195,7 +187,7 @@ describe('railgun-engine', function test() {
             graphID: '0x01',
             commitments: transaction.commitments as string[],
             nullifiers: transaction.nullifiers as string[],
-            boundParamsHash: nToHex(
+            boundParamsHash: ByteUtils.nToHex(
               hashBoundParamsV2(transactionsV2[0].boundParams),
               ByteLength.UINT_256,
             ),
@@ -205,7 +197,7 @@ describe('railgun-engine', function test() {
               value: transaction.unshieldPreimage.value.toString(),
             },
             timestamp: 1_000_000,
-            txid: strip0x(transactReceipt.hash),
+            txid: ByteUtils.strip0x(transactReceipt.hash),
             blockNumber,
             utxoTreeIn: 0,
             utxoTreeOut: utxoTree,
@@ -310,7 +302,7 @@ describe('railgun-engine', function test() {
 
     snapshot = (await provider.send('evm_snapshot', [])) as number;
     token = new Contract(erc20Address, erc20Abi, ethersWallet) as unknown as TestERC20;
-    tokenAddress = formatToByteLength(erc20Address, ByteLength.UINT_256, false);
+    tokenAddress = ByteUtils.formatToByteLength(erc20Address, ByteLength.UINT_256, false);
 
     nft = new Contract(nftAddress, erc721Abi, ethersWallet) as unknown as TestERC721;
 
@@ -422,7 +414,7 @@ describe('railgun-engine', function test() {
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
-    const value = hexToBigInt(commitment.preImage.value);
+    const value = ByteUtils.hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
     await wallet.fullRedecryptBalancesAllTXIDVersions(chain, undefined);
@@ -491,7 +483,7 @@ describe('railgun-engine', function test() {
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
-    const value = hexToBigInt(commitment.preImage.value);
+    const value = ByteUtils.hexToBigInt(commitment.preImage.value);
     expect(balance).to.equal(value);
 
     const walletDetails = await wallet.getWalletDetails(txidVersion, chain);
@@ -617,7 +609,7 @@ describe('railgun-engine', function test() {
       ]);
     }
 
-    const shieldCommitment = nToHex(
+    const shieldCommitment = ByteUtils.nToHex(
       ShieldNote.getShieldNoteHash(
         shield.notePublicKey,
         shield.tokenHash,
@@ -731,7 +723,7 @@ describe('railgun-engine', function test() {
     const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);
 
-    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+    const tokenFormatted = ByteUtils.formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
 
     // Make sure nullifier events map to completed txid.
     const nullifiers = provedTransactions
@@ -891,7 +883,7 @@ describe('railgun-engine', function test() {
     ]);
     expect(newBalance).to.equal(0n, 'Failed to receive expected balance');
 
-    const shieldCommitment = nToHex(
+    const shieldCommitment = ByteUtils.nToHex(
       ShieldNote.getShieldNoteHash(
         shield.notePublicKey,
         shield.tokenHash,
@@ -973,7 +965,7 @@ describe('railgun-engine', function test() {
     const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);
 
-    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+    const tokenFormatted = ByteUtils.formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
 
     // Make sure nullifier events map to completed txid.
     const nullifiers = provedTransactions
@@ -1146,7 +1138,7 @@ describe('railgun-engine', function test() {
     const history = await wallet.getTransactionHistory(chain, undefined);
     expect(history.length).to.equal(2);
 
-    const tokenFormatted = formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
+    const tokenFormatted = ByteUtils.formatToByteLength(tokenAddress, ByteLength.UINT_256, false);
 
     // Check first output: Shield (receive only).
     expect(history[0].txidVersion).to.equal(txidVersion);

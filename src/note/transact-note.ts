@@ -12,17 +12,7 @@ import {
 } from '../models/formatted-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
 import { TokenDataGetter } from '../token/token-data-getter';
-import {
-  ByteLength,
-  combine,
-  formatToByteLength,
-  hexlify,
-  hexToBigInt,
-  nToBytes,
-  nToHex,
-  randomHex,
-  strip0x,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import {
   ciphertextToEncryptedRandomData,
   encryptedDataToCiphertext,
@@ -213,15 +203,15 @@ export class TransactNote {
   }
 
   static getNoteRandom(): string {
-    return randomHex(16);
+    return ByteUtils.randomHex(16);
   }
 
   static getSenderRandom(): string {
-    return randomHex(15);
+    return ByteUtils.randomHex(15);
   }
 
   private getNotePublicKey(): bigint {
-    return poseidon([this.receiverAddressData.masterPublicKey, hexToBigInt(this.random)]);
+    return poseidon([this.receiverAddressData.masterPublicKey, ByteUtils.hexToBigInt(this.random)]);
   }
 
   getSenderAddress(): Optional<string> {
@@ -236,7 +226,7 @@ export class TransactNote {
    * @returns {bigint} hash
    */
   static getHash(notePublicKey: bigint, tokenHash: string, value: bigint): bigint {
-    return poseidon([notePublicKey, hexToBigInt(tokenHash), value]);
+    return poseidon([notePublicKey, ByteUtils.hexToBigInt(tokenHash), value]);
   }
 
   /**
@@ -273,7 +263,7 @@ export class TransactNote {
     const encodedMemoText = Memo.encodeMemoText(this.memoText);
     const ciphertext = AES.encryptGCM(
       [
-        nToHex(encodedMasterPublicKey, ByteLength.UINT_256),
+        ByteUtils.nToHex(encodedMasterPublicKey, ByteLength.UINT_256),
         tokenHash,
         `${random}${value}`,
         encodedMemoText,
@@ -344,7 +334,7 @@ export class TransactNote {
     const encodedMemoText = Memo.encodeMemoText(this.memoText);
 
     const plaintext = [
-      nToHex(encodedMasterPublicKey, ByteLength.UINT_256), // 64 length
+      ByteUtils.nToHex(encodedMasterPublicKey, ByteLength.UINT_256), // 64 length
       `${random}${value}`, // 64 length
       tokenHash, // 64 length
       this.senderRandom, // 30 length
@@ -396,13 +386,13 @@ export class TransactNote {
         if (!('tag' in noteCiphertext)) {
           throw new Error('Invalid ciphertext for V2 decryption');
         }
-        const ciphertextDataWithMemoText = [...noteCiphertext.data, strip0x(memoV2)];
+        const ciphertextDataWithMemoText = [...noteCiphertext.data, ByteUtils.strip0x(memoV2)];
         const fullCiphertext: Ciphertext = {
           ...noteCiphertext,
           data: ciphertextDataWithMemoText,
         };
         const decryptedCiphertext = AES.decryptGCM(fullCiphertext, sharedKey).map((value) =>
-          hexlify(value),
+          ByteUtils.hexlify(value),
         );
 
         const { random, value, memoText, tokenData, encodedMPK } =
@@ -527,13 +517,13 @@ export class TransactNote {
     // 3 (+ more array values for legacy): Optional Memo string
 
     const random = decryptedCiphertext[2].substring(0, 32);
-    const value = hexToBigInt(decryptedCiphertext[2].substring(32, 64));
+    const value = ByteUtils.hexToBigInt(decryptedCiphertext[2].substring(32, 64));
     const tokenHash = decryptedCiphertext[1];
-    const memoText = Memo.decodeMemoText(combine(decryptedCiphertext.slice(3)));
+    const memoText = Memo.decodeMemoText(ByteUtils.combine(decryptedCiphertext.slice(3)));
 
     const tokenData = await tokenDataGetter.getTokenDataFromHash(txidVersion, chain, tokenHash);
 
-    const encodedMPK = hexToBigInt(decryptedCiphertext[0]);
+    const encodedMPK = ByteUtils.hexToBigInt(decryptedCiphertext[0]);
 
     return { random, value, memoText, tokenData, encodedMPK };
   }
@@ -554,11 +544,11 @@ export class TransactNote {
     // Decrypted Values (V3):
 
     // - encodedMPK (senderMPK XOR receiverMPK - 32 bytes)
-    const encodedMPK = hexToBigInt(decryptedCiphertextV3.substring(0, 64));
+    const encodedMPK = ByteUtils.hexToBigInt(decryptedCiphertextV3.substring(0, 64));
 
     // - random & amount (16 bytes each)
     const random = decryptedCiphertextV3.substring(64, 96);
-    const value = hexToBigInt(decryptedCiphertextV3.substring(96, 128));
+    const value = ByteUtils.hexToBigInt(decryptedCiphertextV3.substring(96, 128));
 
     // - token (32 bytes)
     const tokenHash = decryptedCiphertextV3.substring(128, 192);
@@ -661,10 +651,10 @@ export class TransactNote {
 
   private formatFields(prefix: boolean = false) {
     return {
-      npk: nToHex(this.notePublicKey, ByteLength.UINT_256, prefix),
-      tokenHash: formatToByteLength(this.tokenHash, ByteLength.UINT_256, prefix),
-      value: nToHex(BigInt(this.value), ByteLength.UINT_128, prefix),
-      random: formatToByteLength(this.random, ByteLength.UINT_128, prefix),
+      npk: ByteUtils.nToHex(this.notePublicKey, ByteLength.UINT_256, prefix),
+      tokenHash: ByteUtils.formatToByteLength(this.tokenHash, ByteLength.UINT_256, prefix),
+      value: ByteUtils.nToHex(BigInt(this.value), ByteLength.UINT_128, prefix),
+      random: ByteUtils.formatToByteLength(this.random, ByteLength.UINT_128, prefix),
       senderRandom: this.senderRandom ?? undefined,
       walletSource: this.walletSource ?? undefined,
       outputType: this.outputType ?? undefined,
@@ -705,7 +695,7 @@ export class TransactNote {
       npk,
       tokenHash,
       value,
-      encryptedRandom: [ivTag, data].map((v) => hexlify(v, prefix)) as [string, string],
+      encryptedRandom: [ivTag, data].map((v) => ByteUtils.hexlify(v, prefix)) as [string, string],
       memoField,
       recipientAddress: encodeAddress(this.receiverAddressData),
       memoText: this.memoText,
@@ -743,7 +733,7 @@ export class TransactNote {
       decodeAddress(noteData.recipientAddress),
       isDefined(noteData.senderAddress) ? decodeAddress(noteData.senderAddress) : undefined,
       noteData.random,
-      hexToBigInt(noteData.value),
+      ByteUtils.hexToBigInt(noteData.value),
       tokenData,
       noteData.outputType ?? undefined,
       noteData.walletSource ?? undefined,
@@ -774,8 +764,8 @@ export class TransactNote {
     return new TransactNote(
       decodeAddress(noteData.recipientAddress),
       undefined, // senderAddress
-      combine(decryptedRandom),
-      hexToBigInt(noteData.value),
+      ByteUtils.combine(decryptedRandom),
+      ByteUtils.hexToBigInt(noteData.value),
       tokenData,
       undefined, // outputType
       undefined, // walletSource
@@ -822,7 +812,7 @@ export class TransactNote {
   static createNullUnshieldNote(tokenData: TokenData, value: bigint): TransactNote {
     const nullAddressData: AddressData = {
       masterPublicKey: 0n,
-      viewingPublicKey: nToBytes(0n, ByteLength.UINT_256),
+      viewingPublicKey: ByteUtils.nToBytes(0n, ByteLength.UINT_256),
     };
     return new TransactNote(
       nullAddressData,

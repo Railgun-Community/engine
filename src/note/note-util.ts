@@ -3,17 +3,7 @@ import { NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
 import { SNARK_PRIME } from '../utils/constants';
-import {
-  formatToByteLength,
-  ByteLength,
-  nToHex,
-  hexToBigInt,
-  hexlify,
-  combine,
-  nToBytes,
-  hexToBytes,
-  trim,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { keccak256 } from '../utils/hash';
 import { CommitmentPreimageStructOutput } from '../abi/typechain/PoseidonMerkleAccumulator';
 import { isDefined } from '../utils/is-defined';
@@ -21,13 +11,13 @@ import { isDefined } from '../utils/is-defined';
 export const ERC721_NOTE_VALUE = BigInt(1);
 
 export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
-  const tokenAddressLength = hexlify(tokenData.tokenAddress, false).length;
+  const tokenAddressLength = ByteUtils.hexlify(tokenData.tokenAddress, false).length;
 
   switch (tokenData.tokenType) {
     case TokenType.ERC20: {
       if (tokenAddressLength !== 40 && tokenAddressLength !== 64) {
         throw new Error(
-          `ERC20 address must be length 40 (20 bytes) or 64 (32 bytes). Got ${hexlify(
+          `ERC20 address must be length 40 (20 bytes) or 64 (32 bytes). Got ${ByteUtils.hexlify(
             tokenData.tokenAddress,
             false,
           )}.`,
@@ -41,7 +31,7 @@ export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
     case TokenType.ERC721: {
       if (tokenAddressLength !== 40) {
         throw new Error(
-          `ERC721 address must be length 40 (20 bytes). Got ${hexlify(
+          `ERC721 address must be length 40 (20 bytes). Got ${ByteUtils.hexlify(
             tokenData.tokenAddress,
             false,
           )}.`,
@@ -58,7 +48,7 @@ export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
     case TokenType.ERC1155: {
       if (tokenAddressLength !== 40) {
         throw new Error(
-          `ERC1155 address must be length 40 (20 bytes). Got ${hexlify(
+          `ERC1155 address must be length 40 (20 bytes). Got ${ByteUtils.hexlify(
             tokenData.tokenAddress,
             false,
           )}.`,
@@ -72,8 +62,10 @@ export const assertValidNoteToken = (tokenData: TokenData, value: bigint) => {
 };
 
 export const assertValidNoteRandom = (random: string) => {
-  if (hexlify(random, false).length !== 32) {
-    throw new Error(`Random must be length 32 (16 bytes). Got ${hexlify(random, false)}.`);
+  if (ByteUtils.hexlify(random, false).length !== 32) {
+    throw new Error(
+      `Random must be length 32 (16 bytes). Got ${ByteUtils.hexlify(random, false)}.`,
+    );
   }
 };
 
@@ -84,7 +76,7 @@ export const serializePreImage = (
   prefix: boolean = false,
 ) => {
   return {
-    npk: formatToByteLength(address, ByteLength.UINT_256, prefix),
+    npk: ByteUtils.formatToByteLength(address, ByteLength.UINT_256, prefix),
     token: tokenData,
     value: formatValue(value, prefix),
   };
@@ -111,19 +103,19 @@ export const serializeTokenData = (
   tokenSubID: bigint | string,
 ): TokenData => {
   return {
-    tokenAddress: formatToByteLength(tokenAddress, ByteLength.Address, true),
+    tokenAddress: ByteUtils.formatToByteLength(tokenAddress, ByteLength.Address, true),
     tokenType: Number(tokenType),
-    tokenSubID: nToHex(BigInt(tokenSubID), ByteLength.UINT_256, true),
+    tokenSubID: ByteUtils.nToHex(BigInt(tokenSubID), ByteLength.UINT_256, true),
   };
 };
 
 const formatValue = (value: bigint, prefix: boolean = false): string => {
-  return nToHex(value, ByteLength.UINT_128, prefix);
+  return ByteUtils.nToHex(value, ByteLength.UINT_128, prefix);
 };
 
 export const getNoteHash = (address: string, tokenData: TokenData, value: bigint): bigint => {
   const tokenHash = getTokenDataHash(tokenData);
-  return poseidon([hexToBigInt(address), hexToBigInt(tokenHash), value]);
+  return poseidon([ByteUtils.hexToBigInt(address), ByteUtils.hexToBigInt(tokenHash), value]);
 };
 
 export const getUnshieldEventNoteHash = (unshieldEvent: UnshieldStoredEvent): bigint => {
@@ -161,26 +153,26 @@ export const getUnshieldTokenHash = (unshieldEvent: UnshieldStoredEvent): string
 };
 
 export const getTokenDataHashERC20 = (tokenAddress: string): string => {
-  return formatToByteLength(hexToBytes(tokenAddress), ByteLength.UINT_256);
+  return ByteUtils.formatToByteLength(ByteUtils.hexToBytes(tokenAddress), ByteLength.UINT_256);
 };
 
 const getTokenDataHashNFT = (tokenData: TokenData): string => {
   // keccak256 hash of the token data.
-  const combinedData: string = combine([
-    nToBytes(BigInt(tokenData.tokenType), ByteLength.UINT_256),
-    hexToBytes(formatToByteLength(tokenData.tokenAddress, ByteLength.UINT_256)),
-    nToBytes(BigInt(tokenData.tokenSubID), ByteLength.UINT_256),
+  const combinedData: string = ByteUtils.combine([
+    ByteUtils.nToBytes(BigInt(tokenData.tokenType), ByteLength.UINT_256),
+    ByteUtils.hexToBytes(ByteUtils.formatToByteLength(tokenData.tokenAddress, ByteLength.UINT_256)),
+    ByteUtils.nToBytes(BigInt(tokenData.tokenSubID), ByteLength.UINT_256),
   ]);
   const hashed: string = keccak256(combinedData);
-  const modulo: bigint = hexToBigInt(hashed) % SNARK_PRIME;
-  return nToHex(modulo, ByteLength.UINT_256);
+  const modulo: bigint = ByteUtils.hexToBigInt(hashed) % SNARK_PRIME;
+  return ByteUtils.nToHex(modulo, ByteLength.UINT_256);
 };
 
 export const getTokenDataERC20 = (tokenAddress: string): TokenData => {
   return {
-    tokenAddress: formatToByteLength(tokenAddress, ByteLength.Address, true),
+    tokenAddress: ByteUtils.formatToByteLength(tokenAddress, ByteLength.Address, true),
     tokenType: TokenType.ERC20,
-    tokenSubID: formatToByteLength(TOKEN_SUB_ID_NULL, ByteLength.UINT_256, true),
+    tokenSubID: ByteUtils.formatToByteLength(TOKEN_SUB_ID_NULL, ByteLength.UINT_256, true),
   };
 };
 
@@ -190,9 +182,9 @@ export const getTokenDataNFT = (
   tokenSubID: string,
 ): NFTTokenData => {
   return {
-    tokenAddress: formatToByteLength(nftAddress, ByteLength.Address, true),
+    tokenAddress: ByteUtils.formatToByteLength(nftAddress, ByteLength.Address, true),
     tokenType,
-    tokenSubID: formatToByteLength(tokenSubID, ByteLength.UINT_256, true),
+    tokenSubID: ByteUtils.formatToByteLength(tokenSubID, ByteLength.UINT_256, true),
   };
 };
 
@@ -210,7 +202,7 @@ export const getTokenDataHash = (tokenData: TokenData): string => {
 export const getReadableTokenAddress = (tokenData: TokenData): string => {
   switch (tokenData.tokenType) {
     case TokenType.ERC20:
-      return `0x${trim(tokenData.tokenAddress, ByteLength.Address) as string}`;
+      return `0x${ByteUtils.trim(tokenData.tokenAddress, ByteLength.Address) as string}`;
     case TokenType.ERC721:
     case TokenType.ERC1155:
       return `${tokenData.tokenAddress} (${tokenData.tokenSubID})`;

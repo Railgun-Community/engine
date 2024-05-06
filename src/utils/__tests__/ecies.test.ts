@@ -2,7 +2,7 @@ import * as curve25519 from '@noble/ed25519';
 import { randomBytes } from '@noble/hashes/utils';
 import chai, { assert } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
-import { hexlify, randomHex } from '../bytes';
+import { ByteUtils} from '../bytes';
 import { encryptJSONDataWithSharedKey, tryDecryptJSONDataWithSharedKey } from '../ecies';
 import { getSharedSymmetricKeyLegacy } from '../keys-utils-legacy';
 
@@ -19,7 +19,7 @@ describe('ecies', () => {
     const data: object = {
       text: '468abc',
       value: 2839094,
-      hex: hexlify(randomHex(), true),
+      hex: ByteUtils.hexlify(ByteUtils.randomHex(), true),
     };
 
     const sharedKey = await getSharedSymmetricKeyLegacy(privateKey2, publicKey1);

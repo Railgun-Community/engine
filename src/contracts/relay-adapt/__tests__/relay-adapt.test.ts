@@ -38,7 +38,7 @@ import {
   OutputType,
   RelayAdaptShieldERC20Recipient,
 } from '../../../models/formatted-types';
-import { ByteLength, hexToBytes, nToHex, randomHex } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import { SnarkJSGroth16 } from '../../../prover/prover';
 import { Chain, ChainType } from '../../../models/engine-types';
 import { RailgunEngine } from '../../../railgun-engine';
@@ -82,7 +82,7 @@ const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
 const WETH_TOKEN_ADDRESS = config.contracts.weth9;
-const SHIELD_RANDOM = randomHex(16);
+const SHIELD_RANDOM = ByteUtils.randomHex(16);
 
 const NFT_ADDRESS = config.contracts.testERC721;
 
@@ -167,7 +167,7 @@ describe('relay-adapt', function test() {
         value,
         WETH_TOKEN_ADDRESS,
       );
-      const shieldPrivateKey = hexToBytes(randomHex(32));
+      const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
       const shieldRequest = await shield.serialize(
         shieldPrivateKey,
         wallet.getViewingKeyPair().pubkey,
@@ -208,7 +208,7 @@ describe('relay-adapt', function test() {
 
     // Create shield
     const shield = new ShieldNoteERC20(masterPublicKey, SHIELD_RANDOM, 10000n, WETH_TOKEN_ADDRESS);
-    const shieldPrivateKey = hexToBytes(randomHex(32));
+    const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
     const shieldRequest = await shield.serialize(
       shieldPrivateKey,
       wallet.getViewingKeyPair().pubkey,
@@ -450,7 +450,7 @@ describe('relay-adapt', function test() {
       wallet,
       ethersWallet,
       chain,
-      randomHex(16),
+      ByteUtils.randomHex(16),
       NFT_ADDRESS,
       '1',
     );
@@ -503,7 +503,7 @@ describe('relay-adapt', function test() {
     );
 
     // 6. Get gas estimate from dummy txs.
-    const gasEstimateRandom = randomHex(31);
+    const gasEstimateRandom = ByteUtils.randomHex(31);
     const populatedTransactionGasEstimate =
       await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
         txidVersion,
@@ -754,7 +754,7 @@ describe('relay-adapt', function test() {
     );
 
     // 5. Get gas estimate from dummy txs.
-    const randomGasEstimate = randomHex(31);
+    const randomGasEstimate = ByteUtils.randomHex(31);
     const populatedTransactionGasEstimate =
       await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
         txidVersion,
@@ -783,7 +783,7 @@ describe('relay-adapt', function test() {
     );
 
     // 6. Create real transactions with relay adapt params.
-    const random = randomHex(31);
+    const random = ByteUtils.randomHex(31);
     const relayAdaptParams =
       await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
         txidVersion,
@@ -952,7 +952,7 @@ describe('relay-adapt', function test() {
     );
 
     // 5. Get gas estimate from dummy txs. (Expect revert).
-    const gasEstimateRandom = randomHex(31);
+    const gasEstimateRandom = ByteUtils.randomHex(31);
     const populatedTransactionGasEstimate =
       await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
         txidVersion,
@@ -970,7 +970,7 @@ describe('relay-adapt', function test() {
     ).to.be.rejectedWith('RelayAdapt multicall failed at index 0.');
 
     // 6. Create real transactions with relay adapt params.
-    const random = randomHex(31);
+    const random = ByteUtils.randomHex(31);
     const relayAdaptParams =
       await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
         txidVersion,
@@ -1139,7 +1139,7 @@ describe('relay-adapt', function test() {
     );
 
     // 5. Get gas estimate from dummy txs.
-    const randomGasEstimate = randomHex(31);
+    const randomGasEstimate = ByteUtils.randomHex(31);
     const populatedTransactionGasEstimate =
       await RelayAdaptVersionedSmartContracts.populateCrossContractCalls(
         txidVersion,
@@ -1157,7 +1157,7 @@ describe('relay-adapt', function test() {
     ).to.be.rejectedWith('RelayAdapt multicall failed at index 0.');
 
     // 6. Create real transactions with relay adapt params.
-    const random = randomHex(31);
+    const random = ByteUtils.randomHex(31);
     const relayAdaptParams =
       await RelayAdaptVersionedSmartContracts.getRelayAdaptParamsCrossContractCalls(
         txidVersion,
@@ -1236,7 +1236,9 @@ describe('relay-adapt', function test() {
     expect(relayAdaptAddressBalance).to.equal(0n);
 
     const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
-    expect(callResultError).to.equal('Unknown Relay Adapt error: No utf8 string parsed from revert reason.');
+    expect(callResultError).to.equal(
+      'Unknown Relay Adapt error: No utf8 string parsed from revert reason.',
+    );
 
     // TODO: These are the incorrect assertions, if the tx is fully reverted. This requires a callbacks upgrade to contract.
     // For now, it is partially reverted. Unshield/shield fees are still charged.
@@ -1306,7 +1308,7 @@ describe('relay-adapt', function test() {
     ).to.deep.equal(shieldERC20Recipients.map((recipient) => recipient.tokenAddress.toLowerCase()));
     for (const relayShieldInput of relayShieldInputs) {
       expect(relayShieldInput.preimage.npk).to.equal(
-        nToHex(
+        ByteUtils.nToHex(
           3348140451435708797167073859596593490034226162440317170509481065740328487080n,
           ByteLength.UINT_256,
           true,

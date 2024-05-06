@@ -13,7 +13,7 @@ import {
   RailgunTransactionWithHash,
   MerkleProof,
 } from '../models/formatted-types';
-import { ByteLength, formatToByteLength, fromUTF8String, hexlify, nToHex } from '../utils/bytes';
+import { ByteLength, fromUTF8String, ByteUtils } from '../utils/bytes';
 import { isDefined } from '../utils';
 import { TXIDVersion } from '../models';
 import EngineDebug from '../debugger/debugger';
@@ -129,8 +129,8 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       throw new Error('Railgun transaction for tree/index not found');
     }
     const commitmentIndex = railgunTransaction.commitments
-      .map((c) => formatToByteLength(c, ByteLength.UINT_256))
-      .indexOf(formatToByteLength(commitmentHash, ByteLength.UINT_256));
+      .map((c) => ByteUtils.formatToByteLength(c, ByteLength.UINT_256))
+      .indexOf(ByteUtils.formatToByteLength(commitmentHash, ByteLength.UINT_256));
     if (commitmentIndex < 0) {
       throw new Error('Could not find commitmentHash for RailgunTransaction');
     }
@@ -233,7 +233,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
     // Convert index to bytes data, the binary representation is the indices of the merkle path
     // Pad to 32 bytes
-    const indices = nToHex(BigInt(index), ByteLength.UINT_256);
+    const indices = ByteUtils.nToHex(BigInt(index), ByteLength.UINT_256);
 
     const rootNode = await this.getPOILaunchSnapshotNode(TREE_DEPTH);
     if (!isDefined(rootNode)) {
@@ -501,14 +501,14 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
   private getPOILaunchSnapshotNodeDBPath(level: number): string[] {
     const snapshotPrefix = fromUTF8String('poi-launch-snapshot');
     return [...this.getMerkletreeDBPrefix(), snapshotPrefix, level].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
+      ByteUtils.formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
   private getRailgunTxidLookupDBPath(railgunTxid: string): string[] {
     const railgunTxidPrefix = fromUTF8String('railgun-txid-lookup');
     return [...this.getMerkletreeDBPrefix(), railgunTxidPrefix, railgunTxid].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
+      ByteUtils.formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 
@@ -540,9 +540,12 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
   private getHistoricalMerklerootDBPath(tree: number, index: number): string[] {
     const merklerootPrefix = fromUTF8String('merkleroots');
-    return [...this.getMerkletreeDBPrefix(), merklerootPrefix, hexlify(tree), hexlify(index)].map(
-      (el) => formatToByteLength(el, ByteLength.UINT_256),
-    );
+    return [
+      ...this.getMerkletreeDBPrefix(),
+      merklerootPrefix,
+      ByteUtils.hexlify(tree),
+      ByteUtils.hexlify(index),
+    ].map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
   }
 
   protected async newLeafRootTrigger(

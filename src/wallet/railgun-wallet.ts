@@ -3,7 +3,7 @@ import { poseidon } from '../utils/poseidon';
 import { Database } from '../database/database';
 import { deriveNodes, SpendingKeyPair, WalletNode } from '../key-derivation/wallet-node';
 import { WalletData } from '../models/wallet-types';
-import { combine } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
 import { AbstractWallet } from './abstract-wallet';
 import { Mnemonic } from '../key-derivation/bip39';
@@ -60,7 +60,7 @@ class RailgunWallet extends AbstractWallet {
    * @returns {string} hash of mnemonic and index
    */
   private static generateID(mnemonic: string, index: number): string {
-    return sha256(combine([Mnemonic.toSeed(mnemonic), index.toString(16)]));
+    return sha256(ByteUtils.combine([Mnemonic.toSeed(mnemonic), index.toString(16)]));
   }
 
   private static async createWallet(

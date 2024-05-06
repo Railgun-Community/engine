@@ -1,4 +1,4 @@
-import { ByteLength, fromUTF8String, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, fromUTF8String, ByteUtils } from '../utils/bytes';
 import { SNARK_PRIME } from '../utils/constants';
 import { keccak256 } from '../utils/hash';
 import { Chain } from './engine-types';
@@ -47,6 +47,9 @@ export type MerkletreesMetadata = {
 
 // Calculate tree zero value
 export const MERKLE_ZERO_VALUE_BIGINT: bigint =
-  hexToBigInt(keccak256(fromUTF8String('Railgun'))) % SNARK_PRIME;
+  ByteUtils.hexToBigInt(keccak256(fromUTF8String('Railgun'))) % SNARK_PRIME;
 
-export const MERKLE_ZERO_VALUE: string = nToHex(MERKLE_ZERO_VALUE_BIGINT, ByteLength.UINT_256);
+export const MERKLE_ZERO_VALUE: string = ByteUtils.nToHex(
+  MERKLE_ZERO_VALUE_BIGINT,
+  ByteLength.UINT_256,
+);

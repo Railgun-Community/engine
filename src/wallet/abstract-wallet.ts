@@ -43,21 +43,7 @@ import {
   WalletBalanceBucket,
 } from '../models/txo-types';
 import { LEGACY_MEMO_METADATA_BYTE_CHUNKS } from '../note/memo';
-import {
-  arrayify,
-  ByteLength,
-  combine,
-  fastBytesToHex,
-  fastHexToBytes,
-  formatToByteLength,
-  fromUTF8String,
-  hexlify,
-  hexStringToBytes,
-  hexToBigInt,
-  hexToBytes,
-  nToHex,
-  padToLength,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils, fromUTF8String } from '../utils/bytes';
 import { generateSimpleKey, getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   AddressKeys,
@@ -218,12 +204,14 @@ abstract class AbstractWallet extends EventEmitter {
   ) {
     super();
 
-    this.id = hexlify(id);
+    this.id = ByteUtils.hexlify(id);
     this.db = db;
     this.tokenDataGetter = new TokenDataGetter(db);
     this.viewingKeyPair = viewingKeyPair;
     this.spendingPublicKey = spendingPublicKey;
-    this.nullifyingKey = hexToBigInt(poseidonHex([fastBytesToHex(this.viewingKeyPair.privateKey)]));
+    this.nullifyingKey = ByteUtils.hexToBigInt(
+      poseidonHex([ByteUtils.fastBytesToHex(this.viewingKeyPair.privateKey)]),
+    );
     this.masterPublicKey = WalletNode.getMasterPublicKey(spendingPublicKey, this.nullifyingKey);
     this.creationBlockNumbers = creationBlockNumbers;
     this.prover = prover;
@@ -335,14 +323,16 @@ abstract class AbstractWallet extends EventEmitter {
    * @returns wallet DB prefix
    */
   getWalletDBPrefix(chain: Chain, tree?: number, position?: number): string[] {
-    const path = [fromUTF8String('wallet'), hexlify(this.id), getChainFullNetworkID(chain)].map(
-      (el) => formatToByteLength(el, ByteLength.UINT_256),
-    );
+    const path = [
+      fromUTF8String('wallet'),
+      ByteUtils.hexlify(this.id),
+      getChainFullNetworkID(chain),
+    ].map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
     if (tree != null) {
-      path.push(hexlify(padToLength(tree, 32)));
+      path.push(ByteUtils.hexlify(ByteUtils.padToLength(tree, 32)));
     }
     if (position != null) {
-      path.push(hexlify(padToLength(position, 32)));
+      path.push(ByteUtils.hexlify(ByteUtils.padToLength(position, 32)));
     }
     return path;
   }
@@ -367,14 +357,14 @@ abstract class AbstractWallet extends EventEmitter {
   getWalletSentCommitmentDBPrefix(chain: Chain, tree?: number, position?: number): string[] {
     const path = [
       fromUTF8String('wallet'),
-      `${hexlify(this.id)}-spent`,
+      `${ByteUtils.hexlify(this.id)}-spent`,
       getChainFullNetworkID(chain),
-    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
+    ].map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
     if (tree != null) {
-      path.push(hexlify(padToLength(tree, 32)));
+      path.push(ByteUtils.hexlify(ByteUtils.padToLength(tree, 32)));
     }
     if (position != null) {
-      path.push(hexlify(padToLength(position, 32)));
+      path.push(ByteUtils.hexlify(ByteUtils.padToLength(position, 32)));
     }
     return path;
   }
@@ -449,7 +439,7 @@ abstract class AbstractWallet extends EventEmitter {
         this.getWalletDetailsPath(chain),
       )) as BytesData;
       const walletDetailsMap = msgpack.decode(
-        arrayify(walletDetailsMapEncoded),
+        ByteUtils.arrayify(walletDetailsMapEncoded),
       ) as WalletDetailsMap;
       return walletDetailsMap;
     } catch {
@@ -565,10 +555,10 @@ abstract class AbstractWallet extends EventEmitter {
     switch (commitmentType) {
       case CommitmentType.TransactCommitmentV2: {
         const commitment = leaf as TransactCommitmentV2;
-        const blindedSenderViewingKey = hexStringToBytes(
+        const blindedSenderViewingKey = ByteUtils.hexStringToBytes(
           commitment.ciphertext.blindedSenderViewingKey,
         );
-        const blindedReceiverViewingKey = hexStringToBytes(
+        const blindedReceiverViewingKey = ByteUtils.hexStringToBytes(
           commitment.ciphertext.blindedReceiverViewingKey,
         );
         const [sharedKeyReceiver, sharedKeySender] = await Promise.all([
@@ -615,7 +605,7 @@ abstract class AbstractWallet extends EventEmitter {
         const commitment = leaf as ShieldCommitment;
         const sharedKey = await getSharedSymmetricKey(
           viewingPrivateKey,
-          hexToBytes(commitment.shieldKey),
+          ByteUtils.hexToBytes(commitment.shieldKey),
         );
         try {
           if (!sharedKey) {
@@ -654,10 +644,10 @@ abstract class AbstractWallet extends EventEmitter {
 
       case CommitmentType.TransactCommitmentV3: {
         const commitment = leaf as TransactCommitmentV3;
-        const blindedSenderViewingKey = hexStringToBytes(
+        const blindedSenderViewingKey = ByteUtils.hexStringToBytes(
           commitment.ciphertext.blindedSenderViewingKey,
         );
-        const blindedReceiverViewingKey = hexStringToBytes(
+        const blindedReceiverViewingKey = ByteUtils.hexStringToBytes(
           commitment.ciphertext.blindedReceiverViewingKey,
         );
         const [sharedKeyReceiver, sharedKeySender] = await Promise.all([
@@ -702,16 +692,22 @@ abstract class AbstractWallet extends EventEmitter {
       }
       case CommitmentType.LegacyEncryptedCommitment: {
         const commitment = leaf as LegacyEncryptedCommitment;
-        const blindedSenderViewingKey = hexStringToBytes(commitment.ciphertext.ephemeralKeys[0]);
-        const blindedReceiverViewingKey = hexStringToBytes(commitment.ciphertext.ephemeralKeys[1]);
+        const blindedSenderViewingKey = ByteUtils.hexStringToBytes(
+          commitment.ciphertext.ephemeralKeys[0],
+        );
+        const blindedReceiverViewingKey = ByteUtils.hexStringToBytes(
+          commitment.ciphertext.ephemeralKeys[1],
+        );
         const [sharedKeyReceiver, sharedKeySender] = await Promise.all([
           getSharedSymmetricKeyLegacy(viewingPrivateKey, blindedSenderViewingKey),
           getSharedSymmetricKeyLegacy(viewingPrivateKey, blindedReceiverViewingKey),
         ]);
-        const annotationData = combine(
+        const annotationData = ByteUtils.combine(
           commitment.ciphertext.memo.slice(0, LEGACY_MEMO_METADATA_BYTE_CHUNKS),
         );
-        const memo = combine(commitment.ciphertext.memo.slice(LEGACY_MEMO_METADATA_BYTE_CHUNKS));
+        const memo = ByteUtils.combine(
+          commitment.ciphertext.memo.slice(LEGACY_MEMO_METADATA_BYTE_CHUNKS),
+        );
         if (sharedKeyReceiver) {
           noteReceive = await this.decryptLeaf(
             txidVersion,
@@ -792,7 +788,7 @@ abstract class AbstractWallet extends EventEmitter {
         txid: leaf.txid,
         timestamp: leaf.timestamp,
         blockNumber: leaf.blockNumber,
-        nullifier: nToHex(nullifier, ByteLength.UINT_256),
+        nullifier: ByteUtils.nToHex(nullifier, ByteLength.UINT_256),
         decrypted: noteReceive.serialize(),
         senderAddress: noteReceive.senderAddressData
           ? encodeAddress(noteReceive.senderAddressData)
@@ -924,7 +920,9 @@ abstract class AbstractWallet extends EventEmitter {
       await Promise.all(
         keySplits.map(async (keySplit) => {
           const data = (await this.db.get(keySplit)) as BytesData;
-          const storedReceiveCommitment = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
+          const storedReceiveCommitment = msgpack.decode(
+            ByteUtils.arrayify(data),
+          ) as StoredReceiveCommitment;
 
           if (storedReceiveCommitment.txidVersion !== txidVersion) {
             return undefined;
@@ -951,7 +949,9 @@ abstract class AbstractWallet extends EventEmitter {
       await Promise.all(
         keySplits.map(async (keySplit) => {
           const data = (await this.db.get(keySplit)) as BytesData;
-          const storedSendCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
+          const storedSendCommitment = msgpack.decode(
+            ByteUtils.arrayify(data),
+          ) as StoredSendCommitment;
 
           if (storedSendCommitment.txidVersion !== txidVersion) {
             return undefined;
@@ -1277,7 +1277,7 @@ abstract class AbstractWallet extends EventEmitter {
       legacyTransactProofDatas.push({
         txidIndex: txidIndex.toString(),
         blindedCommitment: txo.blindedCommitment as string,
-        npk: nToHex(txo.note.notePublicKey, ByteLength.UINT_256, true),
+        npk: ByteUtils.nToHex(txo.note.notePublicKey, ByteLength.UINT_256, true),
         value: txo.note.value.toString(),
         tokenHash: txo.note.tokenHash,
       });
@@ -1304,7 +1304,7 @@ abstract class AbstractWallet extends EventEmitter {
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
-    const formattedCommitment = formatToByteLength(commitment, ByteLength.UINT_256);
+    const formattedCommitment = ByteUtils.formatToByteLength(commitment, ByteLength.UINT_256);
 
     for (const cachedStoredReceiveCommitment of cachedStoredReceiveCommitments) {
       const receiveCommitment = await utxoMerkletree.getCommitment(
@@ -1314,7 +1314,10 @@ abstract class AbstractWallet extends EventEmitter {
       if (!isTransactCommitmentType(receiveCommitment.commitmentType)) {
         continue;
       }
-      if (formattedCommitment === formatToByteLength(receiveCommitment.hash, ByteLength.UINT_256)) {
+      if (
+        formattedCommitment ===
+        ByteUtils.formatToByteLength(receiveCommitment.hash, ByteLength.UINT_256)
+      ) {
         return POI.hasValidPOIsActiveLists(
           cachedStoredReceiveCommitment.storedReceiveCommitment.poisPerList,
         );
@@ -1748,7 +1751,7 @@ abstract class AbstractWallet extends EventEmitter {
       boundParamsHash,
     );
     const txidLeafHash = getRailgunTxidLeafHash(railgunTxidBigInt, utxoTreeIn, globalTreePosition);
-    const railgunTxidHex = nToHex(railgunTxidBigInt, ByteLength.UINT_256);
+    const railgunTxidHex = ByteUtils.nToHex(railgunTxidBigInt, ByteLength.UINT_256);
 
     const blindedCommitmentsIn = removeUndefineds(utxos.map((txo) => txo.blindedCommitment));
     if (blindedCommitmentsIn.length !== nullifiers.length) {
@@ -1784,7 +1787,7 @@ abstract class AbstractWallet extends EventEmitter {
     const nonUnshieldCommitments = hasUnshield ? commitmentsOut.slice(0, -1) : commitmentsOut;
     const blindedCommitmentsOut = nonUnshieldCommitments.map((commitment, i) => {
       return BlindedCommitment.getForShieldOrTransact(
-        nToHex(commitment, ByteLength.UINT_256, true),
+        ByteUtils.nToHex(commitment, ByteLength.UINT_256, true),
         privateInputs.npkOut[i],
         globalTreePosition + BigInt(i),
       );
@@ -1799,9 +1802,9 @@ abstract class AbstractWallet extends EventEmitter {
       // --- Private inputs ---
 
       // Railgun Transaction info
-      boundParamsHash: nToHex(boundParamsHash, ByteLength.UINT_256, true),
-      nullifiers: nullifiers.map((el) => nToHex(el, ByteLength.UINT_256, true)),
-      commitmentsOut: commitmentsOut.map((el) => nToHex(el, ByteLength.UINT_256, true)),
+      boundParamsHash: ByteUtils.nToHex(boundParamsHash, ByteLength.UINT_256, true),
+      nullifiers: nullifiers.map((el) => ByteUtils.nToHex(el, ByteLength.UINT_256, true)),
+      commitmentsOut: commitmentsOut.map((el) => ByteUtils.nToHex(el, ByteLength.UINT_256, true)),
 
       // Spender wallet info
       spendingPublicKey: this.spendingPublicKey,
@@ -2109,7 +2112,7 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<void> {
     const dbPath = this.getWalletReceiveCommitmentDBPrefix(chain, tree, position);
     const data = (await this.db.get(dbPath)) as BytesData;
-    const receiveCommitment = msgpack.decode(arrayify(data)) as StoredReceiveCommitment;
+    const receiveCommitment = msgpack.decode(ByteUtils.arrayify(data)) as StoredReceiveCommitment;
 
     if (JSON.stringify(receiveCommitment.poisPerList) !== JSON.stringify(poisPerList)) {
       // Update receiveCommitment if POIs have changed.
@@ -2126,7 +2129,7 @@ abstract class AbstractWallet extends EventEmitter {
   ): Promise<void> {
     const dbPath = this.getWalletSentCommitmentDBPrefix(chain, tree, position);
     const data = (await this.db.get(dbPath)) as BytesData;
-    const sentCommitment = msgpack.decode(arrayify(data)) as StoredSendCommitment;
+    const sentCommitment = msgpack.decode(ByteUtils.arrayify(data)) as StoredSendCommitment;
 
     if (JSON.stringify(sentCommitment.poisPerList) !== JSON.stringify(poisPerList)) {
       // Update sentCommitment if POIs have changed.
@@ -2307,7 +2310,7 @@ abstract class AbstractWallet extends EventEmitter {
           receiveTokenAmounts: [],
         };
       }
-      const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
+      const tokenHash = ByteUtils.formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
       txidTransactionMap[txid].receiveTokenAmounts.push({
         tokenHash,
         tokenData: note.tokenData,
@@ -2428,7 +2431,7 @@ abstract class AbstractWallet extends EventEmitter {
         };
       }
 
-      const tokenHash = formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
+      const tokenHash = ByteUtils.formatToByteLength(note.tokenHash, ByteLength.UINT_256, false);
       const tokenAmount: TransactionHistoryTokenAmount | TransactionHistoryTransferTokenAmount = {
         tokenHash,
         tokenData: note.tokenData,
@@ -2661,7 +2664,11 @@ abstract class AbstractWallet extends EventEmitter {
 
     // Loop through each TXO and add to balances if unspent
     for (const txo of TXOs) {
-      const tokenHash = formatToByteLength(txo.note.tokenHash, ByteLength.UINT_256, false);
+      const tokenHash = ByteUtils.formatToByteLength(
+        txo.note.tokenHash,
+        ByteLength.UINT_256,
+        false,
+      );
       // If we don't have an entry for this token yet, create one
       if (!isDefined(tokenBalances[tokenHash])) {
         tokenBalances[tokenHash] = {
@@ -2682,8 +2689,11 @@ abstract class AbstractWallet extends EventEmitter {
         // Only for Unshield-To-Origin transactions. Filter TXOs by the provided shield txid.
         if (
           !isShieldCommitmentType(txo.commitmentType) ||
-          formatToByteLength(txo.txid, ByteLength.UINT_256) !==
-            formatToByteLength(originShieldTxidForSpendabilityOverride, ByteLength.UINT_256)
+          ByteUtils.formatToByteLength(txo.txid, ByteLength.UINT_256) !==
+            ByteUtils.formatToByteLength(
+              originShieldTxidForSpendabilityOverride,
+              ByteLength.UINT_256,
+            )
         ) {
           // Skip if txid doesn't match.
           continue;
@@ -3186,7 +3196,7 @@ abstract class AbstractWallet extends EventEmitter {
     encryptionKey: string,
   ): Promise<WalletData | ViewOnlyWalletData> {
     return msgpack.decode(
-      fastHexToBytes(await db.getEncrypted(AbstractWallet.dbPath(id), encryptionKey)),
+      ByteUtils.fastHexToBytes(await db.getEncrypted(AbstractWallet.dbPath(id), encryptionKey)),
     );
   }
 
@@ -3215,7 +3225,9 @@ abstract class AbstractWallet extends EventEmitter {
     id: string,
   ): Promise<WalletData | ViewOnlyWalletData> {
     return msgpack.decode(
-      fastHexToBytes(await db.getEncrypted([fromUTF8String('wallet'), id], encryptionKey)),
+      ByteUtils.fastHexToBytes(
+        await db.getEncrypted([fromUTF8String('wallet'), id], encryptionKey),
+      ),
     );
   }
 
@@ -3237,7 +3249,7 @@ abstract class AbstractWallet extends EventEmitter {
   generateShareableViewingKey(): string {
     const spendingPublicKeyString = Babyjubjub.packPoint(this.spendingPublicKey).toString('hex');
     const data: ShareableViewingKeyData = {
-      vpriv: formatToByteLength(this.viewingKeyPair.privateKey, ByteLength.UINT_256),
+      vpriv: ByteUtils.formatToByteLength(this.viewingKeyPair.privateKey, ByteLength.UINT_256),
       spub: spendingPublicKeyString,
     };
     return msgpack.encode(data).toString('hex');

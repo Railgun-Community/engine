@@ -1,6 +1,6 @@
 import circom from '@railgun-community/circomlibjs';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, hexToBigInt, nToHex, padToLength, strip0x } from './bytes';
+import { ByteLength, ByteUtils } from './bytes';
 import { isReactNative } from './runtime';
 
 interface PoseidonModule {
@@ -50,15 +50,18 @@ export const poseidon = (args: Array<bigint>): bigint => {
 
 export const poseidonHex = (args: Array<string>): string => {
   if (isReactNative || !poseidonHexWasm) {
-    return nToHex(circom.poseidon(args.map(hexToBigInt)), ByteLength.UINT_256);
+    return ByteUtils.nToHex(
+      circom.poseidon(args.map((x) => ByteUtils.hexToBigInt(x))),
+      ByteLength.UINT_256,
+    );
   }
   try {
     // We need to strip 0x prefix from hex strings before passing to WASM,
     // however, let's first make sure we actually need to do this, to avoid
     // creating an unnecessary copy of the array (via `map`)
     const needsStripping = args.some((arg) => arg.startsWith('0x'));
-    const strippedArgs = needsStripping ? args.map(strip0x) : args;
-    return padToLength(poseidonHexWasm(strippedArgs), ByteLength.UINT_256) as string;
+    const strippedArgs = needsStripping ? args.map((x) => ByteUtils.strip0x(x)) : args;
+    return ByteUtils.padToLength(poseidonHexWasm(strippedArgs), ByteLength.UINT_256) as string;
   } catch (cause) {
     if (!(cause instanceof Error)) {
       throw new Error('Non-error thrown from poseidonHex', { cause });
@@ -66,6 +69,9 @@ export const poseidonHex = (args: Array<string>): string => {
     // Fallback to Javascript.
     EngineDebug.log('poseidonHex in WASM failed: Fallback to JavaScript');
     EngineDebug.error(cause);
-    return nToHex(circom.poseidon(args.map(hexToBigInt)), ByteLength.UINT_256);
+    return ByteUtils.nToHex(
+      circom.poseidon(args.map((x) => ByteUtils.hexToBigInt(x))),
+      ByteLength.UINT_256,
+    );
   }
 };

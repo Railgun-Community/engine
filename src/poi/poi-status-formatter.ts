@@ -8,7 +8,7 @@ import {
   TXOsSpentPOIStatusInfo,
 } from '../models/txo-types';
 import { getUnshieldEventNoteHash } from '../note';
-import { nToHex, ByteLength } from '../utils/bytes';
+import { ByteUtils, ByteLength } from '../utils/bytes';
 import { emojiHashForPOIStatusInfo } from '../utils/hash-emoji';
 import { isDefined } from '../utils/is-defined';
 import { POI } from './poi';
@@ -25,7 +25,9 @@ export const formatTXOsReceivedPOIStatusInfo = async (TXOs: TXO[]) => {
           tree,
           position,
           txid,
-          commitment: `${nToHex(txo.note.hash, ByteLength.UINT_256, true)} (${txo.commitmentType})`,
+          commitment: `${ByteUtils.nToHex(txo.note.hash, ByteLength.UINT_256, true)} (${
+            txo.commitmentType
+          })`,
           blindedCommitment: txo.blindedCommitment ?? 'Unavailable',
           poisPerList: txo.poisPerList,
         },
@@ -33,9 +35,9 @@ export const formatTXOsReceivedPOIStatusInfo = async (TXOs: TXO[]) => {
           tree,
           position,
           txid: emojiHashForPOIStatusInfo(txid),
-          commitment: `${emojiHashForPOIStatusInfo(nToHex(txo.note.hash, ByteLength.UINT_256))} (${
-            txo.commitmentType
-          })`,
+          commitment: `${emojiHashForPOIStatusInfo(
+            ByteUtils.nToHex(txo.note.hash, ByteLength.UINT_256),
+          )} (${txo.commitmentType})`,
           blindedCommitment: isDefined(txo.blindedCommitment)
             ? emojiHashForPOIStatusInfo(txo.blindedCommitment)
             : 'Unavailable',
@@ -152,10 +154,10 @@ const formatSpentStatusInfo = async (
 
   const commitmentHashes: string[] = [
     ...sentCommitmentsForRailgunTxid.map((sentCommitment) =>
-      nToHex(sentCommitment.note.hash, ByteLength.UINT_256, true),
+      ByteUtils.nToHex(sentCommitment.note.hash, ByteLength.UINT_256, true),
     ),
     ...unshieldEventsForRailgunTxid.map((unshieldEvent) =>
-      nToHex(getUnshieldEventNoteHash(unshieldEvent), ByteLength.UINT_256, true),
+      ByteUtils.nToHex(getUnshieldEventNoteHash(unshieldEvent), ByteLength.UINT_256, true),
     ),
   ];
 

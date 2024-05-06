@@ -6,7 +6,7 @@ import { AddressData } from '../key-derivation';
 import { isDefined } from '../utils/is-defined';
 import EngineDebug from '../debugger/debugger';
 import { V2Events } from '../contracts/railgun-smart-wallet/V2/V2-events';
-import { ByteLength, formatToByteLength, hexStringToBytes, nToHex } from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { CommitmentCiphertextV2, TokenType } from '../models/formatted-types';
 import { recursivelyDecodeResult } from '../utils/ethers';
 import { ExtractedRailgunTransactionData } from '../models/transaction-types';
@@ -159,7 +159,9 @@ const extractFirstNoteERC20AmountMapV2 = async (
         return;
       }
 
-      const commitmentCiphertext = V2Events.formatCommitmentCiphertext(commitmentCiphertextStructOutput);
+      const commitmentCiphertext = V2Events.formatCommitmentCiphertext(
+        commitmentCiphertextStructOutput,
+      );
 
       const decryptedReceiverNote = await decryptReceiverNoteSafeV2(
         chain,
@@ -208,7 +210,11 @@ const extractRailgunTransactionDataV2 = async (
     railgunTxs.map(async (railgunTx: TransactionStructOutput, railgunTxIndex: number) => {
       const { commitments, nullifiers, boundParams } = railgunTx;
 
-      const boundParamsHash = nToHex(hashBoundParamsV2(boundParams), ByteLength.UINT_256, true);
+      const boundParamsHash = ByteUtils.nToHex(
+        hashBoundParamsV2(boundParams),
+        ByteLength.UINT_256,
+        true,
+      );
       const railgunTxid = getRailgunTransactionIDHex({
         nullifiers,
         commitments,
@@ -232,7 +238,9 @@ const extractRailgunTransactionDataV2 = async (
         throw new Error('No ciphertext found for commitment at index 0');
       }
 
-      const commitmentCiphertext = V2Events.formatCommitmentCiphertext(commitmentCiphertextStructOutput);
+      const commitmentCiphertext = V2Events.formatCommitmentCiphertext(
+        commitmentCiphertextStructOutput,
+      );
 
       // Get NPK for first note, if addressed to current wallet.
       const firstCommitmentNotePublicKey = await extractNPKFromCommitmentCiphertextV2(
@@ -263,8 +271,10 @@ const decryptReceiverNoteSafeV2 = async (
   tokenDataGetter: TokenDataGetter,
 ): Promise<Optional<TransactNote>> => {
   try {
-    const blindedSenderViewingKey = hexStringToBytes(commitmentCiphertext.blindedSenderViewingKey);
-    const blindedReceiverViewingKey = hexStringToBytes(
+    const blindedSenderViewingKey = ByteUtils.hexStringToBytes(
+      commitmentCiphertext.blindedSenderViewingKey,
+    );
+    const blindedReceiverViewingKey = ByteUtils.hexStringToBytes(
       commitmentCiphertext.blindedReceiverViewingKey,
     );
     const sharedKey = await getSharedSymmetricKey(
@@ -340,8 +350,8 @@ export const extractERC20AmountFromTransactNote = async (
     return undefined;
   }
 
-  const noteHash = nToHex(decryptedReceiverNote.hash, ByteLength.UINT_256);
-  const commitHash = formatToByteLength(commitmentHash, ByteLength.UINT_256);
+  const noteHash = ByteUtils.nToHex(decryptedReceiverNote.hash, ByteLength.UINT_256);
+  const commitHash = ByteUtils.formatToByteLength(commitmentHash, ByteLength.UINT_256);
   if (noteHash !== commitHash) {
     EngineDebug.log('invalid commitHash');
     return undefined;
@@ -353,7 +363,7 @@ export const extractERC20AmountFromTransactNote = async (
     return undefined;
   }
 
-  const tokenAddress = formatToByteLength(
+  const tokenAddress = ByteUtils.formatToByteLength(
     tokenData.tokenAddress,
     ByteLength.Address,
     true,

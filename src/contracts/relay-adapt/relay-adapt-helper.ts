@@ -1,5 +1,5 @@
 import { ContractTransaction, AbiCoder, keccak256 } from 'ethers';
-import { randomHex, hexToBytes } from '../../utils/bytes';
+import { ByteUtils } from '../../utils/bytes';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 import { AddressData, decodeAddress } from '../../key-derivation';
 import {
@@ -40,7 +40,7 @@ class RelayAdaptHelper {
         );
 
         // Random private key for Relay Adapt shield.
-        const shieldPrivateKey = hexToBytes(randomHex(32));
+        const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
 
         return shieldERC20.serialize(shieldPrivateKey, addressData.viewingPublicKey);
       }),
@@ -63,7 +63,7 @@ class RelayAdaptHelper {
         );
 
         // Random private key for Relay Adapt shield.
-        const shieldPrivateKey = hexToBytes(randomHex(32));
+        const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
 
         return shieldNFT.serialize(shieldPrivateKey, addressData.viewingPublicKey);
       }),
@@ -127,7 +127,7 @@ class RelayAdaptHelper {
       [nullifiers, transactions.length, actionData],
     );
 
-    return keccak256(hexToBytes(preimage));
+    return keccak256(ByteUtils.hexToBytes(preimage));
   }
 
   /**
@@ -148,7 +148,7 @@ class RelayAdaptHelper {
     if (random.length !== 62) {
       throw new Error('Relay Adapt random parameter must be a hex string of length 62 (31 bytes).');
     }
-    return hexToBytes(random);
+    return ByteUtils.hexToBytes(random);
   }
 }
 

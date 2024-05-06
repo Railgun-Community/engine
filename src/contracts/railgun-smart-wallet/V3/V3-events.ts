@@ -32,7 +32,7 @@ import {
   serializeTokenData,
 } from '../../../note/note-util';
 import { isDefined } from '../../../utils/is-defined';
-import { ByteLength, formatToByteLength, nToHex, strip0x } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import { recursivelyDecodeResult } from '../../../utils/ethers';
 import EngineDebug from '../../../debugger/debugger';
 import { getRailgunTransactionIDHex } from '../../../transaction/railgun-txid';
@@ -69,7 +69,7 @@ export class V3Events {
       railgunTxid,
     );
     return {
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       treeNumber: utxoTree,
       startPosition: utxoStartingIndex,
       commitments: formattedCommitments,
@@ -95,8 +95,8 @@ export class V3Events {
     return commitmentCiphertexts.map((commitmentCiphertext, index) => {
       return {
         commitmentType: CommitmentType.TransactCommitmentV3,
-        hash: formatToByteLength(commitmentHashes[index], ByteLength.UINT_256),
-        txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+        hash: ByteUtils.formatToByteLength(commitmentHashes[index], ByteLength.UINT_256),
+        txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
         timestamp: undefined,
         blockNumber,
         ciphertext: V3Events.formatCommitmentCiphertext(commitmentCiphertext),
@@ -116,7 +116,7 @@ export class V3Events {
   }): CommitmentCiphertextV3 {
     const { blindedSenderViewingKey, blindedReceiverViewingKey } = commitmentCiphertext;
 
-    const strippedCiphertext = strip0x(commitmentCiphertext.ciphertext);
+    const strippedCiphertext = ByteUtils.strip0x(commitmentCiphertext.ciphertext);
     const nonce = strippedCiphertext.slice(0, 32);
     const bundle = strippedCiphertext.slice(32);
 
@@ -126,8 +126,14 @@ export class V3Events {
         nonce,
         bundle,
       },
-      blindedSenderViewingKey: formatToByteLength(blindedSenderViewingKey, ByteLength.UINT_256), // 32 bytes each.
-      blindedReceiverViewingKey: formatToByteLength(blindedReceiverViewingKey, ByteLength.UINT_256), // 32 bytes each.
+      blindedSenderViewingKey: ByteUtils.formatToByteLength(
+        blindedSenderViewingKey,
+        ByteLength.UINT_256,
+      ), // 32 bytes each.
+      blindedReceiverViewingKey: ByteUtils.formatToByteLength(
+        blindedReceiverViewingKey,
+        ByteLength.UINT_256,
+      ), // 32 bytes each.
     };
   }
 
@@ -148,8 +154,8 @@ export class V3Events {
     railgunTxid: string,
   ): UnshieldStoredEvent {
     return {
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-      toAddress: formatToByteLength(unshieldPreimage.npk, ByteLength.Address, true),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
+      toAddress: ByteUtils.formatToByteLength(unshieldPreimage.npk, ByteLength.Address, true),
       tokenType: Number(unshieldPreimage.token.tokenType),
       tokenAddress: unshieldPreimage.token.tokenAddress,
       tokenSubID: unshieldPreimage.token.tokenSubID.toString(),
@@ -173,8 +179,8 @@ export class V3Events {
 
     for (const nullifierHash of nullifierHashes) {
       nullifiers.push({
-        txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-        nullifier: formatToByteLength(nullifierHash, ByteLength.UINT_256),
+        txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
+        nullifier: ByteUtils.formatToByteLength(nullifierHash, ByteLength.UINT_256),
         treeNumber: spendAccumulatorNumber,
         blockNumber,
       });
@@ -206,7 +212,7 @@ export class V3Events {
     const hasUnshield = unshieldPreimage.value > 0n;
     const unshield: Optional<UnshieldRailgunTransactionData> = hasUnshield
       ? {
-          toAddress: formatToByteLength(unshieldPreimage.npk, ByteLength.Address, true),
+          toAddress: ByteUtils.formatToByteLength(unshieldPreimage.npk, ByteLength.Address, true),
           tokenData: serializeTokenData(
             unshieldPreimage.token.tokenAddress,
             unshieldPreimage.token.tokenType,
@@ -221,7 +227,7 @@ export class V3Events {
 
     return {
       version: RailgunTransactionVersion.V3,
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       blockNumber,
       commitments,
       nullifiers,
@@ -265,7 +271,7 @@ export class V3Events {
       fee,
     );
     return {
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       treeNumber: utxoTree,
       startPosition: utxoIndex,
       commitments: [formattedCommitment],
@@ -291,7 +297,7 @@ export class V3Events {
     utxoIndex: number,
     fee: bigint,
   ): ShieldCommitment {
-    const npk = formatToByteLength(shieldPreImage.npk, ByteLength.UINT_256);
+    const npk = ByteUtils.formatToByteLength(shieldPreImage.npk, ByteLength.UINT_256);
     const tokenData = serializeTokenData(
       shieldPreImage.token.tokenAddress,
       shieldPreImage.token.tokenType,
@@ -303,8 +309,8 @@ export class V3Events {
 
     const commitment: ShieldCommitment = {
       commitmentType: CommitmentType.ShieldCommitment,
-      hash: nToHex(noteHash, ByteLength.UINT_256),
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+      hash: ByteUtils.nToHex(noteHash, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
       timestamp: undefined,
       blockNumber,
       preImage,
@@ -387,7 +393,7 @@ export class V3Events {
       const treasuryFeeMap: { [tokenHash: string]: { shield: bigint; unshield: bigint } } = {};
 
       for (const { tokenID, fee } of treasuryFees) {
-        const strippedTokenID = strip0x(tokenID);
+        const strippedTokenID = ByteUtils.strip0x(tokenID);
         const unshield = transactions.find((transaction) => {
           const unshieldTokenHash = extractTokenHashFromCommitmentPreImageV3(
             transaction.unshieldPreimage,
@@ -453,11 +459,15 @@ export class V3Events {
         const commitmentsWithUnshieldHash = hasUnshield
           ? [
               ...commitmentHashes,
-              nToHex(getUnshieldPreImageNoteHash(unshieldPreimage), ByteLength.UINT_256, true),
+              ByteUtils.nToHex(
+                getUnshieldPreImageNoteHash(unshieldPreimage),
+                ByteLength.UINT_256,
+                true,
+              ),
             ]
           : commitmentHashes;
 
-        const formattedBoundParamsHash = formatToByteLength(
+        const formattedBoundParamsHash = ByteUtils.formatToByteLength(
           boundParamsHash,
           ByteLength.UINT_256,
           false,

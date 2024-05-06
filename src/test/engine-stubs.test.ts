@@ -3,7 +3,7 @@ import { AddressData } from '../key-derivation';
 import { TreeBalance, OutputType, CommitmentType } from '../models';
 import { getTokenDataERC20, TransactNote } from '../note';
 import { Prover } from '../prover/prover';
-import { ZERO_32_BYTE_VALUE, formatToByteLength, ByteLength } from '../utils';
+import { ZERO_32_BYTE_VALUE, ByteUtils, ByteLength } from '../utils';
 import { AbstractWallet, RailgunWallet } from '../wallet';
 
 let balancesStub: SinonStub;
@@ -66,7 +66,7 @@ export const createEngineWalletTreeBalancesStub = async (
   tokenAddress: string,
   tree: number,
 ) => {
-  const formattedTokenAddress = formatToByteLength(
+  const formattedTokenAddress = ByteUtils.formatToByteLength(
     tokenAddress.replace('0x', ''),
     ByteLength.UINT_256,
   );

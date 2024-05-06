@@ -1,14 +1,6 @@
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import { Prover, ProverProgressCallback } from '../prover/prover';
-import {
-  ByteLength,
-  combine,
-  formatToByteLength,
-  hexlify,
-  hexToBigInt,
-  nToHex,
-  prefix0x,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { AdaptID, NFTTokenData, TokenData, TokenType } from '../models/formatted-types';
 import { UnshieldFlag } from '../models/transaction-constants';
 import { getNoteBlindingKeys, getSharedSymmetricKey } from '../utils/keys-utils';
@@ -164,7 +156,7 @@ class Transaction {
       // Push path elements
       // eslint-disable-next-line no-await-in-loop
       const merkleProof = await merkletree.getMerkleProof(this.spendingTree, utxo.position);
-      pathElements.push(merkleProof.elements.map((element) => hexToBigInt(element)));
+      pathElements.push(merkleProof.elements.map((element) => ByteUtils.hexToBigInt(element)));
 
       // Push path indices
       pathIndices.push(BigInt(utxo.position));
@@ -210,8 +202,8 @@ class Transaction {
     );
 
     const privateInputs: PrivateInputsRailgun = {
-      tokenAddress: hexToBigInt(this.tokenHash),
-      randomIn: utxos.map((utxo) => hexToBigInt(utxo.note.random)),
+      tokenAddress: ByteUtils.hexToBigInt(this.tokenHash),
+      randomIn: utxos.map((utxo) => ByteUtils.hexToBigInt(utxo.note.random)),
       valueIn: utxos.map((utxo) => utxo.note.value),
       pathElements,
       leavesIndices: pathIndices,
@@ -241,23 +233,23 @@ class Transaction {
               throw new Error('Note ciphertext data must have length 3.');
             }
             const ciphertext: [string, string, string, string] = [
-              hexlify(`${noteCiphertext.iv}${noteCiphertext.tag}`, true),
-              hexlify(noteCiphertext.data[0], true),
-              hexlify(noteCiphertext.data[1], true),
-              hexlify(noteCiphertext.data[2], true),
+              ByteUtils.hexlify(`${noteCiphertext.iv}${noteCiphertext.tag}`, true),
+              ByteUtils.hexlify(noteCiphertext.data[0], true),
+              ByteUtils.hexlify(noteCiphertext.data[1], true),
+              ByteUtils.hexlify(noteCiphertext.data[2], true),
             ];
             return {
               ciphertext,
-              blindedSenderViewingKey: hexlify(
+              blindedSenderViewingKey: ByteUtils.hexlify(
                 noteBlindedKeys[index].blindedSenderViewingKey,
                 true,
               ),
-              blindedReceiverViewingKey: hexlify(
+              blindedReceiverViewingKey: ByteUtils.hexlify(
                 noteBlindedKeys[index].blindedReceiverViewingKey,
                 true,
               ),
-              memo: hexlify(noteMemo, true),
-              annotationData: hexlify(annotationData, true),
+              memo: ByteUtils.hexlify(noteMemo, true),
+              annotationData: ByteUtils.hexlify(annotationData, true),
             };
           },
         );
@@ -266,14 +258,14 @@ class Transaction {
           treeNumber: this.spendingTree,
           minGasPrice: globalBoundParams.minGasPrice,
           unshield: this.unshieldFlag,
-          chainID: hexlify(getChainFullNetworkID(this.chain), true),
+          chainID: ByteUtils.hexlify(getChainFullNetworkID(this.chain), true),
           adaptContract: this.adaptID.contract,
           adaptParams: this.adaptID.parameters,
           commitmentCiphertext,
         };
 
         const publicInputs: PublicInputsRailgun = {
-          merkleRoot: hexToBigInt(merkleRoot),
+          merkleRoot: ByteUtils.hexToBigInt(merkleRoot),
           boundParamsHash: hashBoundParamsV2(boundParams),
           nullifiers,
           commitmentsOut: allOutputs.map((note) => note.hash),
@@ -303,15 +295,17 @@ class Transaction {
               sharedKey,
               wallet.addressKeys.masterPublicKey,
             );
-            const ciphertext: string = prefix0x(`${noteCiphertext.nonce}${noteCiphertext.bundle}`);
+            const ciphertext: string = ByteUtils.prefix0x(
+              `${noteCiphertext.nonce}${noteCiphertext.bundle}`,
+            );
             return {
               ciphertext,
-              blindedSenderViewingKey: formatToByteLength(
+              blindedSenderViewingKey: ByteUtils.formatToByteLength(
                 noteBlindedKeys[index].blindedSenderViewingKey,
                 ByteLength.UINT_256,
                 true,
               ),
-              blindedReceiverViewingKey: formatToByteLength(
+              blindedReceiverViewingKey: ByteUtils.formatToByteLength(
                 noteBlindedKeys[index].blindedReceiverViewingKey,
                 ByteLength.UINT_256,
                 true,
@@ -328,7 +322,7 @@ class Transaction {
         };
 
         const publicInputs: PublicInputsRailgun = {
-          merkleRoot: hexToBigInt(merkleRoot),
+          merkleRoot: ByteUtils.hexToBigInt(merkleRoot),
           boundParamsHash: hashBoundParamsV3(boundParams),
           nullifiers,
           commitmentsOut: allOutputs.map((note) => note.hash),
@@ -450,12 +444,16 @@ class Transaction {
     return {
       txidVersion,
       proof: Prover.formatProof(proof),
-      merkleRoot: nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
-      nullifiers: publicInputs.nullifiers.map((n) => nToHex(n, ByteLength.UINT_256, true)),
+      merkleRoot: ByteUtils.nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
+      nullifiers: publicInputs.nullifiers.map((n) =>
+        ByteUtils.nToHex(n, ByteLength.UINT_256, true),
+      ),
       boundParams,
-      commitments: publicInputs.commitmentsOut.map((n) => nToHex(n, ByteLength.UINT_256, true)),
+      commitments: publicInputs.commitmentsOut.map((n) =>
+        ByteUtils.nToHex(n, ByteLength.UINT_256, true),
+      ),
       unshieldPreimage: {
-        npk: formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
+        npk: ByteUtils.formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
         token: unshieldPreimage.token,
         value: unshieldPreimage.value,
       },
@@ -472,12 +470,16 @@ class Transaction {
     return {
       txidVersion,
       proof: Prover.formatProof(proof),
-      merkleRoot: nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
-      nullifiers: publicInputs.nullifiers.map((n) => nToHex(n, ByteLength.UINT_256, true)),
+      merkleRoot: ByteUtils.nToHex(publicInputs.merkleRoot, ByteLength.UINT_256, true),
+      nullifiers: publicInputs.nullifiers.map((n) =>
+        ByteUtils.nToHex(n, ByteLength.UINT_256, true),
+      ),
       boundParams,
-      commitments: publicInputs.commitmentsOut.map((n) => nToHex(n, ByteLength.UINT_256, true)),
+      commitments: publicInputs.commitmentsOut.map((n) =>
+        ByteUtils.nToHex(n, ByteLength.UINT_256, true),
+      ),
       unshieldPreimage: {
-        npk: formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
+        npk: ByteUtils.formatToByteLength(unshieldPreimage.npk, ByteLength.UINT_256, true),
         token: unshieldPreimage.token,
         value: unshieldPreimage.value,
       },

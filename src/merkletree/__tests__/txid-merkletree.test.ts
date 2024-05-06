@@ -11,7 +11,7 @@ import {
   createRailgunTransactionWithHash,
   getRailgunTransactionID,
 } from '../../transaction/railgun-txid';
-import { ByteLength, nToHex } from '../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../utils/bytes';
 import { verifyMerkleProof } from '../merkle-proof';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { config } from '../../test/config.test';
@@ -212,7 +212,7 @@ describe('txid-merkletree', () => {
         commitments: railgunTransactions[0].commitments,
         boundParamsHash: railgunTransactions[0].boundParamsHash,
         blockNumber: railgunTransactions[0].blockNumber,
-        hash: nToHex(hash, ByteLength.UINT_256),
+        hash: ByteUtils.nToHex(hash, ByteLength.UINT_256),
         unshield: {
           tokenData: getTokenDataERC20(
             '0000000000000000000000009fe46736679d2d9a65f0992f2272de9f3c7fa6e0',

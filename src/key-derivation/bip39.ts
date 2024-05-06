@@ -4,7 +4,7 @@ import { wordlist } from 'ethereum-cryptography/bip39/wordlists/english';
 import { toHex, bytesToHex } from 'ethereum-cryptography/utils';
 import { mnemonicToSeedSync } from 'ethereum-cryptography/bip39';
 import { HDNodeWallet, Mnemonic as EthersMnemonic } from 'ethers';
-import { hexStringToBytes } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 
 const getPath = (index = 0) => {
   return `m/44'/60'/0'/0/${index}`;
@@ -28,7 +28,7 @@ export class Mnemonic {
   }
 
   static fromEntropy(entropy: string): string {
-    return bip39.entropyToMnemonic(hexStringToBytes(entropy), wordlist);
+    return bip39.entropyToMnemonic(ByteUtils.hexStringToBytes(entropy), wordlist);
   }
 
   /**

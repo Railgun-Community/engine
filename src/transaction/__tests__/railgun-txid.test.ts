@@ -4,7 +4,7 @@ import {
   calculateRailgunTransactionVerificationHash,
   getRailgunTxidLeafHash,
 } from '../railgun-txid';
-import { ByteLength, nToHex } from '../../utils';
+import { ByteLength, ByteUtils } from '../../utils';
 import { getGlobalTreePosition } from '../../poi/global-tree-position';
 
 chai.use(chaiAsPromised);
@@ -19,7 +19,7 @@ describe('railgun-txid', () => {
         getGlobalTreePosition(99999, 99999),
       ),
     ).to.equal(
-      nToHex(
+      ByteUtils.nToHex(
         20241071195545867095431884887423531306892427422293202401460555613931070025875n,
         ByteLength.UINT_256,
       ),

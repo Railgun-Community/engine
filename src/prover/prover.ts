@@ -1,5 +1,5 @@
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, hexToBigInt, nToHex } from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import {
   ArtifactGetter,
   FormattedCircuitInputsRailgun,
@@ -351,7 +351,7 @@ export class Prover {
   }
 
   private static get zeroProof(): Proof {
-    const zero = nToHex(BigInt(0), ByteLength.UINT_8);
+    const zero = ByteUtils.nToHex(BigInt(0), ByteLength.UINT_8);
     // prettier-ignore
     return {
       pi_a: [zero, zero],
@@ -442,15 +442,18 @@ export class Prover {
   ): PublicInputsPOI {
     const publicInputs: PublicInputsPOI = {
       blindedCommitmentsOut: Prover.padWithZerosToMax(
-        blindedCommitmentsOut.map(hexToBigInt),
+        blindedCommitmentsOut.map((x) => ByteUtils.hexToBigInt(x)),
         maxOutputs,
         0n, // Use Zero = 0 here
       ),
-      railgunTxidIfHasUnshield: hexToBigInt(railgunTxidIfHasUnshield),
-      anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
+      railgunTxidIfHasUnshield: ByteUtils.hexToBigInt(railgunTxidIfHasUnshield),
+      anyRailgunTxidMerklerootAfterTransaction: ByteUtils.hexToBigInt(
         anyRailgunTxidMerklerootAfterTransaction,
       ),
-      poiMerkleroots: Prover.padWithZerosToMax(poiMerkleroots.map(hexToBigInt), maxInputs),
+      poiMerkleroots: Prover.padWithZerosToMax(
+        poiMerkleroots.map((x) => ByteUtils.hexToBigInt(x)),
+        maxInputs,
+      ),
     };
     return publicInputs;
   }
@@ -682,19 +685,25 @@ export class Prover {
     maxOutputs: number,
   ): FormattedCircuitInputsPOI {
     return {
-      anyRailgunTxidMerklerootAfterTransaction: hexToBigInt(
+      anyRailgunTxidMerklerootAfterTransaction: ByteUtils.hexToBigInt(
         proofInputs.anyRailgunTxidMerklerootAfterTransaction,
       ),
-      boundParamsHash: hexToBigInt(proofInputs.boundParamsHash),
-      nullifiers: this.padWithZerosToMax(proofInputs.nullifiers.map(hexToBigInt), maxInputs),
+      boundParamsHash: ByteUtils.hexToBigInt(proofInputs.boundParamsHash),
+      nullifiers: this.padWithZerosToMax(
+        proofInputs.nullifiers.map((x) => ByteUtils.hexToBigInt(x)),
+        maxInputs,
+      ),
       commitmentsOut: this.padWithZerosToMax(
-        proofInputs.commitmentsOut.map(hexToBigInt),
+        proofInputs.commitmentsOut.map((x) => ByteUtils.hexToBigInt(x)),
         maxOutputs,
       ),
       spendingPublicKey: proofInputs.spendingPublicKey,
       nullifyingKey: proofInputs.nullifyingKey,
-      token: hexToBigInt(proofInputs.token),
-      randomsIn: this.padWithZerosToMax(proofInputs.randomsIn.map(hexToBigInt), maxInputs),
+      token: ByteUtils.hexToBigInt(proofInputs.token),
+      randomsIn: this.padWithZerosToMax(
+        proofInputs.randomsIn.map((x) => ByteUtils.hexToBigInt(x)),
+        maxInputs,
+      ),
       valuesIn: this.padWithZerosToMax(
         proofInputs.valuesIn,
         maxOutputs,
@@ -710,21 +719,24 @@ export class Prover {
       ),
       utxoBatchGlobalStartPositionOut: BigInt(proofInputs.utxoBatchGlobalStartPositionOut),
       railgunTxidIfHasUnshield: BigInt(proofInputs.railgunTxidIfHasUnshield),
-      railgunTxidMerkleProofIndices: hexToBigInt(proofInputs.railgunTxidMerkleProofIndices),
-      railgunTxidMerkleProofPathElements:
-        proofInputs.railgunTxidMerkleProofPathElements.map(hexToBigInt),
+      railgunTxidMerkleProofIndices: ByteUtils.hexToBigInt(
+        proofInputs.railgunTxidMerkleProofIndices,
+      ),
+      railgunTxidMerkleProofPathElements: proofInputs.railgunTxidMerkleProofPathElements.map((x) =>
+        ByteUtils.hexToBigInt(x),
+      ),
       poiMerkleroots: this.padWithZerosToMax(
-        proofInputs.poiMerkleroots.map(hexToBigInt),
+        proofInputs.poiMerkleroots.map((x) => ByteUtils.hexToBigInt(x)),
         maxInputs,
       ),
       poiInMerkleProofIndices: this.padWithZerosToMax(
-        proofInputs.poiInMerkleProofIndices.map(hexToBigInt),
+        proofInputs.poiInMerkleProofIndices.map((x) => ByteUtils.hexToBigInt(x)),
         maxInputs,
         0n, // Use Zero = 0 here
       ),
       poiInMerkleProofPathElements: this.padWithArraysOfZerosToMaxAndLength(
         proofInputs.poiInMerkleProofPathElements.map((pathElements) =>
-          pathElements.map(hexToBigInt),
+          pathElements.map((x) => ByteUtils.hexToBigInt(x)),
         ),
         maxInputs,
         16,
