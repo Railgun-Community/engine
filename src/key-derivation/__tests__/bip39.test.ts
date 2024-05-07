@@ -89,7 +89,7 @@ describe('bip39', () => {
     ];
 
     for (const vector of vectors) {
-      expect(Mnemonic.toSeed(vector.mnemonic, vector.password || undefined)).to.equal(vector.seed);
+      expect(Mnemonic.toSeed(vector.mnemonic, vector.password)).to.equal(vector.seed);
     }
   });
 });
