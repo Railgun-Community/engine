@@ -2,7 +2,7 @@ import { Contract, FallbackProvider } from 'ethers';
 import { TokenDataStructOutput, TokenVault } from '../../../abi/typechain/TokenVault';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { ABITokenVault } from '../../../abi/abi';
-import { ByteLength, formatToByteLength } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import EngineDebug from '../../../debugger/debugger';
 
 export class TokenVaultContract {
@@ -37,7 +37,7 @@ export class TokenVaultContract {
    */
   async getNFTTokenData(tokenHash: string): Promise<TokenDataStructOutput> {
     try {
-      const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
+      const formattedTokenHash = ByteUtils.formatToByteLength(tokenHash, ByteLength.UINT_256, true);
       return await this.contract.tokenIDMapping(formattedTokenHash);
     } catch (cause) {
       const err = new Error('Failed to get V3 NFT token data', { cause });

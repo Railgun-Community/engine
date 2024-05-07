@@ -5,7 +5,7 @@ import { Wallet } from 'ethers';
 import { Chain } from '../models/engine-types';
 import { NFTTokenData, TokenType } from '../models/formatted-types';
 import { ShieldNoteNFT } from '../note/nft/shield-note-nft';
-import { hexToBytes, randomHex } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 import { RailgunWallet } from '../wallet/railgun-wallet';
 import {
   awaitRailgunSmartWalletShield,
@@ -53,7 +53,7 @@ export const shieldNFTForTest = async (
     tokenSubID,
   };
   const shield = new ShieldNoteNFT(wallet.masterPublicKey, random, 1n, nftTokenData);
-  const shieldPrivateKey = hexToBytes(randomHex(32));
+  const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
   const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
   const shieldTx = await RailgunVersionedSmartContracts.generateShield(txidVersion, chain, [

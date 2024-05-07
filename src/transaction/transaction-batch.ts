@@ -29,9 +29,9 @@ import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 import { isDefined } from '../utils/is-defined';
 import { POI } from '../poi';
 import { PoseidonMerkleVerifier } from '../abi/typechain';
-import { Memo } from '../note';
+import { Memo } from '../note/memo';
 import WalletInfo from '../wallet/wallet-info';
-import { ZERO_ADDRESS } from '../utils';
+import { ZERO_ADDRESS } from '../utils/constants';
 
 export const GAS_ESTIMATE_VARIANCE_DUMMY_TO_ACTUAL_TRANSACTION = 9000;
 

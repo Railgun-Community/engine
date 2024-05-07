@@ -23,18 +23,3 @@ export function promiseTimeout<T>(
       throw err;
     });
 }
-
-export async function waitForPassCondition(
-  passCondition: () => boolean,
-  delayInMS: number,
-  allowedAttempts: number,
-): Promise<void> {
-  let attempts = 1;
-  while (attempts <= allowedAttempts) {
-    if (passCondition()) {
-      return;
-    }
-    await delay(delayInMS);
-    attempts += 1;
-  }
-}

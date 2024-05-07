@@ -18,7 +18,7 @@ import {
   Nullifier,
 } from '../../../models/formatted-types';
 import { getNoteHash, serializePreImage, serializeTokenData } from '../../../note/note-util';
-import { ByteLength, formatToByteLength, nToHex } from '../../../utils';
+import { ByteLength, ByteUtils } from '../../../utils';
 import EngineDebug from '../../../debugger/debugger';
 import { TXIDVersion } from '../../../models/poi-types';
 
@@ -31,11 +31,11 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
   utxoStartingIndex: number,
 ): LegacyGeneratedCommitment[] {
   const randomFormatted: [string, string][] = encryptedRandoms.map((encryptedRandom) => [
-    nToHex(encryptedRandom[0], ByteLength.UINT_256),
-    nToHex(encryptedRandom[1], ByteLength.UINT_128),
+    ByteUtils.nToHex(encryptedRandom[0], ByteLength.UINT_256),
+    ByteUtils.nToHex(encryptedRandom[1], ByteLength.UINT_128),
   ]);
   return preImages.map((commitmentPreImage, index) => {
-    const npk = formatToByteLength(commitmentPreImage.npk.toString(), ByteLength.UINT_256);
+    const npk = ByteUtils.formatToByteLength(commitmentPreImage.npk.toString(), ByteLength.UINT_256);
     const tokenData = serializeTokenData(
       commitmentPreImage.token.tokenAddress,
       commitmentPreImage.token.tokenType,
@@ -47,7 +47,7 @@ export function formatLegacyGeneratedCommitmentBatchCommitments(
 
     return {
       commitmentType: CommitmentType.LegacyGeneratedCommitment,
-      hash: nToHex(noteHash, ByteLength.UINT_256),
+      hash: ByteUtils.nToHex(noteHash, ByteLength.UINT_256),
       txid: transactionHash,
       timestamp: undefined,
       blockNumber,
@@ -89,7 +89,7 @@ export function formatLegacyGeneratedCommitmentBatchEvent(
       utxoStartingIndex,
     );
   return {
-    txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+    txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
     treeNumber: utxoTree,
     startPosition: utxoStartingIndex,
     commitments: formattedCommitments,
@@ -102,7 +102,7 @@ function formatLegacyCommitmentCiphertext(
 ): LegacyCommitmentCiphertext {
   const { ephemeralKeys, memo } = commitment;
   const ciphertext = commitment.ciphertext.map(
-    (el) => nToHex(el, ByteLength.UINT_256), // 32 bytes each.
+    (el) => ByteUtils.nToHex(el, ByteLength.UINT_256), // 32 bytes each.
   );
   const ivTag = ciphertext[0];
 
@@ -113,10 +113,10 @@ function formatLegacyCommitmentCiphertext(
       data: ciphertext.slice(1),
     },
     ephemeralKeys: ephemeralKeys.map(
-      (key) => nToHex(key, ByteLength.UINT_256), // 32 bytes each.
+      (key) => ByteUtils.nToHex(key, ByteLength.UINT_256), // 32 bytes each.
     ),
     memo: (memo ?? []).map(
-      (el) => nToHex(el, ByteLength.UINT_256), // 32 bytes each.
+      (el) => ByteUtils.nToHex(el, ByteLength.UINT_256), // 32 bytes each.
     ),
   };
 }
@@ -132,7 +132,7 @@ export function formatLegacyCommitmentBatchCommitments(
   return commitments.map((commitment, index) => {
     return {
       commitmentType: CommitmentType.LegacyEncryptedCommitment,
-      hash: nToHex(hash[index], ByteLength.UINT_256),
+      hash: ByteUtils.nToHex(hash[index], ByteLength.UINT_256),
       txid: transactionHash,
       timestamp: undefined,
       blockNumber,
@@ -168,7 +168,7 @@ export function formatLegacyCommitmentBatchEvent(
     utxoStartingIndex,
   );
   return {
-    txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
+    txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
     treeNumber: utxoTree,
     startPosition: utxoStartingIndex,
     commitments: formattedCommitments,
@@ -217,8 +217,8 @@ export function formatLegacyNullifierEvents(
 
   for (const nullifier of nullifierEventArgs.nullifier) {
     nullifiers.push({
-      txid: formatToByteLength(transactionHash, ByteLength.UINT_256),
-      nullifier: nToHex(nullifier, ByteLength.UINT_256),
+      txid: ByteUtils.formatToByteLength(transactionHash, ByteLength.UINT_256),
+      nullifier: ByteUtils.nToHex(nullifier, ByteLength.UINT_256),
       treeNumber: Number(nullifierEventArgs.treeNumber),
       blockNumber,
     });

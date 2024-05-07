@@ -1,5 +1,5 @@
 import { EncryptedData } from '../models/formatted-types';
-import { toUTF8String, combine, chunk, fromUTF8String } from './bytes';
+import { toUTF8String, fromUTF8String, ByteUtils } from './bytes';
 import { encryptedDataToCiphertext, ciphertextToEncryptedJSONData } from './encryption/ciphertext';
 import { AES } from './encryption/aes';
 
@@ -10,7 +10,7 @@ export const tryDecryptJSONDataWithSharedKey = (
   try {
     const ciphertext = encryptedDataToCiphertext(encryptedData);
     const chunkedData = AES.decryptGCM(ciphertext, sharedKey);
-    const dataString = toUTF8String(combine(chunkedData));
+    const dataString = toUTF8String(ByteUtils.combine(chunkedData));
     return JSON.parse(dataString);
   } catch (err) {
     // Data is not addressed to this user.
@@ -23,7 +23,7 @@ export const encryptJSONDataWithSharedKey = (
   sharedKey: Uint8Array,
 ): EncryptedData => {
   const dataString = JSON.stringify(data);
-  const chunkedData = chunk(fromUTF8String(dataString));
+  const chunkedData = ByteUtils.chunk(fromUTF8String(dataString));
   const ciphertext = AES.encryptGCM(chunkedData, sharedKey);
   return ciphertextToEncryptedJSONData(ciphertext);
 };

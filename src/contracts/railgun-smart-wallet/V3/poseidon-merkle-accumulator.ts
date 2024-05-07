@@ -4,7 +4,7 @@ import { Chain } from '../../../models/engine-types';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { PoseidonMerkleAccumulator } from '../../../abi/typechain/PoseidonMerkleAccumulator';
 import { ABIPoseidonMerkleAccumulator } from '../../../abi/abi';
-import { ByteLength, formatToByteLength, hexlify } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import EngineDebug from '../../../debugger/debugger';
 import { assertIsPollingProvider } from '../../../provider/polling-util';
 import {
@@ -15,8 +15,8 @@ import {
   EventsUnshieldListener,
 } from '../../../models/event-types';
 import { TXIDVersion } from '../../../models/poi-types';
-import { processAccumulatorEvent, processAccumulatorUpdateEventsV3 } from './V3-events';
-import { promiseTimeout } from '../../../utils';
+import { V3Events } from './V3-events';
+import { promiseTimeout } from '../../../utils/promises';
 import { recursivelyDecodeResult } from '../../../utils/ethers';
 import { TypedContractEvent, TypedEventLog } from '../../../abi/typechain/common';
 import { Nullifier } from '../../../models/formatted-types';
@@ -69,7 +69,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
    * Get current merkle root
    */
   async merkleRoot(): Promise<string> {
-    return hexlify(await this.contract.accumulatorRoot());
+    return ByteUtils.hexlify(await this.contract.accumulatorRoot());
   }
 
   /**
@@ -79,7 +79,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
     try {
       const isValidMerkleroot = await this.contract.rootHistory(
         tree,
-        formatToByteLength(root, ByteLength.UINT_256, true),
+        ByteUtils.formatToByteLength(root, ByteLength.UINT_256, true),
       );
       // if (!isValidMerkleroot && EngineDebug.isTestRun()) {
       //   EngineDebug.error(
@@ -111,7 +111,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
         }
 
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        processAccumulatorEvent(
+        V3Events.processAccumulatorEvent(
           this.txidVersion,
           event.args,
           event.log.transactionHash,
@@ -159,7 +159,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
       return eventsWithDecodedArgs;
     } catch (cause) {
       if (!(cause instanceof Error)) {
-        throw new Error('Non-error was thrown during scanAllUpdateV3Events', {cause})
+        throw new Error('Non-error was thrown during scanAllUpdateV3Events', { cause });
       }
       const err = new Error('Failed to scan all V3 update events', { cause });
       if (retryCount < MAX_SCAN_RETRIES && cause.message === SCAN_TIMEOUT_ERROR_MESSAGE) {
@@ -220,7 +220,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
       const allUpdateV3EventLogs = await this.scanAllUpdateV3Events(currentStartBlock, endBlock);
 
       // eslint-disable-next-line no-await-in-loop
-      await processAccumulatorUpdateEventsV3(
+      await V3Events.processAccumulatorUpdateEvents(
         this.txidVersion,
         allUpdateV3EventLogs,
         eventsCommitmentListener,

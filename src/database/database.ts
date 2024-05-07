@@ -4,7 +4,7 @@ import type { LevelUp } from 'levelup';
 import levelup from 'levelup';
 import EventEmitter from 'events';
 import { BytesData, Ciphertext } from '../models/formatted-types';
-import { chunk, combine, hexlify } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 import { AES } from '../utils/encryption/aes';
 import EngineDebug from '../debugger/debugger';
 
@@ -91,7 +91,7 @@ class Database {
    */
   static pathToKey(path: Path): string {
     // Convert to hex string, pad to 32 bytes, and join with :
-    return path.map((el) => hexlify(el).toLowerCase().padStart(64, '0')).join(':');
+    return path.map((el) => ByteUtils.hexlify(el).toLowerCase().padStart(64, '0')).join(':');
   }
 
   /**
@@ -180,7 +180,7 @@ class Database {
    */
   async putEncrypted(path: Path, encryptionKey: string, value: string | Buffer) {
     // Encrypt data
-    const encrypted = AES.encryptGCM(chunk(value), encryptionKey);
+    const encrypted = AES.encryptGCM(ByteUtils.chunk(value), encryptionKey);
 
     // Write to database
     await this.put(path, encrypted, 'json');
@@ -197,7 +197,7 @@ class Database {
     const encrypted: Ciphertext = (await this.get(path, 'json')) as Ciphertext;
 
     // Decrypt and return
-    return combine(AES.decryptGCM(encrypted, encryptionKey));
+    return ByteUtils.combine(AES.decryptGCM(encrypted, encryptionKey));
   }
 
   /**

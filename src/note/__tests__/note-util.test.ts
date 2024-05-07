@@ -1,7 +1,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { TokenData, TokenType } from '../../models/formatted-types';
-import { ByteLength, formatToByteLength } from '../../utils';
+import { ByteLength, ByteUtils } from '../../utils';
 import { getTokenDataHash } from '../note-util';
 
 chai.use(chaiAsPromised);
@@ -15,7 +15,7 @@ describe('note-util', () => {
       tokenType: TokenType.ERC20,
     };
     expect(getTokenDataHash(tokenDataERC20)).to.equal(
-      formatToByteLength(tokenDataERC20.tokenAddress, ByteLength.UINT_256),
+      ByteUtils.formatToByteLength(tokenDataERC20.tokenAddress, ByteLength.UINT_256),
     );
 
     const tokenDataERC721: TokenData = {

@@ -1,13 +1,6 @@
 import { poseidon } from '../utils/poseidon';
 import { RailgunTransaction, RailgunTransactionWithHash } from '../models/formatted-types';
-import {
-  ByteLength,
-  combine,
-  formatToByteLength,
-  hexToBigInt,
-  hexToBytes,
-  nToHex,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import { getGlobalTreePosition } from '../poi/global-tree-position';
 import { keccak256 } from '../utils/hash';
@@ -25,9 +18,9 @@ export const getRailgunTransactionID = (railgunTransaction: {
   commitments: string[];
   boundParamsHash: string;
 }): bigint => {
-  const nullifierBigInts = railgunTransaction.nullifiers.map((el) => hexToBigInt(el));
-  const commitmentBigInts = railgunTransaction.commitments.map((el) => hexToBigInt(el));
-  const boundParamsHashBigInt = hexToBigInt(railgunTransaction.boundParamsHash);
+  const nullifierBigInts = railgunTransaction.nullifiers.map((el) => ByteUtils.hexToBigInt(el));
+  const commitmentBigInts = railgunTransaction.commitments.map((el) => ByteUtils.hexToBigInt(el));
+  const boundParamsHashBigInt = ByteUtils.hexToBigInt(railgunTransaction.boundParamsHash);
   return getRailgunTransactionIDFromBigInts(
     nullifierBigInts,
     commitmentBigInts,
@@ -57,7 +50,7 @@ export const getRailgunTransactionIDHex = (railgunTransaction: {
   boundParamsHash: string;
 }): string => {
   const railgunTxid = getRailgunTransactionID(railgunTransaction);
-  return nToHex(railgunTxid, ByteLength.UINT_256);
+  return ByteUtils.nToHex(railgunTxid, ByteLength.UINT_256);
 };
 
 export const getRailgunTxidLeafHash = (
@@ -65,7 +58,10 @@ export const getRailgunTxidLeafHash = (
   utxoTreeIn: bigint,
   globalTreePosition: bigint,
 ): string => {
-  return nToHex(poseidon([railgunTxidBigInt, utxoTreeIn, globalTreePosition]), ByteLength.UINT_256);
+  return ByteUtils.nToHex(
+    poseidon([railgunTxidBigInt, utxoTreeIn, globalTreePosition]),
+    ByteLength.UINT_256,
+  );
 };
 
 export const createRailgunTransactionWithHash = (
@@ -76,7 +72,7 @@ export const createRailgunTransactionWithHash = (
   const globalTreePosition = getGlobalTreePosition(utxoTreeOut, utxoBatchStartPositionOut);
   return {
     ...railgunTransaction,
-    railgunTxid: nToHex(railgunTxidBigInt, ByteLength.UINT_256),
+    railgunTxid: ByteUtils.nToHex(railgunTxidBigInt, ByteLength.UINT_256),
     hash: getRailgunTxidLeafHash(railgunTxidBigInt, BigInt(utxoTreeIn), globalTreePosition),
   };
 };
@@ -87,9 +83,9 @@ export const calculateRailgunTransactionVerificationHash = (
 ): string => {
   // hash[n] = keccak(hash[n-1] ?? 0, n_firstNullifier);
 
-  const combinedData: string = combine([
-    hexToBytes(previousVerificationHash ?? '0x'),
-    hexToBytes(firstNullifier),
+  const combinedData: string = ByteUtils.combine([
+    ByteUtils.hexToBytes(previousVerificationHash ?? '0x'),
+    ByteUtils.hexToBytes(firstNullifier),
   ]);
-  return formatToByteLength(keccak256(combinedData), ByteLength.UINT_256, true);
+  return ByteUtils.formatToByteLength(keccak256(combinedData), ByteLength.UINT_256, true);
 };

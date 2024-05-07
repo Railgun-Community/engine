@@ -1,13 +1,13 @@
 import { utils as utilsEd25519, Point, CURVE } from '@noble/ed25519';
 import { bytesToHex } from 'ethereum-cryptography/utils';
-import { ByteLength, hexToBigInt, hexToBytes, nToHex } from './bytes';
+import { ByteLength, ByteUtils } from './bytes';
 import { sha256 } from './hash';
 import { adjustBytes25519, getPrivateScalarFromPrivateKey } from './keys-utils';
 import { scalarMultiplyWasmFallbackToJavascript } from './scalar-multiply';
 
 function normalizeRandomLegacy(random: string): bigint {
   // Hash with sha256 to get a uniform random 32 bytes of data
-  const randomArray = hexToBytes(sha256(random));
+  const randomArray = ByteUtils.hexToBytes(sha256(random));
 
   // NOTE: The bits adjustment is no longer required to function as an X25519 integer is not used
   // These steps are still taken to preserve compatibility with older transactions
@@ -22,9 +22,9 @@ function getCommitmentBlindingKeyLegacy(random: string, senderRandom: string): b
   // XOR public and spender blinding key to get commitment blinding key
   // XOR is used because a 0 value on the sender blinding key will result in identical public and
   // commitment blinding keys, allowing the receiver to reverse the multiplier operation
-  const commitmentBlindingKey = hexToBigInt(random) ^ hexToBigInt(senderRandom);
+  const commitmentBlindingKey = ByteUtils.hexToBigInt(random) ^ ByteUtils.hexToBigInt(senderRandom);
 
-  const commitmentBlindingKeyHex = nToHex(commitmentBlindingKey, ByteLength.UINT_256);
+  const commitmentBlindingKeyHex = ByteUtils.nToHex(commitmentBlindingKey, ByteLength.UINT_256);
 
   // Adjust random value to use as blinding key to prevent external observers from being able to
   // reverse the multiplication. The random value here is a value only known to the sender and

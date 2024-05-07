@@ -1,16 +1,8 @@
-// import BN from 'bn.js';
 import { bech32m } from '@scure/base';
 import xor from 'buffer-xor';
 import { getChainFullNetworkID } from '../chain/chain';
 import { Chain } from '../models/engine-types';
-import {
-  ByteLength,
-  formatToByteLength,
-  hexlify,
-  hexStringToBytes,
-  hexToBigInt,
-  nToHex,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { ADDRESS_VERSION } from '../utils/constants';
 
 export type AddressData = {
@@ -59,8 +51,8 @@ const networkIDToChain = (networkID: string): Optional<Chain> => {
  * @param addressData - AddressData to encode
  */
 function encodeAddress(addressData: AddressData): string {
-  const masterPublicKey = nToHex(addressData.masterPublicKey, ByteLength.UINT_256, false);
-  const viewingPublicKey = formatToByteLength(addressData.viewingPublicKey, ByteLength.UINT_256);
+  const masterPublicKey = ByteUtils.nToHex(addressData.masterPublicKey, ByteLength.UINT_256, false);
+  const viewingPublicKey = ByteUtils.formatToByteLength(addressData.viewingPublicKey, ByteLength.UINT_256);
 
   const { chain } = addressData;
   const networkID = xorNetworkID(chainToNetworkID(chain));
@@ -95,13 +87,13 @@ function decodeAddress(address: string): AddressData {
     }
 
     // Hexlify data
-    const data = hexlify(bech32m.fromWords(decoded.words));
+    const data = ByteUtils.hexlify(bech32m.fromWords(decoded.words));
 
     // Get version
     const version = parseInt(data.slice(0, 2), 16);
-    const masterPublicKey = hexToBigInt(data.slice(2, 66));
+    const masterPublicKey = ByteUtils.hexToBigInt(data.slice(2, 66));
     const networkID = xorNetworkID(data.slice(66, 82));
-    const viewingPublicKey = hexStringToBytes(data.slice(82, 146));
+    const viewingPublicKey = ByteUtils.hexStringToBytes(data.slice(82, 146));
 
     const chain: Optional<Chain> = networkIDToChain(networkID);
 

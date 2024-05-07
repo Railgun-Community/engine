@@ -14,20 +14,10 @@ import {
   EventsUnshieldListener,
   EngineEvent,
 } from '../../../models/event-types';
-import { ByteLength, formatToByteLength, hexlify } from '../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import { promiseTimeout } from '../../../utils/promises';
 import { ABIRailgunSmartWallet_Legacy_PreMar23, ABIRailgunSmartWallet } from '../../../abi/abi';
-import {
-  formatNullifiedEvents,
-  formatShieldEvent,
-  formatTransactEvent,
-  formatUnshieldEvent,
-  processNullifiedEvents,
-  processShieldEvents,
-  processShieldEvents_LegacyShield_PreMar23,
-  processTransactEvents,
-  processUnshieldEvents,
-} from './V2-events';
+import { V2Events } from './V2-events';
 import {
   processLegacyCommitmentBatchEvents,
   processLegacyGeneratedCommitmentEvents,
@@ -116,7 +106,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
    * @returns merkle root
    */
   async merkleRoot(): Promise<string> {
-    return hexlify(await this.contract.merkleRoot());
+    return ByteUtils.hexlify(await this.contract.merkleRoot());
   }
 
   /**
@@ -149,7 +139,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
     try {
       const isValidMerkleroot = await this.contract.rootHistory(
         tree,
-        formatToByteLength(root, ByteLength.UINT_256, true),
+        ByteUtils.formatToByteLength(root, ByteLength.UINT_256, true),
       );
       // if (!isValidMerkleroot && EngineDebug.isTestRun()) {
       //   EngineDebug.error(
@@ -171,7 +161,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
    */
   async getNFTTokenData(tokenHash: string): Promise<TokenDataStructOutput> {
     try {
-      const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, true);
+      const formattedTokenHash = ByteUtils.formatToByteLength(tokenHash, ByteLength.UINT_256, true);
       return await this.contract.tokenIDMapping(formattedTokenHash);
     } catch (cause) {
       const err = new Error('Failed to get NFT token data', { cause });
@@ -192,7 +182,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
       treeNumber,
       nullifier: nullifierDecoded,
     };
-    const nullifiers = formatNullifiedEvents(
+    const nullifiers = V2Events.formatNullifiedEvents(
       args,
       event.log.transactionHash,
       event.log.blockNumber,
@@ -223,7 +213,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
       shieldCiphertext: shieldCiphertextDecoded,
       fees: feesDecoded,
     };
-    const shieldEvent = formatShieldEvent(
+    const shieldEvent = V2Events.formatShieldEvent(
       args,
       event.log.transactionHash,
       event.log.blockNumber,
@@ -251,7 +241,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
       hash: hashDecoded,
       ciphertext: ciphertextDecoded,
     };
-    const transactEvent = formatTransactEvent(
+    const transactEvent = V2Events.formatTransactEvent(
       args,
       event.log.transactionHash,
       event.log.blockNumber,
@@ -274,7 +264,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
       amount,
       fee,
     };
-    const unshieldEvent = formatUnshieldEvent(
+    const unshieldEvent = V2Events.formatUnshieldEvent(
       args,
       event.log.transactionHash,
       event.log.blockNumber,
@@ -513,7 +503,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
             legacyPreMar23EventFilterShield,
           );
           // eslint-disable-next-line no-await-in-loop
-          await processShieldEvents_LegacyShield_PreMar23(
+          await V2Events.processShieldEvents_LegacyShield_PreMar23(
             txidVersion,
             eventsCommitmentListener,
             eventsShieldLegacyV3,
@@ -526,7 +516,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
             eventFilterShield,
           );
           // eslint-disable-next-line no-await-in-loop
-          await processShieldEvents(txidVersion, eventsCommitmentListener, eventsShield);
+          await V2Events.processShieldEvents(txidVersion, eventsCommitmentListener, eventsShield);
         }
 
         const eventsNullifiers = RailgunSmartWalletContract.filterEventsByTopic(
@@ -544,9 +534,9 @@ export class RailgunSmartWalletContract extends EventEmitter {
 
         // eslint-disable-next-line no-await-in-loop
         await Promise.all([
-          processNullifiedEvents(txidVersion, eventsNullifierListener, eventsNullifiers),
-          processUnshieldEvents(txidVersion, eventsUnshieldListener, eventsUnshield),
-          processTransactEvents(txidVersion, eventsCommitmentListener, eventsTransact),
+          V2Events.processNullifiedEvents(txidVersion, eventsNullifierListener, eventsNullifiers),
+          V2Events.processUnshieldEvents(txidVersion, eventsUnshieldListener, eventsUnshield),
+          V2Events.processTransactEvents(txidVersion, eventsCommitmentListener, eventsTransact),
         ]);
       }
 
@@ -634,7 +624,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
   async hashCommitment(commitment: CommitmentPreimageStruct): Promise<string> {
     return this.contract.hashCommitment({
       ...commitment,
-      npk: formatToByteLength(commitment.npk, ByteLength.UINT_256, true),
+      npk: ByteUtils.formatToByteLength(commitment.npk, ByteLength.UINT_256, true),
     });
   }
 

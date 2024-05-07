@@ -8,13 +8,7 @@ import { abi as erc20Abi } from '../../../../test/test-erc20-abi.test';
 import { abi as erc721Abi } from '../../../../test/test-erc721-abi.test';
 import { config } from '../../../../test/config.test';
 import { RailgunWallet } from '../../../../wallet/railgun-wallet';
-import {
-  ByteLength,
-  formatToByteLength,
-  hexlify,
-  hexToBytes,
-  randomHex,
-} from '../../../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../../../utils/bytes';
 import {
   awaitMultipleScans,
   awaitRailgunSmartWalletShield,
@@ -101,7 +95,7 @@ const testEncryptionKey = config.encryptionKey;
 
 const TOKEN_ADDRESS = config.contracts.rail;
 const NFT_ADDRESS = config.contracts.testERC721;
-const RANDOM = randomHex(16);
+const RANDOM = ByteUtils.randomHex(16);
 const VALUE = BigInt(10000) * DECIMALS_18;
 
 let testShield: (value?: bigint) => Promise<TransactionReceipt | null>;
@@ -179,7 +173,7 @@ describe('railgun-smart-wallet', function runTests() {
     ): Promise<TransactionReceipt | null> => {
       // Create shield
       const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, value, TOKEN_ADDRESS);
-      const shieldPrivateKey = hexToBytes(randomHex(32));
+      const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
       const shieldInput = await shield.serialize(
         shieldPrivateKey,
         wallet.getViewingKeyPair().pubkey,
@@ -567,7 +561,7 @@ describe('railgun-smart-wallet', function runTests() {
     // Listeners should have been updated automatically by contract events.
 
     expect(resultEvent).to.be.an('object', 'No event in history for shield');
-    expect((resultEvent as CommitmentEvent).txid).to.equal(hexlify(txResponse.hash));
+    expect((resultEvent as CommitmentEvent).txid).to.equal(ByteUtils.hexlify(txResponse.hash));
     expect(resultNullifiers.length).to.equal(0);
     expect(resultRailgunTransactionsV3.length).to.equal(0);
 
@@ -593,7 +587,9 @@ describe('railgun-smart-wallet', function runTests() {
     // Listeners should have been updated by historical event scan.
 
     expect(resultEvent).to.be.an('object', 'No event in history for shield');
-    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(hexlify(txResponse.hash));
+    expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(
+      ByteUtils.hexlify(txResponse.hash),
+    );
     expect(resultNullifiers.length).to.equal(0);
     expect(resultUnshields.length).to.equal(0);
     expect(resultRailgunTransactionsV3.length).to.equal(0);
@@ -684,7 +680,7 @@ describe('railgun-smart-wallet', function runTests() {
     if (txResponseTransact == null) {
       throw new Error('No transact transaction response');
     }
-    const txid = hexlify(txResponseTransact.hash);
+    const txid = ByteUtils.hexlify(txResponseTransact.hash);
     expect((resultEvent as unknown as CommitmentEvent).txid).to.equal(txid);
     expect(resultNullifiers[0].txid).to.equal(txid);
     expect(resultNullifiers2[0].txid).to.equal(txid);
@@ -798,7 +794,7 @@ describe('railgun-smart-wallet', function runTests() {
     const shieldInputs: ShieldRequestStruct[] = [];
     for (let i = 0; i < 11; i += 1) {
       const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, 100000000n, TOKEN_ADDRESS);
-      const shieldPrivateKey = hexToBytes(randomHex(32));
+      const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
       shieldInputs.push(
         // eslint-disable-next-line no-await-in-loop
         await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey),
@@ -862,7 +858,7 @@ describe('railgun-smart-wallet', function runTests() {
 
     const history = await wallet.getTransactionHistory(chain, startingBlock);
 
-    const tokenFormatted = formatToByteLength(TOKEN_ADDRESS, ByteLength.UINT_256, false);
+    const tokenFormatted = ByteUtils.formatToByteLength(TOKEN_ADDRESS, ByteLength.UINT_256, false);
 
     expect(history.length).to.equal(2);
 
@@ -973,7 +969,7 @@ describe('railgun-smart-wallet', function runTests() {
   //   const unshield = new UnshieldNoteERC20(ethersWallet.address, 100n, await token.getAddress());
   //   const contractHash = await railgunSmartWalletContract.hashCommitment(unshield.preImage);
 
-  //   expect(hexlify(contractHash)).to.equal(unshield.hashHex);
+  //   expect(ByteUtils.hexlify(contractHash)).to.equal(unshield.hashHex);
   // });
 
   it('[HH] Should shield erc20', async function run() {
@@ -1002,7 +998,7 @@ describe('railgun-smart-wallet', function runTests() {
 
     // Create shield
     const shield = new ShieldNoteERC20(wallet.masterPublicKey, RANDOM, VALUE, TOKEN_ADDRESS);
-    const shieldPrivateKey = hexToBytes(randomHex(32));
+    const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
     const shieldInput = await shield.serialize(shieldPrivateKey, wallet.getViewingKeyPair().pubkey);
 
     const shieldTx = await RailgunVersionedSmartContracts.generateShield(txidVersion, chain, [
@@ -1083,7 +1079,7 @@ describe('railgun-smart-wallet', function runTests() {
     const onChainTokenData = await tokenDataGetter.getNFTTokenData(txidVersion, chain, tokenHash);
     expect(onChainTokenData.tokenAddress.toLowerCase()).to.equal(NFT_ADDRESS.toLowerCase());
     expect(onChainTokenData.tokenSubID).to.equal(
-      formatToByteLength('01', ByteLength.UINT_256, true),
+      ByteUtils.formatToByteLength('01', ByteLength.UINT_256, true),
     );
     expect(onChainTokenData.tokenType).to.equal(TokenType.ERC721);
 

@@ -9,15 +9,7 @@ import {
   XChaChaEncryptionAlgorithm,
 } from '../models/formatted-types';
 import { MEMO_SENDER_RANDOM_NULL } from '../models/transaction-constants';
-import {
-  ByteLength,
-  arrayify,
-  fastHexToBytes,
-  hexlify,
-  nToHex,
-  prefix0x,
-  strip0x,
-} from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { AES } from '../utils/encryption/aes';
 import { XChaCha20 } from '../utils/encryption/x-cha-cha-20';
 import { isDefined } from '../utils/is-defined';
@@ -44,7 +36,7 @@ export class Memo {
 
     try {
       // Remove 0x prefix.
-      const hexlified = hexlify(annotationData);
+      const hexlified = ByteUtils.hexlify(annotationData);
 
       const hasTwoBytes = hexlified.length > 64;
 
@@ -87,7 +79,7 @@ export class Memo {
     }
 
     try {
-      const strippedSenderCiphertext = strip0x(senderCiphertext);
+      const strippedSenderCiphertext = ByteUtils.strip0x(senderCiphertext);
 
       const metadataCiphertext: CiphertextXChaCha = {
         algorithm: XChaChaEncryptionAlgorithm.XChaCha,
@@ -152,7 +144,7 @@ export class Memo {
     walletSource: string,
     viewingPrivateKey: Uint8Array,
   ): EncryptedNoteAnnotationData {
-    const outputTypeFormatted = nToHex(BigInt(outputType), ByteLength.UINT_8); // 1 byte
+    const outputTypeFormatted = ByteUtils.nToHex(BigInt(outputType), ByteLength.UINT_8); // 1 byte
     const senderRandomFormatted = senderRandom; // 15 bytes
     const metadataField0: string = `${outputTypeFormatted}${senderRandomFormatted}`;
     if (metadataField0.length !== 32) {
@@ -190,7 +182,7 @@ export class Memo {
 
     const outputTypesFormatted = orderedOutputTypes.map((outputType) =>
       // 1 byte each
-      nToHex(BigInt(outputType), ByteLength.UINT_8),
+      ByteUtils.nToHex(BigInt(outputType), ByteLength.UINT_8),
     );
     const metadataField1 = outputTypesFormatted.join('');
 
@@ -201,14 +193,14 @@ export class Memo {
       viewingPrivateKey,
     );
 
-    return prefix0x(metadataCiphertext.nonce + metadataCiphertext.bundle);
+    return ByteUtils.prefix0x(metadataCiphertext.nonce + metadataCiphertext.bundle);
   }
 
   static encodeMemoText(memoText: Optional<string>): string {
     if (!isDefined(memoText)) {
       return '';
     }
-    const encoded = hexlify(new TextEncoder().encode(memoText));
+    const encoded = ByteUtils.hexlify(new TextEncoder().encode(memoText));
     return encoded;
   }
 
@@ -216,6 +208,6 @@ export class Memo {
     if (!encoded.length) {
       return undefined;
     }
-    return new TextDecoder().decode(fastHexToBytes(encoded));
+    return new TextDecoder().decode(ByteUtils.fastHexToBytes(encoded));
   }
 }

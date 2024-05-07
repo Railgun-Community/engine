@@ -1,7 +1,6 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import memdown from 'memdown';
-import { BN } from 'bn.js';
 import { Commitment, CommitmentType, TokenType } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
@@ -552,7 +551,7 @@ describe('utxo-merkletree', () => {
       0,
       Array.from(Array(600).keys()).map((el) => ({
         commitmentType: CommitmentType.LegacyEncryptedCommitment,
-        hash: new BN(el, 10).toString(16),
+        hash: el.toString(16),
         txid: '0x1097c636f99f179de275635277e458820485039b0a37088a5d657b999f73b59b',
         ciphertext: {
           ciphertext: { iv: '', tag: '', data: [] },

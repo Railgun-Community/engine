@@ -1,25 +1,19 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 
-import {
-  generateMnemonic,
-  mnemonicToEntropy,
-  entropyToMnemonic,
-  validateMnemonic,
-  mnemonicToSeed,
-} from '../bip39';
+import { Mnemonic } from '../bip39';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('bip39', () => {
   it('Should generate mnemonic', () => {
-    expect(generateMnemonic().split(' ').length).to.equal(12);
-    expect(generateMnemonic(192).split(' ').length).to.equal(18);
-    expect(generateMnemonic(256).split(' ').length).to.equal(24);
+    expect(Mnemonic.generate().split(' ').length).to.equal(12);
+    expect(Mnemonic.generate(192).split(' ').length).to.equal(18);
+    expect(Mnemonic.generate(256).split(' ').length).to.equal(24);
 
     // Should only have letters and spaces
-    expect(/^[a-z ]+$/.test(generateMnemonic())).to.equal(true);
+    expect(/^[a-z ]+$/.test(Mnemonic.generate())).to.equal(true);
   });
 
   it('Should convert mnemonic to entropy and back', () => {
@@ -42,8 +36,8 @@ describe('bip39', () => {
     ];
 
     for (const vector of vectors) {
-      expect(mnemonicToEntropy(vector.mnemonic)).to.equal(vector.entropy);
-      expect(entropyToMnemonic(vector.entropy)).to.equal(vector.mnemonic);
+      expect(Mnemonic.toEntropy(vector.mnemonic)).to.equal(vector.entropy);
+      expect(Mnemonic.fromEntropy(vector.entropy)).to.equal(vector.mnemonic);
     }
   });
 
@@ -61,11 +55,11 @@ describe('bip39', () => {
     ];
 
     for (const vector of valid) {
-      expect(validateMnemonic(vector)).to.equal(true);
+      expect(Mnemonic.validate(vector)).to.equal(true);
     }
 
     for (const vector of invalid) {
-      expect(validateMnemonic(vector)).to.equal(false);
+      expect(Mnemonic.validate(vector)).to.equal(false);
     }
   });
 
@@ -95,7 +89,7 @@ describe('bip39', () => {
     ];
 
     for (const vector of vectors) {
-      expect(mnemonicToSeed(vector.mnemonic, vector.password || undefined)).to.equal(vector.seed);
+      expect(Mnemonic.toSeed(vector.mnemonic, vector.password)).to.equal(vector.seed);
     }
   });
 });

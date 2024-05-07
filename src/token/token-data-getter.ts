@@ -5,7 +5,8 @@ import { Chain } from '../models/engine-types';
 import { TokenData } from '../models/formatted-types';
 import { TXIDVersion } from '../models/poi-types';
 import { getTokenDataERC20, serializeTokenData } from '../note/note-util';
-import { ByteLength, formatToByteLength, fromUTF8String } from '../utils';
+import { ByteLength, ByteUtils } from '../utils';
+import { fromUTF8String } from '../utils/bytes';
 
 // 12 empty bytes.
 const ERC20_TOKEN_HASH_PREFIX = '000000000000000000000000';
@@ -22,7 +23,7 @@ export class TokenDataGetter {
     chain: Chain,
     tokenHash: string,
   ): Promise<TokenData> {
-    const formatted = formatToByteLength(tokenHash, ByteLength.UINT_256);
+    const formatted = ByteUtils.formatToByteLength(tokenHash, ByteLength.UINT_256);
     const isERC20 = formatted.startsWith(ERC20_TOKEN_HASH_PREFIX);
     if (isERC20) {
       // tokenHash is erc20 tokenAddress.
@@ -37,7 +38,7 @@ export class TokenDataGetter {
     chain: Chain,
     tokenHash: string,
   ): Promise<TokenData> {
-    const formattedTokenHash = formatToByteLength(tokenHash, ByteLength.UINT_256, false);
+    const formattedTokenHash = ByteUtils.formatToByteLength(tokenHash, ByteLength.UINT_256, false);
 
     const cachedData = await this.getCachedNFTTokenData(formattedTokenHash);
     if (cachedData) {
@@ -65,7 +66,7 @@ export class TokenDataGetter {
 
   private static getNFTTokenDataPath(tokenHash: string): string[] {
     return [...TokenDataGetter.getNFTTokenDataPrefix(), tokenHash].map((el) =>
-      formatToByteLength(el, ByteLength.UINT_256),
+      ByteUtils.formatToByteLength(el, ByteLength.UINT_256),
     );
   }
 

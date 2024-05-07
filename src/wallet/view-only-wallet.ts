@@ -3,7 +3,7 @@ import { Database } from '../database/database';
 import { ViewingKeyPair } from '../key-derivation/wallet-node';
 import { PublicInputsRailgun } from '../models';
 import { ViewOnlyWalletData } from '../models/wallet-types';
-import { hexStringToBytes } from '../utils/bytes';
+import { ByteUtils } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
 import { getPublicViewingKey } from '../utils/keys-utils';
 import { AbstractWallet } from './abstract-wallet';
@@ -24,7 +24,7 @@ class ViewOnlyWallet extends AbstractWallet {
   }
 
   private static async getViewingKeyPair(viewingPrivateKey: string): Promise<ViewingKeyPair> {
-    const vpk = hexStringToBytes(viewingPrivateKey);
+    const vpk = ByteUtils.hexStringToBytes(viewingPrivateKey);
     return {
       privateKey: vpk,
       pubkey: await getPublicViewingKey(vpk),

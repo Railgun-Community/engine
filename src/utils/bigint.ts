@@ -1,4 +1,4 @@
-import { hexToBigInt } from "./bytes";
+import { ByteUtils } from "./bytes";
 
 export const minBigInt = (a: bigint, b: bigint): bigint => (a < b ? a : b);
 
@@ -9,5 +9,5 @@ export const stringToBigInt = (str: string): bigint => {
         return BigInt(str);
     }
 
-    return hexToBigInt(str);
+    return ByteUtils.hexToBigInt(str);
 };

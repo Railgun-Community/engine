@@ -16,10 +16,9 @@ import {
   verifyED25519,
   verifyEDDSA,
 } from '../keys-utils';
-import { nToHex, ByteLength, randomHex, hexStringToBytes } from '../bytes';
+import { ByteLength, ByteUtils} from '../bytes';
 import { MEMO_SENDER_RANDOM_NULL } from '../../models/transaction-constants';
 import { getNoteBlindingKeysLegacy, unblindNoteKeyLegacy } from '../keys-utils-legacy';
-import EngineDebug from '../../debugger/debugger';
 import { sha256 } from '../hash';
 import { initCurve25519Promise, scalarMultiplyJavascript } from '../scalar-multiply';
 
@@ -44,7 +43,7 @@ async function getSharedSymmetricKeyJavascript(
     const keyPreimage: Uint8Array = scalarMultiplyJavascript(blindedPublicKeyPairB, scalar);
 
     // SHA256 hash to get the final key
-    const hashed: Uint8Array = hexStringToBytes(sha256(keyPreimage));
+    const hashed: Uint8Array = ByteUtils.hexStringToBytes(sha256(keyPreimage));
     return hashed;
   } catch (err) {
     return undefined;
@@ -62,16 +61,16 @@ describe('keys-utils', () => {
   it('Should return a random scalar', () => {
     const randomScalar = getRandomScalar();
     expect(randomScalar).to.be.a('bigint');
-    expect(nToHex(randomScalar, ByteLength.UINT_256).length).to.equal(64);
+    expect(ByteUtils.nToHex(randomScalar, ByteLength.UINT_256).length).to.equal(64);
   });
 
   it('Should get expected symmetric keys from WASM and Javascript implementations', async () => {
     await expect(initCurve25519Promise).to.not.be.rejectedWith('some error');
 
-    const privateKeyPairA = hexStringToBytes(
+    const privateKeyPairA = ByteUtils.hexStringToBytes(
       '0123456789012345678901234567890123456789012345678901234567891234',
     );
-    const blindedPublicKeyPairB = hexStringToBytes(
+    const blindedPublicKeyPairB = ByteUtils.hexStringToBytes(
       '0987654321098765432109876543210987654321098765432109876543210987',
     );
     const symmetricKeyWasm = await getSharedSymmetricKey(privateKeyPairA, blindedPublicKeyPairB);
@@ -143,7 +142,7 @@ describe('keys-utils', () => {
     const receiverPublic = await getPublicViewingKey(receiver);
 
     const random = bytesToHex(randomBytes(16));
-    const senderRandom = randomHex(15);
+    const senderRandom = ByteUtils.randomHex(15);
     const { blindedSenderViewingKey, blindedReceiverViewingKey } = getNoteBlindingKeys(
       senderPublic,
       receiverPublic,
@@ -210,7 +209,7 @@ describe('keys-utils', () => {
     const receiver = randomBytes(32);
     const receiverPublic = await getPublicViewingKey(receiver);
 
-    const senderRandom = randomHex(15);
+    const senderRandom = ByteUtils.randomHex(15);
     const random = bytesToHex(randomBytes(16));
     const { blindedSenderViewingKey, blindedReceiverViewingKey } = getNoteBlindingKeys(
       senderPublic,

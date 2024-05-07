@@ -2,7 +2,7 @@ import { Contract, ContractTransaction } from 'ethers';
 import { Chain } from '../models/engine-types';
 import { AddressData } from '../key-derivation';
 import { isDefined } from '../utils/is-defined';
-import { ByteLength, hexStringToBytes, nToHex } from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { recursivelyDecodeResult } from '../utils/ethers';
 import { ExtractedRailgunTransactionData } from '../models/transaction-types';
 import { getRailgunTransactionIDHex } from '../transaction/railgun-txid';
@@ -13,7 +13,7 @@ import { TXIDVersion } from '../models/poi-types';
 import { ABIPoseidonMerkleVerifier } from '../abi/abi';
 import { PoseidonMerkleVerifier } from '../abi/typechain/PoseidonMerkleVerifier';
 import EngineDebug from '../debugger/debugger';
-import { formatCommitmentCiphertextV3 } from '../contracts/railgun-smart-wallet/V3/V3-events';
+import { V3Events } from '../contracts/railgun-smart-wallet/V3/V3-events';
 import { extractERC20AmountFromTransactNote } from './extract-transaction-data-v2';
 import { CommitmentCiphertextV3 } from '../models';
 import { hashBoundParamsV3 } from '../transaction/bound-params';
@@ -159,7 +159,9 @@ const extractFirstNoteERC20AmountMapV3 = async (
         return;
       }
 
-      const commitmentCiphertext = formatCommitmentCiphertextV3(commitmentCiphertextStructOutput);
+      const commitmentCiphertext = V3Events.formatCommitmentCiphertext(
+        commitmentCiphertextStructOutput,
+      );
 
       const decryptedReceiverNote = await decryptReceiverNoteSafeV3(
         chain,
@@ -210,7 +212,7 @@ const extractRailgunTransactionDataV3 = async (
       async (railgunTx: PoseidonMerkleVerifier.TransactionStructOutput, railgunTxIndex: number) => {
         const { commitments, nullifiers, boundParams } = railgunTx;
 
-        const boundParamsHash = nToHex(
+        const boundParamsHash = ByteUtils.nToHex(
           hashBoundParamsV3({
             global: globalBoundParams,
             local: boundParams,
@@ -241,7 +243,9 @@ const extractRailgunTransactionDataV3 = async (
           throw new Error('No ciphertext found for commitment at index 0');
         }
 
-        const commitmentCiphertext = formatCommitmentCiphertextV3(commitmentCiphertextStructOutput);
+        const commitmentCiphertext = V3Events.formatCommitmentCiphertext(
+          commitmentCiphertextStructOutput,
+        );
 
         // Get NPK for first note, if addressed to current wallet.
         const firstCommitmentNotePublicKey = await extractNPKFromCommitmentCiphertextV3(
@@ -292,8 +296,10 @@ const decryptReceiverNoteSafeV3 = async (
   transactCommitmentBatchIndexV3: number,
 ): Promise<Optional<TransactNote>> => {
   try {
-    const blindedSenderViewingKey = hexStringToBytes(commitmentCiphertext.blindedSenderViewingKey);
-    const blindedReceiverViewingKey = hexStringToBytes(
+    const blindedSenderViewingKey = ByteUtils.hexStringToBytes(
+      commitmentCiphertext.blindedSenderViewingKey,
+    );
+    const blindedReceiverViewingKey = ByteUtils.hexStringToBytes(
       commitmentCiphertext.blindedReceiverViewingKey,
     );
     const sharedKey = await getSharedSymmetricKey(

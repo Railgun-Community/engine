@@ -2,17 +2,17 @@ import { bytesToHex } from '@noble/hashes/utils';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { getSharedSymmetricKeyLegacy } from '../keys-utils-legacy';
-import { hexStringToBytes } from '../bytes';
+import { ByteUtils } from '../bytes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
 
 describe('keys-utils-legacy', () => {
   it('getSharedSymmetricKeyLegacy stability', async () => {
-    const privateKeyPairA = hexStringToBytes(
+    const privateKeyPairA = ByteUtils.hexStringToBytes(
       '0123456789012345678901234567890123456789012345678901234567891234',
     );
-    const blindedPublicKeyPairB = hexStringToBytes(
+    const blindedPublicKeyPairB = ByteUtils.hexStringToBytes(
       '0987654321098765432109876543210987654321098765432109876543210987',
     );
     const symmetricKey = await getSharedSymmetricKeyLegacy(privateKeyPairA, blindedPublicKeyPairB);

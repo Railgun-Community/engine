@@ -1,4 +1,3 @@
-import BN from 'bn.js';
 import type { PutBatch } from 'abstract-leveldown';
 import { Database } from '../database/database';
 import { Chain } from '../models/engine-types';
@@ -7,7 +6,7 @@ import {
   InvalidMerklerootDetails,
   MerklerootValidator,
 } from '../models/merkletree-types';
-import { ByteLength, formatToByteLength, hexlify } from '../utils/bytes';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
@@ -71,9 +70,9 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   getNullifierDBPath(tree: number, nullifier: string): string[] {
     return [
       ...this.getTreeDBPrefix(tree),
-      hexlify(new BN(0).notn(32).subn(1)), // 2^32-2
-      hexlify(nullifier),
-    ].map((el) => formatToByteLength(el, ByteLength.UINT_256));
+      ByteUtils.hexlify(ByteUtils.FULL_32_BITS - 1n), // 2^32-2
+      ByteUtils.hexlify(nullifier),
+    ].map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
   }
 
   /**
@@ -88,17 +87,17 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
   ): string[] {
     const path = [
       ...this.getMerkletreeDBPrefix(),
-      hexlify(new BN(0).notn(32).subn(2)), // 2^32-3
+      ByteUtils.hexlify(ByteUtils.FULL_32_BITS - 2n), // 2^32-3
     ];
     if (txid != null) {
-      path.push(hexlify(txid));
+      path.push(ByteUtils.hexlify(txid));
     }
     if (eventLogIndex != null) {
       path.push(eventLogIndex.toString(16));
     } else if (railgunTxid != null) {
       path.push(railgunTxid);
     }
-    return path.map((el) => formatToByteLength(el, ByteLength.UINT_256));
+    return path.map((el) => ByteUtils.formatToByteLength(el, ByteLength.UINT_256));
   }
 
   /**
@@ -191,7 +190,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
    * Gets Unshield events
    */
   async getAllUnshieldEventsForTxid(txid: string): Promise<UnshieldStoredEvent[]> {
-    const strippedTxid = formatToByteLength(txid, ByteLength.UINT_256, false);
+    const strippedTxid = ByteUtils.formatToByteLength(txid, ByteLength.UINT_256, false);
     const namespace = this.getUnshieldEventsDBPath(strippedTxid, undefined, undefined);
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
     const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 6);

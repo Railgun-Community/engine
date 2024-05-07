@@ -1,15 +1,5 @@
-export * from './average';
-export * from './bigint';
-export * from './bytes';
-export * from './encryption/ciphertext';
-export * from './commitment';
-export * from './constants';
+// Note: we purposefully do not export everything, in order to reduce the number of public APIs
+export { ByteLength, ByteUtils } from './bytes';
+export { convertTransactionStructToCommitmentSummary } from './commitment';
 export * from './ecies';
-export * from './ethers';
-export * from './encryption/aes';
-export * from './hash';
-export * from './keys-utils';
-export * from './promises';
-export * from './runtime';
-export * from './stringify';
-export * from './is-defined';
+export { getPublicViewingKey, verifyED25519 } from './keys-utils';

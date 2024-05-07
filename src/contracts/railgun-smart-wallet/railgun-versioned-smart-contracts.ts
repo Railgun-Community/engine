@@ -11,7 +11,7 @@ import {
   EventsRailgunTransactionListenerV3,
   EventsUnshieldListener,
 } from '../../models/event-types';
-import { ZERO_32_BYTE_VALUE, ZERO_ADDRESS } from '../../utils';
+import { ZERO_32_BYTE_VALUE, ZERO_ADDRESS } from '../../utils/constants';
 import { ContractStore } from '../contract-store';
 import { Chain } from '../../models/engine-types';
 import { TXIDVersion } from '../../models/poi-types';

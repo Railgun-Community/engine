@@ -14,7 +14,7 @@ import {
 } from '../../models/formatted-types';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Memo } from '../../note/memo';
-import { ByteLength, formatToByteLength, hexlify, hexToBigInt, randomHex } from '../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../utils/bytes';
 import {
   getNoteBlindingKeys,
   getSharedSymmetricKey,
@@ -36,7 +36,7 @@ import { Prover, SnarkJSGroth16 } from '../../prover/prover';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
 import { hashBoundParamsV2, hashBoundParamsV3 } from '../bound-params';
-import { MEMO_SENDER_RANDOM_NULL, TXIDVersion } from '../../models';
+import { TXIDVersion } from '../../models';
 import WalletInfo from '../../wallet/wallet-info';
 import { TransactionBatch } from '../transaction-batch';
 import { getTokenDataERC20, getTokenDataHashERC20 } from '../../note/note-util';
@@ -46,11 +46,13 @@ import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet
 import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
-import { AES, ZERO_32_BYTE_VALUE } from '../../utils';
+import { AES } from '../../utils/encryption/aes';
 import { POI } from '../../poi/poi';
 import { PoseidonMerkleVerifier } from '../../abi/typechain';
 import { addChainSupportsV3 } from '../../chain/chain';
 import { XChaCha20 } from '../../utils/encryption/x-cha-cha-20';
+import { MEMO_SENDER_RANDOM_NULL } from '../../models/transaction-constants';
+import { ZERO_32_BYTE_VALUE } from '../../utils/constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -177,21 +179,21 @@ describe('transaction-erc20', function test() {
     const params: BoundParamsStruct = {
       treeNumber: BigInt(0),
       unshield: BigInt(0),
-      adaptContract: formatToByteLength('00', 20, true),
-      adaptParams: formatToByteLength('00', 32, true),
+      adaptContract: ByteUtils.formatToByteLength('00', 20, true),
+      adaptParams: ByteUtils.formatToByteLength('00', 32, true),
       chainID: chain.id,
       commitmentCiphertext: [
         {
           ciphertext: [
-            formatToByteLength('00', ByteLength.UINT_256, true),
-            formatToByteLength('00', ByteLength.UINT_256, true),
-            formatToByteLength('00', ByteLength.UINT_256, true),
-            formatToByteLength('00', ByteLength.UINT_256, true),
+            ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
+            ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
+            ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
+            ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
           ],
-          memo: hexlify('00', true),
-          blindedReceiverViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
-          blindedSenderViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
-          annotationData: hexlify('00', true),
+          memo: ByteUtils.hexlify('00', true),
+          blindedReceiverViewingKey: ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
+          blindedSenderViewingKey: ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
+          annotationData: ByteUtils.hexlify('00', true),
         },
       ],
       minGasPrice: BigInt(3000),
@@ -210,13 +212,17 @@ describe('transaction-erc20', function test() {
         commitmentCiphertext: [
           {
             ciphertext: `0x${[
-              formatToByteLength('00', ByteLength.UINT_256),
-              formatToByteLength('00', ByteLength.UINT_256),
-              formatToByteLength('00', ByteLength.UINT_256),
-              formatToByteLength('00', ByteLength.UINT_256),
+              ByteUtils.formatToByteLength('00', ByteLength.UINT_256),
+              ByteUtils.formatToByteLength('00', ByteLength.UINT_256),
+              ByteUtils.formatToByteLength('00', ByteLength.UINT_256),
+              ByteUtils.formatToByteLength('00', ByteLength.UINT_256),
             ].join('')}`,
-            blindedReceiverViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
-            blindedSenderViewingKey: formatToByteLength('00', ByteLength.UINT_256, true),
+            blindedReceiverViewingKey: ByteUtils.formatToByteLength(
+              '00',
+              ByteLength.UINT_256,
+              true,
+            ),
+            blindedSenderViewingKey: ByteUtils.formatToByteLength('00', ByteLength.UINT_256, true),
           },
         ],
       },
@@ -248,7 +254,7 @@ describe('transaction-erc20', function test() {
       1000000000n,
       senderMasterPublicKey,
     );
-    const senderRandom = randomHex(15);
+    const senderRandom = ByteUtils.randomHex(15);
     const encodedMasterPublicKeyWithSenderRandom = TransactNote.getEncodedMasterPublicKey(
       senderRandom,
       1000000000n,
@@ -298,7 +304,7 @@ describe('transaction-erc20', function test() {
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
 
-    const senderRandom = randomHex(15);
+    const senderRandom = ByteUtils.randomHex(15);
     const noteAnnotationData: NoteAnnotationData = {
       outputType: OutputType.RelayerFee,
       senderRandom,
@@ -376,9 +382,9 @@ describe('transaction-erc20', function test() {
           data: ciphertextDataWithMemoText,
         };
         const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
-          hexlify(value),
+          ByteUtils.hexlify(value),
         );
-        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        encodedMasterPublicKey = ByteUtils.hexToBigInt(decryptedValues[0]);
         break;
       }
       case TXIDVersion.V3_PoseidonMerkle: {
@@ -396,7 +402,7 @@ describe('transaction-erc20', function test() {
 
         // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
         const decryptedValues = XChaCha20.decryptChaCha20Poly1305(noteCiphertext, senderShared);
-        encodedMasterPublicKey = hexToBigInt(decryptedValues.substring(0, 64));
+        encodedMasterPublicKey = ByteUtils.hexToBigInt(decryptedValues.substring(0, 64));
         break;
       }
     }
@@ -482,7 +488,7 @@ describe('transaction-erc20', function test() {
     const sender = wallet.getViewingKeyPair();
     const receiver = wallet2.getViewingKeyPair();
 
-    const senderRandom = randomHex(15);
+    const senderRandom = ByteUtils.randomHex(15);
     const noteAnnotationData: NoteAnnotationData = {
       outputType: OutputType.RelayerFee,
       senderRandom,
@@ -554,9 +560,9 @@ describe('transaction-erc20', function test() {
           data: ciphertextDataWithMemoText,
         };
         const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
-          hexlify(value),
+          ByteUtils.hexlify(value),
         );
-        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        encodedMasterPublicKey = ByteUtils.hexToBigInt(decryptedValues[0]);
         break;
       }
       case TXIDVersion.V3_PoseidonMerkle: {
@@ -574,7 +580,7 @@ describe('transaction-erc20', function test() {
 
         // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
         const decryptedValues = XChaCha20.decryptChaCha20Poly1305(noteCiphertext, senderShared);
-        encodedMasterPublicKey = hexToBigInt(decryptedValues.substring(0, 64));
+        encodedMasterPublicKey = ByteUtils.hexToBigInt(decryptedValues.substring(0, 64));
         break;
       }
     }
@@ -723,9 +729,9 @@ describe('transaction-erc20', function test() {
           data: ciphertextDataWithMemoText,
         };
         const decryptedValues = AES.decryptGCM(fullCiphertext, senderShared).map((value) =>
-          hexlify(value),
+          ByteUtils.hexlify(value),
         );
-        encodedMasterPublicKey = hexToBigInt(decryptedValues[0]);
+        encodedMasterPublicKey = ByteUtils.hexToBigInt(decryptedValues[0]);
         break;
       }
       case TXIDVersion.V3_PoseidonMerkle: {
@@ -743,7 +749,7 @@ describe('transaction-erc20', function test() {
 
         // Make sure masterPublicKey is raw (unencoded) as encodedMasterPublicKey.
         const decryptedValues = XChaCha20.decryptChaCha20Poly1305(noteCiphertext, senderShared);
-        encodedMasterPublicKey = hexToBigInt(decryptedValues.substring(0, 64));
+        encodedMasterPublicKey = ByteUtils.hexToBigInt(decryptedValues.substring(0, 64));
         break;
       }
     }

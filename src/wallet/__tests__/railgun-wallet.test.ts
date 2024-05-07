@@ -9,9 +9,9 @@ import { config } from '../../test/config.test';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { sha256 } from '../../utils/hash';
-import { combine } from '../../utils/bytes';
+import { ByteUtils } from '../../utils/bytes';
 import { RailgunEngine } from '../../railgun-engine';
-import { mnemonicToSeed } from '../../key-derivation/bip39';
+import { Mnemonic } from '../../key-derivation/bip39';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 import { Prover } from '../../prover/prover';
 import { getTestTXIDVersion, testArtifactsGetter } from '../../test/helper.test';
@@ -82,7 +82,7 @@ describe('railgun-wallet', () => {
 
   it('Should get wallet prefix path', async () => {
     const path = wallet.getWalletDBPrefix(chain);
-    expect(path[1]).to.equal(sha256(combine([mnemonicToSeed(testMnemonic), '00'])));
+    expect(path[1]).to.equal(sha256(ByteUtils.combine([Mnemonic.toSeed(testMnemonic), '00'])));
     expect(path[1]).to.equal(wallet.id);
     expect(wallet.getWalletDBPrefix(chain)).to.deep.equal([
       '000000000000000000000000000000000000000000000000000077616c6c6574',
@@ -187,6 +187,11 @@ describe('railgun-wallet', () => {
     expect(wallet.getAddress({ type: 1 as ChainType, id: 1 })).to.equal(
       '0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48t7umpd9kxwatwq9ma02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5vv72h8',
     );
+  });
+
+  it('Should get chain address correctly', async () => {
+    const address = await wallet.getChainAddress(testEncryptionKey);
+    expect(address).to.equal('0xD89879B78BE8197b7e8eeb070467292129F42e8d');
   });
 
   it('Should derive addresses correctly', async () => {

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { strip0x } from './bytes';
+import { ByteUtils } from './bytes';
 import EMOJIS from './emojis.json';
 
 export const emojiHash = (str: string, length?: number): string => {
@@ -7,7 +7,7 @@ export const emojiHash = (str: string, length?: number): string => {
 };
 
 export const emojiHashForPOIStatusInfo = (str: string): string => {
-  return emojiHash(strip0x(str), 2);
+  return emojiHash(ByteUtils.strip0x(str), 2);
 };
 
 const hashEmoji = (string: string, hashLength = 1) => {

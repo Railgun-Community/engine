@@ -1,10 +1,12 @@
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { poseidon } from '../utils/poseidon';
 import { ShieldCiphertext, TokenData } from '../models/formatted-types';
-import { AES, getPublicViewingKey, getSharedSymmetricKey } from '../utils';
-import { ByteLength, combine, hexlify, hexToBigInt, nToHex } from '../utils/bytes';
+import { getPublicViewingKey } from '../utils';
+import { ByteLength, ByteUtils } from '../utils/bytes';
 import { assertValidNoteRandom, assertValidNoteToken, getTokenDataHash } from './note-util';
 import { ShieldRequestStruct } from '../abi/typechain/RailgunSmartWallet';
+import { getSharedSymmetricKey } from '../utils/keys-utils';
+import { AES } from '../utils/encryption/aes';
 
 export abstract class ShieldNote {
   readonly masterPublicKey: bigint;
@@ -41,7 +43,7 @@ export abstract class ShieldNote {
   }
 
   static getNotePublicKey(masterPublicKey: bigint, random: string): bigint {
-    return poseidon([masterPublicKey, hexToBigInt(random)]);
+    return poseidon([masterPublicKey, ByteUtils.hexToBigInt(random)]);
   }
 
   static getShieldNoteHash(
@@ -49,12 +51,12 @@ export abstract class ShieldNote {
     tokenHash: string,
     valueAfterFee: bigint,
   ): bigint {
-    return poseidon([notePublicKey, hexToBigInt(tokenHash), valueAfterFee]);
+    return poseidon([notePublicKey, ByteUtils.hexToBigInt(tokenHash), valueAfterFee]);
   }
 
   static decryptRandom(encryptedBundle: [string, string, string], sharedKey: Uint8Array): string {
-    const hexlified0 = hexlify(encryptedBundle[0]);
-    const hexlified1 = hexlify(encryptedBundle[1]);
+    const hexlified0 = ByteUtils.hexlify(encryptedBundle[0]);
+    const hexlified1 = ByteUtils.hexlify(encryptedBundle[1]);
     const decrypted = AES.decryptGCM(
       {
         iv: hexlified0.slice(0, 32),
@@ -63,7 +65,7 @@ export abstract class ShieldNote {
       },
       sharedKey,
     )[0];
-    return hexlify(decrypted);
+    return ByteUtils.hexlify(decrypted);
   }
 
   /**
@@ -96,16 +98,16 @@ export abstract class ShieldNote {
     // Construct ciphertext
     const ciphertext: ShieldCiphertext = {
       encryptedBundle: [
-        hexlify(`${encryptedRandom.iv}${encryptedRandom.tag}`, true),
-        hexlify(combine([...encryptedRandom.data, encryptedReceiver.iv]), true),
-        hexlify(combine(encryptedReceiver.data), true),
+        ByteUtils.hexlify(`${encryptedRandom.iv}${encryptedRandom.tag}`, true),
+        ByteUtils.hexlify(ByteUtils.combine([...encryptedRandom.data, encryptedReceiver.iv]), true),
+        ByteUtils.hexlify(ByteUtils.combine(encryptedReceiver.data), true),
       ],
-      shieldKey: hexlify(shieldKey, true),
+      shieldKey: ByteUtils.hexlify(shieldKey, true),
     };
 
     return {
       preimage: {
-        npk: nToHex(this.notePublicKey, ByteLength.UINT_256, true),
+        npk: ByteUtils.nToHex(this.notePublicKey, ByteLength.UINT_256, true),
         token: this.tokenData,
         value: this.value,
       },

@@ -1,7 +1,6 @@
-import BN from 'bn.js';
 import { POIsPerList, TXIDVersion } from './poi-types';
 
-export type BytesData = ArrayLike<number> | string | BN;
+export type BytesData = bigint | number | ArrayLike<number> | string;
 
 export type AdaptID = {
   contract: string;

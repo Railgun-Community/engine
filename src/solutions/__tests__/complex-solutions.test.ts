@@ -9,7 +9,7 @@ import { filterZeroUTXOs, sortUTXOsByAscendingValue } from '../utxos';
 import { TransactionBatch } from '../../transaction/transaction-batch';
 import { CommitmentType, OutputType } from '../../models/formatted-types';
 import { extractSpendingSolutionGroupsData } from '../spending-group-extractor';
-import { randomHex } from '../../utils/bytes';
+import { ByteUtils } from '../../utils/bytes';
 import { ChainType } from '../../models/engine-types';
 import { AddressData } from '../../key-derivation/bech32';
 import { TransactNote } from '../../note/transact-note';
@@ -63,7 +63,7 @@ const createMockTXO = async (txid: string, value: bigint): Promise<TXO> => {
     blindedCommitment: undefined,
     transactCreationRailgunTxid: undefined,
     commitmentType: CommitmentType.TransactCommitmentV3,
-    nullifier: randomHex(32),
+    nullifier: ByteUtils.randomHex(32),
     blockNumber: 100,
   };
 };

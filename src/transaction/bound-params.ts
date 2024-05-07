@@ -1,7 +1,9 @@
 import { AbiCoder } from 'ethers';
 import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
-import { keccak256, hexToBigInt, SNARK_PRIME_BIGINT } from '../utils';
+import { ByteUtils } from '../utils';
 import { PoseidonMerkleVerifier } from '../abi/typechain';
+import { SNARK_PRIME } from '../utils/constants';
+import { keccak256 } from '../utils/hash';
 
 const abiCoder = AbiCoder.defaultAbiCoder();
 
@@ -15,7 +17,7 @@ export const hashBoundParamsV2 = (boundParams: BoundParamsStruct) => {
     ),
   );
 
-  return hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
+  return ByteUtils.hexToBigInt(hashed) % SNARK_PRIME;
 };
 
 export const hashBoundParamsV3 = (boundParams: PoseidonMerkleVerifier.BoundParamsStruct) => {
@@ -28,5 +30,5 @@ export const hashBoundParamsV3 = (boundParams: PoseidonMerkleVerifier.BoundParam
     ),
   );
 
-  return hexToBigInt(hashed) % SNARK_PRIME_BIGINT;
+  return ByteUtils.hexToBigInt(hashed) % SNARK_PRIME;
 };

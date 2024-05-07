@@ -1,7 +1,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { ChainType } from '../../models/engine-types';
-import { ByteLength, formatToByteLength, hexStringToBytes, hexToBigInt } from '../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../utils/bytes';
 import { AddressData, ADDRESS_LENGTH_LIMIT, decodeAddress, encodeAddress } from '../bech32';
 
 chai.use(chaiAsPromised);
@@ -42,9 +42,9 @@ describe('bech32-encode', () => {
 
     for (const [index, vector] of vectors.entries()) {
       const addressData: AddressData = {
-        masterPublicKey: hexToBigInt(vector.pubkey),
-        viewingPublicKey: hexStringToBytes(
-          formatToByteLength(vector.pubkey, ByteLength.UINT_256, false),
+        masterPublicKey: ByteUtils.hexToBigInt(vector.pubkey),
+        viewingPublicKey: ByteUtils.hexStringToBytes(
+          ByteUtils.formatToByteLength(vector.pubkey, ByteLength.UINT_256, false),
         ),
         chain: vector.chain,
         version: vector.version,
