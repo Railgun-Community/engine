@@ -1,10 +1,11 @@
 import { bytesToHex } from 'ethereum-cryptography/utils';
 import { poseidon } from '../utils/poseidon';
 import { ShieldCiphertext, TokenData } from '../models/formatted-types';
-import { AES, getPublicViewingKey, getSharedSymmetricKey } from '../utils';
+import { AES, getPublicViewingKey } from '../utils';
 import { ByteLength, ByteUtils } from '../utils/bytes';
 import { assertValidNoteRandom, assertValidNoteToken, getTokenDataHash } from './note-util';
 import { ShieldRequestStruct } from '../abi/typechain/RailgunSmartWallet';
+import { getSharedSymmetricKey } from '../utils/keys-utils';
 
 export abstract class ShieldNote {
   readonly masterPublicKey: bigint;

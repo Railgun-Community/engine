@@ -44,7 +44,7 @@ import {
 } from '../models/txo-types';
 import { LEGACY_MEMO_METADATA_BYTE_CHUNKS } from '../note/memo';
 import { ByteLength, ByteUtils, fromUTF8String } from '../utils/bytes';
-import { generateSimpleKey, getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
+import { generateNaiveRandomHex, getSharedSymmetricKey, signED25519 } from '../utils/keys-utils';
 import {
   AddressKeys,
   TokenBalancesAllTxidVersions,
@@ -2815,7 +2815,7 @@ abstract class AbstractWallet extends EventEmitter {
 
       // Set a simple key for this run of decryptBalances, so we can return early if it changes
       // This will change if another decryptBalances is called for this chain, and we don't need multiple running at once
-      const decryptingBalancesKey = generateSimpleKey();
+      const decryptingBalancesKey = generateNaiveRandomHex();
       this.decryptBalancesKeyForChain.set(null, chain, decryptingBalancesKey);
 
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);

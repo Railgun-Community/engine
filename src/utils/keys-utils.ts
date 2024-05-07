@@ -205,7 +205,7 @@ async function getSharedSymmetricKey(
   }
 }
 
-function generateSimpleKey(length = 16): string {
+function generateNaiveRandomHex(length = 16): string {
   const CHARSET = 'abcdefghijklnopqrstuvwxyz0123456789';
   let retVal = '';
   for (let i = 0; i < length; i += 1) {
@@ -227,5 +227,5 @@ export {
   adjustBytes25519,
   getNoteBlindingKeys,
   unblindNoteKey,
-  generateSimpleKey,
+  generateNaiveRandomHex,
 };
