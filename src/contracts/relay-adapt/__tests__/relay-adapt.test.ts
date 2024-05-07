@@ -54,7 +54,7 @@ import FormattedRelayAdaptErrorLogs from './json/formatted-relay-adapt-error-log
 import { TestERC721 } from '../../../test/abi/typechain/TestERC721';
 import { TestERC20 } from '../../../test/abi/typechain/TestERC20';
 import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
-import { promiseTimeout } from '../../../utils';
+import { promiseTimeout } from '../../../utils/promises';
 import { createPollingJsonRpcProviderForListeners } from '../../../provider/polling-util';
 import { isDefined } from '../../../utils/is-defined';
 import { TXIDVersion } from '../../../models/poi-types';

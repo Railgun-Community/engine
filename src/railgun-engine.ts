@@ -52,7 +52,7 @@ import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
-import { delay, promiseTimeout } from './utils';
+import { delay, promiseTimeout } from './utils/promises';
 import { initPoseidonPromise } from './utils/poseidon';
 import { initCurve25519Promise } from './utils/scalar-multiply';
 import {

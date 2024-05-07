@@ -17,7 +17,7 @@ import { Chain } from '../models/engine-types';
 import { ArtifactGetter, PublicInputsRailgun } from '../models/prover-types';
 import { Mnemonic } from '../key-derivation';
 import { TypedContractEvent, TypedDeferredTopicFilter } from '../abi/typechain/common';
-import { promiseTimeout } from '../utils';
+import { promiseTimeout } from '../utils/promises';
 import { MerklerootValidator } from '../models/merkletree-types';
 import { TXIDVersion } from '../models';
 import { RailgunVersionedSmartContracts } from '../contracts/railgun-smart-wallet/railgun-versioned-smart-contracts';

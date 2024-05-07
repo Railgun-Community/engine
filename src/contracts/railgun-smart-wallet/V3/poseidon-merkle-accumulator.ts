@@ -16,7 +16,7 @@ import {
 } from '../../../models/event-types';
 import { TXIDVersion } from '../../../models/poi-types';
 import { V3Events } from './V3-events';
-import { promiseTimeout } from '../../../utils';
+import { promiseTimeout } from '../../../utils/promises';
 import { recursivelyDecodeResult } from '../../../utils/ethers';
 import { TypedContractEvent, TypedEventLog } from '../../../abi/typechain/common';
 import { Nullifier } from '../../../models/formatted-types';
