@@ -14,7 +14,7 @@ import {
   MerkleProof,
 } from '../models/formatted-types';
 import { ByteLength, fromUTF8String, ByteUtils } from '../utils/bytes';
-import { isDefined } from '../utils';
+import { isDefined } from '../utils/is-defined';
 import { TXIDVersion } from '../models';
 import EngineDebug from '../debugger/debugger';
 import { verifyMerkleProof } from './merkle-proof';

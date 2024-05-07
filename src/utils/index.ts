@@ -7,4 +7,3 @@ export * from './keys-utils';
 export * from './promises';
 export * from './runtime';
 export * from './stringify';
-export * from './is-defined';
