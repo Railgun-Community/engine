@@ -52,7 +52,7 @@ import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
 import { MerklerootValidator } from './models/merkletree-types';
-import { delay, isTransactCommitment, promiseTimeout } from './utils';
+import { delay, promiseTimeout } from './utils';
 import { initPoseidonPromise } from './utils/poseidon';
 import { initCurve25519Promise } from './utils/scalar-multiply';
 import {
@@ -72,6 +72,7 @@ import { PoseidonMerkleVerifierContract } from './contracts/railgun-smart-wallet
 import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-vault-contract';
 import { Registry } from './utils/registry';
 import { stringToBigInt } from './utils/bigint';
+import { isTransactCommitment } from './utils/commitment';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;

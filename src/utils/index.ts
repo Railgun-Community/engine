@@ -1,6 +1,6 @@
-export {ByteLength, ByteUtils} from './bytes';
+export { ByteLength, ByteUtils } from './bytes';
 export * from './encryption/ciphertext';
-export * from './commitment';
+export { convertTransactionStructToCommitmentSummary } from './commitment';
 export * from './constants';
 export * from './ecies';
 export * from './ethers';
