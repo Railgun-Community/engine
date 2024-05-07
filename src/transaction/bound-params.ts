@@ -1,8 +1,9 @@
 import { AbiCoder } from 'ethers';
 import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
-import { keccak256, ByteUtils } from '../utils';
+import { ByteUtils } from '../utils';
 import { PoseidonMerkleVerifier } from '../abi/typechain';
 import { SNARK_PRIME } from '../utils/constants';
+import { keccak256 } from '../utils/hash';
 
 const abiCoder = AbiCoder.defaultAbiCoder();
 
