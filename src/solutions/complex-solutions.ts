@@ -5,9 +5,10 @@ import { VALID_INPUT_COUNTS, isValidNullifierCount } from './nullifiers';
 import { calculateTotalSpend, filterZeroUTXOs, sortUTXOsByAscendingValue } from './utxos';
 import { TransactNote } from '../note/transact-note';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, ZERO_32_BYTE_VALUE, ByteUtils } from '../utils';
+import { ByteLength, ByteUtils } from '../utils';
 import { isDefined } from '../utils/is-defined';
 import { CommitmentType } from '../models/formatted-types';
+import { ZERO_32_BYTE_VALUE } from '../utils/constants';
 
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');

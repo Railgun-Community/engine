@@ -46,12 +46,13 @@ import { RailgunSmartWalletContract } from '../../contracts/railgun-smart-wallet
 import { BoundParamsStruct } from '../../abi/typechain/RailgunSmartWallet';
 import { PollingJsonRpcProvider } from '../../provider/polling-json-rpc-provider';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
-import { AES, ZERO_32_BYTE_VALUE } from '../../utils';
+import { AES } from '../../utils';
 import { POI } from '../../poi/poi';
 import { PoseidonMerkleVerifier } from '../../abi/typechain';
 import { addChainSupportsV3 } from '../../chain/chain';
 import { XChaCha20 } from '../../utils/encryption/x-cha-cha-20';
 import { MEMO_SENDER_RANDOM_NULL } from '../../models/transaction-constants';
+import { ZERO_32_BYTE_VALUE } from '../../utils/constants';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;

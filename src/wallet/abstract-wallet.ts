@@ -112,12 +112,7 @@ import {
   formatTXOsReceivedPOIStatusInfo,
   formatTXOsSpentPOIStatusInfo,
 } from '../poi/poi-status-formatter';
-import {
-  CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
-  ZERO_32_BYTE_VALUE,
-  delay,
-  stringifySafe,
-} from '../utils';
+import { delay, stringifySafe } from '../utils';
 import {
   getRailgunTransactionIDFromBigInts,
   getRailgunTxidLeafHash,
@@ -126,6 +121,7 @@ import { ExtractedRailgunTransactionData } from '../models/transaction-types';
 import { POIValidation } from '../validation/poi-validation';
 import { extractFirstNoteERC20AmountMapFromTransactionRequest } from '../validation/extract-transaction-data';
 import { Registry } from '../utils/registry';
+import { CURRENT_UTXO_MERKLETREE_HISTORY_VERSION, ZERO_32_BYTE_VALUE } from '../utils/constants';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
