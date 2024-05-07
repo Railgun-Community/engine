@@ -576,7 +576,8 @@ describe('railgun-smart-wallet', function runTests() {
       chain,
       startingBlock,
       latestBlock,
-      () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
+      // eslint-disable-next-line no-underscore-dangle
+      () => engine._getNextStartingBlockSlowScan(txidVersion, chain),
       eventsListener,
       nullifiersListener,
       unshieldListener,
@@ -732,7 +733,8 @@ describe('railgun-smart-wallet', function runTests() {
       chain,
       startingBlock,
       latestBlock,
-      () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
+      // eslint-disable-next-line no-underscore-dangle
+      () => engine._getNextStartingBlockSlowScan(txidVersion, chain),
       eventsListener,
       nullifiersListener,
       unshieldListener,
@@ -946,11 +948,14 @@ describe('railgun-smart-wallet', function runTests() {
       undefined, // walletIdFilter
     );
     expect(historyScanCompletedForChain).to.equal(chain);
-    expect(await engine.getStartScanningBlock(txidVersion, chain)).to.be.above(0);
+    // eslint-disable-next-line no-underscore-dangle
+    expect(await engine._getStartScanningBlock(txidVersion, chain)).to.be.above(0);
 
-    await engine.clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain);
+    // eslint-disable-next-line no-underscore-dangle
+    await engine._clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain);
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(0);
-    expect(await engine.getStartScanningBlock(txidVersion, chain)).to.equal(0);
+    // eslint-disable-next-line no-underscore-dangle
+    expect(await engine._getStartScanningBlock(txidVersion, chain)).to.equal(0);
 
     const forceRefresh = true;
     await wallet.refreshPOIsForAllTXIDVersions(chain, forceRefresh);
