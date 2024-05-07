@@ -1,3 +1,4 @@
+// Note: we purposefully do not export everything, in order to reduce the number of public APIs
 export * from './railgun-engine';
 export * from './abi/abi';
 export * from './contracts';

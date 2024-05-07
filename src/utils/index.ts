@@ -1,3 +1,4 @@
+// Note: we purposefully do not export everything, in order to reduce the number of public APIs
 export { ByteLength, ByteUtils } from './bytes';
 export * from './encryption/ciphertext';
 export { convertTransactionStructToCommitmentSummary } from './commitment';

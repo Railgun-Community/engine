@@ -1,3 +1,4 @@
+// Note: we purposefully do not export everything, in order to reduce the number of public APIs
 export * from './engine-types';
 export * from './event-types';
 export * from './formatted-types';
