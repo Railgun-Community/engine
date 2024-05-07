@@ -112,7 +112,7 @@ import {
   formatTXOsReceivedPOIStatusInfo,
   formatTXOsSpentPOIStatusInfo,
 } from '../poi/poi-status-formatter';
-import { stringifySafe } from '../utils';
+import { stringifySafe } from '../utils/stringify';
 import {
   getRailgunTransactionIDFromBigInts,
   getRailgunTxidLeafHash,
