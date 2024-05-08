@@ -411,11 +411,7 @@ class RailgunEngine extends EventEmitter {
     return startScanningBlock;
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  async _getStartScanningBlock(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
+  private async getStartScanningBlock(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
     let startScanningBlock = await this.getMostRecentValidCommitmentBlock(txidVersion, chain);
     EngineDebug.log(
       `[${txidVersion}] most recent valid commitment block: ${startScanningBlock ?? 'unknown'}`,
@@ -442,8 +438,7 @@ class RailgunEngine extends EventEmitter {
       EngineDebug.log(`[${txidVersion}] quickSync: chain ${chain.type}:${chain.id}`);
       const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
 
-      // eslint-disable-next-line no-underscore-dangle
-      const startScanningBlockQuickSync = await this._getStartScanningBlock(txidVersion, chain);
+      const startScanningBlockQuickSync = await this.getStartScanningBlock(txidVersion, chain);
       EngineDebug.log(
         `[${txidVersion}] Start scanning block for QuickSync: ${startScanningBlockQuickSync}`,
       );
@@ -521,16 +516,10 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, updateData);
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  async _getNextStartingBlockSlowScan(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
+  private async getNextStartingBlockSlowScan(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
     // Get updated start-scanning block from new valid utxoMerkletree.
-    // eslint-disable-next-line no-underscore-dangle
-    let startScanningBlockSlowScan = await this._getStartScanningBlock(txidVersion, chain);
-    // eslint-disable-next-line no-underscore-dangle
-    const lastSyncedBlock = await this._getLastSyncedBlock(txidVersion, chain);
+    let startScanningBlockSlowScan = await this.getStartScanningBlock(txidVersion, chain);
+    const lastSyncedBlock = await this.getLastSyncedBlock(txidVersion, chain);
     EngineDebug.log(`[${txidVersion}] lastSyncedBlock: ${lastSyncedBlock ?? 'unknown'}`);
     if (isDefined(lastSyncedBlock) && lastSyncedBlock > startScanningBlockSlowScan) {
       startScanningBlockSlowScan = lastSyncedBlock;
@@ -580,15 +569,13 @@ class RailgunEngine extends EventEmitter {
       return;
     }
 
-    // eslint-disable-next-line no-underscore-dangle
-    const utxoMerkletreeHistoryVersion = await this._getUTXOMerkletreeHistoryVersion(chain);
+    const utxoMerkletreeHistoryVersion = await this.getUTXOMerkletreeHistoryVersion(chain);
     if (
       !isDefined(utxoMerkletreeHistoryVersion) ||
       utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
       await this.clearUTXOMerkletreeAndLoadedWalletsAllTXIDVersions(chain);
-      // eslint-disable-next-line no-underscore-dangle
-      await this._setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
+      await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
     }
 
     const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
@@ -609,8 +596,7 @@ class RailgunEngine extends EventEmitter {
     this.emitUTXOMerkletreeScanUpdateEvent(txidVersion, chain, postQuickSyncProgress); // 50%
 
     // Get updated start-scanning block from new valid utxoMerkletree.
-    // eslint-disable-next-line no-underscore-dangle
-    const startScanningBlockSlowScan = await this._getNextStartingBlockSlowScan(txidVersion, chain);
+    const startScanningBlockSlowScan = await this.getNextStartingBlockSlowScan(txidVersion, chain);
     EngineDebug.log(
       `[${txidVersion}] startScanningBlockSlowScan: ${startScanningBlockSlowScan} (note: continously updated during scan)`,
     );
@@ -722,8 +708,7 @@ class RailgunEngine extends EventEmitter {
     await railgunSmartWalletContract.getHistoricalEvents(
       startScanningBlockSlowScan,
       latestBlock,
-      // eslint-disable-next-line no-underscore-dangle
-      () => this._getNextStartingBlockSlowScan(txidVersion, chain),
+      () => this.getNextStartingBlockSlowScan(txidVersion, chain),
       async (_txidVersion: TXIDVersion, commitmentEvents: CommitmentEvent[]) => {
         await this.commitmentListener(
           txidVersion,
@@ -752,8 +737,7 @@ class RailgunEngine extends EventEmitter {
           // This will force a scan from the last valid commitment on next run.
           return;
         }
-        // eslint-disable-next-line no-underscore-dangle
-        await this._setLastSyncedBlock(txidVersion, chain, syncedBlock);
+        await this.setLastSyncedBlock(txidVersion, chain, syncedBlock);
       },
     );
   }
@@ -779,8 +763,7 @@ class RailgunEngine extends EventEmitter {
     await poseidonMerkleAccumulatorV3Contract.getHistoricalEvents(
       startScanningBlockSlowScan,
       latestBlock,
-      // eslint-disable-next-line no-underscore-dangle
-      () => this._getNextStartingBlockSlowScan(txidVersion, chain),
+      () => this.getNextStartingBlockSlowScan(txidVersion, chain),
       async (_txidVersion: TXIDVersion, commitmentEvents: CommitmentEvent[]) => {
         await this.commitmentListener(
           txidVersion,
@@ -811,8 +794,7 @@ class RailgunEngine extends EventEmitter {
           // This will force a scan from the last valid commitment on next run.
           return;
         }
-        // eslint-disable-next-line no-underscore-dangle
-        await this._setLastSyncedBlock(txidVersion, chain, syncedBlock);
+        await this.setLastSyncedBlock(txidVersion, chain, syncedBlock);
       },
     );
   }
@@ -861,15 +843,13 @@ class RailgunEngine extends EventEmitter {
       return;
     }
 
-    // eslint-disable-next-line no-underscore-dangle
-    const txidV2MerkletreeHistoryVersion = await this._getTxidV2MerkletreeHistoryVersion(chain);
+    const txidV2MerkletreeHistoryVersion = await this.getTxidV2MerkletreeHistoryVersion(chain);
     if (
       !isDefined(txidV2MerkletreeHistoryVersion) ||
       txidV2MerkletreeHistoryVersion < CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION
     ) {
       await this.clearTXIDMerkletree(txidVersion, chain);
-      // eslint-disable-next-line no-underscore-dangle
-      await this._setTxidV2MerkletreeHistoryVersion(
+      await this.setTxidV2MerkletreeHistoryVersion(
         chain,
         CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION,
       );
@@ -951,8 +931,7 @@ class RailgunEngine extends EventEmitter {
       const txidMerkletreeEndScanPercentage = 0.99; // 99%
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, txidMerkletreeStartScanPercentage);
 
-      // eslint-disable-next-line no-underscore-dangle
-      await this._handleNewRailgunTransactionsV2(
+      await this.handleNewRailgunTransactionsV2(
         txidVersion,
         chain,
         railgunTransactions,
@@ -1006,11 +985,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  async _handleNewRailgunTransactionsV2(
+  private async handleNewRailgunTransactionsV2(
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransactionV2[],
@@ -1330,13 +1305,10 @@ class RailgunEngine extends EventEmitter {
   }
 
   /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   *
    * Clears all merkletree leaves stored in database.
    * @param chain - chain type/id to clear
    */
-  // eslint-disable-next-line no-underscore-dangle
-  async _clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
+  private async clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
     for (const txidVersion of Object.values(TXIDVersion)) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1351,8 +1323,7 @@ class RailgunEngine extends EventEmitter {
   }
 
   private async clearUTXOMerkletreeAndLoadedWalletsAllTXIDVersions(chain: Chain) {
-    // eslint-disable-next-line no-underscore-dangle
-    await this._clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain);
+    await this.clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain);
     await Promise.all(
       this.allWallets().map((wallet) => wallet.clearDecryptedBalancesAllTXIDVersions(chain)),
     );
@@ -1856,14 +1827,11 @@ class RailgunEngine extends EventEmitter {
   }
 
   /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   *
    * Sets last synced block to resume syncing on next load.
    * @param chain - chain type/id to store value for
    * @param lastSyncedBlock - last synced block
    */
-  // eslint-disable-next-line no-underscore-dangle
-  _setLastSyncedBlock(
+  private setLastSyncedBlock(
     txidVersion: TXIDVersion,
     chain: Chain,
     lastSyncedBlock: number,
@@ -1876,14 +1844,11 @@ class RailgunEngine extends EventEmitter {
   }
 
   /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   *
    * Gets last synced block to resume syncing from.
    * @param chain - chain type/id to get value for
    * @returns lastSyncedBlock - last synced block
    */
-  // eslint-disable-next-line no-underscore-dangle
-  _getLastSyncedBlock(txidVersion: TXIDVersion, chain: Chain): Promise<Optional<number>> {
+  private getLastSyncedBlock(txidVersion: TXIDVersion, chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getLastSyncedBlockDBPrefix(txidVersion, chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
@@ -1906,11 +1871,7 @@ class RailgunEngine extends EventEmitter {
     return path;
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  _setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+  private setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
     return this.db.put(
       RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain),
       merkletreeHistoryVersion,
@@ -1918,22 +1879,14 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  _getUTXOMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+  private getUTXOMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  _setTxidV2MerkletreeHistoryVersion(
+  private setTxidV2MerkletreeHistoryVersion(
     chain: Chain,
     merkletreeHistoryVersion: number,
   ): Promise<void> {
@@ -1944,11 +1897,7 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  /**
-   * ONLY INTENDED FOR INTERNAL USE OR TESTING.
-   */
-  // eslint-disable-next-line no-underscore-dangle
-  _getTxidV2MerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+  private getTxidV2MerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getTxidV2MerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
