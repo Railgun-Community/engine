@@ -1978,7 +1978,7 @@ class RailgunEngine extends EventEmitter {
       : undefined;
   }
 
-  async decryptBalancesAllWallets(
+  private async decryptBalancesAllWallets(
     txidVersion: TXIDVersion,
     chain: Chain,
     walletIdFilter: Optional<string[]>,
