@@ -39,11 +39,8 @@ import {
 import {
   CommitmentEvent,
   EngineEvent,
-  MerkletreeHistoryScanEventData,
-  MerkletreeScanStatus,
   UTXOScanDecryptBalancesCompleteEventData,
   UnshieldStoredEvent,
-  WalletScannedEventData,
 } from '../../../../models/event-types';
 import { Memo } from '../../../../note/memo';
 import { ViewOnlyWallet } from '../../../../wallet/view-only-wallet';
@@ -576,7 +573,8 @@ describe('railgun-smart-wallet', function runTests() {
       chain,
       startingBlock,
       latestBlock,
-      () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
+      // eslint-disable-next-line dot-notation
+      () => engine['getNextStartingBlockSlowScan'](txidVersion, chain),
       eventsListener,
       nullifiersListener,
       unshieldListener,
@@ -732,7 +730,8 @@ describe('railgun-smart-wallet', function runTests() {
       chain,
       startingBlock,
       latestBlock,
-      () => engine.getNextStartingBlockSlowScan(txidVersion, chain),
+      // eslint-disable-next-line dot-notation
+      () => engine['getNextStartingBlockSlowScan'](txidVersion, chain),
       eventsListener,
       nullifiersListener,
       unshieldListener,
@@ -946,11 +945,14 @@ describe('railgun-smart-wallet', function runTests() {
       undefined, // walletIdFilter
     );
     expect(historyScanCompletedForChain).to.equal(chain);
-    expect(await engine.getStartScanningBlock(txidVersion, chain)).to.be.above(0);
+    // eslint-disable-next-line dot-notation
+    expect(await engine['getStartScanningBlock'](txidVersion, chain)).to.be.above(0);
 
-    await engine.clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain);
+    // eslint-disable-next-line dot-notation
+    await engine['clearSyncedUTXOMerkletreeLeavesAllTXIDVersions'](chain);
     expect(await utxoMerkletree.getTreeLength(tree)).to.equal(0);
-    expect(await engine.getStartScanningBlock(txidVersion, chain)).to.equal(0);
+    // eslint-disable-next-line dot-notation
+    expect(await engine['getStartScanningBlock'](txidVersion, chain)).to.equal(0);
 
     const forceRefresh = true;
     await wallet.refreshPOIsForAllTXIDVersions(chain, forceRefresh);

@@ -207,7 +207,7 @@ class RailgunEngine extends EventEmitter {
    * @param startingIndex - starting index of commitments
    * @param leaves - commitment data from events
    */
-  async commitmentListener(
+  private async commitmentListener(
     txidVersion: TXIDVersion,
     chain: Chain,
     events: CommitmentEvent[],
@@ -249,7 +249,10 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async triggerDelayedTXIDMerkletreeSyncV2(chain: Chain, scanCount: number = 0): Promise<void> {
+  private async triggerDelayedTXIDMerkletreeSyncV2(
+    chain: Chain,
+    scanCount: number = 0,
+  ): Promise<void> {
     // Delay and then trigger a Railgun Txid Merkletree sync.
     if (this.isPOINode) {
       // POI node should scan faster because POI node is the data source for wallets
@@ -276,7 +279,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id for nullifiers
    * @param nullifiers - transaction info to nullify commitment
    */
-  async nullifierListener(
+  private async nullifierListener(
     txidVersion: TXIDVersion,
     chain: Chain,
     nullifiers: Nullifier[],
@@ -308,7 +311,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id
    * @param unshields - unshield events
    */
-  async unshieldListener(
+  private async unshieldListener(
     txidVersion: TXIDVersion,
     chain: Chain,
     unshields: UnshieldStoredEvent[],
@@ -334,7 +337,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id
    * @param railgunTransactions - railgun transaction events
    */
-  async railgunTransactionsV3Listener(
+  private async railgunTransactionsV3Listener(
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransactionV3[],
@@ -355,7 +358,7 @@ class RailgunEngine extends EventEmitter {
     await this.handleNewRailgunTransactionsV3(txidVersion, chain, railgunTransactions);
   }
 
-  async getMostRecentValidCommitmentBlock(
+  private async getMostRecentValidCommitmentBlock(
     txidVersion: TXIDVersion,
     chain: Chain,
   ): Promise<Optional<number>> {
@@ -408,7 +411,7 @@ class RailgunEngine extends EventEmitter {
     return startScanningBlock;
   }
 
-  async getStartScanningBlock(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
+  private async getStartScanningBlock(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
     let startScanningBlock = await this.getMostRecentValidCommitmentBlock(txidVersion, chain);
     EngineDebug.log(
       `[${txidVersion}] most recent valid commitment block: ${startScanningBlock ?? 'unknown'}`,
@@ -513,7 +516,7 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, updateData);
   }
 
-  async getNextStartingBlockSlowScan(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
+  private async getNextStartingBlockSlowScan(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
     // Get updated start-scanning block from new valid utxoMerkletree.
     let startScanningBlockSlowScan = await this.getStartScanningBlock(txidVersion, chain);
     const lastSyncedBlock = await this.getLastSyncedBlock(txidVersion, chain);
@@ -544,7 +547,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async scanEventHistory(
+  private async scanEventHistory(
     txidVersion: TXIDVersion,
     chain: Chain,
     walletIdFilter: Optional<string[]>,
@@ -685,7 +688,7 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.UTXOMerkletreeHistoryScanUpdate, scanCompleteData);
   }
 
-  async slowSyncV2(
+  private async slowSyncV2(
     chain: Chain,
     utxoMerkletree: UTXOMerkletree,
     startScanningBlockSlowScan: number,
@@ -739,7 +742,7 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  async slowSyncV3(
+  private async slowSyncV3(
     chain: Chain,
     utxoMerkletree: UTXOMerkletree,
     startScanningBlockSlowScan: number,
@@ -796,7 +799,7 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  async startSyncRailgunTransactionsPollerV2(chain: Chain) {
+  private async startSyncRailgunTransactionsPollerV2(chain: Chain) {
     const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
     if (!this.hasTXIDMerkletree(txidVersion, chain)) {
@@ -982,7 +985,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  async handleNewRailgunTransactionsV2(
+  private async handleNewRailgunTransactionsV2(
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransactionV2[],
@@ -1187,7 +1190,7 @@ class RailgunEngine extends EventEmitter {
     await txidMerkletree.updateTreesFromWriteQueue();
   }
 
-  async handleNewRailgunTransactionsV3(
+  private async handleNewRailgunTransactionsV3(
     txidVersion: TXIDVersion,
     chain: Chain,
     railgunTransactions: RailgunTransactionV3[],
@@ -1305,7 +1308,7 @@ class RailgunEngine extends EventEmitter {
    * Clears all merkletree leaves stored in database.
    * @param chain - chain type/id to clear
    */
-  async clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
+  private async clearSyncedUTXOMerkletreeLeavesAllTXIDVersions(chain: Chain) {
     for (const txidVersion of Object.values(TXIDVersion)) {
       if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
         continue;
@@ -1420,7 +1423,7 @@ class RailgunEngine extends EventEmitter {
     await this.syncRailgunTransactionsV2(chain, 'full txid reset');
   }
 
-  async clearTXIDMerkletreeData(txidVersion: TXIDVersion, chain: Chain) {
+  private async clearTXIDMerkletreeData(txidVersion: TXIDVersion, chain: Chain) {
     if (!getChainSupportsV3(chain) && txidVersion === TXIDVersion.V3_PoseidonMerkle) {
       return;
     }
@@ -1775,7 +1778,7 @@ class RailgunEngine extends EventEmitter {
    * Unload network
    * @param chain - chainID of network to unload
    */
-  async unloadNetwork(chain: Chain): Promise<void> {
+  private async unloadNetwork(chain: Chain): Promise<void> {
     if (ContractStore.railgunSmartWalletContracts.has(null, chain)) {
       return;
     }
@@ -1828,7 +1831,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to store value for
    * @param lastSyncedBlock - last synced block
    */
-  setLastSyncedBlock(
+  private setLastSyncedBlock(
     txidVersion: TXIDVersion,
     chain: Chain,
     lastSyncedBlock: number,
@@ -1845,7 +1848,7 @@ class RailgunEngine extends EventEmitter {
    * @param chain - chain type/id to get value for
    * @returns lastSyncedBlock - last synced block
    */
-  getLastSyncedBlock(txidVersion: TXIDVersion, chain: Chain): Promise<Optional<number>> {
+  private getLastSyncedBlock(txidVersion: TXIDVersion, chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getLastSyncedBlockDBPrefix(txidVersion, chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
@@ -1868,7 +1871,7 @@ class RailgunEngine extends EventEmitter {
     return path;
   }
 
-  setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+  private setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
     return this.db.put(
       RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain),
       merkletreeHistoryVersion,
@@ -1876,14 +1879,17 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  getUTXOMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+  private getUTXOMerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
       .catch(() => Promise.resolve(undefined));
   }
 
-  setTxidV2MerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+  private setTxidV2MerkletreeHistoryVersion(
+    chain: Chain,
+    merkletreeHistoryVersion: number,
+  ): Promise<void> {
     return this.db.put(
       RailgunEngine.getTxidV2MerkletreeHistoryVersionDBPrefix(chain),
       merkletreeHistoryVersion,
@@ -1891,7 +1897,7 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  getTxidV2MerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
+  private getTxidV2MerkletreeHistoryVersion(chain: Chain): Promise<Optional<number>> {
     return this.db
       .get(RailgunEngine.getTxidV2MerkletreeHistoryVersionDBPrefix(chain), 'utf8')
       .then((val: string) => parseInt(val, 10))
@@ -1972,7 +1978,7 @@ class RailgunEngine extends EventEmitter {
       : undefined;
   }
 
-  async decryptBalancesAllWallets(
+  private async decryptBalancesAllWallets(
     txidVersion: TXIDVersion,
     chain: Chain,
     walletIdFilter: Optional<string[]>,
@@ -2002,7 +2008,7 @@ class RailgunEngine extends EventEmitter {
     }
   }
 
-  invalidateTXOsCacheAllWallets(chain: Chain) {
+  private invalidateTXOsCacheAllWallets(chain: Chain) {
     const wallets = this.allWallets();
     for (const wallet of wallets) {
       wallet.invalidateCommitmentsCache(chain);

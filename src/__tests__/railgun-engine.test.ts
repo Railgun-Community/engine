@@ -209,8 +209,8 @@ describe('railgun-engine', function test() {
           };
           utxoBatchStartPosition += transaction.commitments.length;
 
-          // eslint-disable-next-line no-await-in-loop
-          await engine.handleNewRailgunTransactionsV2(
+          // eslint-disable-next-line no-await-in-loop, dot-notation
+          await engine['handleNewRailgunTransactionsV2'](
             txidVersion,
             chain,
             [railgunTransaction],
@@ -1450,13 +1450,18 @@ describe('railgun-engine', function test() {
       type: ChainType.EVM,
       id: 10010,
     };
-    let lastSyncedBlock = await engine.getLastSyncedBlock(txidVersion, chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    let lastSyncedBlock = await engine['getLastSyncedBlock'](txidVersion, chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setLastSyncedBlock(txidVersion, chainForSyncedBlock, 100);
-    lastSyncedBlock = await engine.getLastSyncedBlock(txidVersion, chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    await engine['setLastSyncedBlock'](txidVersion, chainForSyncedBlock, 100);
+    // eslint-disable-next-line dot-notation
+    lastSyncedBlock = await engine['getLastSyncedBlock'](txidVersion, chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setLastSyncedBlock(txidVersion, chainForSyncedBlock, 100000);
-    lastSyncedBlock = await engine.getLastSyncedBlock(txidVersion, chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    await engine['setLastSyncedBlock'](txidVersion, chainForSyncedBlock, 100000);
+    // eslint-disable-next-line dot-notation
+    lastSyncedBlock = await engine['getLastSyncedBlock'](txidVersion, chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
@@ -1465,13 +1470,18 @@ describe('railgun-engine', function test() {
       type: ChainType.EVM,
       id: 10010,
     };
-    let lastSyncedBlock = await engine.getLastSyncedBlock(txidVersion, chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    let lastSyncedBlock = await engine['getLastSyncedBlock'](txidVersion, chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setUTXOMerkletreeHistoryVersion(chainForSyncedBlock, 100);
-    lastSyncedBlock = await engine.getUTXOMerkletreeHistoryVersion(chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    await engine['setUTXOMerkletreeHistoryVersion'](chainForSyncedBlock, 100);
+    // eslint-disable-next-line dot-notation
+    lastSyncedBlock = await engine['getUTXOMerkletreeHistoryVersion'](chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setUTXOMerkletreeHistoryVersion(chainForSyncedBlock, 100000);
-    lastSyncedBlock = await engine.getUTXOMerkletreeHistoryVersion(chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    await engine['setUTXOMerkletreeHistoryVersion'](chainForSyncedBlock, 100000);
+    // eslint-disable-next-line dot-notation
+    lastSyncedBlock = await engine['getUTXOMerkletreeHistoryVersion'](chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
@@ -1480,13 +1490,18 @@ describe('railgun-engine', function test() {
       type: ChainType.EVM,
       id: 10010,
     };
-    let lastSyncedBlock = await engine.getLastSyncedBlock(txidVersion, chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    let lastSyncedBlock = await engine['getLastSyncedBlock'](txidVersion, chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(undefined);
-    await engine.setTxidV2MerkletreeHistoryVersion(chainForSyncedBlock, 100);
-    lastSyncedBlock = await engine.getTxidV2MerkletreeHistoryVersion(chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    await engine['setTxidV2MerkletreeHistoryVersion'](chainForSyncedBlock, 100);
+    // eslint-disable-next-line dot-notation
+    lastSyncedBlock = await engine['getTxidV2MerkletreeHistoryVersion'](chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100);
-    await engine.setTxidV2MerkletreeHistoryVersion(chainForSyncedBlock, 100000);
-    lastSyncedBlock = await engine.getTxidV2MerkletreeHistoryVersion(chainForSyncedBlock);
+    // eslint-disable-next-line dot-notation
+    await engine['setTxidV2MerkletreeHistoryVersion'](chainForSyncedBlock, 100000);
+    // eslint-disable-next-line dot-notation
+    lastSyncedBlock = await engine['getTxidV2MerkletreeHistoryVersion'](chainForSyncedBlock);
     expect(lastSyncedBlock).to.equal(100000);
   });
 
