@@ -539,15 +539,18 @@ class RailgunEngine extends EventEmitter {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await this.scanEventHistory(txidVersion, chain, walletIdFilter);
+      await this.scanUTXOHistory(txidVersion, chain, walletIdFilter);
     }
 
     if (this.pollingRailgunTransactionsV2.get(null, chain) !== true) {
-      await this.startSyncRailgunTransactionsPollerV2(chain);
+      await this.scanTXIDHistoryV2(chain);
     }
   }
 
-  private async scanEventHistory(
+  /**
+   * Scan (via quick sync or slow sync) on-chain data for the UTXO merkletree.
+   */
+  private async scanUTXOHistory(
     txidVersion: TXIDVersion,
     chain: Chain,
     walletIdFilter: Optional<string[]>,
@@ -799,7 +802,10 @@ class RailgunEngine extends EventEmitter {
     );
   }
 
-  private async startSyncRailgunTransactionsPollerV2(chain: Chain) {
+  /**
+   * Scan subgraph data for railgun transactions to build the TXID merkletree.
+   */
+  private async scanTXIDHistoryV2(chain: Chain) {
     const txidVersion = TXIDVersion.V2_PoseidonMerkle;
 
     if (!this.hasTXIDMerkletree(txidVersion, chain)) {
@@ -810,23 +816,18 @@ class RailgunEngine extends EventEmitter {
     }
     // Every 1 min for POI nodes, 2 min for wallets
     const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 2 * 60 * 1000;
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.syncRailgunTransactionsPollerV2(chain, refreshDelayMsec);
 
+    // Start polling
     this.pollingRailgunTransactionsV2.set(null, chain, true);
-  }
-
-  private async syncRailgunTransactionsPollerV2(chain: Chain, refreshDelayMsec: number) {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     const poll = async () => {
       await this.syncRailgunTransactionsV2(chain, 'poller');
       await delay(refreshDelayMsec);
-    };
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      // eslint-disable-next-line no-await-in-loop
-      await poll();
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      poll();
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    poll();
   }
 
   /**
@@ -1237,62 +1238,6 @@ class RailgunEngine extends EventEmitter {
     await txidMerkletree.updateTreesFromWriteQueue();
   }
 
-  async validateHistoricalRailgunTxidMerkleroot(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    tree: number,
-    index: number,
-    merkleroot: string,
-  ): Promise<boolean> {
-    const historicalMerkleroot = await this.getHistoricalRailgunTxidMerkleroot(
-      txidVersion,
-      chain,
-      tree,
-      index,
-    );
-    return historicalMerkleroot === merkleroot;
-  }
-
-  async validateRailgunTxidOccurredBeforeBlockNumber(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    tree: number,
-    index: number,
-    blockNumber: number,
-  ): Promise<boolean> {
-    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-    return txidMerkletree.railgunTxidOccurredBeforeBlockNumber(tree, index, blockNumber);
-  }
-
-  async getHistoricalRailgunTxidMerkleroot(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    tree: number,
-    index: number,
-  ): Promise<Optional<string>> {
-    if (!this.isPOINode) {
-      throw new Error('Only POI nodes process historical merkleroots');
-    }
-    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-    const historicalMerkleroot = await txidMerkletree.getHistoricalMerkleroot(tree, index);
-    return historicalMerkleroot;
-  }
-
-  async getGlobalUTXOTreePositionForRailgunTransactionCommitment(
-    txidVersion: TXIDVersion,
-    chain: Chain,
-    tree: number,
-    index: number,
-    commitmentHash: string,
-  ) {
-    const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
-    return txidMerkletree.getGlobalUTXOTreePositionForRailgunTransactionCommitment(
-      tree,
-      index,
-      commitmentHash,
-    );
-  }
-
   async getLatestRailgunTxidData(
     txidVersion: TXIDVersion,
     chain: Chain,
@@ -1395,7 +1340,7 @@ class RailgunEngine extends EventEmitter {
       }
 
       // eslint-disable-next-line no-await-in-loop
-      await this.scanEventHistory(txidVersion, chain, walletIdFilter);
+      await this.scanUTXOHistory(txidVersion, chain, walletIdFilter);
 
       if (txidVersion === TXIDVersion.V2_PoseidonMerkle) {
         // Must reset txid merkletree which is mapped to UTXO commitments in V2.
