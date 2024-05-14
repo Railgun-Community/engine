@@ -19,6 +19,104 @@ For simple implementations, use [RAILGUN Wallet SDK](https://github.com/Railgun-
 
 `yarn add @railgun-community/engine`
 
+## API
+
+There are many APIs that can be imported via `import { } from '@railgun-community/engine'` but the most important is `RailgunEngine`.
+
+### General
+
+Constructors
+
+- `RailgunEngine.initForWallet()` (static method) creates an instance
+- `RailgunEngine.initForPOINode()` (static method) creates an instance
+
+Others
+
+- `RailgunEngine.setEngineDebugger()` (static method)
+- `railgunEngine.loadNetwork()` (instance method)
+- `railgunEngine.unload()` (instance method)
+
+### Wallet management
+
+RAILGUN Wallet
+
+- `railgunEngine.createWalletFromMnemonic()` (instance method)
+- `railgunEngine.loadExistingWallet()` (instance method)
+
+View-only RAILGUN Wallet
+
+- `railgunEngine.createViewOnlyWalletFromShareableViewingKey()` (instance method)
+- `railgunEngine.loadExistingViewOnlyWallet()` (instance method)
+
+Teardown
+
+- `railgunEngine.unloadWallet()` (instance method)
+- `railgunEngine.deleteWallet()` (instance method)
+
+### Scanning
+
+"Scanning" consists of algorithms that fetch smart contract data to (re)build merkletree data structures, while also attempting to decrypt notes on the merkletrees, in order to calculate wallet balances.
+
+- `railgunEngine.scanContractHistory()` (instance method)
+- `railgunEngine.emitScanEventHistoryComplete()` (instance method)
+- `railgunEngine.syncRailgunTransactionsV2()` (instance method)
+- `railgunEngine.fullRescanUTXOMerkletreesAndWallets()` (instance method)
+- `railgunEngine.fullResetTXIDMerkletreesV2()` (instance method)
+- `railgunEngine.resetRailgunTxidsAfterTxidIndex()` (instance method)
+
+### Getters
+
+Merkletrees
+
+- `railgunEngine.getUTXOMerkletree()` (instance method)
+- `railgunEngine.getTXIDMerkletree()` (instance method)
+
+Others
+
+- `railgunEngine.getLatestRailgunTxidData()` (instance method)
+- `railgunEngine.getCompletedTxidFromNullifiers()` (instance method)
+- `railgunEngine.getAllShieldCommitments()` (instance method)
+
+### Utilities
+
+- `Mnemonic.generate()` (static method)
+- `Mnemonic.validate()` (static method)
+- `Mnemonic.toSeed()` (static method)
+- `Mnemonic.toEntropy()` (static method)
+- `Mnemonic.fromEntropy()` (static method)
+- `Mnemonic.to0xPrivateKey()` (static method)
+- `Mnemonic.to0xAddress()` (static method)
+- `BlindedCommitment.getForUnshield()` (static method)
+- `BlindedCommitment.getForShieldOrTransact()` (static method)
+- `ByteUtils.u8ToBigInt()` (static method)
+- `ByteUtils.hexToBigInt()` (static method)
+- `ByteUtils.nToBytes()` (static method)
+- `ByteUtils.nToHex()` (static method)
+- `ByteUtils.bytesToN()` (static method)
+- `ByteUtils.hexStringToBytes()` (static method)
+- `ByteUtils.randomHex()` (static method)
+- `ByteUtils.hexlify()` (static method)
+- `ByteUtils.arrayify()` (static method)
+- `ByteUtils.formatToByteLength()` (static method)
+- `ByteUtils.hexToBytes()` (static method)
+- `getGlobalTreePosition()`
+- `convertTransactionStructToCommitmentSummary()`
+- `encryptJSONDataWithSharedKey()`
+- `tryDecryptJSONDataWithSharedKey()`
+- `getPublicViewingKey()`
+
+### Types
+
+- `AddressData` for encoding 0zk addresses
+- `SpendingPublicKey`
+- `SpendingKeyPair`
+- `ViewingKeyPair`
+- `MerklerootValidator`
+- `MerkletreeLeaf`
+- `InvalidMerklerootDetails`
+- `MerkletreesMetadata`
+- `POINodeInterface`
+
 ## Developing
 
 ### Install nodejs
