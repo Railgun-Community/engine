@@ -306,12 +306,12 @@ describe('transaction-erc20', function test() {
 
     const senderRandom = ByteUtils.randomHex(15);
     const noteAnnotationData: NoteAnnotationData = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       senderRandom,
       walletSource: 'erc20 wallet',
     };
     const senderCiphertext: SenderAnnotationDecrypted = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       walletSource: 'erc20 wallet',
     };
 
@@ -490,12 +490,12 @@ describe('transaction-erc20', function test() {
 
     const senderRandom = ByteUtils.randomHex(15);
     const noteAnnotationData: NoteAnnotationData = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       senderRandom,
       walletSource: 'erc20 wallet',
     };
     const senderCiphertext: SenderAnnotationDecrypted = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       walletSource: 'erc20 wallet',
     };
 
@@ -663,12 +663,12 @@ describe('transaction-erc20', function test() {
 
     const senderRandom = MEMO_SENDER_RANDOM_NULL;
     const noteAnnotationData: NoteAnnotationData = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       senderRandom: MEMO_SENDER_RANDOM_NULL,
       walletSource: 'erc20 wallet',
     };
     const senderCiphertext: SenderAnnotationDecrypted = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       walletSource: 'erc20 wallet',
     };
 
@@ -904,7 +904,7 @@ describe('transaction-erc20', function test() {
         6500000000000n,
         getTokenDataERC20('000925cdf66ddf5b88016df1fe915e68eff8f192'),
         false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
+        OutputType.BroadcasterFee,
         undefined, // memoText
       ),
     );
