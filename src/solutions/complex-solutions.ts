@@ -113,7 +113,7 @@ export const createSpendingSolutionsForValue = (
 
     // Create a 0-value spending solution group.
     // This is used when simulating a circuit transaction, without requiring an input note.
-    // Helpful for initial dummy Relayer Fee with recursive gas estimator.
+    // Helpful for initial dummy Broadcaster Fee with recursive gas estimator.
     const nullNote = primaryOutput.newProcessingNoteWithValue(0n);
     const nullUtxo = createNullUTXO(nullNote);
     const utxos = [nullUtxo];

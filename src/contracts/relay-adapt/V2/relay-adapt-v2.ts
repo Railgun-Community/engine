@@ -148,11 +148,11 @@ export class RelayAdaptV2Contract {
 
   private static shouldRequireSuccessForCrossContractCalls(
     isGasEstimate: boolean,
-    isRelayerTransaction: boolean,
+    isBroadcasterTransaction: boolean,
   ): boolean {
-    // If the cross contract calls (multicalls) fail, the Relayer Fee and Shields should continue to process.
-    // We should only !requireSuccess for production relayer transactions (not gas estimates).
-    const continueAfterMulticallFailure = isRelayerTransaction && !isGasEstimate;
+    // If the cross contract calls (multicalls) fail, the Broadcaster Fee and Shields should continue to process.
+    // We should only !requireSuccess for production broadcaster transactions (not gas estimates).
+    const continueAfterMulticallFailure = isBroadcasterTransaction && !isGasEstimate;
     return !continueAfterMulticallFailure;
   }
 
@@ -161,7 +161,7 @@ export class RelayAdaptV2Contract {
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random: string,
-    isRelayerTransaction: boolean,
+    isBroadcasterTransaction: boolean,
     minGasLimit?: bigint,
   ): Promise<string> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
@@ -174,7 +174,7 @@ export class RelayAdaptV2Contract {
 
     const requireSuccess = RelayAdaptV2Contract.shouldRequireSuccessForCrossContractCalls(
       isGasEstimate,
-      isRelayerTransaction,
+      isBroadcasterTransaction,
     );
 
     const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2;
@@ -196,7 +196,7 @@ export class RelayAdaptV2Contract {
     relayShieldRequests: ShieldRequestStruct[],
     random31Bytes: string,
     isGasEstimate: boolean,
-    isRelayerTransaction: boolean,
+    isBroadcasterTransaction: boolean,
     minGasLimit?: bigint,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
@@ -206,7 +206,7 @@ export class RelayAdaptV2Contract {
 
     const requireSuccess = RelayAdaptV2Contract.shouldRequireSuccessForCrossContractCalls(
       isGasEstimate,
-      isRelayerTransaction,
+      isBroadcasterTransaction,
     );
 
     const minimumGasLimit = minGasLimit ?? MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2;
@@ -282,7 +282,7 @@ export class RelayAdaptV2Contract {
     calls: ContractTransaction[],
     overrides: PayableOverrides,
   ): Promise<ContractTransaction> {
-    // Always requireSuccess when there is no Relayer payment.
+    // Always requireSuccess when there is no Broadcaster payment.
     const requireSuccess = true;
     const populatedTransaction = await this.contract.multicall.populateTransaction(
       requireSuccess,

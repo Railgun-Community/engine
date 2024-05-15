@@ -374,7 +374,7 @@ describe('transact-note', () => {
           ByteUtils.hexToBigInt(vector.note.amount),
           tokenData,
           false, // showSenderAddressToRecipient
-          OutputType.RelayerFee,
+          OutputType.BroadcasterFee,
           'something', // memoText
         );
 

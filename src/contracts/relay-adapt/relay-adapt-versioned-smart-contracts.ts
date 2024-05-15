@@ -64,7 +64,7 @@ export class RelayAdaptVersionedSmartContracts {
     relayShieldRequests: ShieldRequestStruct[],
     random31Bytes: string,
     isGasEstimate: boolean,
-    isRelayerTransaction: boolean,
+    isBroadcasterTransaction: boolean,
     minGasLimit?: bigint,
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
@@ -76,7 +76,7 @@ export class RelayAdaptVersionedSmartContracts {
           relayShieldRequests,
           random31Bytes,
           isGasEstimate,
-          isRelayerTransaction,
+          isBroadcasterTransaction,
           minGasLimit,
         );
       }
@@ -88,7 +88,7 @@ export class RelayAdaptVersionedSmartContracts {
           relayShieldRequests,
           random31Bytes,
           isGasEstimate,
-          isRelayerTransaction,
+          isBroadcasterTransaction,
           minGasLimit,
         );
       }
@@ -131,7 +131,7 @@ export class RelayAdaptVersionedSmartContracts {
     crossContractCalls: ContractTransaction[],
     relayShieldRequests: ShieldRequestStruct[],
     random: string,
-    isRelayerTransaction: boolean,
+    isBroadcasterTransaction: boolean,
     minGasLimit?: bigint,
   ): Promise<string> {
     switch (txidVersion) {
@@ -142,7 +142,7 @@ export class RelayAdaptVersionedSmartContracts {
           crossContractCalls,
           relayShieldRequests,
           random,
-          isRelayerTransaction,
+          isBroadcasterTransaction,
           minGasLimit,
         );
       }
@@ -153,7 +153,7 @@ export class RelayAdaptVersionedSmartContracts {
           crossContractCalls,
           relayShieldRequests,
           random,
-          isRelayerTransaction,
+          isBroadcasterTransaction,
           minGasLimit,
         );
       }

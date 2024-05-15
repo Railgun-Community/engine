@@ -384,8 +384,8 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Used only to sign Relayer fee messages.
-   * Verified using Relayer's viewingPublicKey, which is encoded in its rail address.
+   * Used only to sign Broadcaster fee messages.
+   * Verified using Broadcaster's viewingPublicKey, which is encoded in its rail address.
    * @param {Uint8Array} message - message to sign as Uint8Array
    */
   async signWithViewingKey(message: Uint8Array): Promise<Uint8Array> {
@@ -2485,7 +2485,7 @@ abstract class AbstractWallet extends EventEmitter {
     const history: TransactionHistoryEntrySpent[] = preProcessHistory.map(
       ({ txid, timestamp, blockNumber, tokenAmounts, unshieldEvents, version }) => {
         const transferTokenAmounts: TransactionHistoryTransferTokenAmount[] = [];
-        let relayerFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
+        let broadcasterFeeTokenAmount: Optional<TransactionHistoryTokenAmount>;
         const changeTokenAmounts: TransactionHistoryTokenAmount[] = [];
 
         for (const tokenAmount of tokenAmounts) {
@@ -2502,8 +2502,8 @@ abstract class AbstractWallet extends EventEmitter {
                 tokenAmount as TransactionHistoryTransferTokenAmount,
               );
               break;
-            case OutputType.RelayerFee:
-              relayerFeeTokenAmount = tokenAmount;
+            case OutputType.BroadcasterFee:
+              broadcasterFeeTokenAmount = tokenAmount;
               break;
             case OutputType.Change:
               changeTokenAmounts.push(tokenAmount);
@@ -2538,7 +2538,7 @@ abstract class AbstractWallet extends EventEmitter {
           timestamp,
           blockNumber,
           transferTokenAmounts,
-          relayerFeeTokenAmount,
+          broadcasterFeeTokenAmount,
           changeTokenAmounts,
           unshieldTokenAmounts,
           version,

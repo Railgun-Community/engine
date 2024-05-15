@@ -252,16 +252,16 @@ describe('relay-adapt', function test() {
 
     const transactionBatch = new TransactionBatch(chain);
 
-    const relayerFee = TransactNote.createTransfer(
+    const broadcasterFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       1000n,
       wethTokenData,
       false, // showSenderAddressToRecipient
-      OutputType.RelayerFee,
+      OutputType.BroadcasterFee,
       undefined, // memoText
     );
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
 
     const unshieldValue = 99000000n;
 
@@ -309,18 +309,18 @@ describe('relay-adapt', function test() {
       ]),
     ).to.equal(9975n);
 
-    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Broadcaster.
     const transactionBatch = new TransactionBatch(chain);
-    const relayerFee = TransactNote.createTransfer(
+    const broadcasterFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       100n,
       wethTokenData,
       false, // showSenderAddressToRecipient
-      OutputType.RelayerFee,
+      OutputType.BroadcasterFee,
       undefined, // memoText
     );
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
 
     const unshieldValue = 300n;
 
@@ -407,7 +407,7 @@ describe('relay-adapt', function test() {
       await wallet.getBalanceERC20(txidVersion, chain, WETH_TOKEN_ADDRESS, [
         WalletBalanceBucket.Spendable,
       ]),
-    ).to.equal(BigInt(9975 /* original */ - 100 /* relayer fee */ - 300 /* unshield amount */));
+    ).to.equal(BigInt(9975 /* original */ - 100 /* broadcaster fee */ - 300 /* unshield amount */));
 
     const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
@@ -425,7 +425,7 @@ describe('relay-adapt', function test() {
       return;
     }
 
-    // Shield WETH for Relayer fee.
+    // Shield WETH for Broadcaster fee.
     await testShieldBaseToken();
     expect(
       await wallet.getBalanceERC20(txidVersion, chain, WETH_TOKEN_ADDRESS, [
@@ -462,18 +462,18 @@ describe('relay-adapt', function test() {
 
     const nftTokenData = shield.tokenData as NFTTokenData;
 
-    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Broadcaster.
     const transactionBatch = new TransactionBatch(chain);
-    const relayerFee = TransactNote.createTransfer(
+    const broadcasterFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       300n,
       wethTokenData,
       false, // showSenderAddressToRecipient
-      OutputType.RelayerFee,
+      OutputType.BroadcasterFee,
       undefined, // memoText
     );
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
 
     const unshieldNote = new UnshieldNoteNFT(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
@@ -513,7 +513,7 @@ describe('relay-adapt', function test() {
         relayShieldInputs,
         gasEstimateRandom,
         false, // isGasEstimate
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await RelayAdaptV2Contract.estimateGasWithErrorHandler(
@@ -542,7 +542,7 @@ describe('relay-adapt', function test() {
         crossContractCalls,
         relayShieldInputs,
         random,
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     transactionBatch.setAdaptID({
       contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
@@ -574,7 +574,7 @@ describe('relay-adapt', function test() {
       relayShieldInputs,
       random,
       false, // isGasEstimate
-      true, // isRelayerTransaction
+      true, // isBroadcasterTransaction
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
     expect(Math.abs(Number(gasEstimate - gasEstimateFinal))).to.be.below(
@@ -622,7 +622,7 @@ describe('relay-adapt', function test() {
       ]),
     ).to.equal(9975n);
 
-    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Broadcaster.
     const transactionBatch = new TransactionBatch(chain);
     const unshieldNote = new UnshieldNoteERC20(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
@@ -702,18 +702,18 @@ describe('relay-adapt', function test() {
       ]),
     ).to.equal(9975n);
 
-    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Broadcaster.
     const transactionBatch = new TransactionBatch(chain);
-    const relayerFee = TransactNote.createTransfer(
+    const broadcasterFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       300n,
       wethTokenData,
       false, // showSenderAddressToRecipient
-      OutputType.RelayerFee,
+      OutputType.BroadcasterFee,
       undefined, // memoText
     );
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
     const unshieldNote = new UnshieldNoteERC20(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       1000n,
@@ -764,7 +764,7 @@ describe('relay-adapt', function test() {
         relayShieldInputs,
         randomGasEstimate,
         true, // isGasEstimate
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     const gasEstimate = await RelayAdaptV2Contract.estimateGasWithErrorHandler(
@@ -792,7 +792,7 @@ describe('relay-adapt', function test() {
         crossContractCalls,
         relayShieldInputs,
         random,
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     transactionBatch.setAdaptID({
       contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
@@ -824,7 +824,7 @@ describe('relay-adapt', function test() {
       relayShieldInputs,
       random,
       false, // isGasEstimate
-      true, // isRelayerTransaction
+      true, // isBroadcasterTransaction
     );
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
 
@@ -867,11 +867,11 @@ describe('relay-adapt', function test() {
 
     const expectedPrivateWethBalance = BigInt(
       9975 /* original shield */ -
-        300 /* relayer fee */ -
+        300 /* broadcaster fee */ -
         1000 /* unshield */ +
         8 /* re-shield (1000 unshield amount - 2 unshield fee - 990 send amount - 0 re-shield fee) */,
     );
-    const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
+    const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add broadcaster fee.
 
     const proxyWethBalance = await wethTokenContract.balanceOf(
       RailgunVersionedSmartContracts.getAccumulator(txidVersion, chain).address,
@@ -900,18 +900,18 @@ describe('relay-adapt', function test() {
       ]),
     ).to.equal(99750n);
 
-    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Broadcaster.
     const transactionBatch = new TransactionBatch(chain);
-    const relayerFee = TransactNote.createTransfer(
+    const broadcasterFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       300n,
       wethTokenData,
       false, // showSenderAddressToRecipient
-      OutputType.RelayerFee,
+      OutputType.BroadcasterFee,
       undefined, // memoText
     );
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
     const unshieldNote = new UnshieldNoteERC20(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       10000n,
@@ -962,7 +962,7 @@ describe('relay-adapt', function test() {
         relayShieldInputs,
         gasEstimateRandom,
         true, // isGasEstimate
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     await expect(
@@ -979,7 +979,7 @@ describe('relay-adapt', function test() {
         crossContractCalls,
         relayShieldInputs,
         random,
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     transactionBatch.setAdaptID({
       contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
@@ -1011,7 +1011,7 @@ describe('relay-adapt', function test() {
       relayShieldInputs,
       random,
       false, // isGasEstimate
-      true, // isRelayerTransaction
+      true, // isBroadcasterTransaction
     );
 
     // Set high gas limit.
@@ -1052,13 +1052,13 @@ describe('relay-adapt', function test() {
 
     const expectedPrivateWethBalance = BigInt(
       99750 /* original */ -
-        300 /* relayer fee */ -
+        300 /* broadcaster fee */ -
         10000 /* unshield amount */ -
         0 /* failed cross contract send: no change */ +
         9975 /* re-shield amount */ -
         24 /* shield fee */,
     );
-    const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add relayer fee.
+    const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add broadcaster fee.
 
     const proxyWethBalance = await wethTokenContract.balanceOf(
       RailgunVersionedSmartContracts.getAccumulator(txidVersion, chain).address,
@@ -1087,18 +1087,18 @@ describe('relay-adapt', function test() {
       ]),
     ).to.equal(99750n);
 
-    // 1. Generate transaction batch to unshield necessary amount, and pay Relayer.
+    // 1. Generate transaction batch to unshield necessary amount, and pay Broadcaster.
     const transactionBatch = new TransactionBatch(chain);
-    const relayerFee = TransactNote.createTransfer(
+    const broadcasterFee = TransactNote.createTransfer(
       wallet2.addressKeys,
       wallet.addressKeys,
       300n,
       wethTokenData,
       false, // showSenderAddressToRecipient
-      OutputType.RelayerFee,
+      OutputType.BroadcasterFee,
       undefined, // memoText
     );
-    transactionBatch.addOutput(relayerFee); // Simulate Relayer fee output.
+    transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
     const unshieldNote = new UnshieldNoteERC20(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       10000n,
@@ -1149,7 +1149,7 @@ describe('relay-adapt', function test() {
         relayShieldInputs,
         randomGasEstimate,
         true, // isGasEstimate
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     populatedTransactionGasEstimate.from = DEAD_ADDRESS;
     await expect(
@@ -1166,7 +1166,7 @@ describe('relay-adapt', function test() {
         crossContractCalls,
         relayShieldInputs,
         random,
-        true, // isRelayerTransaction
+        true, // isBroadcasterTransaction
       );
     transactionBatch.setAdaptID({
       contract: RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
@@ -1198,7 +1198,7 @@ describe('relay-adapt', function test() {
       relayShieldInputs,
       random,
       false, // isGasEstimate
-      true, // isRelayerTransaction
+      true, // isBroadcasterTransaction
     );
 
     const gasEstimateFinal = await provider.estimateGas(relayTransaction);
@@ -1242,12 +1242,12 @@ describe('relay-adapt', function test() {
 
     // TODO: These are the incorrect assertions, if the tx is fully reverted. This requires a callbacks upgrade to contract.
     // For now, it is partially reverted. Unshield/shield fees are still charged.
-    // This caps the loss of funds at 0.5% + Relayer fee.
+    // This caps the loss of funds at 0.5% + Broadcaster fee.
 
     const expectedProxyBalance = BigInt(
       99750 /* original */ - 25 /* unshield fee */ - 24 /* re-shield fee */,
     );
-    const expectedWalletBalance = BigInt(expectedProxyBalance - 300n /* relayer fee */);
+    const expectedWalletBalance = BigInt(expectedProxyBalance - 300n /* broadcaster fee */);
 
     const treasuryBalance: bigint = await wethTokenContract.balanceOf(
       config.contracts.treasuryProxy,

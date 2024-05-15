@@ -37,7 +37,7 @@ describe('memo', function run() {
     const sender = wallet.getViewingKeyPair();
 
     const noteAnnotationData: NoteAnnotationData = {
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       senderRandom: '1234567890abcde1234567890abcde', // 15 bytes
       walletSource: 'memo wallet',
     };

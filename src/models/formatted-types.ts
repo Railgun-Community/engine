@@ -65,7 +65,7 @@ export enum CommitmentType {
 
 export enum OutputType {
   Transfer = 0,
-  RelayerFee = 1,
+  BroadcasterFee = 1,
   Change = 2,
 }
 

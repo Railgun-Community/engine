@@ -511,7 +511,7 @@ describe('railgun-engine', function test() {
     expect(walletDetailsCleared.treeScannedHeights.length).to.equal(0);
   });
 
-  it('[HH] Should shield, unshield w/ relayer and update balance, generate POIs, and pull formatted spend/receive transaction history', async function run() {
+  it('[HH] Should shield, unshield w/ broadcaster and update balance, generate POIs, and pull formatted spend/receive transaction history', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
@@ -540,7 +540,7 @@ describe('railgun-engine', function test() {
       tokenData,
     });
 
-    // Add output for mock Relayer
+    // Add output for mock Broadcaster
     transactionBatch.addOutput(
       TransactNote.createTransfer(
         wallet2.addressKeys,
@@ -548,7 +548,7 @@ describe('railgun-engine', function test() {
         1n,
         tokenData,
         false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
+        OutputType.BroadcasterFee,
         undefined, // memoText
       ),
     );
@@ -711,13 +711,13 @@ describe('railgun-engine', function test() {
     ]);
     expect(newBalance2).to.equal(BigInt(1));
 
-    // check if relayer wallet finds valid POI for received commitment
-    const hasValidRelayerPOI = await wallet2.receiveCommitmentHasValidPOI(
+    // check if broadcaster wallet finds valid POI for received commitment
+    const hasValidBroadcasterPOI = await wallet2.receiveCommitmentHasValidPOI(
       txidVersion,
       chain,
       '0x2c5acad8f41f95a2795997353f6cdb0838493cd5604f8ddc1859a468233e15ac',
     );
-    expect(hasValidRelayerPOI).to.equal(true);
+    expect(hasValidBroadcasterPOI).to.equal(true);
 
     // check the transactions log
     const history = await wallet.getTransactionHistory(chain, undefined);
@@ -751,11 +751,11 @@ describe('railgun-engine', function test() {
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
-    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].broadcasterFeeTokenAmount).eq(undefined);
     expect(history[0].changeTokenAmounts).deep.eq([]);
     expect(history[0].unshieldTokenAmounts).deep.eq([]);
 
-    // Check second output: Unshield (relayer fee + change).
+    // Check second output: Unshield (broadcaster fee + change).
     // NOTE: No receive token amounts should be logged by history.
 
     // TODO: The stubs for sinon random cause this expectation to fail:
@@ -765,11 +765,11 @@ describe('railgun-engine', function test() {
     // );
 
     expect(history[1].transferTokenAmounts).deep.eq([]);
-    expect(history[1].relayerFeeTokenAmount).deep.eq({
+    expect(history[1].broadcasterFeeTokenAmount).deep.eq({
       tokenData: getTokenDataERC20(tokenAddress),
       tokenHash: tokenFormatted,
       amount: BigInt(1),
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       walletSource: 'test wallet',
       memoText: undefined,
       hasValidPOIForActiveLists: true,
@@ -803,7 +803,7 @@ describe('railgun-engine', function test() {
     expect(historyHighStartingBlock.length).to.equal(0);
   }).timeout(90000);
 
-  it('[HH] Should shield, max-unshield without relayer, generate POIs, and pull formatted spend/receive transaction history', async function run() {
+  it('[HH] Should shield, max-unshield without broadcaster, generate POIs, and pull formatted spend/receive transaction history', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();
       return;
@@ -866,7 +866,7 @@ describe('railgun-engine', function test() {
       new TokenDataGetter(engine.db),
     );
     // Not valid as there are no commitments generated -
-    // it should never generate pre-transaction pois without a relayer in production.
+    // it should never generate pre-transaction pois without a broadcaster in production.
     expect(isValidPOI.isValid).to.equal(false);
 
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
@@ -993,18 +993,18 @@ describe('railgun-engine', function test() {
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
-    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].broadcasterFeeTokenAmount).eq(undefined);
     expect(history[0].changeTokenAmounts).deep.eq([]);
     expect(history[0].unshieldTokenAmounts).deep.eq([]);
 
-    // Check second output: Unshield (relayer fee + change).
+    // Check second output: Unshield (broadcaster fee + change).
     // NOTE: No receive token amounts should be logged by history.
     expect(history[1].receiveTokenAmounts).deep.eq(
       [],
       "Receive amount should be filtered out - it's the same as change output.",
     );
     expect(history[1].transferTokenAmounts).deep.eq([]);
-    expect(history[1].relayerFeeTokenAmount).eq(undefined);
+    expect(history[1].broadcasterFeeTokenAmount).eq(undefined);
     expect(history[1].changeTokenAmounts).deep.eq([]); // No change output
     expect(history[1].unshieldTokenAmounts).deep.eq([
       {
@@ -1060,9 +1060,9 @@ describe('railgun-engine', function test() {
       ),
     );
 
-    const relayerMemoText = 'A short memo with only 32 chars.';
+    const broadcasterMemoText = 'A short memo with only 32 chars.';
 
-    // Add output for mock Relayer
+    // Add output for mock Broadcaster
     transactionBatch.addOutput(
       TransactNote.createTransfer(
         wallet2.addressKeys,
@@ -1070,8 +1070,8 @@ describe('railgun-engine', function test() {
         1n,
         tokenData,
         false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
-        relayerMemoText, // memoText
+        OutputType.BroadcasterFee,
+        broadcasterMemoText, // memoText
       ),
     );
 
@@ -1155,11 +1155,11 @@ describe('railgun-engine', function test() {
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
-    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].broadcasterFeeTokenAmount).eq(undefined);
     expect(history[0].changeTokenAmounts).deep.eq([]);
     expect(history[0].unshieldTokenAmounts).deep.eq([]);
 
-    // Check second output: Unshield (relayer fee + change).
+    // Check second output: Unshield (broadcaster fee + change).
     // NOTE: No receive token amounts should be logged by history.
     expect(history[1].receiveTokenAmounts).deep.eq(
       [],
@@ -1179,14 +1179,14 @@ describe('railgun-engine', function test() {
         hasValidPOIForActiveLists: true,
       },
     ]);
-    expect(history[1].relayerFeeTokenAmount).deep.eq({
+    expect(history[1].broadcasterFeeTokenAmount).deep.eq({
       tokenData: getTokenDataERC20(tokenAddress),
       tokenHash: tokenFormatted,
       amount: BigInt(1),
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       walletSource: 'test wallet',
-      memoText: relayerMemoText,
+      memoText: broadcasterMemoText,
       // eslint-disable-next-line no-unneeded-ternary
       hasValidPOIForActiveLists: true,
     });
@@ -1221,7 +1221,7 @@ describe('railgun-engine', function test() {
         tokenData: getTokenDataERC20(tokenAddress),
         tokenHash: tokenFormatted,
         amount: BigInt(1),
-        memoText: relayerMemoText,
+        memoText: broadcasterMemoText,
         senderAddress: undefined,
         shieldFee: undefined,
         balanceBucket: WalletBalanceBucket.Spendable,
@@ -1229,7 +1229,7 @@ describe('railgun-engine', function test() {
       },
     ]);
     expect(history2[0].transferTokenAmounts).deep.eq([]);
-    expect(history2[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history2[0].broadcasterFeeTokenAmount).eq(undefined);
     expect(history2[0].changeTokenAmounts).deep.eq([]);
     expect(history2[0].unshieldTokenAmounts).deep.eq([]);
   }).timeout(90000);
@@ -1277,7 +1277,7 @@ describe('railgun-engine', function test() {
       },
     ]);
     expect(history[0].transferTokenAmounts).deep.eq([]);
-    expect(history[0].relayerFeeTokenAmount).eq(undefined);
+    expect(history[0].broadcasterFeeTokenAmount).eq(undefined);
     expect(history[0].changeTokenAmounts).deep.eq([]);
     expect(history[0].unshieldTokenAmounts).deep.eq([]);
 
@@ -1292,7 +1292,7 @@ describe('railgun-engine', function test() {
       '0',
     );
 
-    // Shield tokens for Relayer Fee.
+    // Shield tokens for Broadcaster Fee.
     await shieldTestTokens(wallet.getAddress(), BigInt(110000) * DECIMALS_18);
 
     // Transfer NFT to another wallet.
@@ -1321,20 +1321,20 @@ describe('railgun-engine', function test() {
     );
     transactionBatch.addUnshieldData(unshieldNote.unshieldData);
 
-    const relayerMemoText = 'A short memo with only 32 chars.';
+    const broadcasterMemoText = 'A short memo with only 32 chars.';
 
-    const tokenDataRelayerFee = getTokenDataERC20(erc20Address);
+    const tokenDataBroadcasterFee = getTokenDataERC20(erc20Address);
 
-    // Add output for mock Relayer
+    // Add output for mock Broadcaster
     transactionBatch.addOutput(
       TransactNote.createTransfer(
         wallet2.addressKeys,
         wallet.addressKeys,
         20n,
-        tokenDataRelayerFee,
+        tokenDataBroadcasterFee,
         false, // showSenderAddressToRecipient
-        OutputType.RelayerFee,
-        relayerMemoText, // memoText
+        OutputType.BroadcasterFee,
+        broadcasterMemoText, // memoText
       ),
     );
 
@@ -1391,8 +1391,8 @@ describe('railgun-engine', function test() {
     const historyAfterTransfer = await wallet.getTransactionHistory(chain, undefined);
     expect(historyAfterTransfer.length).to.equal(4);
 
-    const relayerFeeTokenData = getTokenDataERC20(tokenAddress);
-    const relayerFeeTokenHash = getTokenDataHash(relayerFeeTokenData);
+    const broadcasterFeeTokenData = getTokenDataERC20(tokenAddress);
+    const broadcasterFeeTokenHash = getTokenDataHash(broadcasterFeeTokenData);
 
     expect(historyAfterTransfer.length).to.equal(4, 'Expected 4 history records');
     expect(historyAfterTransfer[3].transferTokenAmounts.length).to.equal(1, 'Expected 1 transfer');
@@ -1410,19 +1410,19 @@ describe('railgun-engine', function test() {
         hasValidPOIForActiveLists: true,
       },
     ]);
-    expect(historyAfterTransfer[3].relayerFeeTokenAmount).deep.eq({
-      tokenData: relayerFeeTokenData,
-      tokenHash: relayerFeeTokenHash,
+    expect(historyAfterTransfer[3].broadcasterFeeTokenAmount).deep.eq({
+      tokenData: broadcasterFeeTokenData,
+      tokenHash: broadcasterFeeTokenHash,
       amount: BigInt(20),
-      outputType: OutputType.RelayerFee,
+      outputType: OutputType.BroadcasterFee,
       walletSource: 'test wallet',
-      memoText: relayerMemoText,
+      memoText: broadcasterMemoText,
       hasValidPOIForActiveLists: true,
     });
     expect(historyAfterTransfer[3].changeTokenAmounts).deep.eq([
       {
-        tokenData: relayerFeeTokenData,
-        tokenHash: relayerFeeTokenHash,
+        tokenData: broadcasterFeeTokenData,
+        tokenHash: broadcasterFeeTokenHash,
         amount: BigInt('109724999999999999999980'),
         outputType: OutputType.Change,
         walletSource: 'test wallet',

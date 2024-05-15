@@ -164,11 +164,11 @@ export class TransactionBatch {
       EngineDebug.log(`tokenBalance: ${tokenBalance}`);
       switch (tokenData.tokenType) {
         case TokenType.ERC20: {
-          const relayerFeeOutput = tokenOutputs.find(
-            (output) => output.outputType === OutputType.RelayerFee,
+          const broadcasterFeeOutput = tokenOutputs.find(
+            (output) => output.outputType === OutputType.BroadcasterFee,
           );
-          const amountRequiredMessage = relayerFeeOutput
-            ? `${totalRequired.toString()} (includes ${relayerFeeOutput.value.toString()} Relayer Fee)`
+          const amountRequiredMessage = broadcasterFeeOutput
+            ? `${totalRequired.toString()} (includes ${broadcasterFeeOutput.value.toString()} Broadcaster Fee)`
             : totalRequired.toString();
           if (isDefined(originShieldTxidForSpendabilityOverride)) {
             throw new Error(

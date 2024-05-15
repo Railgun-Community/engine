@@ -84,7 +84,7 @@ export type TransactionHistoryEntrySpent = {
   blockNumber: Optional<number>;
   transferTokenAmounts: TransactionHistoryTransferTokenAmount[];
   changeTokenAmounts: TransactionHistoryTokenAmount[];
-  relayerFeeTokenAmount?: TransactionHistoryTokenAmount;
+  broadcasterFeeTokenAmount?: TransactionHistoryTokenAmount;
   unshieldTokenAmounts: TransactionHistoryUnshieldTokenAmount[];
   version: TransactionHistoryItemVersion;
 };
