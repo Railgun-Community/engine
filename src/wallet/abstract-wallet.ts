@@ -78,7 +78,7 @@ import {
   serializeTokenData,
 } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
-import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
+import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { PrivateInputsRailgun, PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import {
@@ -1331,7 +1331,7 @@ abstract class AbstractWallet extends EventEmitter {
       await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain);
 
     const txids = [...sentCommitmentsNeedPOIs, ...unshieldEventsNeedPOIs].map((item) => item.txid);
-    return removeDuplicates(txids);
+    return Array.from(new Set(txids));
   }
 
   async getSpendableReceivedChainTxids(txidVersion: TXIDVersion, chain: Chain): Promise<string[]> {
@@ -1340,7 +1340,7 @@ abstract class AbstractWallet extends EventEmitter {
       (txo) => POI.getBalanceBucket(txo) === WalletBalanceBucket.Spendable,
     );
     const txids = spendableTXOs.map((item) => item.txid);
-    return removeDuplicates(txids);
+    return Array.from(new Set(txids));
   }
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
