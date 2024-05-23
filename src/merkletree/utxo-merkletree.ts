@@ -150,9 +150,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     let newUnshields: UnshieldStoredEvent[] = unshields;
 
     if (!replaceExisting) {
-
       const replaceUnshields = new Set<UnshieldStoredEvent>();
-
         await Promise.all(
           unshields.map(async (unshield) => {
             const hasExisting = await this.hasExistingUnshieldEvent(unshield);
@@ -161,21 +159,22 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
             }
           }),
       )
-
       newUnshields = Array.from(replaceUnshields);
     }
-
     // Build write batch for nullifiers
-    const writeBatch: PutBatch[] = newUnshields.map((unshield) => ({
-      type: 'put',
-      key: this.getUnshieldEventsDBPath(
-        unshield.txid,
-        unshield.eventLogIndex,
-        unshield.railgunTxid,
-      ).join(':'),
-      value: unshield,
-    }));
+    const writeBatch: PutBatch[] = [];
 
+    for (const unshield of newUnshields) {
+      writeBatch.push({
+        type: 'put',
+        key: this.getUnshieldEventsDBPath(
+          unshield.txid,
+          unshield.eventLogIndex,
+          unshield.railgunTxid,
+        ).join(':'),
+        value: unshield,
+      })
+    }
     // Write to DB
     return this.db.batch(writeBatch, 'json');
   }
