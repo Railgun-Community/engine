@@ -177,7 +177,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     }));
 
     // Write to DB
-    await this.db.batch(writeBatch, 'json');
+    return this.db.batch(writeBatch, 'json');
   }
 
   async hasExistingUnshieldEvent(unshield: UnshieldStoredEvent): Promise<boolean> {
