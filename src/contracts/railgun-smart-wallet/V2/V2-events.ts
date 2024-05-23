@@ -69,7 +69,7 @@ export class V2Events {
     });
     return shieldCommitments;
   }
-
+  
   static formatShieldEvent(
     shieldEventArgs: ShieldEvent.OutputObject | ShieldEvent_LegacyShield_PreMar23.OutputObject,
     transactionHash: string,
@@ -227,25 +227,32 @@ export class V2Events {
     eventsListener: EventsCommitmentListener,
     logs: ShieldEvent.Log[],
   ): Promise<void> {
-    const filtered = logs.filter((log) => log.args);
-    if (logs.length !== filtered.length) {
-      throw new Error('Args required for Shield events');
+    if (!logs.length) {
+      return;
     }
-    await Promise.all(
-      filtered.map(async (log) => {
-        const { args, transactionHash, blockNumber } = log;
-        const { fees } = args;
-        return eventsListener(txidVersion, [
-          V2Events.formatShieldEvent(
-            args,
-            transactionHash,
-            blockNumber,
-            fees,
-            undefined, // timestamp
-          ),
-        ]);
-      }),
-    );
+    const shieldEventPromises = [];
+
+    for (const log of logs) {
+      if (log.args === undefined) {
+        throw new Error('Args required for Shield events');
+      }
+
+      const { args, transactionHash, blockNumber } = log;
+      const { fees } = args;
+
+      const shieldEventPromise = eventsListener(txidVersion, [
+        V2Events.formatShieldEvent(
+          args,
+          transactionHash,
+          blockNumber,
+          fees,
+          undefined, // timestamp
+        ),
+      ]);
+
+      shieldEventPromises.push(shieldEventPromise);
+    }
+    await Promise.all(shieldEventPromises);
   }
 
   static async processShieldEvents_LegacyShield_PreMar23(
@@ -253,6 +260,9 @@ export class V2Events {
     eventsListener: EventsCommitmentListener,
     logs: ShieldEvent_LegacyShield_PreMar23.Log[],
   ): Promise<void> {
+    if (!logs.length) {
+      return;
+    }
     // NOTE: Legacy "Shield" event of the same name conflicts with the current ABI's Shield event.
     // It seems that the first ABI to load, with "Shield" event, for a given contract address,
     // sets a cached version of the ABI interface.
@@ -267,26 +277,29 @@ export class V2Events {
       log.args = args as any;
     }
 
-    const filtered = logs.filter((log) => log.args);
-    if (logs.length !== filtered.length) {
-      throw new Error('Args required for Legacy Shield events');
+    const shieldEventsLegacyPromises = [];
+
+    for (const event of logs) {
+      if (event.args === undefined) {
+        throw new Error('Args required for Legacy Shield events');
+      }
+
+      const { args, transactionHash, blockNumber } = event;
+      const fees: Optional<bigint[]> = undefined;
+
+      shieldEventsLegacyPromises.push(eventsListener(txidVersion, [
+        V2Events.formatShieldEvent(
+          args,
+          transactionHash,
+          blockNumber,
+          fees,
+          undefined, // timestamp
+        ),
+      ]))
+
     }
 
-    await Promise.all(
-      filtered.map(async (event) => {
-        const { args, transactionHash, blockNumber } = event;
-        const fees: Optional<bigint[]> = undefined;
-        return eventsListener(txidVersion, [
-          V2Events.formatShieldEvent(
-            args,
-            transactionHash,
-            blockNumber,
-            fees,
-            undefined, // timestamp
-          ),
-        ]);
-      }),
-    );
+    await Promise.all(shieldEventsLegacyPromises)
   }
 
   static async processTransactEvents(
@@ -294,23 +307,31 @@ export class V2Events {
     eventsListener: EventsCommitmentListener,
     logs: TransactEvent.Log[],
   ): Promise<void> {
-    const filtered = logs.filter((log) => log.args);
-    if (logs.length !== filtered.length) {
-      throw new Error('Args required for Transact events');
+    if (!logs.length) {
+      return;
     }
-    await Promise.all(
-      filtered.map(async (event) => {
-        const { args, transactionHash, blockNumber } = event;
-        return eventsListener(txidVersion, [
-          V2Events.formatTransactEvent(
-            args,
-            transactionHash,
-            blockNumber,
-            undefined, // timestamp
-          ),
-        ]);
-      }),
-    );
+    
+    const transactEventsPromises = [];
+
+    for (const event of logs) {
+      if (event.args === undefined) {
+        throw new Error('Args required for Transact events');
+      }
+
+      const { args, transactionHash, blockNumber } = event;
+
+      transactEventsPromises.push(eventsListener(txidVersion, [
+        V2Events.formatTransactEvent(
+          args,
+          transactionHash,
+          blockNumber,
+          undefined, // timestamp
+        ),
+      ]))
+
+    }
+    
+    await Promise.all(transactEventsPromises);
   }
 
   static async processUnshieldEvents(
@@ -318,13 +339,17 @@ export class V2Events {
     eventsUnshieldListener: EventsUnshieldListener,
     logs: UnshieldEvent.Log[],
   ): Promise<void> {
+    if (!logs.length) {
+      return;
+    }
+
     const unshields: UnshieldStoredEvent[] = [];
 
-    const filtered = logs.filter((log) => log.args);
-    if (logs.length !== filtered.length) {
-      throw new Error('Args required for Unshield events');
-    }
-    for (const log of filtered) {
+    for (const log of logs) {
+      if (log.args === undefined) {
+        throw new Error('Args required for Unshield events');
+      }
+
       const { args, transactionHash, blockNumber } = log;
       unshields.push(
         V2Events.formatUnshieldEvent(
@@ -364,14 +389,17 @@ export class V2Events {
     eventsNullifierListener: EventsNullifierListener,
     logs: NullifiedEvent.Log[],
   ): Promise<void> {
-    const nullifiers: Nullifier[] = [];
-
-    const filtered = logs.filter((log) => log.args);
-    if (logs.length !== filtered.length) {
-      throw new Error('Args required for Nullified events');
+    if (!logs.length) {
+      return;
     }
 
-    for (const log of filtered) {
+    const nullifiers: Nullifier[] = [];
+
+    for (const log of logs) {
+      if (log.args === undefined) {
+        throw new Error('Args required for Nullified events');
+      }
+
       const { args, transactionHash, blockNumber } = log;
       nullifiers.push(...V2Events.formatNullifiedEvents(args, transactionHash, blockNumber));
     }

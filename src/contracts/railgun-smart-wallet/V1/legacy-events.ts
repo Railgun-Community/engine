@@ -181,15 +181,23 @@ export async function processGeneratedCommitmentEvents(
   eventsListener: EventsCommitmentListener,
   logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = logs.filter((log) => log.args);
-  await Promise.all(
-    filtered.map(async (log) => {
-      const { args, transactionHash, blockNumber } = log;
-      return eventsListener(txidVersion, [
-        formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
-      ]);
-    }),
-  );
+  if (logs.length) {
+    return;
+  }
+  
+  const generatedCommitmentEventsPromises = [];
+
+  for (const log of logs) {
+
+    if (log.args === undefined) continue;
+    
+    const { args, transactionHash, blockNumber } = log;
+    generatedCommitmentEventsPromises.push(eventsListener(txidVersion, [
+      formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
+    ]));
+  }
+
+  await Promise.all(generatedCommitmentEventsPromises);
 }
 
 export async function processCommitmentBatchEvents(
@@ -197,15 +205,22 @@ export async function processCommitmentBatchEvents(
   eventsListener: EventsCommitmentListener,
   logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = logs.filter((log) => log.args);
-  await Promise.all(
-    filtered.map(async (log) => {
-      const { args, transactionHash, blockNumber } = log;
-      return eventsListener(txidVersion, [
-        formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
-      ]);
-    }),
-  );
+  if (!logs.length) {
+    return;
+  }
+
+  const commitmentBatchEventsPromises = [];
+
+  for (const log of logs) {
+    if (log.args === undefined) continue;
+    
+    const { args, transactionHash, blockNumber } = log;
+    commitmentBatchEventsPromises.push(eventsListener(txidVersion, [
+      formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
+    ]))
+  }
+
+  await Promise.all(commitmentBatchEventsPromises);
 }
 
 export function formatLegacyNullifierEvents(
@@ -232,15 +247,22 @@ export async function processLegacyGeneratedCommitmentEvents(
   eventsListener: EventsCommitmentListener,
   logs: LegacyGeneratedCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = logs.filter((log) => log.args);
-  await Promise.all(
-    filtered.map(async (log) => {
-      const { args, transactionHash, blockNumber } = log;
-      return eventsListener(txidVersion, [
-        formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
-      ]);
-    }),
-  );
+  if (!logs.length) {
+    return;
+  }
+  
+  const legacyGeneratedCommitmentEventsPromises = [];
+  
+  for (const log of logs) {
+    if (log.args === undefined) continue;
+
+    const { args, transactionHash, blockNumber } = log;
+    legacyGeneratedCommitmentEventsPromises.push(eventsListener(txidVersion, [
+      formatLegacyGeneratedCommitmentBatchEvent(args, transactionHash, blockNumber),
+    ]))
+  }
+
+  await Promise.all(legacyGeneratedCommitmentEventsPromises);
 }
 
 export async function processLegacyCommitmentBatchEvents(
@@ -248,15 +270,21 @@ export async function processLegacyCommitmentBatchEvents(
   eventsListener: EventsCommitmentListener,
   logs: LegacyCommitmentBatchEvent.Log[],
 ): Promise<void> {
-  const filtered = logs.filter((log) => log.args);
-  await Promise.all(
-    filtered.map(async (log) => {
-      const { args, transactionHash, blockNumber } = log;
-      return eventsListener(txidVersion, [
-        formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
-      ]);
-    }),
-  );
+  if (!logs.length) {
+    return;
+  }
+
+  const legacyCommitmentBatchEventsPromises = [];
+
+  for (const log of logs) {
+    if (log === undefined) continue;
+    const { args, transactionHash, blockNumber } = log;
+    legacyCommitmentBatchEventsPromises.push(eventsListener(txidVersion, [
+      formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
+    ]))
+  }
+
+  await Promise.all(legacyCommitmentBatchEventsPromises);
 }
 
 export async function processLegacyNullifierEvents(
@@ -264,10 +292,13 @@ export async function processLegacyNullifierEvents(
   eventsNullifierListener: EventsNullifierListener,
   logs: LegacyNullifiersEvent.Log[],
 ): Promise<void> {
+  if (!logs.length) {
+    return;
+  }
   const nullifiers: Nullifier[] = [];
 
-  const filtered = logs.filter((log) => log.args);
-  for (const event of filtered) {
+  for (const event of logs) {
+    if (event.args === undefined) continue;
     const { args, transactionHash, blockNumber } = event;
     nullifiers.push(...formatLegacyNullifierEvents(args, transactionHash, blockNumber));
   }
