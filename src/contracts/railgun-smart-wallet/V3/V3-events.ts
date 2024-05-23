@@ -338,7 +338,7 @@ export class V3Events {
 
     const accumulatorUpdateEventPromises = [];
     for (const log of logs) {
-      if (log.args === undefined) {
+      if (!isDefined(log.args)) {
         throw new Error('Args required for Nullified events');
       }
       

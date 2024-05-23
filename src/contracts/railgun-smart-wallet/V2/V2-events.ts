@@ -28,6 +28,7 @@ import { serializeTokenData, serializePreImage, getNoteHash } from '../../../not
 import { ShieldEvent as ShieldEvent_LegacyShield_PreMar23 } from '../../../abi/typechain/RailgunSmartWallet_Legacy_PreMar23';
 import { ABIRailgunSmartWallet_Legacy_PreMar23 } from '../../../abi/abi';
 import { TXIDVersion } from '../../../models/poi-types';
+import { isDefined } from '../../../utils/is-defined';
 
 export class V2Events {
   private static formatShieldCommitments(
@@ -233,7 +234,7 @@ export class V2Events {
     const shieldEventPromises = [];
 
     for (const log of logs) {
-      if (log.args === undefined) {
+      if (!isDefined(log.args)) {
         throw new Error('Args required for Shield events');
       }
 
@@ -280,7 +281,7 @@ export class V2Events {
     const shieldEventsLegacyPromises = [];
 
     for (const event of logs) {
-      if (event.args === undefined) {
+      if (!isDefined(event.args)) {
         throw new Error('Args required for Legacy Shield events');
       }
 
@@ -314,7 +315,7 @@ export class V2Events {
     const transactEventsPromises = [];
 
     for (const event of logs) {
-      if (event.args === undefined) {
+      if (!isDefined(event.args)) {
         throw new Error('Args required for Transact events');
       }
 
@@ -346,7 +347,7 @@ export class V2Events {
     const unshields: UnshieldStoredEvent[] = [];
 
     for (const log of logs) {
-      if (log.args === undefined) {
+      if (!isDefined(log.args)) {
         throw new Error('Args required for Unshield events');
       }
 
@@ -396,7 +397,7 @@ export class V2Events {
     const nullifiers: Nullifier[] = [];
 
     for (const log of logs) {
-      if (log.args === undefined) {
+      if (!isDefined(log.args)) {
         throw new Error('Args required for Nullified events');
       }
 

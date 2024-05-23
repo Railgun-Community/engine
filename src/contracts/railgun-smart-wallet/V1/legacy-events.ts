@@ -21,6 +21,7 @@ import { getNoteHash, serializePreImage, serializeTokenData } from '../../../not
 import { ByteLength, ByteUtils } from '../../../utils';
 import EngineDebug from '../../../debugger/debugger';
 import { TXIDVersion } from '../../../models/poi-types';
+import { isDefined } from '../../../utils/is-defined';
 
 export function formatLegacyGeneratedCommitmentBatchCommitments(
   transactionHash: string,
@@ -188,8 +189,7 @@ export async function processGeneratedCommitmentEvents(
   const generatedCommitmentEventsPromises = [];
 
   for (const log of logs) {
-
-    if (log.args === undefined) continue;
+    if (!isDefined(log.args)) continue;
     
     const { args, transactionHash, blockNumber } = log;
     generatedCommitmentEventsPromises.push(eventsListener(txidVersion, [
@@ -212,7 +212,7 @@ export async function processCommitmentBatchEvents(
   const commitmentBatchEventsPromises = [];
 
   for (const log of logs) {
-    if (log.args === undefined) continue;
+    if (!isDefined(log.args)) continue;
     
     const { args, transactionHash, blockNumber } = log;
     commitmentBatchEventsPromises.push(eventsListener(txidVersion, [
@@ -254,7 +254,7 @@ export async function processLegacyGeneratedCommitmentEvents(
   const legacyGeneratedCommitmentEventsPromises = [];
   
   for (const log of logs) {
-    if (log.args === undefined) continue;
+    if (!isDefined(log.args)) continue;
 
     const { args, transactionHash, blockNumber } = log;
     legacyGeneratedCommitmentEventsPromises.push(eventsListener(txidVersion, [
@@ -277,7 +277,7 @@ export async function processLegacyCommitmentBatchEvents(
   const legacyCommitmentBatchEventsPromises = [];
 
   for (const log of logs) {
-    if (log === undefined) continue;
+    if (!isDefined(log.args)) continue;
     const { args, transactionHash, blockNumber } = log;
     legacyCommitmentBatchEventsPromises.push(eventsListener(txidVersion, [
       formatLegacyCommitmentBatchEvent(args, transactionHash, blockNumber),
@@ -298,7 +298,7 @@ export async function processLegacyNullifierEvents(
   const nullifiers: Nullifier[] = [];
 
   for (const event of logs) {
-    if (event.args === undefined) continue;
+    if (!isDefined(event.args)) continue;
     const { args, transactionHash, blockNumber } = event;
     nullifiers.push(...formatLegacyNullifierEvents(args, transactionHash, blockNumber));
   }
