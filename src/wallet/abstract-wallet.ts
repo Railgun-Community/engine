@@ -3,7 +3,7 @@ import { Signature } from '@railgun-community/circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
-import { BigNumberish, ContractTransaction } from 'ethers';
+import { BigNumberish, ContractTransaction, Wallet } from 'ethers';
 import { poseidonHex } from '../utils/poseidon';
 import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
@@ -1336,11 +1336,16 @@ abstract class AbstractWallet extends EventEmitter {
 
   async getSpendableReceivedChainTxids(txidVersion: TXIDVersion, chain: Chain): Promise<string[]> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const spendableTXOs = TXOs.filter(
-      (txo) => POI.getBalanceBucket(txo) === WalletBalanceBucket.Spendable,
-    );
-    const txids = spendableTXOs.map((item) => item.txid);
-    return Array.from(new Set(txids));
+
+    const txIds = new Set<string>();
+
+    for (const txo of TXOs) {
+       if (POI.getBalanceBucket(txo) === WalletBalanceBucket.Spendable) {
+        txIds.add(txo.txid)
+       }
+    }
+    
+    return Array.from(txIds);
   }
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
