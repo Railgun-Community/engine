@@ -3,7 +3,7 @@ import { Signature } from '@railgun-community/circomlibjs';
 import type { PutBatch } from 'abstract-leveldown';
 import EventEmitter from 'events';
 import msgpack from 'msgpack-lite';
-import { BigNumberish, ContractTransaction, Wallet } from 'ethers';
+import { BigNumberish, ContractTransaction } from 'ethers';
 import { poseidonHex } from '../utils/poseidon';
 import { Database } from '../database/database';
 import EngineDebug from '../debugger/debugger';
