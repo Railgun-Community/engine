@@ -1330,8 +1330,17 @@ abstract class AbstractWallet extends EventEmitter {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs } =
       await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain);
 
-    const txids = [...sentCommitmentsNeedPOIs, ...unshieldEventsNeedPOIs].map((item) => item.txid);
-    return Array.from(new Set(txids));
+    const txIds = new Set<string>();
+
+    for (const sentCommitment of sentCommitmentsNeedPOIs) {
+      txIds.add(sentCommitment.txid);
+    }
+
+    for (const unshieldEvent of unshieldEventsNeedPOIs) {
+      txIds.add(unshieldEvent.txid);
+    }
+
+    return Array.from(txIds);
   }
 
   async getSpendableReceivedChainTxids(txidVersion: TXIDVersion, chain: Chain): Promise<string[]> {
