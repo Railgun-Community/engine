@@ -10,7 +10,7 @@ import { ByteLength, ByteUtils } from '../utils/bytes';
 import { Merkletree } from './merkletree';
 import { Commitment, Nullifier } from '../models/formatted-types';
 import { UnshieldStoredEvent } from '../models/event-types';
-import { isDefined, removeUndefineds } from '../utils/is-defined';
+import { isDefined } from '../utils/is-defined';
 import { TXIDVersion } from '../models';
 
 export class UTXOMerkletree extends Merkletree<Commitment> {
@@ -148,18 +148,21 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     replaceExisting = false,
   ): Promise<void> {
     let newUnshields: UnshieldStoredEvent[] = unshields;
+
     if (!replaceExisting) {
-      newUnshields = removeUndefineds(
+
+      const replaceUnshields = new Set<UnshieldStoredEvent>();
+
         await Promise.all(
           unshields.map(async (unshield) => {
             const hasExisting = await this.hasExistingUnshieldEvent(unshield);
             if (!hasExisting) {
-              return unshield;
+              replaceUnshields.add(unshield);
             }
-            return undefined;
           }),
-        ),
-      );
+      )
+
+      newUnshields = Array.from(replaceUnshields);
     }
 
     // Build write batch for nullifiers
@@ -174,16 +177,24 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     }));
 
     // Write to DB
-    return this.db.batch(writeBatch, 'json');
+    await this.db.batch(writeBatch, 'json');
   }
 
   async hasExistingUnshieldEvent(unshield: UnshieldStoredEvent): Promise<boolean> {
     const existingUnshieldEvents = await this.getAllUnshieldEventsForTxid(unshield.txid);
-    return isDefined(
-      existingUnshieldEvents.find(
-        (existingUnshieldEvent) => existingUnshieldEvent.eventLogIndex === unshield.eventLogIndex,
-      ),
-    );
+
+    const { eventLogIndex } = unshield;
+
+    let hasExistingUnshieldEvent = false;
+
+    for (const event of existingUnshieldEvents) {
+      if (event.eventLogIndex === eventLogIndex) {
+        hasExistingUnshieldEvent = true;
+        break;
+      }
+    }
+    
+    return hasExistingUnshieldEvent;
   }
 
   /**
@@ -193,15 +204,20 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     const strippedTxid = ByteUtils.formatToByteLength(txid, ByteLength.UINT_256, false);
     const namespace = this.getUnshieldEventsDBPath(strippedTxid, undefined, undefined);
     const keys: string[] = await this.db.getNamespaceKeys(namespace);
-    const keySplits = keys.map((key) => key.split(':')).filter((keySplit) => keySplit.length === 6);
+    const unshieldEvents: UnshieldStoredEvent[] = [];
 
-    return Promise.all(
-      keySplits.map(async (keySplit) => {
+    for (const key of keys) {
+      const keySplit = key.split(':');
+
+      if (keySplit.length === 6) {
+        // eslint-disable-next-line no-await-in-loop
         const unshieldEvent = (await this.db.get(keySplit, 'json')) as UnshieldStoredEvent;
         unshieldEvent.timestamp = unshieldEvent.timestamp ?? undefined;
-        return unshieldEvent;
-      }),
-    );
+        unshieldEvents.push(unshieldEvent);
+      }
+    }
+
+    return unshieldEvents;
   }
 
   async updateUnshieldEvent(unshieldEvent: UnshieldStoredEvent): Promise<void> {
