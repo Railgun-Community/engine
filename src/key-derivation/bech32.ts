@@ -26,7 +26,8 @@ const xorNetworkID = (chainID: string) => {
 };
 
 const chainToNetworkID = (chain: Optional<Chain>): string => {
-  if (chain == null) {
+  // @ts-expect-error - chain can be undefined but not 'undefined'
+  if (chain == null || chain === 'undefined') {
     return ALL_CHAINS_NETWORK_ID;
   }
 
@@ -52,7 +53,10 @@ const networkIDToChain = (networkID: string): Optional<Chain> => {
  */
 function encodeAddress(addressData: AddressData): string {
   const masterPublicKey = ByteUtils.nToHex(addressData.masterPublicKey, ByteLength.UINT_256, false);
-  const viewingPublicKey = ByteUtils.formatToByteLength(addressData.viewingPublicKey, ByteLength.UINT_256);
+  const viewingPublicKey = ByteUtils.formatToByteLength(
+    addressData.viewingPublicKey,
+    ByteLength.UINT_256,
+  );
 
   const { chain } = addressData;
   const networkID = xorNetworkID(chainToNetworkID(chain));
