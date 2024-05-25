@@ -62,7 +62,6 @@ describe('bech32-encode', () => {
         chain: vector.chain as any,
         version: vector.version as any,
       };
-      console.log('addressData', addressData);
       const encoded = encodeAddress(addressData);
       expect(encoded).to.equal(vector.address);
       expect(encoded.length).to.equal(ADDRESS_LENGTH_LIMIT);

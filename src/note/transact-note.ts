@@ -215,7 +215,7 @@ export class TransactNote {
   }
 
   getSenderAddress(): Optional<string> {
-    if (!this.senderAddressData) {
+    if (!this.senderAddressData || typeof this.senderAddressData === 'string') {
       return undefined;
     }
     return encodeAddress(this.senderAddressData);
