@@ -111,6 +111,17 @@ function decodeAddress(address: string): AddressData {
       chain,
     };
 
+    // Sanitize address data
+    if (typeof result.masterPublicKey === 'string') {
+      result.masterPublicKey = BigInt(result.masterPublicKey);
+    }
+    if (typeof result.version === 'string') {
+      result.version = parseInt(result.version, 10);
+    }
+    if (typeof result.chain === 'string') {
+      result.chain = undefined;
+    }
+
     return result;
   } catch (cause) {
     if (cause instanceof Error && cause.message && cause.message.includes('Invalid checksum')) {
