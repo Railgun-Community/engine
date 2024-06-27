@@ -995,10 +995,15 @@ class RailgunEngine extends EventEmitter {
     endScanPercentage: number,
   ) {
     const latestValidatedTxidIndex = await this.getLatestValidatedTxidIndex(txidVersion, chain);
+    // Log chain.id, txidVersion, and if not a POI node, the latest validated txid index.
     EngineDebug.log(
       `syncing railgun transactions to validated index (Chain: ${
         chain.id
-      }. txidVersion: ${txidVersion}): ${latestValidatedTxidIndex ?? 'NOT FOUND'}`,
+      }. txidVersion: ${txidVersion}): ${
+        this.isPOINode
+          ? 'POI Node: getLatestValidatedTxidIndex() skipped'
+          : latestValidatedTxidIndex ?? 'NOT FOUND'
+      }`,
     );
 
     const shouldAddNewRailgunTransactions = await this.shouldAddNewRailgunTransactions(
@@ -1152,8 +1157,8 @@ class RailgunEngine extends EventEmitter {
       }
 
       if (missingAnyCommitments) {
-        EngineDebug.log(
-          `Stopping queue of Railgun TXIDs - missing a commitment or unshield. This will occur whenever the TXIDs are further than the UTXOs data source.`,
+        EngineDebug.error(new Error(
+          `Stopping queue of Railgun TXIDs - missing a commitment or unshield. This will occur whenever the TXIDs are further than the UTXOs data source.`)
         );
         break;
       }
