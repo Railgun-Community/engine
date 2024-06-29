@@ -78,7 +78,7 @@ import {
   serializeTokenData,
 } from '../note/note-util';
 import { TokenDataGetter } from '../token/token-data-getter';
-import { isDefined, removeDuplicates, removeUndefineds } from '../utils/is-defined';
+import { isDefined, removeUndefineds } from '../utils/is-defined';
 import { PrivateInputsRailgun, PublicInputsRailgun } from '../models/prover-types';
 import { UTXOMerkletree } from '../merkletree/utxo-merkletree';
 import {
@@ -1330,17 +1330,31 @@ abstract class AbstractWallet extends EventEmitter {
     const { sentCommitmentsNeedPOIs, unshieldEventsNeedPOIs } =
       await this.getSentCommitmentsAndUnshieldEventsNeedPOIs(txidVersion, chain);
 
-    const txids = [...sentCommitmentsNeedPOIs, ...unshieldEventsNeedPOIs].map((item) => item.txid);
-    return removeDuplicates(txids);
+    const txIds = new Set<string>();
+
+    for (const sentCommitment of sentCommitmentsNeedPOIs) {
+      txIds.add(sentCommitment.txid);
+    }
+
+    for (const unshieldEvent of unshieldEventsNeedPOIs) {
+      txIds.add(unshieldEvent.txid);
+    }
+
+    return Array.from(txIds);
   }
 
   async getSpendableReceivedChainTxids(txidVersion: TXIDVersion, chain: Chain): Promise<string[]> {
     const TXOs = await this.TXOs(txidVersion, chain);
-    const spendableTXOs = TXOs.filter(
-      (txo) => POI.getBalanceBucket(txo) === WalletBalanceBucket.Spendable,
-    );
-    const txids = spendableTXOs.map((item) => item.txid);
-    return removeDuplicates(txids);
+
+    const txIds = new Set<string>();
+
+    for (const txo of TXOs) {
+       if (POI.getBalanceBucket(txo) === WalletBalanceBucket.Spendable) {
+        txIds.add(txo.txid)
+       }
+    }
+    
+    return Array.from(txIds);
   }
 
   async refreshReceivePOIsAllTXOs(txidVersion: TXIDVersion, chain: Chain): Promise<void> {
