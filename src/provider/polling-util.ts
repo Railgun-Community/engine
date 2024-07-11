@@ -2,9 +2,7 @@ import { AbstractProvider, FallbackProvider, JsonRpcProvider } from 'ethers';
 import { PollingJsonRpcProvider } from './polling-json-rpc-provider';
 
 const isPollingProvider = (provider: AbstractProvider): provider is PollingJsonRpcProvider => {
-  return (
-    provider.providerType === 'jsonrpc' && (provider as PollingJsonRpcProvider).isPollingProvider
-  );
+  return (provider as PollingJsonRpcProvider).isPollingProvider !== undefined;
 };
 
 export const assertIsPollingProvider = (provider: AbstractProvider) => {
