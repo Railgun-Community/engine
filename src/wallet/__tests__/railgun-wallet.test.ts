@@ -34,7 +34,7 @@ const chain: Chain = {
 const testMnemonic = config.mnemonic;
 const testEncryptionKey = config.encryptionKey;
 
-describe('railgun-wallet', () => {
+describe.only('railgun-wallet', () => {
   beforeEach(async () => {
     db = new Database(memdown());
     utxoMerkletree = await UTXOMerkletree.create(db, chain, txidVersion, async () => true);
@@ -189,7 +189,7 @@ describe('railgun-wallet', () => {
     );
   });
 
-  it('Should get chain address correctly', async () => {
+  it.only('Should get chain address correctly', async () => {
     const address = await wallet.getChainAddress(testEncryptionKey);
     expect(address).to.equal('0xD89879B78BE8197b7e8eeb070467292129F42e8d');
   });

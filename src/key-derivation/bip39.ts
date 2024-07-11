@@ -43,8 +43,22 @@ export class Mnemonic {
   }
 
   static to0xAddress(mnemonic: string, derivationIndex?: number): string {
+    console.log('to0xAddress', mnemonic);
+    console.log('derivationIndex', derivationIndex);
+    
     const path = getPath(derivationIndex);
-    const hdnode = HDNodeWallet.fromMnemonic(EthersMnemonic.fromPhrase(mnemonic)).derivePath(path);
-    return hdnode.address;
+
+    console.log('path: ', path);
+    
+    const ethersMnemonic = EthersMnemonic.fromPhrase(mnemonic);
+    
+    const wallet = HDNodeWallet.fromMnemonic(ethersMnemonic, path);
+
+    console.log('hdNodeWallet', wallet);
+    const derived = wallet.derivePath(derivationIndex != null ? `${derivationIndex}` : "0")
+
+    console.log('derived: ', derived);
+
+    return wallet.derivePath(path).address;
   }
 }
