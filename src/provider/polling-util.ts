@@ -26,20 +26,21 @@ export const createPollingJsonRpcProviderForListeners = async (
     return provider;
   }
 
-  if (provider.providerType === 'jsonrpc') {
+  if (provider instanceof JsonRpcProvider) {
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider._getConnection();
     return new PollingJsonRpcProvider(url, chainId, pollingInterval);
   }
 
-  if (provider.providerType === 'fallback') {
+  if (provider instanceof FallbackProvider) {
     // FallbackProvider only
 
     if (!provider.providerConfigs.length) {
       throw new Error('Requires 1+ providers in FallbackProvider');
     }
-    const firstProvider = provider.providerConfigs[0].provider as JsonRpcProvider;
-    if (firstProvider.providerType !== 'jsonrpc') {
+    const firstProvider = provider.providerConfigs[0].provider;
+    
+    if (!(firstProvider instanceof JsonRpcProvider)) {
       throw new Error('First provider in FallbackProvider must be JsonRpcProvider');
     }
 
