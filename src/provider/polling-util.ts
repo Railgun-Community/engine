@@ -1,18 +1,16 @@
 import { AbstractProvider, FallbackProvider, JsonRpcProvider } from 'ethers';
 import { PollingJsonRpcProvider } from './polling-json-rpc-provider';
 
-const isPollingProvider = (provider: AbstractProvider): provider is PollingJsonRpcProvider => {
-  return (
-    provider.providerType === 'jsonrpc' && (provider as PollingJsonRpcProvider).isPollingProvider
-  );
-};
-
 export const assertIsPollingProvider = (provider: AbstractProvider) => {
   if (!isPollingProvider(provider)) {
     throw new Error(
       'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
     );
   }
+};
+
+const isPollingProvider = (provider: AbstractProvider): provider is PollingJsonRpcProvider => {
+  return (provider as PollingJsonRpcProvider).isPollingProvider !== undefined;
 };
 
 /**
@@ -28,29 +26,28 @@ export const createPollingJsonRpcProviderForListeners = async (
     return provider;
   }
 
-  if (provider.providerType === 'jsonrpc') {
+  if (provider instanceof JsonRpcProvider) {
     // eslint-disable-next-line no-underscore-dangle
     const { url } = provider._getConnection();
+
     return new PollingJsonRpcProvider(url, chainId, pollingInterval);
   }
 
-  if (provider.providerType === 'fallback') {
-    // FallbackProvider only
+  const { providerConfigs } = provider;
 
-    if (!provider.providerConfigs.length) {
-      throw new Error('Requires 1+ providers in FallbackProvider');
-    }
-    const firstProvider = provider.providerConfigs[0].provider as JsonRpcProvider;
-    if (firstProvider.providerType !== 'jsonrpc') {
-      throw new Error('First provider in FallbackProvider must be JsonRpcProvider');
-    }
-
-    // eslint-disable-next-line no-underscore-dangle
-    const { url } = firstProvider._getConnection();
-    // eslint-disable-next-line no-underscore-dangle
-    const maxLogsPerBatch = firstProvider._getOption('batchMaxCount');
-    return new PollingJsonRpcProvider(url, chainId, pollingInterval, maxLogsPerBatch);
+  if (!providerConfigs.length) {
+    throw new Error("Need to supply at least one fallback provider");
   }
 
-  throw new Error('Invalid ethers provider type');
+  const [ { provider: firstProviderConfig } ] = providerConfigs;
+
+  const firstProvider = firstProviderConfig as JsonRpcProvider;
+
+  // eslint-disable-next-line no-underscore-dangle
+  const { url } = firstProvider._getConnection();
+
+  // eslint-disable-next-line no-underscore-dangle
+  const maxLogsPerBatch = firstProvider._getOption('batchMaxCount');
+
+  return new PollingJsonRpcProvider(url, chainId, pollingInterval, maxLogsPerBatch);
 };
