@@ -99,7 +99,7 @@ class RailgunEngine extends EventEmitter {
 
   private readonly skipMerkletreeScans: boolean;
 
-  private readonly pollingRailgunTransactionsV2: Registry<boolean> = new Registry();
+  private readonly hasSyncedRailgunTransactionsV2: Registry<boolean> = new Registry();
 
   readonly isPOINode: boolean;
 
@@ -815,7 +815,7 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
-
+    this.hasSyncedRailgunTransactionsV2.set(null, chain, true);
     await this.syncRailgunTransactionsV2(chain, 'poller');
   }
 
@@ -1352,7 +1352,7 @@ class RailgunEngine extends EventEmitter {
     if (!this.hasTXIDMerkletree(txidVersion, chain)) {
       return;
     }
-    if (this.pollingRailgunTransactionsV2.get(null, chain) !== true) {
+    if (this.hasSyncedRailgunTransactionsV2.get(null, chain) !== true) {
       const err = new Error(
         `Cannot re-scan railgun txids. Must get UTXO history first. Please wait and try again.`,
       );
