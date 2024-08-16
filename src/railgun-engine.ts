@@ -99,7 +99,7 @@ class RailgunEngine extends EventEmitter {
 
   private readonly skipMerkletreeScans: boolean;
 
-  private readonly pollingRailgunTransactionsV2: Registry<boolean> = new Registry();
+  private readonly hasSyncedRailgunTransactionsV2: Registry<boolean> = new Registry();
 
   readonly isPOINode: boolean;
 
@@ -516,7 +516,10 @@ class RailgunEngine extends EventEmitter {
     this.emit(EngineEvent.TXIDMerkletreeHistoryScanUpdate, updateData);
   }
 
-  private async getNextStartingBlockSlowScan(txidVersion: TXIDVersion, chain: Chain): Promise<number> {
+  private async getNextStartingBlockSlowScan(
+    txidVersion: TXIDVersion,
+    chain: Chain,
+  ): Promise<number> {
     // Get updated start-scanning block from new valid utxoMerkletree.
     let startScanningBlockSlowScan = await this.getStartScanningBlock(txidVersion, chain);
     const lastSyncedBlock = await this.getLastSyncedBlock(txidVersion, chain);
@@ -542,9 +545,7 @@ class RailgunEngine extends EventEmitter {
       await this.scanUTXOHistory(txidVersion, chain, walletIdFilter);
     }
 
-    if (this.pollingRailgunTransactionsV2.get(null, chain) !== true) {
-      await this.scanTXIDHistoryV2(chain);
-    }
+    await this.scanTXIDHistoryV2(chain);
   }
 
   /**
@@ -814,20 +815,8 @@ class RailgunEngine extends EventEmitter {
       );
       return;
     }
-    // Every 1 min for POI nodes, 2 min for wallets
-    const refreshDelayMsec = this.isPOINode ? 1 * 60 * 1000 : 2 * 60 * 1000;
-
-    // Start polling
-    this.pollingRailgunTransactionsV2.set(null, chain, true);
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    const poll = async () => {
-      await this.syncRailgunTransactionsV2(chain, 'poller');
-      await delay(refreshDelayMsec);
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      poll();
-    }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    poll();
+    this.hasSyncedRailgunTransactionsV2.set(null, chain, true);
+    await this.syncRailgunTransactionsV2(chain, 'poller');
   }
 
   /**
@@ -1157,8 +1146,10 @@ class RailgunEngine extends EventEmitter {
       }
 
       if (missingAnyCommitments) {
-        EngineDebug.error(new Error(
-          `Stopping queue of Railgun TXIDs - missing a commitment or unshield. This will occur whenever the TXIDs are further than the UTXOs data source.`)
+        EngineDebug.error(
+          new Error(
+            `Stopping queue of Railgun TXIDs - missing a commitment or unshield. This will occur whenever the TXIDs are further than the UTXOs data source.`,
+          ),
         );
         break;
       }
@@ -1361,7 +1352,7 @@ class RailgunEngine extends EventEmitter {
     if (!this.hasTXIDMerkletree(txidVersion, chain)) {
       return;
     }
-    if (this.pollingRailgunTransactionsV2.get(null, chain) !== true) {
+    if (this.hasSyncedRailgunTransactionsV2.get(null, chain) !== true) {
       const err = new Error(
         `Cannot re-scan railgun txids. Must get UTXO history first. Please wait and try again.`,
       );
@@ -1821,7 +1812,10 @@ class RailgunEngine extends EventEmitter {
     return path;
   }
 
-  private setUTXOMerkletreeHistoryVersion(chain: Chain, merkletreeHistoryVersion: number): Promise<void> {
+  private setUTXOMerkletreeHistoryVersion(
+    chain: Chain,
+    merkletreeHistoryVersion: number,
+  ): Promise<void> {
     return this.db.put(
       RailgunEngine.getUTXOMerkletreeHistoryVersionDBPrefix(chain),
       merkletreeHistoryVersion,
