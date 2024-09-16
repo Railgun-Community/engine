@@ -902,6 +902,12 @@ class RailgunEngine extends EventEmitter {
       this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, 0.15); // 15%
 
       const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
+
+      // while loop to handle multiple queries
+      let isLooping = true;
+      const txidMerkletreeHistoryStartScanPercentage = 0.4; // 40%
+      const txidMerkletreeEndScanPercentage = 0.99; // 99%
+      const railgunTransactions: RailgunTransactionV2[] = [];
       const latestRailgunTransaction: Optional<RailgunTransactionWithHash> =
         await txidMerkletree.getLatestRailgunTransaction();
       if (
@@ -911,22 +917,32 @@ class RailgunEngine extends EventEmitter {
         // Should never happen
         return;
       }
-
-      const railgunTransactions: RailgunTransactionV2[] = await this.quickSyncRailgunTransactionsV2(
-        chain,
-        latestRailgunTransaction?.graphID,
-      );
-
-      const txidMerkletreeStartScanPercentage = 0.4; // 40%
-      const txidMerkletreeEndScanPercentage = 0.99; // 99%
-      this.emitTXIDMerkletreeScanUpdateEvent(txidVersion, chain, txidMerkletreeStartScanPercentage);
-
+      let latestTranasction: RailgunTransactionV2 =
+        latestRailgunTransaction as RailgunTransactionV2;
+      let txidMerkletreeStartScanPercentage = 0.2; // 20%
+      while (isLooping) {
+        const railgunTransactionsRAW: RailgunTransactionV2[] =
+          // eslint-disable-next-line no-await-in-loop
+          await this.quickSyncRailgunTransactionsV2(chain, latestTranasction?.graphID);
+        railgunTransactions.push(...railgunTransactionsRAW);
+        latestTranasction = railgunTransactionsRAW[railgunTransactionsRAW.length - 1];
+        this.emitTXIDMerkletreeScanUpdateEvent(
+          txidVersion,
+          chain,
+          txidMerkletreeStartScanPercentage,
+        );
+        txidMerkletreeStartScanPercentage += 0.05;
+        if (txidMerkletreeStartScanPercentage > 1) {
+          txidMerkletreeStartScanPercentage = 0.95;
+        }
+        isLooping = railgunTransactionsRAW.length === 5000;
+      }
       await this.handleNewRailgunTransactionsV2(
         txidVersion,
         chain,
         railgunTransactions,
         latestRailgunTransaction?.verificationHash,
-        txidMerkletreeStartScanPercentage,
+        txidMerkletreeHistoryStartScanPercentage,
         txidMerkletreeEndScanPercentage,
       );
 
@@ -937,18 +953,11 @@ class RailgunEngine extends EventEmitter {
       };
 
       if (railgunTransactions.length) {
-        if (railgunTransactions.length === 5000) {
-          // Max query amount is 5000 from Wallet. Kick off a new query.
-          await this.performSyncRailgunTransactionsV2(chain, 'retrigger after 5000 synced');
-          return;
-        }
-
         // Only scan wallets if utxoMerkletree is not currently scanning
         const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
         if (!utxoMerkletree.isScanning) {
           // Decrypt balances for all wallets - kicks off a POI refresh.
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.decryptBalancesAllWallets(
+          await this.decryptBalancesAllWallets(
             txidVersion,
             chain,
             undefined, // walletIdFilter

@@ -2930,7 +2930,8 @@ abstract class AbstractWallet extends EventEmitter {
       // Reset decryptBalancesKeyForChain
       this.decryptBalancesKeyForChain.del(null, chain);
 
-      await this.refreshPOIsForTXIDVersion(chain, txidVersion);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.refreshPOIsForTXIDVersion(chain, txidVersion);
 
       // Emit scanned event for this chain
       EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
