@@ -2930,14 +2930,15 @@ abstract class AbstractWallet extends EventEmitter {
       // Reset decryptBalancesKeyForChain
       this.decryptBalancesKeyForChain.del(null, chain);
 
-      await this.refreshPOIsForTXIDVersion(chain, txidVersion);
-
-      // Emit scanned event for this chain
-      EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
-      if (!deferCompletionEvent) {
-        const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
-        this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
-      }
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.refreshPOIsForTXIDVersion(chain, txidVersion).then(() => {
+        // Emit scanned event for this chain
+        EngineDebug.log(`wallet: scanned ${chain.type}:${chain.id}`);
+        if (!deferCompletionEvent) {
+          const walletScannedEventData: WalletScannedEventData = { txidVersion, chain };
+          this.emit(EngineEvent.WalletDecryptBalancesComplete, walletScannedEventData);
+        }
+      });
     } catch (err) {
       // Reset decryptBalancesKeyForChain
       this.decryptBalancesKeyForChain.del(null, chain);
@@ -3006,7 +3007,7 @@ abstract class AbstractWallet extends EventEmitter {
         );
 
         // Retrigger
-        await this.refreshPOIsForTXIDVersion(chain, txidVersion);
+        // await this.refreshPOIsForTXIDVersion(chain, txidVersion);
         return;
       }
 
