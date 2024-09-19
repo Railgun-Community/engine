@@ -44,7 +44,7 @@ export class Mnemonic {
 
   static to0xAddress(mnemonic: string, derivationIndex?: number): string {
     const path = getPath(derivationIndex);
-    const hdnode = HDNodeWallet.fromMnemonic(EthersMnemonic.fromPhrase(mnemonic)).derivePath(path);
-    return hdnode.address;
+    const wallet = HDNodeWallet.fromMnemonic(EthersMnemonic.fromPhrase(mnemonic), path);
+    return wallet.address;
   }
 }
