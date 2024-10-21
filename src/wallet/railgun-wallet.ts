@@ -24,8 +24,7 @@ class RailgunWallet extends AbstractWallet {
 
   async sign(publicInputs: PublicInputsRailgun, encryptionKey: string): Promise<Signature> {
     const spendingKeyPair = await this.getSpendingKeyPair(encryptionKey);
-    const entries = Object.values(publicInputs).flatMap((x) => x);
-    const msg = poseidon(entries);
+    const msg = poseidon([publicInputs.merkleRoot, publicInputs.boundParamsHash, ...publicInputs.nullifiers, ...publicInputs.commitmentsOut]);
     return signEDDSA(spendingKeyPair.privateKey, msg);
   }
 
