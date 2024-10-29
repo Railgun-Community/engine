@@ -404,28 +404,59 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+
+  // Tree length helper method
+  protected setTreeLength(treeIndex: number, length: number): void {
+    this.treeLengths.set(treeIndex, length);
+  }
+
+  // Tree length helper method
+  protected hasTreeLength(treeIndex: number): boolean {
+    return this.treeLengths.has(treeIndex);
+  }
+
+  // Tree length helper method
+  protected clearTreeLength(treeIndex: number): void {
+    this.treeLengths.delete(treeIndex);
+  }
+
   /**
    * Gets length of tree
    * @param treeIndex - tree to get length of
    * @returns tree length
    */
   async getTreeLength(treeIndex: number): Promise<number> {
-    if (isDefined(this.treeLengths[treeIndex])) {
-      return this.treeLengths[treeIndex];
+    
+    // get length from cache if it exists
+    const treeLength = this.treeLengths.get(treeIndex);
+    if (treeLength !== undefined) {
+      return treeLength;
     }
 
+    // if cache does not exist check if its on stored metadata
     const storedMetadata = await this.getMerkletreesMetadata();
-    if (isDefined(storedMetadata?.trees[treeIndex])) {
-      this.treeLengths[treeIndex] = storedMetadata.trees[treeIndex].scannedHeight;
-      return this.treeLengths[treeIndex];
+    const storedTreeMetadata = storedMetadata?.trees[treeIndex];
+
+    if (storedTreeMetadata) {
+      const storedLength = storedTreeMetadata.scannedHeight;
+      // save on cache
+      this.treeLengths.set(treeIndex, storedLength);
+      return storedLength;
     }
 
-    this.treeLengths[treeIndex] = await this.getTreeLengthFromDBCount(treeIndex);
-    if (this.treeLengths[treeIndex] > 0) {
+    // neither on cache nor on stored metadata, get from db
+    const calculatedLength = await this.getTreeLengthFromDBCount(treeIndex);
+    // save on cache
+    this.treeLengths.set(treeIndex, calculatedLength);
+    
+    // update stored metadata if found items
+    if (calculatedLength > 0) {
       await this.updateStoredMerkletreesMetadata(treeIndex);
     }
+  
+    return calculatedLength;
 
-    return this.treeLengths[treeIndex];
+
   }
 
   async updateStoredMerkletreesMetadata(treeIndex: number): Promise<void> {
