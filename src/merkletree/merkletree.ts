@@ -473,13 +473,15 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async resetTreeLength(treeIndex: number): Promise<void> {
-    delete this.treeLengths[treeIndex];
+    this.treeLengths.delete(treeIndex);
     const merkletreesMetadata = await this.getMerkletreesMetadata();
     if (!merkletreesMetadata) {
       return;
+    }  
+    if (treeIndex in merkletreesMetadata.trees) {
+      delete merkletreesMetadata.trees[treeIndex];
+      await this.storeMerkletreesMetadata(merkletreesMetadata);
     }
-    delete merkletreesMetadata.trees[treeIndex];
-    await this.storeMerkletreesMetadata(merkletreesMetadata);
   }
 
   /**
@@ -510,7 +512,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     } finally {
       this.releaseUpdatesLock();
       this.cachedNodeHashes = {};
-      this.treeLengths = [];
+      this.treeLengths.clear();
     }
   }
 
@@ -577,7 +579,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     await this.newLeafRootTrigger(treeIndex, lastIndex, leaf, merkleroot);
 
     // Update tree length
-    this.treeLengths[treeIndex] = newTreeLength;
+    this.treeLengths.set(treeIndex, newTreeLength);
     await this.updateStoredMerkletreesMetadata(treeIndex);
   }
 
