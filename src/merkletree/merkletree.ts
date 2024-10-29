@@ -37,7 +37,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   private treeLengths: Map<number, number> = new Map();
 
   // {tree: {startingIndex: [leaves]}}
-  protected writeQueue: T[][][] = [];
+  protected writeQueue: Map<number, Map<number, T[]>> = new Map();
 
   private lockPromise: Promise<void> | null = null;
 
@@ -52,7 +52,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   isScanning = false;
 
-  private processingWriteQueueTrees: { [tree: number]: boolean } = {};
+  private processingWriteQueueTrees: Map<number, boolean> = new Map();
 
   invalidMerklerootDetailsByTree: { [tree: number]: InvalidMerklerootDetails } = {};
 
@@ -753,30 +753,37 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     let processingGroupSize = this.defaultCommitmentProcessingSize;
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
-    const treeWriteQueue = this.writeQueue[treeIndex];
-    for (const writeQueueKey of Object.keys(treeWriteQueue)) {
+    const treeWriteQueue = this.writeQueue.get(treeIndex);
+
+    if (!treeWriteQueue) {
+      return;
+    }
+
+    const writeQueueKeys = treeWriteQueue.keys();
+
+    for (const writeQueueKey of writeQueueKeys) {
       if (!isDefined(writeQueueKey)) continue;
       const writeQueueIndex = Number(writeQueueKey);
       const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
       if (alreadyAddedToTree) {
-        delete treeWriteQueue[writeQueueIndex];
+        treeWriteQueue.delete(writeQueueIndex);
       }
     }
 
-    if (this.processingWriteQueueTrees[treeIndex]) {
+    if (this.processingWriteQueueTrees.has(treeIndex)) {
       EngineDebug.log(
         `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}] Already processing writeQueue. Killing re-process.`,
       );
       return;
     }
 
-    while (isDefined(this.writeQueue[treeIndex])) {
+    while (this.writeQueue.has(treeIndex)) {
       // Process leaves as a group until we hit an invalid merkleroot.
       // Then, process each single item.
       // This optimizes for fewer `merklerootValidator` calls, while still protecting
       // users against invalid roots and broken trees.
 
-      this.processingWriteQueueTrees[treeIndex] = true;
+      this.processingWriteQueueTrees.set(treeIndex, true);
 
       currentTreeLength = await this.getTreeLength(treeIndex);
 
@@ -823,13 +830,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       }
 
       // Delete queue for entire tree if necessary.
-      const noElementsInTreeWriteQueue = treeWriteQueue.reduce((x) => x + 1, 0) === 0;
-      if (noElementsInTreeWriteQueue) {
-        delete this.writeQueue[treeIndex];
+      if (treeWriteQueue.size === 0) {
+        this.writeQueue.delete(treeIndex);
       }
     }
 
-    this.processingWriteQueueTrees[treeIndex] = false;
+    this.processingWriteQueueTrees.set(treeIndex, false);
   }
 
   private static nextProcessingGroupSize(processingGroupSize: CommitmentProcessingGroupSize) {
@@ -924,13 +930,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const treeLength = await this.getTreeLength(tree);
 
     // Ensure write queue for tree exists
-    if (!isDefined(this.writeQueue[tree])) {
-      this.writeQueue[tree] = [];
+    if (this.writeQueue.has(tree)) {
+      this.writeQueue.set(tree, new Map());
     }
 
     if (treeLength <= startingIndex) {
       // If starting index is greater or equal to tree length, insert to queue
-      this.writeQueue[tree][startingIndex] = leaves;
+      const writeQueueTree = this.writeQueue.get(tree);
+      writeQueueTree?.set(startingIndex, leaves)
 
       if (EngineDebug.verboseScanLogging()) {
         EngineDebug.log(
