@@ -871,11 +871,16 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     maxCommitmentGroupsToProcess: number,
   ): Promise<boolean> {
     // If there is an element in the write queue equal to the tree length, process it.
-    const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
-    if (!isDefined(nextCommitmentGroup)) {
-      // EngineDebug.log(
-      //   `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
-      // );
+    const writeQueueTree = this.writeQueue.get(treeIndex);
+
+    if (!writeQueueTree) {
+      return false;
+    }
+
+    // Get next commitment group
+    const nextCommitmentGroup = writeQueueTree?.get(currentTreeLength);
+
+    if (!nextCommitmentGroup) {
       return false;
     }
 
@@ -883,12 +888,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     let nextIndex = currentTreeLength + nextCommitmentGroup.length;
 
     const dataWriteGroups: T[][] = [nextCommitmentGroup];
+
     while (
       maxCommitmentGroupsToProcess > dataWriteGroups.length &&
-      isDefined(this.writeQueue[treeIndex][nextIndex])
+      writeQueueTree.has(treeIndex)
     ) {
       commitmentGroupIndices.push(nextIndex);
-      const next = this.writeQueue[treeIndex][nextIndex];
+      const next = writeQueueTree.get(nextIndex);
+      if (!next) continue;
       dataWriteGroups.push(next);
       nextIndex += next.length;
     }
@@ -898,7 +905,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Delete the batch after processing it.
     // Ensures bad batches are deleted, therefore halting update loop if one is found.
     for (const commitmentGroupIndex of commitmentGroupIndices) {
-      delete this.writeQueue[treeIndex][commitmentGroupIndex];
+      writeQueueTree.delete(commitmentGroupIndex);
     }
 
     return true;
@@ -909,9 +916,8 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   private treeIndicesFromWriteQueue(): number[] {
-    return this.writeQueue
-      .map((_tree, treeIndex) => treeIndex)
-      .filter((index) => !Number.isNaN(index));
+    const writeQueueKeys = this.writeQueue.keys();
+    return Array.from(writeQueueKeys);
   }
 
   async updateTreesFromWriteQueue(): Promise<void> {
