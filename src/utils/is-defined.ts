@@ -11,7 +11,3 @@ export const removeUndefineds = <T>(a: Optional<T>[]): T[] => {
   }
   return newArray;
 };
-
-export const removeDuplicates = <T>(a: T[]): T[] => {
-  return a.filter((item, index) => a.indexOf(item) === index);
-};
