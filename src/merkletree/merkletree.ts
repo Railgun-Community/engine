@@ -919,9 +919,9 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const writeQueueKeys = this.writeQueue.keys();
     return Array.from(writeQueueKeys);
   }
-
+  
   async updateTreesFromWriteQueue(): Promise<void> {
-    const treeIndices: number[] = this.treeIndicesFromWriteQueue();
+    const treeIndices = Array.from(this.writeQueue.keys());
     await Promise.all(treeIndices.map((treeIndex) => this.processWriteQueueForTree(treeIndex)));
   }
 
@@ -936,7 +936,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const treeLength = await this.getTreeLength(tree);
 
     // Ensure write queue for tree exists
-    if (this.writeQueue.has(tree)) {
+    if (!this.writeQueue.has(tree)) {
       this.writeQueue.set(tree, new Map());
     }
 

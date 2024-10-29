@@ -116,7 +116,7 @@ describe('txid-merkletree', () => {
     );
   });
 
-  it('Should update railgun txid merkle tree correctly', async () => {
+  it.only('Should update railgun txid merkle tree correctly', async () => {
     for (const merkletree of [merkletreePOINode, merkletreeWallet]) {
       await merkletree.clearDataForMerkletree();
 
