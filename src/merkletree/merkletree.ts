@@ -34,7 +34,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   readonly zeros: string[] = [];
 
-  private treeLengths: number[] = [];
+  private treeLengths: Map<number, number> = new Map();
 
   // {tree: {startingIndex: [leaves]}}
   protected writeQueue: T[][][] = [];
@@ -344,23 +344,34 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     this.cachedNodeHashes[tree][level][index] = hash;
   }
 
+  hasTreeMetadata(tree: number): boolean {
+    return this.treeLengths.has(tree);
+  }
+  
+  getTreeMetadata(tree: number): number | undefined {
+    return this.treeLengths.get(tree);
+  }
+
   async getMetadataFromStorage(): Promise<void> {
     const storedMetadata = await this.getMerkletreesMetadata();
+    
     if (!storedMetadata) {
       return;
     }
-    const treeKeys = Object.keys(storedMetadata.trees);
-    for (const treeKey of treeKeys) {
+  
+    for (const [treeKey, treeMetadata] of Object.entries(storedMetadata.trees)) {
       const tree = Number(treeKey);
-      const treeMetadata = storedMetadata.trees[tree];
-      this.treeLengths[tree] = treeMetadata.scannedHeight;
+      
+      // update tree lengths
+      this.treeLengths.set(tree, treeMetadata.scannedHeight);
+      
+      // update invalid merkle root details if they exist
       if (treeMetadata.invalidMerklerootDetails) {
-        this.invalidMerklerootDetailsByTree[tree] =
-          treeMetadata.invalidMerklerootDetails ?? undefined;
+        this.invalidMerklerootDetailsByTree[tree] = treeMetadata.invalidMerklerootDetails;
       }
     }
   }
-
+  
   /**
    * Gets merkletrees metadata
    * @returns metadata
