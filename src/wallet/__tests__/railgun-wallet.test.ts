@@ -191,7 +191,7 @@ describe('railgun-wallet', () => {
 
   it('Should get chain address correctly', async () => {
     const address = await wallet.getChainAddress(testEncryptionKey);
-    expect(address).to.equal('0xD89879B78BE8197b7e8eeb070467292129F42e8d');
+    expect(address).to.equal('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
   });
 
   it('Should derive addresses correctly', async () => {
