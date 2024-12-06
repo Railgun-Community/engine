@@ -446,7 +446,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     const lock = this.acquireUpdatesLock();
     try {
       // Remove any queued items
-      this.writeQueue = [];
+      this.writeQueue.clear();
 
       const { tree, index } = TXIDMerkletree.getTreeAndIndexFromGlobalPosition(txidIndex);
 
