@@ -71,9 +71,11 @@ export const createEngineWalletTreeBalancesStub = async (
     tokenAddress.replace('0x', ''),
     ByteLength.UINT_256,
   );
-  treeBalancesStub = sinon.stub(RailgunWallet.prototype, 'getTotalBalancesByTreeNumber').resolves({
-    [formattedTokenAddress]: [await getMockBalanceData(addressData, tokenAddress, tree)],
-  });
+  treeBalancesStub = sinon
+    .stub(RailgunWallet.prototype, 'getTotalBalancesGroupedByTreeNumber')
+    .resolves({
+      [formattedTokenAddress]: [await getMockBalanceData(addressData, tokenAddress, tree)],
+    });
 };
 
 export const createEngineVerifyProofStub = () => {
