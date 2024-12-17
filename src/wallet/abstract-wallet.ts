@@ -2744,14 +2744,11 @@ abstract class AbstractWallet extends EventEmitter {
   }
 
   /**
-   * Get balances for all tokens, grouped by tree number.
-   *
-   * NOTE: For any tree where a token has no UTXO's, a zero-balance entry will be created.
-   *
+   * Sort token balances by tree
    * @param chain - chain type/id of token
    * @returns balances by tree
    */
-  async getTotalBalancesGroupedByTreeNumber(
+  async getTotalBalancesByTreeNumber(
     txidVersion: TXIDVersion,
     chain: Chain,
     balanceBucketFilter: WalletBalanceBucket[],
@@ -2769,31 +2766,26 @@ abstract class AbstractWallet extends EventEmitter {
     const totalBalancesByTreeNumber: TotalBalancesByTreeNumber = {};
 
     // Loop through each token
+
     for (const tokenHash of Object.keys(tokenBalances)) {
       // Create balances tree array
       totalBalancesByTreeNumber[tokenHash] = [];
 
-      // Find max tree number to know array size needed and avoid undefined entries
-      const maxTree = Math.max(...tokenBalances[tokenHash].utxos.map((utxo) => utxo.tree), 0);
-
-      // Initialize all tree positions with zero balances
-      for (let i = 0; i <= maxTree; i += 1) {
-        totalBalancesByTreeNumber[tokenHash][i] = {
-          balance: 0n,
-          utxos: [],
-          tokenData: tokenBalances[tokenHash].tokenData,
-        };
-      }
-
-      // Fill in actual balances where we have UTXOs
+      // Loop through each TXO and sort by tree
       for (const utxo of tokenBalances[tokenHash].utxos) {
-        const treeBalance = totalBalancesByTreeNumber[tokenHash][utxo.tree];
-        treeBalance.balance += utxo.note.value;
-        treeBalance.utxos.push(utxo);
+        if (!isDefined(totalBalancesByTreeNumber[tokenHash][utxo.tree])) {
+          totalBalancesByTreeNumber[tokenHash][utxo.tree] = {
+            balance: utxo.note.value,
+            utxos: [utxo],
+            tokenData: utxo.note.tokenData,
+          };
+        } else {
+          totalBalancesByTreeNumber[tokenHash][utxo.tree].balance += utxo.note.value;
+          totalBalancesByTreeNumber[tokenHash][utxo.tree].utxos.push(utxo);
+        }
       }
     }
 
-    // Return array of balances, where each array position is a tree number and balances
     return totalBalancesByTreeNumber;
   }
 
@@ -2804,15 +2796,12 @@ abstract class AbstractWallet extends EventEmitter {
     balanceBucketFilter: WalletBalanceBucket[],
     originShieldTxidForSpendabilityOverride?: string,
   ): Promise<TreeBalance[]> {
-    // Get an array of balances, where each array position is a tree number and balances
-    const totalBalancesByTreeNumber = await this.getTotalBalancesGroupedByTreeNumber(
+    const totalBalancesByTreeNumber = await this.getTotalBalancesByTreeNumber(
       txidVersion,
       chain,
       balanceBucketFilter,
       originShieldTxidForSpendabilityOverride,
     );
-
-    // Get balances of the specific token for all trees
     const treeSortedBalances = totalBalancesByTreeNumber[tokenHash] ?? [];
     return treeSortedBalances;
   }
