@@ -13,6 +13,7 @@ import { ZERO_32_BYTE_VALUE } from '../utils/constants';
 const logTreeSortedBalancesMetadata = (treeSortedBalances: TreeBalance[]) => {
   EngineDebug.log('treeSortedBalances metadata:');
   for (const treeBalance of treeSortedBalances) {
+    if (!isDefined(treeBalance)) continue;
     EngineDebug.log(`Token: ${treeBalance.tokenData.tokenAddress}`);
     EngineDebug.log(`Total balance: ${treeBalance.balance.toString()}`);
     EngineDebug.log(
