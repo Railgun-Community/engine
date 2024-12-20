@@ -332,27 +332,32 @@ export class V3Events {
     eventsUnshieldListener: EventsUnshieldListener,
     eventsRailgunTransactionsV3Listener: EventsRailgunTransactionListenerV3,
   ): Promise<void> {
-    const filtered = logs.filter((log) => log.args);
-    if (logs.length !== filtered.length) {
-      throw new Error('Args required for Nullified events');
+    if (!logs.length) {
+      return;
     }
 
-    await Promise.all(
-      filtered.map(async (log) => {
-        const { args, transactionHash, blockNumber } = log;
-        await V3Events.processAccumulatorEvent(
-          txidVersion,
-          args as unknown as Result,
-          transactionHash,
-          blockNumber,
-          eventsCommitmentListener,
-          eventsNullifierListener,
-          eventsUnshieldListener,
-          eventsRailgunTransactionsV3Listener,
-          async () => {}, // Do not trigger wallet scans
-        );
-      }),
-    );
+    const accumulatorUpdateEventPromises = [];
+    for (const log of logs) {
+      if (!isDefined(log.args)) {
+        throw new Error('Args required for Nullified events');
+      }
+      
+      const { args, transactionHash, blockNumber } = log;
+
+      accumulatorUpdateEventPromises.push(V3Events.processAccumulatorEvent(
+        txidVersion,
+        args as unknown as Result,
+        transactionHash,
+        blockNumber,
+        eventsCommitmentListener,
+        eventsNullifierListener,
+        eventsUnshieldListener,
+        eventsRailgunTransactionsV3Listener,
+        async () => {}, // Do not trigger wallet scans
+      ))
+    }
+
+    await Promise.all(accumulatorUpdateEventPromises);
   }
 
   static async processAccumulatorEvent(
