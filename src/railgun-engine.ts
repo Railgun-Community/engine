@@ -235,8 +235,12 @@ class RailgunEngine extends EventEmitter {
       }
 
       // Queue leaves to merkle tree
-      // eslint-disable-next-line no-await-in-loop
-      await utxoMerkletree.queueLeaves(treeNumber, startPosition, commitments);
+      for (const commitment of commitments) {
+        const normalizedIndex = commitment.utxoIndex % 2 ** 16;
+        const normalizedTreeNumber = commitment.utxoTree + (commitment.utxoIndex >> 16);
+        // eslint-disable-next-line no-await-in-loop
+        await utxoMerkletree.queueLeaves(normalizedTreeNumber, normalizedIndex, [commitment]);
+      }
     }
 
     if (shouldUpdateTrees) {
