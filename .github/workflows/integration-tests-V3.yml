@@ -35,7 +35,7 @@ jobs:
           cmd: install
           dir: 'contract'
       - name: Build contract
-        run: cd contract && ./node_modules/.bin/hardhat build
+        run: cd contract && ./node_modules/.bin/hardhat compile
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:
