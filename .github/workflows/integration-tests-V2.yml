@@ -33,8 +33,8 @@ jobs:
         with:
           cmd: install
           dir: 'contract'
-      - name: Compile contract
-        run: cd contract && npm run compile
+      - name: Build contract
+        run: cd contract && npm run build
       - name: Run contract hardhat and engine tests
         uses: BerniWittmann/background-server-action@v1
         with:

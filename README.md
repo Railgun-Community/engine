@@ -128,9 +128,9 @@ Others
 
 `npm install` OR `yarn`
 
-### Compile TypeScript
+### Build TypeScript
 
-`npm compile` OR `yarn compile`
+`npm build` OR `yarn build`
 
 ### Run unit tests
 
