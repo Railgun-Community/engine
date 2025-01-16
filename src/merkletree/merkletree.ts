@@ -34,10 +34,10 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   readonly zeros: string[] = [];
 
-  private treeLengths: number[] = [];
+  private treeLengths: Map<number, number> = new Map();
 
   // {tree: {startingIndex: [leaves]}}
-  protected writeQueue: T[][][] = [];
+  protected writeQueue: Map<number, Map<number, T[]>> = new Map();
 
   private lockPromise: Promise<void> | null = null;
 
@@ -52,7 +52,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   isScanning = false;
 
-  private processingWriteQueueTrees: { [tree: number]: boolean } = {};
+  private processingWriteQueueTrees: Map<number, boolean> = new Map();
 
   invalidMerklerootDetailsByTree: { [tree: number]: InvalidMerklerootDetails } = {};
 
@@ -344,23 +344,34 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     this.cachedNodeHashes[tree][level][index] = hash;
   }
 
+  hasTreeMetadata(tree: number): boolean {
+    return this.treeLengths.has(tree);
+  }
+  
+  getTreeMetadata(tree: number): number | undefined {
+    return this.treeLengths.get(tree);
+  }
+
   async getMetadataFromStorage(): Promise<void> {
     const storedMetadata = await this.getMerkletreesMetadata();
+    
     if (!storedMetadata) {
       return;
     }
-    const treeKeys = Object.keys(storedMetadata.trees);
-    for (const treeKey of treeKeys) {
+  
+    for (const [treeKey, treeMetadata] of Object.entries(storedMetadata.trees)) {
       const tree = Number(treeKey);
-      const treeMetadata = storedMetadata.trees[tree];
-      this.treeLengths[tree] = treeMetadata.scannedHeight;
+      
+      // update tree lengths
+      this.treeLengths.set(tree, treeMetadata.scannedHeight);
+      
+      // update invalid merkle root details if they exist
       if (treeMetadata.invalidMerklerootDetails) {
-        this.invalidMerklerootDetailsByTree[tree] =
-          treeMetadata.invalidMerklerootDetails ?? undefined;
+        this.invalidMerklerootDetailsByTree[tree] = treeMetadata.invalidMerklerootDetails;
       }
     }
   }
-
+  
   /**
    * Gets merkletrees metadata
    * @returns metadata
@@ -393,28 +404,59 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     }
   }
 
+
+  // Tree length helper method
+  protected setTreeLength(treeIndex: number, length: number): void {
+    this.treeLengths.set(treeIndex, length);
+  }
+
+  // Tree length helper method
+  protected hasTreeLength(treeIndex: number): boolean {
+    return this.treeLengths.has(treeIndex);
+  }
+
+  // Tree length helper method
+  protected clearTreeLength(treeIndex: number): void {
+    this.treeLengths.delete(treeIndex);
+  }
+
   /**
    * Gets length of tree
    * @param treeIndex - tree to get length of
    * @returns tree length
    */
   async getTreeLength(treeIndex: number): Promise<number> {
-    if (isDefined(this.treeLengths[treeIndex])) {
-      return this.treeLengths[treeIndex];
+    
+    // get length from cache if it exists
+    const treeLength = this.treeLengths.get(treeIndex);
+    if (treeLength !== undefined) {
+      return treeLength;
     }
 
+    // if cache does not exist check if its on stored metadata
     const storedMetadata = await this.getMerkletreesMetadata();
-    if (isDefined(storedMetadata?.trees[treeIndex])) {
-      this.treeLengths[treeIndex] = storedMetadata.trees[treeIndex].scannedHeight;
-      return this.treeLengths[treeIndex];
+    const storedTreeMetadata = storedMetadata?.trees[treeIndex];
+
+    if (storedTreeMetadata) {
+      const storedLength = storedTreeMetadata.scannedHeight;
+      // save on cache
+      this.treeLengths.set(treeIndex, storedLength);
+      return storedLength;
     }
 
-    this.treeLengths[treeIndex] = await this.getTreeLengthFromDBCount(treeIndex);
-    if (this.treeLengths[treeIndex] > 0) {
+    // neither on cache nor on stored metadata, get from db
+    const calculatedLength = await this.getTreeLengthFromDBCount(treeIndex);
+    // save on cache
+    this.treeLengths.set(treeIndex, calculatedLength);
+    
+    // update stored metadata if found items
+    if (calculatedLength > 0) {
       await this.updateStoredMerkletreesMetadata(treeIndex);
     }
+  
+    return calculatedLength;
 
-    return this.treeLengths[treeIndex];
+
   }
 
   async updateStoredMerkletreesMetadata(treeIndex: number): Promise<void> {
@@ -431,13 +473,15 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   async resetTreeLength(treeIndex: number): Promise<void> {
-    delete this.treeLengths[treeIndex];
+    this.treeLengths.delete(treeIndex);
     const merkletreesMetadata = await this.getMerkletreesMetadata();
     if (!merkletreesMetadata) {
       return;
+    }  
+    if (treeIndex in merkletreesMetadata.trees) {
+      delete merkletreesMetadata.trees[treeIndex];
+      await this.storeMerkletreesMetadata(merkletreesMetadata);
     }
-    delete merkletreesMetadata.trees[treeIndex];
-    await this.storeMerkletreesMetadata(merkletreesMetadata);
   }
 
   /**
@@ -468,7 +512,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     } finally {
       this.releaseUpdatesLock();
       this.cachedNodeHashes = {};
-      this.treeLengths = [];
+      this.treeLengths.clear();
     }
   }
 
@@ -535,7 +579,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     await this.newLeafRootTrigger(treeIndex, lastIndex, leaf, merkleroot);
 
     // Update tree length
-    this.treeLengths[treeIndex] = newTreeLength;
+    this.treeLengths.set(treeIndex, newTreeLength);
     await this.updateStoredMerkletreesMetadata(treeIndex);
   }
 
@@ -709,30 +753,37 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     let processingGroupSize = this.defaultCommitmentProcessingSize;
 
     let currentTreeLength = await this.getTreeLength(treeIndex);
-    const treeWriteQueue = this.writeQueue[treeIndex];
-    for (const writeQueueKey of Object.keys(treeWriteQueue)) {
+    const treeWriteQueue = this.writeQueue.get(treeIndex);
+
+    if (!treeWriteQueue) {
+      return;
+    }
+
+    const writeQueueKeys = treeWriteQueue.keys();
+
+    for (const writeQueueKey of writeQueueKeys) {
       if (!isDefined(writeQueueKey)) continue;
       const writeQueueIndex = Number(writeQueueKey);
       const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
       if (alreadyAddedToTree) {
-        delete treeWriteQueue[writeQueueIndex];
+        treeWriteQueue.delete(writeQueueIndex);
       }
     }
 
-    if (this.processingWriteQueueTrees[treeIndex]) {
+    if (this.processingWriteQueueTrees.has(treeIndex)) {
       EngineDebug.log(
         `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}] Already processing writeQueue. Killing re-process.`,
       );
       return;
     }
 
-    while (isDefined(this.writeQueue[treeIndex])) {
+    while (this.writeQueue.has(treeIndex)) {
       // Process leaves as a group until we hit an invalid merkleroot.
       // Then, process each single item.
       // This optimizes for fewer `merklerootValidator` calls, while still protecting
       // users against invalid roots and broken trees.
 
-      this.processingWriteQueueTrees[treeIndex] = true;
+      this.processingWriteQueueTrees.set(treeIndex, true);
 
       currentTreeLength = await this.getTreeLength(treeIndex);
 
@@ -779,13 +830,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       }
 
       // Delete queue for entire tree if necessary.
-      const noElementsInTreeWriteQueue = treeWriteQueue.reduce((x) => x + 1, 0) === 0;
-      if (noElementsInTreeWriteQueue) {
-        delete this.writeQueue[treeIndex];
+      if (treeWriteQueue.size === 0) {
+        this.writeQueue.delete(treeIndex);
       }
     }
 
-    this.processingWriteQueueTrees[treeIndex] = false;
+    this.processingWriteQueueTrees.set(treeIndex, false);
   }
 
   private static nextProcessingGroupSize(processingGroupSize: CommitmentProcessingGroupSize) {
@@ -821,11 +871,16 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     maxCommitmentGroupsToProcess: number,
   ): Promise<boolean> {
     // If there is an element in the write queue equal to the tree length, process it.
-    const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
-    if (!isDefined(nextCommitmentGroup)) {
-      // EngineDebug.log(
-      //   `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
-      // );
+    const writeQueueTree = this.writeQueue.get(treeIndex);
+
+    if (!writeQueueTree) {
+      return false;
+    }
+
+    // Get next commitment group
+    const nextCommitmentGroup = writeQueueTree?.get(currentTreeLength);
+
+    if (!nextCommitmentGroup) {
       return false;
     }
 
@@ -833,12 +888,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     let nextIndex = currentTreeLength + nextCommitmentGroup.length;
 
     const dataWriteGroups: T[][] = [nextCommitmentGroup];
+
     while (
       maxCommitmentGroupsToProcess > dataWriteGroups.length &&
-      isDefined(this.writeQueue[treeIndex][nextIndex])
+      writeQueueTree.has(treeIndex)
     ) {
       commitmentGroupIndices.push(nextIndex);
-      const next = this.writeQueue[treeIndex][nextIndex];
+      const next = writeQueueTree.get(nextIndex);
+      if (!next) continue;
       dataWriteGroups.push(next);
       nextIndex += next.length;
     }
@@ -848,7 +905,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     // Delete the batch after processing it.
     // Ensures bad batches are deleted, therefore halting update loop if one is found.
     for (const commitmentGroupIndex of commitmentGroupIndices) {
-      delete this.writeQueue[treeIndex][commitmentGroupIndex];
+      writeQueueTree.delete(commitmentGroupIndex);
     }
 
     return true;
@@ -859,13 +916,12 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
   }
 
   private treeIndicesFromWriteQueue(): number[] {
-    return this.writeQueue
-      .map((_tree, treeIndex) => treeIndex)
-      .filter((index) => !Number.isNaN(index));
+    const writeQueueKeys = this.writeQueue.keys();
+    return Array.from(writeQueueKeys);
   }
-
+  
   async updateTreesFromWriteQueue(): Promise<void> {
-    const treeIndices: number[] = this.treeIndicesFromWriteQueue();
+    const treeIndices = Array.from(this.writeQueue.keys());
     await Promise.all(treeIndices.map((treeIndex) => this.processWriteQueueForTree(treeIndex)));
   }
 
@@ -880,13 +936,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     const treeLength = await this.getTreeLength(tree);
 
     // Ensure write queue for tree exists
-    if (!isDefined(this.writeQueue[tree])) {
-      this.writeQueue[tree] = [];
+    if (!this.writeQueue.has(tree)) {
+      this.writeQueue.set(tree, new Map());
     }
 
     if (treeLength <= startingIndex) {
       // If starting index is greater or equal to tree length, insert to queue
-      this.writeQueue[tree][startingIndex] = leaves;
+      const writeQueueTree = this.writeQueue.get(tree);
+      writeQueueTree?.set(startingIndex, leaves)
 
       if (EngineDebug.verboseScanLogging()) {
         EngineDebug.log(
