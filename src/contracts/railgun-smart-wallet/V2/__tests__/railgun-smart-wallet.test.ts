@@ -188,21 +188,6 @@ describe('railgun-smart-wallet', function runTests() {
     };
   });
 
-  it('Should fail to instantiate without a polling provider', () => {
-    const nonPollingProvider = new JsonRpcProvider(config.rpc);
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-      return new RailgunSmartWalletContract(
-        'abc',
-        nonPollingProvider as any,
-        nonPollingProvider as any,
-        chain,
-      );
-    }).to.throw(
-      'The JsonRpcProvider must have polling enabled. Use PollingJsonRpcProvider to instantiate.',
-    );
-  });
-
   it('[HH] Should retrieve merkle root from contract', async function run() {
     if (!isDefined(process.env.RUN_HARDHAT_TESTS)) {
       this.skip();

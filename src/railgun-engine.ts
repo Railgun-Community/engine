@@ -1,6 +1,6 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import EventEmitter from 'events';
-import type { JsonRpcApiProvider } from 'ethers';
+import type { JsonRpcApiProvider, Provider } from 'ethers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
 import { Database, DatabaseNamespace } from './database/database';
@@ -1462,8 +1462,8 @@ class RailgunEngine extends EventEmitter {
     poseidonMerkleAccumulatorV3Address: string,
     poseidonMerkleVerifierV3Address: string,
     tokenVaultV3Address: string,
-    defaultProvider: JsonRpcApiProvider,
-    pollingProvider: JsonRpcApiProvider,
+    defaultProvider: Provider,
+    pollingProvider: Provider,
     deploymentBlocks: Record<TXIDVersion, number>,
     poiLaunchBlock: Optional<number>,
     supportsV3: boolean,

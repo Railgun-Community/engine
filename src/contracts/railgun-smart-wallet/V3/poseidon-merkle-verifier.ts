@@ -1,4 +1,4 @@
-import { Contract, ContractTransaction, type JsonRpcApiProvider } from 'ethers';
+import { Contract, ContractTransaction, Provider } from 'ethers';
 import { PoseidonMerkleVerifier } from '../../../abi/typechain/PoseidonMerkleVerifier';
 import { ABIPoseidonMerkleVerifier } from '../../../abi/abi';
 import { ShieldCiphertextStruct } from '../../../abi/typechain/RailgunSmartWallet';
@@ -8,7 +8,7 @@ export class PoseidonMerkleVerifierContract {
 
   readonly address: string;
 
-  constructor(address: string, provider: JsonRpcApiProvider) {
+  constructor(address: string, provider: Provider) {
     this.address = address;
     this.contract = new Contract(
       address,

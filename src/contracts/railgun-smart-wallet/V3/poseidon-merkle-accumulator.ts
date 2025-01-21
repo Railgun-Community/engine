@@ -1,4 +1,4 @@
-import { Contract, ContractEventPayload, type JsonRpcApiProvider, Result } from 'ethers';
+import { Contract, ContractEventPayload, Provider, Result } from 'ethers';
 import EventEmitter from 'events';
 import { Chain } from '../../../models/engine-types';
 import { PoseidonMerkleAccumulator } from '../../../abi/typechain/PoseidonMerkleAccumulator';
@@ -43,8 +43,8 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
    */
   constructor(
     address: string,
-    provider: JsonRpcApiProvider,
-    pollingProvider: JsonRpcApiProvider,
+    provider: Provider,
+    pollingProvider: Provider,
     chain: Chain,
   ) {
     super();

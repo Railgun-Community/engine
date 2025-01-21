@@ -4,6 +4,7 @@ import {
   ContractTransaction,
   Interface,
   JsonRpcApiProvider,
+  Provider,
   Result,
 } from 'ethers';
 import EventEmitter from 'events';
@@ -77,8 +78,8 @@ export class RailgunSmartWalletContract extends EventEmitter {
    */
   constructor(
     railgunSmartWalletContractAddress: string,
-    defaultProvider: JsonRpcApiProvider,
-    pollingProvider: JsonRpcApiProvider,
+    defaultProvider: Provider,
+    pollingProvider: Provider,
     chain: Chain,
   ) {
     super();
