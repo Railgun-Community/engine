@@ -44,7 +44,11 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
   constructor(
     address: string,
     provider: Provider,
-    pollingProvider: Provider,
+    /**
+      * @deprecated pollingProvider will be removed in the next major version.
+    */
+    pollingProvider?: Provider,
+    // @ts-ignore - Ignore optional param last requirement during deprecation
     chain: Chain,
   ) {
     super();

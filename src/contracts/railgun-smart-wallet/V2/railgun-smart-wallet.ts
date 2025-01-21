@@ -79,7 +79,11 @@ export class RailgunSmartWalletContract extends EventEmitter {
   constructor(
     railgunSmartWalletContractAddress: string,
     defaultProvider: Provider,
-    pollingProvider: Provider,
+    /**
+      * @deprecated pollingProvider will be removed in the next major version.
+    */
+    pollingProvider?: Provider,
+    // @ts-ignore - Ignore optional param last requirement during deprecation
     chain: Chain,
   ) {
     super();

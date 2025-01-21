@@ -1463,7 +1463,11 @@ class RailgunEngine extends EventEmitter {
     poseidonMerkleVerifierV3Address: string,
     tokenVaultV3Address: string,
     defaultProvider: Provider,
-    pollingProvider: Provider,
+    /**
+      * @deprecated pollingProvider will be removed in the next major version.
+    */
+    pollingProvider?: Provider,
+    // @ts-ignore - Ignore optional param last requirement during deprecation
     deploymentBlocks: Record<TXIDVersion, number>,
     poiLaunchBlock: Optional<number>,
     supportsV3: boolean,
