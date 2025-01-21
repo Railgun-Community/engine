@@ -1,6 +1,6 @@
 import type { AbstractLevelDOWN } from 'abstract-leveldown';
 import EventEmitter from 'events';
-import { FallbackProvider } from 'ethers';
+import type { JsonRpcApiProvider } from 'ethers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
 import { Database, DatabaseNamespace } from './database/database';
@@ -46,8 +46,6 @@ import {
   CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION,
   CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
 } from './utils/constants';
-import { PollingJsonRpcProvider } from './provider/polling-json-rpc-provider';
-import { assertIsPollingProvider } from './provider/polling-util';
 import { isDefined } from './utils/is-defined';
 import { UTXOMerkletree } from './merkletree/utxo-merkletree';
 import { TXIDMerkletree } from './merkletree/txid-merkletree';
@@ -1445,11 +1443,18 @@ class RailgunEngine extends EventEmitter {
 
   /**
    * Load network
+   * @param chain
    * @param railgunSmartWalletContractAddress - address of railgun instance (proxy contract)
    * @param relayAdaptV2ContractAddress - address of railgun instance (proxy contract)
-   * @param provider - ethers provider for network
-   * @param deploymentBlock - block number to start scanning from
-   */
+   * @param poseidonMerkleAccumulatorV3Address
+   * @param poseidonMerkleVerifierV3Address
+   * @param tokenVaultV3Address
+   * @param defaultProvider - ethers provider for network
+   * @param pollingProvider - DEPRECATED
+   * @param deploymentBlocks - block number to start scanning from
+   * @param poiLaunchBlock
+   * @param supportsV3 
+  */
   async loadNetwork(
     chain: Chain,
     railgunSmartWalletContractAddress: string,
@@ -1457,8 +1462,8 @@ class RailgunEngine extends EventEmitter {
     poseidonMerkleAccumulatorV3Address: string,
     poseidonMerkleVerifierV3Address: string,
     tokenVaultV3Address: string,
-    defaultProvider: PollingJsonRpcProvider | FallbackProvider,
-    pollingProvider: PollingJsonRpcProvider,
+    defaultProvider: JsonRpcApiProvider,
+    pollingProvider: JsonRpcApiProvider,
     deploymentBlocks: Record<TXIDVersion, number>,
     poiLaunchBlock: Optional<number>,
     supportsV3: boolean,
@@ -1477,24 +1482,6 @@ class RailgunEngine extends EventEmitter {
         { cause },
       );
       EngineDebug.error(err);
-      throw err;
-    }
-
-    assertIsPollingProvider(pollingProvider);
-    try {
-      await promiseTimeout(
-        pollingProvider.getBlockNumber(),
-        60_000,
-        'Timed out waiting for polling RPC provider to connect.',
-      );
-    } catch (cause) {
-      const err = new Error(
-        'Failed to get block number from polling provider when loading network',
-        {
-          cause,
-        },
-      );
-      EngineDebug.error(cause as Error);
       throw err;
     }
 

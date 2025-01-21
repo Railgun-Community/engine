@@ -1,12 +1,10 @@
-import { Contract, ContractEventPayload, FallbackProvider, Result } from 'ethers';
+import { Contract, ContractEventPayload, type JsonRpcApiProvider, Result } from 'ethers';
 import EventEmitter from 'events';
 import { Chain } from '../../../models/engine-types';
-import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
 import { PoseidonMerkleAccumulator } from '../../../abi/typechain/PoseidonMerkleAccumulator';
 import { ABIPoseidonMerkleAccumulator } from '../../../abi/abi';
 import { ByteLength, ByteUtils } from '../../../utils/bytes';
 import EngineDebug from '../../../debugger/debugger';
-import { assertIsPollingProvider } from '../../../provider/polling-util';
 import {
   EngineEvent,
   EventsCommitmentListener,
@@ -29,8 +27,6 @@ const SCAN_TIMEOUT_ERROR_MESSAGE = 'getLogs request timed out after 5 seconds.';
 export class PoseidonMerkleAccumulatorContract extends EventEmitter {
   readonly contract: PoseidonMerkleAccumulator;
 
-  readonly contractForListeners: PoseidonMerkleAccumulator;
-
   readonly address: string;
 
   readonly chain: Chain;
@@ -39,10 +35,16 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
 
   private readonly eventTopic: string;
 
+  /**
+   * @param address 
+   * @param provider 
+   * @param pollingProvider - DEPRECATED
+   * @param chain 
+   */
   constructor(
     address: string,
-    provider: PollingJsonRpcProvider | FallbackProvider,
-    pollingProvider: PollingJsonRpcProvider,
+    provider: JsonRpcApiProvider,
+    pollingProvider: JsonRpcApiProvider,
     chain: Chain,
   ) {
     super();
@@ -54,15 +56,6 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
     ) as unknown as PoseidonMerkleAccumulator;
     this.eventTopic = this.contract.getEvent('AccumulatorStateUpdate').getFragment().topicHash;
     this.chain = chain;
-
-    // Because of a 'stallTimeout' bug in Ethers v6, all providers in a FallbackProvider will get called simultaneously.
-    // So, we'll use a single json rpc (the first in the FallbackProvider) to poll for the event listeners.
-    assertIsPollingProvider(pollingProvider);
-    this.contractForListeners = new Contract(
-      address,
-      ABIPoseidonMerkleAccumulator,
-      pollingProvider,
-    ) as unknown as PoseidonMerkleAccumulator;
   }
 
   /**
@@ -104,7 +97,7 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
     eventsRailgunTransactionsV3Listener: EventsRailgunTransactionListenerV3,
     triggerWalletBalanceDecryptions: (txidVersion: TXIDVersion) => Promise<void>,
   ): Promise<void> {
-    await this.contractForListeners.on(this.eventTopic as any, (event: ContractEventPayload) => {
+    await this.contract.on(this.eventTopic as any, (event: ContractEventPayload) => {
       try {
         if (event.log.topics.length !== 1) {
           throw new Error('Requires one topic for railgun events');
@@ -264,6 +257,5 @@ export class PoseidonMerkleAccumulatorContract extends EventEmitter {
    */
   async unload() {
     await this.contract.removeAllListeners();
-    await this.contractForListeners?.removeAllListeners();
   }
 }

@@ -1,5 +1,4 @@
-import { Contract, ContractTransaction, FallbackProvider } from 'ethers';
-import { PollingJsonRpcProvider } from '../../../provider/polling-json-rpc-provider';
+import { Contract, ContractTransaction, type JsonRpcApiProvider } from 'ethers';
 import { PoseidonMerkleVerifier } from '../../../abi/typechain/PoseidonMerkleVerifier';
 import { ABIPoseidonMerkleVerifier } from '../../../abi/abi';
 import { ShieldCiphertextStruct } from '../../../abi/typechain/RailgunSmartWallet';
@@ -9,7 +8,7 @@ export class PoseidonMerkleVerifierContract {
 
   readonly address: string;
 
-  constructor(address: string, provider: PollingJsonRpcProvider | FallbackProvider) {
+  constructor(address: string, provider: JsonRpcApiProvider) {
     this.address = address;
     this.contract = new Contract(
       address,

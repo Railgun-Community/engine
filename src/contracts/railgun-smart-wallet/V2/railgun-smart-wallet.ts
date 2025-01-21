@@ -2,8 +2,8 @@ import {
   Contract,
   ContractEventPayload,
   ContractTransaction,
-  FallbackProvider,
   Interface,
+  JsonRpcApiProvider,
   Result,
 } from 'ethers';
 import EventEmitter from 'events';
@@ -62,8 +62,6 @@ const SCAN_TIMEOUT_ERROR_MESSAGE = 'getLogs request timed out after 5 seconds.';
 export class RailgunSmartWalletContract extends EventEmitter {
   readonly contract: RailgunSmartWallet;
 
-  readonly contractForListeners: RailgunSmartWallet;
-
   readonly address: string;
 
   readonly chain: Chain;
@@ -73,12 +71,14 @@ export class RailgunSmartWalletContract extends EventEmitter {
   /**
    * Connect to Railgun instance on network
    * @param railgunSmartWalletContractAddress - address of Railgun instance (Proxy contract)
-   * @param provider - Network provider
+   * @param defaultProvider - Network provider
+   * @param pollingProvider - DEPRECATED
+   * @param chain
    */
   constructor(
     railgunSmartWalletContractAddress: string,
-    defaultProvider: PollingJsonRpcProvider | FallbackProvider,
-    pollingProvider: PollingJsonRpcProvider,
+    defaultProvider: JsonRpcApiProvider,
+    pollingProvider: JsonRpcApiProvider,
     chain: Chain,
   ) {
     super();
@@ -87,15 +87,6 @@ export class RailgunSmartWalletContract extends EventEmitter {
       railgunSmartWalletContractAddress,
       ABIRailgunSmartWallet,
       defaultProvider,
-    ) as unknown as RailgunSmartWallet;
-
-    // Because of a 'stallTimeout' bug in Ethers v6, all providers in a FallbackProvider will get called simultaneously.
-    // So, we'll use a single json rpc (the first in the FallbackProvider) to poll for the event listeners.
-    assertIsPollingProvider(pollingProvider);
-    this.contractForListeners = new Contract(
-      railgunSmartWalletContractAddress,
-      ABIRailgunSmartWallet,
-      pollingProvider,
     ) as unknown as RailgunSmartWallet;
 
     this.chain = chain;
@@ -290,7 +281,7 @@ export class RailgunSmartWalletContract extends EventEmitter {
     const transactTopic = this.contract.getEvent('Transact').getFragment().topicHash;
     const unshieldTopic = this.contract.getEvent('Unshield').getFragment().topicHash;
 
-    await this.contractForListeners.on(
+    await this.contract.on(
       // @ts-expect-error - Use * to request all events
       '*', // All Events
       (event: ContractEventPayload) => {
