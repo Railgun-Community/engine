@@ -138,7 +138,7 @@ export const awaitRailgunSmartWalletEvent = async (
     new Promise<void>((resolve) => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       // @ts-expect-error
-      RailgunVersionedSmartContracts.getAccumulator(txidVersion, chain).contractForListeners.once(
+      RailgunVersionedSmartContracts.getAccumulator(txidVersion, chain).contract.once(
         event,
         () => resolve(),
       );

@@ -624,6 +624,5 @@ export class RailgunSmartWalletContract extends EventEmitter {
    */
   async unload() {
     await this.contract.removeAllListeners();
-    await this.contractForListeners?.removeAllListeners();
   }
 }
