@@ -837,29 +837,32 @@ class RailgunEngine extends EventEmitter {
       return;
     }
 
-    const txidV2MerkletreeHistoryVersion = await this.getTxidV2MerkletreeHistoryVersion(chain);
-    if (
-      !isDefined(txidV2MerkletreeHistoryVersion) ||
-      txidV2MerkletreeHistoryVersion < CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION
-    ) {
-      await this.clearTXIDMerkletree(txidVersion, chain);
-      await this.setTxidV2MerkletreeHistoryVersion(
-        chain,
-        CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION,
-      );
-    }
-
     const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
     if (txidMerkletree.isScanning) {
       // Do not allow multiple simultaneous scans.
       EngineDebug.log('[Txid] Already syncing. Stopping additional re-sync.');
       return;
     }
-    txidMerkletree.isScanning = true;
 
-    await this.performSyncRailgunTransactionsV2(chain, trigger);
+    try {
+      txidMerkletree.isScanning = true;
 
-    txidMerkletree.isScanning = false;
+      const txidV2MerkletreeHistoryVersion = await this.getTxidV2MerkletreeHistoryVersion(chain);
+      if (
+        !isDefined(txidV2MerkletreeHistoryVersion) ||
+        txidV2MerkletreeHistoryVersion < CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION
+      ) {
+        await this.clearTXIDMerkletree(txidVersion, chain);
+        await this.setTxidV2MerkletreeHistoryVersion(
+          chain,
+          CURRENT_TXID_V2_MERKLETREE_HISTORY_VERSION,
+        );
+      }
+
+      await this.performSyncRailgunTransactionsV2(chain, trigger);
+    } finally {
+      txidMerkletree.isScanning = false;
+    }
   }
 
   private async shouldAddNewRailgunTransactions(
