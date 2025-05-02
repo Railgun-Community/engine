@@ -34,6 +34,7 @@ export class RelayAdaptVersionedSmartContracts {
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     unshieldAddress: string,
     random31Bytes: string,
+    useDummyProof: boolean,
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
@@ -42,6 +43,7 @@ export class RelayAdaptVersionedSmartContracts {
           transactions as TransactionStructV2[],
           unshieldAddress,
           random31Bytes,
+          useDummyProof,
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {
@@ -102,6 +104,7 @@ export class RelayAdaptVersionedSmartContracts {
     dummyUnshieldTransactions: (TransactionStructV2 | TransactionStructV3)[],
     unshieldAddress: string,
     random31Bytes: string,
+    sendWithPublicWallet: boolean,
   ): Promise<string> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
@@ -110,6 +113,7 @@ export class RelayAdaptVersionedSmartContracts {
           dummyUnshieldTransactions as TransactionStructV2[],
           unshieldAddress,
           random31Bytes,
+          sendWithPublicWallet,
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {

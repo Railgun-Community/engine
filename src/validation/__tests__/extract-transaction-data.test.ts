@@ -51,7 +51,6 @@ const txidVersion = getTestTXIDVersion();
 
 const RANDOM_RELAY_ADAPT = ByteUtils.randomHex(31);
 const MOCK_TOKEN_ADDRESS = config.contracts.rail;
-
 const TREE = 0;
 let chain: Chain;
 let tokenDataGetter: TokenDataGetter;
@@ -303,6 +302,7 @@ describe('extract-transaction-data', () => {
       transactions,
       MOCK_ETH_WALLET_ADDRESS,
       RANDOM_RELAY_ADAPT,
+      false, // useDummyProof
     );
     const firstNoteERC20AmountMap = await extractFirstNoteERC20AmountMapFromTransactionRequest(
       txidVersion,
@@ -343,6 +343,7 @@ describe('extract-transaction-data', () => {
       transactions,
       MOCK_ETH_WALLET_ADDRESS,
       RANDOM_RELAY_ADAPT,
+      false, // useDummyProof
     );
     const firstNoteERC20AmountMap = await extractFirstNoteERC20AmountMapFromTransactionRequest(
       txidVersion,

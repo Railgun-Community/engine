@@ -80,9 +80,9 @@ const testHistoricalEventsForRange = async (
       }
       foundNullifiers += nullifier.length;
     },
-    async () => {},
-    async () => {},
-    async () => {},
+    async () => { },
+    async () => { },
+    async () => { },
   );
   expect(foundShieldEvents).to.be.greaterThanOrEqual(1);
   expect(foundTransact).to.be.greaterThanOrEqual(1);
@@ -107,7 +107,7 @@ describe('railgun-smart-wallet-events', function runTests() {
 
     engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
 
-    provider = new PollingJsonRpcProvider('https://rpc.ankr.com/eth', 1, 100);
+    provider = new PollingJsonRpcProvider('https://eth.llamarpc.com', 1, 100);
 
     chain = {
       type: ChainType.EVM,

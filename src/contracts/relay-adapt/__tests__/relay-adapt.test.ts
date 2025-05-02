@@ -288,6 +288,7 @@ describe('relay-adapt', function test() {
         dummyTransactions,
         ethersWallet.address,
         random,
+        true, // useDummyProof
       );
 
     relayTransactionGasEstimate.from = DEAD_ADDRESS;
@@ -348,6 +349,7 @@ describe('relay-adapt', function test() {
         dummyTransactions,
         ethersWallet.address,
         random,
+        true,
       );
     expect(relayAdaptParams).to.equal(
       '0xa54346cdc981dd16bf95990bd28264a2e498e8db8be602b9611b999df51f3cf1',
@@ -363,7 +365,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -384,6 +386,7 @@ describe('relay-adapt', function test() {
       provedTransactions,
       ethersWallet.address,
       random,
+      true,
     );
 
     // 6: Send relay transaction.
@@ -553,7 +556,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -636,7 +639,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
@@ -803,7 +806,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -867,9 +870,9 @@ describe('relay-adapt', function test() {
 
     const expectedPrivateWethBalance = BigInt(
       9975 /* original shield */ -
-        300 /* broadcaster fee */ -
-        1000 /* unshield */ +
-        8 /* re-shield (1000 unshield amount - 2 unshield fee - 990 send amount - 0 re-shield fee) */,
+      300 /* broadcaster fee */ -
+      1000 /* unshield */ +
+      8 /* re-shield (1000 unshield amount - 2 unshield fee - 990 send amount - 0 re-shield fee) */,
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add broadcaster fee.
 
@@ -990,7 +993,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -1052,11 +1055,11 @@ describe('relay-adapt', function test() {
 
     const expectedPrivateWethBalance = BigInt(
       99750 /* original */ -
-        300 /* broadcaster fee */ -
-        10000 /* unshield amount */ -
-        0 /* failed cross contract send: no change */ +
-        9975 /* re-shield amount */ -
-        24 /* shield fee */,
+      300 /* broadcaster fee */ -
+      10000 /* unshield amount */ -
+      0 /* failed cross contract send: no change */ +
+      9975 /* re-shield amount */ -
+      24 /* shield fee */,
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add broadcaster fee.
 
@@ -1177,7 +1180,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
