@@ -76,6 +76,7 @@ export class RelayAdaptV2Contract {
 
   private async getOrderedCallsForUnshieldBaseToken(
     unshieldAddress: string,
+    shieldRequest: ShieldRequestStruct,
   ): Promise<ContractTransaction[]> {
     // Use 0x00 address ERC20 to represent base token.
     const baseTokenData = getTokenDataERC20(ZERO_ADDRESS);
@@ -92,6 +93,10 @@ export class RelayAdaptV2Contract {
     return Promise.all([
       this.contract.unwrapBase.populateTransaction(value),
       this.populateRelayTransfers([baseTokenTransfer]),
+      // If unwrapping fails, or any other call fails after this, 
+      // we want to safely re-wrap the base token. without needing to fully revert the transaction.
+      this.contract.wrapBase.populateTransaction(value), 
+      this.populateRelayShields([shieldRequest]),
     ]);
   }
 
@@ -99,12 +104,15 @@ export class RelayAdaptV2Contract {
     dummyTransactions: TransactionStructV2[],
     unshieldAddress: string,
     random: string,
+    sendWithPublicWallet: boolean,
+    shieldRequest: ShieldRequestStruct,
   ): Promise<string> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
+      shieldRequest
     );
 
-    const requireSuccess = true;
+    const requireSuccess = sendWithPublicWallet;
     return RelayAdaptHelper.getRelayAdaptParams(
       dummyTransactions,
       random,
@@ -117,12 +125,15 @@ export class RelayAdaptV2Contract {
     transactions: TransactionStructV2[],
     unshieldAddress: string,
     random31Bytes: string,
+    useDummyProof: boolean,
+    shieldRequest: ShieldRequestStruct,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
+      shieldRequest,
     );
 
-    const requireSuccess = true;
+    const requireSuccess = useDummyProof;
     return this.populateRelay(transactions, random31Bytes, requireSuccess, orderedCalls, {});
   }
 

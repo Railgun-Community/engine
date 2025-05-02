@@ -280,6 +280,12 @@ describe('relay-adapt', function test() {
     );
 
     const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
+    const shield = new ShieldNoteERC20(wallet.masterPublicKey, SHIELD_RANDOM, 10000n, WETH_TOKEN_ADDRESS);
+    const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
+    const shieldRequest = await shield.serialize(
+      shieldPrivateKey,
+      wallet.getViewingKeyPair().pubkey,
+    );
 
     const relayTransactionGasEstimate =
       await RelayAdaptVersionedSmartContracts.populateUnshieldBaseToken(
@@ -288,6 +294,8 @@ describe('relay-adapt', function test() {
         dummyTransactions,
         ethersWallet.address,
         random,
+        true,
+        shieldRequest
       );
 
     relayTransactionGasEstimate.from = DEAD_ADDRESS;
@@ -323,7 +331,12 @@ describe('relay-adapt', function test() {
     transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
 
     const unshieldValue = 300n;
-
+    const shield = new ShieldNoteERC20(wallet.masterPublicKey, SHIELD_RANDOM, 0n, WETH_TOKEN_ADDRESS);
+    const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
+    const shieldRequest = await shield.serialize(
+      shieldPrivateKey,
+      wallet.getViewingKeyPair().pubkey,
+    );
     const unshieldNote = new UnshieldNoteERC20(
       RelayAdaptVersionedSmartContracts.getRelayAdaptContract(txidVersion, chain).address,
       unshieldValue,
@@ -348,6 +361,8 @@ describe('relay-adapt', function test() {
         dummyTransactions,
         ethersWallet.address,
         random,
+        true,
+        shieldRequest
       );
     expect(relayAdaptParams).to.equal(
       '0xa54346cdc981dd16bf95990bd28264a2e498e8db8be602b9611b999df51f3cf1',
@@ -384,6 +399,8 @@ describe('relay-adapt', function test() {
       provedTransactions,
       ethersWallet.address,
       random,
+      true,
+      shieldRequest
     );
 
     // 6: Send relay transaction.
