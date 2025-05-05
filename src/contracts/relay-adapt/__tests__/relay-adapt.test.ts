@@ -1,6 +1,8 @@
 /* eslint-disable prefer-template */
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
+import type { SinonStub } from 'sinon';
+import sinon from 'sinon';
 import memdown from 'memdown';
 import { groth16 } from 'snarkjs';
 import { bytesToHex } from 'ethereum-cryptography/utils';
@@ -63,6 +65,7 @@ import { RailgunVersionedSmartContracts } from '../../railgun-smart-wallet/railg
 import { RelayAdaptVersionedSmartContracts } from '../relay-adapt-versioned-smart-contracts';
 import { TransactionStructV2 } from '../../../models';
 import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
+import { AES } from '../../../utils/encryption/aes';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -75,6 +78,7 @@ let snapshot: number;
 let nft: TestERC721;
 let wallet: RailgunWallet;
 let wallet2: RailgunWallet;
+let aesGetRandomIVStub: SinonStub;
 
 const txidVersion = getTestTXIDVersion();
 
@@ -83,6 +87,8 @@ const testEncryptionKey = config.encryptionKey;
 
 const WETH_TOKEN_ADDRESS = config.contracts.weth9;
 const SHIELD_RANDOM = ByteUtils.randomHex(16);
+const SHIELD_PRIVATE_KEY = '0x72d39b85a18b6ae20f5f73612f5005414feb40fd932666d3a904db1ffcfb8cdf'
+const SHIELD_RANDOM_CONST = 'ec4ce933c216dd2a18ed5c65548be51d'
 
 const NFT_ADDRESS = config.contracts.testERC721;
 
@@ -280,8 +286,9 @@ describe('relay-adapt', function test() {
     );
 
     const random = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd';
-    const shield = new ShieldNoteERC20(wallet.masterPublicKey, SHIELD_RANDOM, 10000n, WETH_TOKEN_ADDRESS);
+    const shield = new ShieldNoteERC20(wallet.masterPublicKey, SHIELD_RANDOM, 0n, WETH_TOKEN_ADDRESS);
     const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
+
     const shieldRequest = await shield.serialize(
       shieldPrivateKey,
       wallet.getViewingKeyPair().pubkey,
@@ -294,7 +301,7 @@ describe('relay-adapt', function test() {
         dummyTransactions,
         ethersWallet.address,
         random,
-        true,
+        true, // useDummyProof
         shieldRequest
       );
 
@@ -309,6 +316,9 @@ describe('relay-adapt', function test() {
       this.skip();
       return;
     }
+    // Setup SinonStub to handle nonRandomized AES.getRandomIV
+    aesGetRandomIVStub = sinon.stub(AES, 'getRandomIV').returns('abcdef1234567890abcdef1234567890');
+
 
     await testShieldBaseToken();
     expect(
@@ -331,8 +341,9 @@ describe('relay-adapt', function test() {
     transactionBatch.addOutput(broadcasterFee); // Simulate Broadcaster fee output.
 
     const unshieldValue = 300n;
-    const shield = new ShieldNoteERC20(wallet.masterPublicKey, SHIELD_RANDOM, 0n, WETH_TOKEN_ADDRESS);
-    const shieldPrivateKey = ByteUtils.hexToBytes(ByteUtils.randomHex(32));
+    const shield = new ShieldNoteERC20(wallet.masterPublicKey, SHIELD_RANDOM_CONST, 0n, WETH_TOKEN_ADDRESS);
+    const shieldPrivateKey = ByteUtils.hexToBytes(SHIELD_PRIVATE_KEY);
+
     const shieldRequest = await shield.serialize(
       shieldPrivateKey,
       wallet.getViewingKeyPair().pubkey,
@@ -365,7 +376,7 @@ describe('relay-adapt', function test() {
         shieldRequest
       );
     expect(relayAdaptParams).to.equal(
-      '0xa54346cdc981dd16bf95990bd28264a2e498e8db8be602b9611b999df51f3cf1',
+      '0x73dead15bff7f47681e4a1cc076f466bd3395676b65cf63972131bc2f81bc765'
     );
 
     // 4. Create real transactions with relay adapt params.
@@ -378,7 +389,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -428,6 +439,9 @@ describe('relay-adapt', function test() {
 
     const callResultError = RelayAdaptV2Contract.getRelayAdaptCallError(txReceipt.logs);
     expect(callResultError).to.equal(undefined);
+
+    // Restore aesGetRandomIVStub to original implementation
+    aesGetRandomIVStub?.restore();
 
     // TODO: Fix this test assertion. How much gas is used?
     // const postEthBalance = await ethersWallet.getBalanceERC20(txidVersion, );
@@ -570,7 +584,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -653,7 +667,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     const transact = await RailgunVersionedSmartContracts.generateTransact(
@@ -820,7 +834,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -884,9 +898,9 @@ describe('relay-adapt', function test() {
 
     const expectedPrivateWethBalance = BigInt(
       9975 /* original shield */ -
-        300 /* broadcaster fee */ -
-        1000 /* unshield */ +
-        8 /* re-shield (1000 unshield amount - 2 unshield fee - 990 send amount - 0 re-shield fee) */,
+      300 /* broadcaster fee */ -
+      1000 /* unshield */ +
+      8 /* re-shield (1000 unshield amount - 2 unshield fee - 990 send amount - 0 re-shield fee) */,
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add broadcaster fee.
 
@@ -1007,7 +1021,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
@@ -1069,11 +1083,11 @@ describe('relay-adapt', function test() {
 
     const expectedPrivateWethBalance = BigInt(
       99750 /* original */ -
-        300 /* broadcaster fee */ -
-        10000 /* unshield amount */ -
-        0 /* failed cross contract send: no change */ +
-        9975 /* re-shield amount */ -
-        24 /* shield fee */,
+      300 /* broadcaster fee */ -
+      10000 /* unshield amount */ -
+      0 /* failed cross contract send: no change */ +
+      9975 /* re-shield amount */ -
+      24 /* shield fee */,
     );
     const expectedTotalPrivateWethBalance = expectedPrivateWethBalance + 300n; // Add broadcaster fee.
 
@@ -1194,7 +1208,7 @@ describe('relay-adapt', function test() {
       wallet,
       txidVersion,
       testEncryptionKey,
-      () => {},
+      () => { },
       false, // shouldGeneratePreTransactionPOIs
     );
     for (const transaction of provedTransactions) {
