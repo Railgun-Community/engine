@@ -11,7 +11,7 @@ import { TransactionBatch } from '../../transaction/transaction-batch';
 import { TransactNote } from '../../note/transact-note';
 import { getTokenDataERC20 } from '../../note/note-util';
 import { OutputType } from '../../models/formatted-types';
-import { Chain, ChainType } from '../../models';
+import { Chain, ChainType, type ShieldRequestStruct } from '../../models';
 import { ByteUtils } from '../../utils/bytes';
 import {
   extractFirstNoteERC20AmountMapFromTransactionRequest,
@@ -40,6 +40,7 @@ import { TestPOINodeInterface } from '../../test/test-poi-node-interface.test';
 import { TokenDataGetter } from '../../token/token-data-getter';
 import { RailgunVersionedSmartContracts } from '../../contracts/railgun-smart-wallet/railgun-versioned-smart-contracts';
 import { isDefined } from '../../utils/is-defined';
+import { ShieldNoteERC20 } from '../../note';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -51,12 +52,36 @@ const txidVersion = getTestTXIDVersion();
 
 const RANDOM_RELAY_ADAPT = ByteUtils.randomHex(31);
 const MOCK_TOKEN_ADDRESS = config.contracts.rail;
+const MOCK_WRAPPED_ADDRESS = config.contracts.weth9;
 
 const TREE = 0;
 let chain: Chain;
 let tokenDataGetter: TokenDataGetter;
 
 const MOCK_ETH_WALLET_ADDRESS = '0x9E9F988356f46744Ee0374A17a5Fa1a3A3cC3777';
+
+export const generateRelayShieldBaseTokenShieldRequest = async (
+  addressData: AddressData,
+): Promise<ShieldRequestStruct> => {
+
+  const { masterPublicKey, viewingPublicKey } = addressData
+  const shieldRandom = ByteUtils.randomHex(16);
+  const shieldPrivateKey = ByteUtils.randomHex(16);
+
+  const shieldStruct = new ShieldNoteERC20(
+    masterPublicKey,
+    shieldRandom,
+    0n,
+    MOCK_WRAPPED_ADDRESS
+  )
+
+  const shieldedPrivateKey = new TextEncoder().encode(shieldPrivateKey);
+  const shieldRequest = await shieldStruct.serialize(
+    shieldedPrivateKey,
+    viewingPublicKey,
+  );
+  return shieldRequest;
+}
 
 describe('extract-transaction-data', () => {
   const createGoerliTransferTransactions = async (
@@ -287,10 +312,12 @@ describe('extract-transaction-data', () => {
       return;
     }
 
+
     const fee = BigInt('1000');
     const senderAddressData = RailgunEngine.decodeAddress(
       '0zk1qy00025qjn7vw0mvu4egcxlkjv3nkemeat92qdlh3lzl4rpzxv9f8rv7j6fe3z53ll2adx8kn0lj0ucjkz4xxyax8l9mpqjgrf9z3zjvlvqr4qxgznrpqugcjt8',
     );
+    const shieldRequest = await generateRelayShieldBaseTokenShieldRequest(senderAddressData)
     const transactions = await createGoerliRelayAdaptUnshieldTransactions(
       railgunWallet.addressKeys,
       senderAddressData,
@@ -303,6 +330,8 @@ describe('extract-transaction-data', () => {
       transactions,
       MOCK_ETH_WALLET_ADDRESS,
       RANDOM_RELAY_ADAPT,
+      false, // useDummyProof
+      shieldRequest
     );
     const firstNoteERC20AmountMap = await extractFirstNoteERC20AmountMapFromTransactionRequest(
       txidVersion,
@@ -331,6 +360,8 @@ describe('extract-transaction-data', () => {
     const senderAddressData = RailgunEngine.decodeAddress(
       '0zk1qy00025qjn7vw0mvu4egcxlkjv3nkemeat92qdlh3lzl4rpzxv9f8rv7j6fe3z53ll2adx8kn0lj0ucjkz4xxyax8l9mpqjgrf9z3zjvlvqr4qxgznrpqugcjt8',
     );
+    const shieldRequest = await generateRelayShieldBaseTokenShieldRequest(senderAddressData)
+
     const transactions = await createGoerliRelayAdaptUnshieldTransactions(
       receiverAddressData,
       senderAddressData,
@@ -343,6 +374,8 @@ describe('extract-transaction-data', () => {
       transactions,
       MOCK_ETH_WALLET_ADDRESS,
       RANDOM_RELAY_ADAPT,
+      false, // useDummyProof
+      shieldRequest
     );
     const firstNoteERC20AmountMap = await extractFirstNoteERC20AmountMapFromTransactionRequest(
       txidVersion,
