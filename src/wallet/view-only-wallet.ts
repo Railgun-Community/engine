@@ -19,11 +19,11 @@ class ViewOnlyWallet extends AbstractWallet {
    * Calculate Wallet ID from mnemonic and derivation path index
    * @returns {string} hash of mnemonic and index
    */
-  private static generateID(shareableViewingKey: string): string {
+  protected static generateID(shareableViewingKey: string): string {
     return sha256(shareableViewingKey);
   }
 
-  private static async getViewingKeyPair(viewingPrivateKey: string): Promise<ViewingKeyPair> {
+  protected static async getViewingKeyPair(viewingPrivateKey: string): Promise<ViewingKeyPair> {
     const vpk = ByteUtils.hexStringToBytes(viewingPrivateKey);
     return {
       privateKey: vpk,
@@ -31,7 +31,7 @@ class ViewOnlyWallet extends AbstractWallet {
     };
   }
 
-  private static async createWallet(
+  protected static async createWallet(
     id: string,
     db: Database,
     shareableViewingKey: string,

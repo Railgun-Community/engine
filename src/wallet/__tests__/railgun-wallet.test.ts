@@ -16,6 +16,7 @@ import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 import { Prover } from '../../prover/prover';
 import { getTestTXIDVersion, testArtifactsGetter } from '../../test/helper.test';
 import { addChainSupportsV3 } from '../../chain/chain';
+import { MultisigWallet } from '../multisig-wallet';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -138,6 +139,22 @@ describe('railgun-wallet', () => {
         11878614856120328179849762231924033298788609151532558727282528569229552954628n,
       ],
     });
+  });
+
+  it('Should get multi-sig wallet from sharedViewingKey', async () => {
+
+
+    const testSharedViewingKey = '82a57670726976d94034326232623861643234306331323630396633623265363865656137613636373330306437373332633335346238373338343266373433313135313836303066a473707562d94061316166356531353935616330303736303734646465653034323737356230363365366434653666313966613632633333323935636336643363646635313165'
+    const multiSigWallet = await MultisigWallet.fromShareableViewingKey(
+      db,
+      testEncryptionKey,
+      testSharedViewingKey,
+      undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
+    );
+
+    const address = multiSigWallet.getAddress()
+    expect(address).to.eq('0zk1qy2ukgmgcks06peftlkz4csqyxgdsl79qucx5gufxga5p346duevlrv7j6fe3z53llk55mjaa43ds8l0lq3r5nnjcf4zfkzgwnugrxc9emu7v44nn3w4kxwxqa3', 'Generated incorrect railgun address for multi-sig')
   });
 
   it('Should get address keys', async () => {

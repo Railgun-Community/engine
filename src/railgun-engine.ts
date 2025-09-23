@@ -73,6 +73,7 @@ import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-va
 import { Registry } from './utils/registry';
 import { stringToBigInt } from './utils/bigint';
 import { isTransactCommitment } from './utils/commitment';
+import { MultisigWallet, type WakuConnector } from './wallet/multisig-wallet';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -2062,6 +2063,26 @@ class RailgunEngine extends EventEmitter {
     return wallet;
   }
 
+    /**
+   * Load existing wallet
+   * @param {string} encryptionKey - encryption key of wallet
+   * @param {string} id - wallet ID
+   * @returns wallet
+   */
+  async loadExistingMultiSigWallet(
+    encryptionKey: string, 
+    id: string, 
+    waku: WakuConnector
+  ): Promise<MultisigWallet> {
+    if (isDefined(this.wallets[id])) {
+      return this.wallets[id] as MultisigWallet;
+    }
+    const wallet = await MultisigWallet.loadExisting(this.db, encryptionKey, id, this.prover) as MultisigWallet
+    await wallet.setConnector(waku)
+    await this.loadWallet(wallet);
+    return wallet;
+  }
+
   async deleteWallet(id: string) {
     this.unloadWallet(id);
     return AbstractWallet.delete(this.db, id);
@@ -2104,6 +2125,25 @@ class RailgunEngine extends EventEmitter {
       creationBlockNumbers,
       this.prover,
     );
+    await this.loadWallet(wallet);
+    return wallet;
+  }
+
+  async createMultiSigWalletFromShareableViewingKey(
+    encryptionKey: string,
+    shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
+     waku: WakuConnector
+  ): Promise<MultisigWallet> {
+    const wallet = await MultisigWallet.fromShareableViewingKey(
+      this.db,
+      encryptionKey,
+      shareableViewingKey,
+      creationBlockNumbers,
+      this.prover,
+    ) as MultisigWallet
+    await wallet.setConnector(waku)
+
     await this.loadWallet(wallet);
     return wallet;
   }
