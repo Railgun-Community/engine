@@ -2078,7 +2078,7 @@ class RailgunEngine extends EventEmitter {
       return this.wallets[id] as MultisigWallet;
     }
     const wallet = await MultisigWallet.loadExisting(this.db, encryptionKey, id, this.prover) as MultisigWallet
-    await wallet.setConnector(waku)
+    wallet.setConnector(waku)
     await this.loadWallet(wallet);
     return wallet;
   }
@@ -2142,7 +2142,7 @@ class RailgunEngine extends EventEmitter {
       creationBlockNumbers,
       this.prover,
     ) as MultisigWallet
-    await wallet.setConnector(waku)
+    wallet.setConnector(waku)
 
     await this.loadWallet(wallet);
     return wallet;

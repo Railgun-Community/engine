@@ -1,26 +1,29 @@
 import { Signature } from '@railgun-community/circomlibjs';
 import msgpack from 'msgpack-lite';
-import { PublicInputsRailgun, type ShareableViewingKeyData } from '../models';
+import { PublicInputsRailgun, type ShareableViewingKeyData, type ViewOnlyWalletData } from '../models';
 import { ViewOnlyWallet } from './view-only-wallet';
 import { Babyjubjub, type SpendingPublicKey, type ViewingKeyPair } from '../key-derivation';
-import { ByteLength, ByteUtils } from '../utils';
+import { ByteLength, ByteUtils, getPublicViewingKey } from '../utils';
 import { isDefined } from '../utils/is-defined';
 import type { Database } from '../database/database';
 import type { Prover } from '../prover/prover';
 import { AbstractWallet } from './abstract-wallet';
+import { poseidon } from '../utils/poseidon';
+import { sha256 } from '../utils/hash';
 
 // import { poseidon } from '../utils/poseidon';
 
 
 export type WakuConnector = {
+  myId: number;
 
   symmetricKey: string;
   sessionId: string;
-  sign: (publicInputs: PublicInputsRailgun, sessionId: string, symmetricKey: string) => Promise<Signature>
+  sign: (myId: number, sessionId: string, symmetricKey: string, publicInputs: PublicInputsRailgun, expectedHash: bigint) => Promise<Signature>
 
 }
 
-class MultisigWallet extends ViewOnlyWallet {
+class MultisigWallet extends AbstractWallet {
 
   waku: WakuConnector | undefined
 
@@ -30,61 +33,64 @@ class MultisigWallet extends ViewOnlyWallet {
 
   sessionId: string | undefined
 
-  protected static async createWallet(
-    id: string,
-    db: Database,
-    shareableViewingKey: string,
-    creationBlockNumbers: Optional<number[][]>,
-    prover: Prover,
-  ) {
-    const { viewingPrivateKey, spendingPublicKey } =
-      AbstractWallet.getKeysFromShareableViewingKey(shareableViewingKey);
-    const viewingKeyPair: ViewingKeyPair = await ViewOnlyWallet.getViewingKeyPair(
-      viewingPrivateKey,
-    );
-    return new MultisigWallet(
-      id,
-      db,
-      viewingKeyPair,
-      spendingPublicKey,
-      creationBlockNumbers,
-      prover,
-    );
-  }
+  myId: number | undefined;
 
-    /**
-   * Create a wallet from mnemonic
-   * @param {Database} db - database
-   * @param {BytesData} encryptionKey - encryption key to use with database
-   * @param {string} shareableViewingKey - encoded keys to load wallet from
-   * @returns {Wallet} Wallet
-   */
-  static async fromShareableViewingKey(
-    db: Database,
-    encryptionKey: string,
-    shareableViewingKey: string,
-    creationBlockNumbers: Optional<number[][]>,
-    prover: Prover,
-  ): Promise<AbstractWallet> {
-    const id = MultisigWallet.generateID(shareableViewingKey);
+  // protected static async createWallet(
+  //   id: string,
+  //   db: Database,
+  //   shareableViewingKey: string,
+  //   creationBlockNumbers: Optional<number[][]>,
+  //   prover: Prover,
+  // ) {
+  //   const { viewingPrivateKey, spendingPublicKey } =
+  //     AbstractWallet.getKeysFromShareableViewingKey(shareableViewingKey);
+  //   const viewingKeyPair: ViewingKeyPair = await ViewOnlyWallet.getViewingKeyPair(
+  //     viewingPrivateKey,
+  //   );
+  //   return new MultisigWallet(
+  //     id,
+  //     db,
+  //     viewingKeyPair,
+  //     spendingPublicKey,
+  //     creationBlockNumbers,
+  //     prover,
+  //   );
+  // }
 
-    // Write encrypted shareableViewingKey to DB
-    await AbstractWallet.write(db, id, encryptionKey, {
-      shareableViewingKey,
-      creationBlockNumbers,
-    });
+//   /**
+//  * Create a wallet from mnemonic
+//  * @param {Database} db - database
+//  * @param {BytesData} encryptionKey - encryption key to use with database
+//  * @param {string} shareableViewingKey - encoded keys to load wallet from
+//  * @returns {Wallet} Wallet
+//  */
+//   static async fromShareableViewingKey(
+//     db: Database,
+//     encryptionKey: string,
+//     shareableViewingKey: string,
+//     creationBlockNumbers: Optional<number[][]>,
+//     prover: Prover,
+//   ): Promise<AbstractWallet> {
+//     const id = MultisigWallet.generateID(shareableViewingKey);
 
-    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
-  }
+//     // Write encrypted shareableViewingKey to DB
+//     await AbstractWallet.write(db, id, encryptionKey, {
+//       shareableViewingKey,
+//       creationBlockNumbers,
+//     });
+
+//     return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
+//   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async setConnector(waku: WakuConnector){
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+  setConnector(waku: WakuConnector) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     this.waku = waku
     // generateSymmetric key
     // lets just hash this for ease, we dont need anything 'too over the top' here.
     this.symmetricKey = waku.symmetricKey
     this.sessionId = waku.sessionId
+    this.myId = waku.myId
     console.log("symmetricKey Generated", this.symmetricKey)
     console.log("symmetricKey Generated", this.sessionId)
     // const pubk = await getPublicViewingKey(this.viewingKeyPair.privateKey)
@@ -115,22 +121,23 @@ class MultisigWallet extends ViewOnlyWallet {
     // initiator will send publicInputs out in a 'signing-request'
     //  - awaits threshold 'partial-signatures'
     //  - computes final signature & returns to here...
-    
-    if ( 
-      !isDefined(this.waku) || 
-      !isDefined(this.symmetricKey) || 
-      !isDefined(this.sessionId)
+
+    if (
+      !isDefined(this.waku) ||
+      !isDefined(this.symmetricKey) ||
+      !isDefined(this.sessionId) ||
+      !isDefined(this.myId)
     ) {
       throw new Error("Waku Connector not properly initialized.")
     }
-    // const msg = poseidon([publicInputs.merkleRoot, publicInputs.boundParamsHash, ...publicInputs.nullifiers, ...publicInputs.commitmentsOut]);
+    const msg = poseidon([publicInputs.merkleRoot, publicInputs.boundParamsHash, ...publicInputs.nullifiers, ...publicInputs.commitmentsOut]);
 
-    return await this.waku.sign(publicInputs, this.sessionId, this.symmetricKey)
+    return await this.waku.sign(this.myId, this.sessionId, this.symmetricKey, publicInputs, msg)
     // throw new Error('Signer not implemented for multisig.');
   }
 
 
-  // use this prior to 'create-wallet' in wallet -> engine interaction
+  // // use this prior to 'create-wallet' in wallet -> engine interaction
   static getShareableViewingKey(spendingPublicKey: SpendingPublicKey, viewingPrivateKey: Uint8Array): string {
     const spendingPublicKeyString = Babyjubjub.packPoint(spendingPublicKey).toString('hex');
     // console.log('spendingPublicKey', spendingPublicKeyString)
@@ -141,6 +148,98 @@ class MultisigWallet extends ViewOnlyWallet {
     console.log('data', data)
     return msgpack.encode(data).toString('hex');
   }
+  
+  /**
+   * Calculate Wallet ID from mnemonic and derivation path index
+   * @returns {string} hash of mnemonic and index
+   */
+  private static generateID(shareableViewingKey: string): string {
+    return sha256(shareableViewingKey);
+  }
+
+  private static async getViewingKeyPair(viewingPrivateKey: string): Promise<ViewingKeyPair> {
+    const vpk = ByteUtils.hexStringToBytes(viewingPrivateKey);
+    return {
+      privateKey: vpk,
+      pubkey: await getPublicViewingKey(vpk),
+    };
+  }
+
+  private static async createWallet(
+    id: string,
+    db: Database,
+    shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
+  ) {
+    const { viewingPrivateKey, spendingPublicKey } =
+      AbstractWallet.getKeysFromShareableViewingKey(shareableViewingKey);
+    const viewingKeyPair: ViewingKeyPair = await MultisigWallet.getViewingKeyPair(
+      viewingPrivateKey,
+    );
+    return new MultisigWallet(
+      id,
+      db,
+      viewingKeyPair,
+      spendingPublicKey,
+      creationBlockNumbers,
+      prover,
+    );
+  }
+
+  /**
+   * Create a wallet from mnemonic
+   * @param {Database} db - database
+   * @param {BytesData} encryptionKey - encryption key to use with database
+   * @param {string} shareableViewingKey - encoded keys to load wallet from
+   * @returns {Wallet} Wallet
+   */
+  static async fromShareableViewingKey(
+    db: Database,
+    encryptionKey: string,
+    shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
+  ): Promise<AbstractWallet> {
+    const id = MultisigWallet.generateID(shareableViewingKey);
+
+    // Write encrypted shareableViewingKey to DB
+    await AbstractWallet.write(db, id, encryptionKey, {
+      shareableViewingKey,
+      creationBlockNumbers,
+    });
+
+    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
+  }
+
+  /**
+   * Loads wallet data from database and creates wallet object
+   * @param {Database} db - database
+   * @param {BytesData} encryptionKey - encryption key to use with database
+   * @param {string} id - wallet id
+   * @returns {Wallet} Wallet
+   */
+  static async loadExisting(
+    db: Database,
+    encryptionKey: string,
+    id: string,
+    prover: Prover,
+  ): Promise<AbstractWallet> {
+    // Get encrypted shareableViewingKey from DB
+    const { shareableViewingKey, creationBlockNumbers } = (await AbstractWallet.read(
+      db,
+      id,
+      encryptionKey,
+    )) as ViewOnlyWalletData;
+    if (!shareableViewingKey) {
+      throw new Error(
+        'Incorrect wallet type: ViewOnly wallet requires stored shareableViewingKey.',
+      );
+    }
+
+    return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
+  }
+
 }
 
 export { MultisigWallet };
