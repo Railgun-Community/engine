@@ -2,7 +2,7 @@ import { Signature } from '@railgun-community/circomlibjs';
 import msgpack from 'msgpack-lite';
 import { PublicInputsRailgun, type ShareableViewingKeyData, type ViewOnlyWalletData } from '../models';
 import { ViewOnlyWallet } from './view-only-wallet';
-import { Babyjubjub, type SpendingPublicKey, type ViewingKeyPair } from '../key-derivation';
+import { Babyjubjub, type SpendingKeyPair, type SpendingPublicKey, type ViewingKeyPair, type WalletNode } from '../key-derivation';
 import { ByteLength, ByteUtils, getPublicViewingKey } from '../utils';
 import { isDefined } from '../utils/is-defined';
 import type { Database } from '../database/database';
@@ -10,6 +10,7 @@ import type { Prover } from '../prover/prover';
 import { AbstractWallet } from './abstract-wallet';
 import { poseidon } from '../utils/poseidon';
 import { sha256 } from '../utils/hash';
+import { ZERO_ADDRESS } from '../utils/constants';
 
 // import { poseidon } from '../utils/poseidon';
 
@@ -34,6 +35,8 @@ class MultisigWallet extends AbstractWallet {
   sessionId: string | undefined
 
   myId: number | undefined;
+
+  spendPubKey: SpendingPublicKey;
 
   // protected static async createWallet(
   //   id: string,
@@ -81,6 +84,26 @@ class MultisigWallet extends AbstractWallet {
 
 //     return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
 //   }
+
+  constructor(
+    id: string,
+    db: Database,
+    viewingKeyPair: ViewingKeyPair,
+    spendingPublicKey: SpendingPublicKey,
+    creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
+  ){
+    super(
+      id,
+      db,
+      viewingKeyPair,
+      spendingPublicKey,
+      creationBlockNumbers,
+      prover
+    )
+    this.spendPubKey = spendingPublicKey
+
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setConnector(waku: WakuConnector) {
@@ -174,6 +197,7 @@ class MultisigWallet extends AbstractWallet {
   ) {
     const { viewingPrivateKey, spendingPublicKey } =
       AbstractWallet.getKeysFromShareableViewingKey(shareableViewingKey);
+
     const viewingKeyPair: ViewingKeyPair = await MultisigWallet.getViewingKeyPair(
       viewingPrivateKey,
     );
@@ -239,6 +263,38 @@ class MultisigWallet extends AbstractWallet {
 
     return this.createWallet(id, db, shareableViewingKey, creationBlockNumbers, prover);
   }
+
+  async getSpendingKeyPair(): Promise<SpendingKeyPair>{
+
+    return {
+      privateKey: new Uint8Array(32), // not used except for in the wallet.sign() function 
+      pubkey: this.spendPubKey
+    }
+  }
+
+  private async loadSpendingKey(encryptionKey: string): Promise<WalletNode> {
+    if(false){
+      console.log((this.id))
+    }
+
+    return {} as WalletNode
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getChainAddress(encryptionKey: string): Promise<string> {
+    this.getAddress()
+      return ZERO_ADDRESS
+  }
+
+  // need these 
+  /*
+    src/services/railgun/wallets/wallets.ts:67:3 - error TS2322: Type 'RailgunWallet | MultisigWallet' is not assignable to type 'RailgunWallet'.
+      Type 'MultisigWallet' is missing the following properties from type 'RailgunWallet': getSpendingKeyPair, loadSpendingKey, getChainAddress
+
+    67   return wallet;
+        ~~~~~~~~~~~~~~
+
+  */
 
 }
 
