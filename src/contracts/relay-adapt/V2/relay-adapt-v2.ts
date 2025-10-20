@@ -119,12 +119,13 @@ export class RelayAdaptV2Contract {
     unshieldAddress: string,
     random31Bytes: string,
     useDummyProof: boolean,
+    sendWithPublicWallet : boolean,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
     );
 
-    const requireSuccess = useDummyProof;
+    const requireSuccess = sendWithPublicWallet;
     return this.populateRelay(transactions, random31Bytes, requireSuccess, orderedCalls, {});
   }
 
