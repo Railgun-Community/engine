@@ -35,6 +35,7 @@ export class RelayAdaptVersionedSmartContracts {
     unshieldAddress: string,
     random31Bytes: string,
     useDummyProof: boolean,
+    sendWithPublicWallet: boolean,
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
@@ -44,6 +45,7 @@ export class RelayAdaptVersionedSmartContracts {
           unshieldAddress,
           random31Bytes,
           useDummyProof,
+          sendWithPublicWallet,
         );
       }
       case TXIDVersion.V3_PoseidonMerkle: {

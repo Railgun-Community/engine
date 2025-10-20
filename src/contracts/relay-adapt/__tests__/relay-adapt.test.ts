@@ -289,6 +289,7 @@ describe('relay-adapt', function test() {
         ethersWallet.address,
         random,
         true, // useDummyProof
+        false, // sendWithPublicWallet
       );
 
     relayTransactionGasEstimate.from = DEAD_ADDRESS;
@@ -387,6 +388,7 @@ describe('relay-adapt', function test() {
       ethersWallet.address,
       random,
       true,
+      false, // sendWithPublicWallet
     );
 
     // 6: Send relay transaction.
