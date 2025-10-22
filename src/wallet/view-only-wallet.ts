@@ -99,7 +99,7 @@ class ViewOnlyWallet extends AbstractWallet {
     )) as ViewOnlyWalletData;
     if (!shareableViewingKey) {
       throw new Error(
-        'Incorrect wallet type: ViewOnly wallet requires stored shareableViewingKey.',
+        'Incorrect wallet type: ViewOnly wallet requires stored shareableViewingKey. ',
       );
     }
 
