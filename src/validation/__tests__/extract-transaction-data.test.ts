@@ -302,7 +302,6 @@ describe('extract-transaction-data', () => {
       transactions,
       MOCK_ETH_WALLET_ADDRESS,
       RANDOM_RELAY_ADAPT,
-      false, // useDummyProof
       false, // sendWithPublicWallet
     );
     const firstNoteERC20AmountMap = await extractFirstNoteERC20AmountMapFromTransactionRequest(
@@ -344,7 +343,6 @@ describe('extract-transaction-data', () => {
       transactions,
       MOCK_ETH_WALLET_ADDRESS,
       RANDOM_RELAY_ADAPT,
-      false, // useDummyProof
       false, // sendWithPublicWallet
     );
     const firstNoteERC20AmountMap = await extractFirstNoteERC20AmountMapFromTransactionRequest(

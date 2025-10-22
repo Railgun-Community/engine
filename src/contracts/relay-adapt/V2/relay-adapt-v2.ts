@@ -118,8 +118,7 @@ export class RelayAdaptV2Contract {
     transactions: TransactionStructV2[],
     unshieldAddress: string,
     random31Bytes: string,
-    useDummyProof: boolean,
-    sendWithPublicWallet : boolean,
+    sendWithPublicWallet: boolean,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
