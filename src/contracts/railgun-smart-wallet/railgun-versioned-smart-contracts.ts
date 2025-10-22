@@ -224,6 +224,8 @@ export class RailgunVersionedSmartContracts {
     chain: Chain,
     transactions: (TransactionStructV2 | TransactionStructV3)[],
   ): Promise<ContractTransaction> {
+    console.log('GENERATE TRANSACT: ', txidVersion, chain, transactions);
+
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
         const contractV2 = ContractStore.railgunSmartWalletContracts.getOrThrow(null, chain);
