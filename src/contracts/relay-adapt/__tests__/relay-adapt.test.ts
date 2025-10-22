@@ -288,6 +288,7 @@ describe('relay-adapt', function test() {
         dummyTransactions,
         ethersWallet.address,
         random,
+        true, // useDummyProof
         false, // sendWithPublicWallet
       );
 
@@ -386,6 +387,7 @@ describe('relay-adapt', function test() {
       provedTransactions,
       ethersWallet.address,
       random,
+      true, // useDummyProof
       false, // sendWithPublicWallet
     );
 

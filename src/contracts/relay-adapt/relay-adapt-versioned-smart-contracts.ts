@@ -34,6 +34,7 @@ export class RelayAdaptVersionedSmartContracts {
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     unshieldAddress: string,
     random31Bytes: string,
+    useDummyProof: boolean,
     sendWithPublicWallet: boolean,
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
@@ -43,6 +44,7 @@ export class RelayAdaptVersionedSmartContracts {
           transactions as TransactionStructV2[],
           unshieldAddress,
           random31Bytes,
+          useDummyProof,
           sendWithPublicWallet,
         );
       }
