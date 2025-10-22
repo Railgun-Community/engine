@@ -517,9 +517,11 @@ describe('railgun-engine', function test() {
       return;
     }
 
+    console.log('DEBUG: Test starting - txidVersion:', txidVersion);
     const initialBalance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
+    console.log('DEBUG: Initial balance:', initialBalance);
     expect(initialBalance).to.equal(undefined);
 
     const address = wallet.getAddress(chain);
@@ -553,6 +555,7 @@ describe('railgun-engine', function test() {
       ),
     );
 
+    console.log('DEBUG: Generating transactions...');
     const { provedTransactions, preTransactionPOIsPerTxidLeafPerList } =
       await transactionBatch.generateTransactions(
         engine.prover,
@@ -565,17 +568,20 @@ describe('railgun-engine', function test() {
         },
         true, // shouldGeneratePreTransactionPOIs
       );
+    console.log('DEBUG: Generated', provedTransactions.length, 'proved transactions');
 
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList).length).to.equal(1);
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList[MOCK_LIST_KEY]).length).to.equal(1);
 
     TestPOINodeInterface.overridePOIsListStatus = TXOPOIListStatus.Missing;
 
+    console.log('DEBUG: Generating transact transaction...');
     const transact = await RailgunVersionedSmartContracts.generateTransact(
       txidVersion,
       chain,
       provedTransactions,
     );
+    console.log('DEBUG: Generated transact transaction, data length:', transact.data?.length);
 
     const isValidPOI = await POIValidation.isValidSpendableTransaction(
       txidVersion,
@@ -591,8 +597,11 @@ describe('railgun-engine', function test() {
     );
     expect(isValidPOI.isValid).to.equal(true, isValidPOI.error);
 
+    console.log('DEBUG: Sending transaction to blockchain...');
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
+    console.log('DEBUG: Transaction sent, hash:', transactTx.hash);
     const transactReceipt = await transactTx.wait();
+    console.log('DEBUG: Transaction confirmed, block:', transactReceipt?.blockNumber);
 
     if (!transactReceipt) {
       throw new Error('Failed to get transact receipt');
