@@ -521,14 +521,13 @@ describe('railgun-engine', function test() {
       WalletBalanceBucket.Spendable,
     ]);
     expect(initialBalance).to.equal(undefined);
+
     const address = wallet.getAddress(chain);
     const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
-
 
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
-
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     const tokenData = getTokenDataERC20(tokenAddress);
@@ -618,7 +617,6 @@ describe('railgun-engine', function test() {
       ),
       ByteLength.UINT_256,
     );
-
     const blindedCommitmentIn = BlindedCommitment.getForShieldOrTransact(
       shieldCommitment,
       shield.notePublicKey,
