@@ -521,27 +521,17 @@ describe('railgun-engine', function test() {
       WalletBalanceBucket.Spendable,
     ]);
     expect(initialBalance).to.equal(undefined);
-
-    console.log('DEBUG: initialBalance', initialBalance)
-
     const address = wallet.getAddress(chain);
     const shield = await shieldTestTokens(address, BigInt(110000) * DECIMALS_18);
 
-
-
-    console.log('DEBUG: address and shield', shield)
 
     const balance = await wallet.getBalanceERC20(txidVersion, chain, tokenAddress, [
       WalletBalanceBucket.Spendable,
     ]);
 
-    console.log('DEBUG: balance: ', balance)
-
     expect(balance).to.equal(BigInt('109725000000000000000000'));
 
     const tokenData = getTokenDataERC20(tokenAddress);
-
-    console.log('DEBUG: tokendata: ', tokenData);
 
     // Create transaction
     const transactionBatch = new TransactionBatch(chain);
@@ -551,8 +541,6 @@ describe('railgun-engine', function test() {
       tokenData,
     });
 
-
-    console.log('DEBUG: transactionBatch: ', transactionBatch);
     // Add output for mock Broadcaster
     transactionBatch.addOutput(
       TransactNote.createTransfer(
@@ -579,9 +567,6 @@ describe('railgun-engine', function test() {
         true, // shouldGeneratePreTransactionPOIs
       );
 
-
-    console.log('DEBUG: provedTransactions: preTransactionPOIsPerTxidLeafPerList ', provedTransactions, preTransactionPOIsPerTxidLeafPerList);
-
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList).length).to.equal(1);
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList[MOCK_LIST_KEY]).length).to.equal(1);
 
@@ -592,10 +577,6 @@ describe('railgun-engine', function test() {
       chain,
       provedTransactions,
     );
-
-
-    console.log('DEBUG: transact ', transact);
-
 
     const isValidPOI = await POIValidation.isValidSpendableTransaction(
       txidVersion,
@@ -612,12 +593,7 @@ describe('railgun-engine', function test() {
     expect(isValidPOI.isValid).to.equal(true, isValidPOI.error);
 
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
-
-    console.log('transactTx: ', transactTx);
-
     const transactReceipt = await transactTx.wait();
-
-    console.log('transactReceipt: ', transactReceipt);
 
     if (!transactReceipt) {
       throw new Error('Failed to get transact receipt');
@@ -642,8 +618,6 @@ describe('railgun-engine', function test() {
       ),
       ByteLength.UINT_256,
     );
-
-    console.log('shieldCommitment: ', shieldCommitment);
 
     const blindedCommitmentIn = BlindedCommitment.getForShieldOrTransact(
       shieldCommitment,
