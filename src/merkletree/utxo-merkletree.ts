@@ -25,7 +25,7 @@ export class UTXOMerkletree extends Merkletree<Commitment> {
     txidVersion: TXIDVersion,
     merklerootValidator: MerklerootValidator,
   ) {
-    super(db, chain, txidVersion, merklerootValidator, CommitmentProcessingGroupSize.XXXLarge);
+    super(db, chain, txidVersion, merklerootValidator, CommitmentProcessingGroupSize.XXXXLarge);
   }
 
   static async create(

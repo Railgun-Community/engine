@@ -40,7 +40,7 @@ export class V2Events {
     fees: Optional<bigint[]>,
     timestamp: Optional<number>,
   ): ShieldCommitment[] {
-    const shieldCommitments = preImages.map((commitmentPreImage, index) => {
+    const shieldCommitments = (preImages.length ? preImages : []).map((commitmentPreImage, index) => {
       const npk = ByteUtils.formatToByteLength(commitmentPreImage.npk, ByteLength.UINT_256);
       const tokenData = serializeTokenData(
         commitmentPreImage.token.tokenAddress,
@@ -231,21 +231,18 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Shield events');
     }
-    await Promise.all(
-      filtered.map(async (log) => {
-        const { args, transactionHash, blockNumber } = log;
-        const { fees } = args;
-        return eventsListener(txidVersion, [
-          V2Events.formatShieldEvent(
-            args,
-            transactionHash,
-            blockNumber,
-            fees,
-            undefined, // timestamp
-          ),
-        ]);
-      }),
-    );
+    const formatted = filtered.map( (log) => {
+      const { args, transactionHash, blockNumber } = log;
+      const { fees } = args;
+      return V2Events.formatShieldEvent(
+          args,
+          transactionHash,
+          blockNumber,
+          fees,
+          undefined, // timestamp
+        )
+    })
+    return eventsListener(txidVersion, formatted)
   }
 
   static async processShieldEvents_LegacyShield_PreMar23(
@@ -266,27 +263,22 @@ export class V2Events {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       log.args = args as any;
     }
-
     const filtered = logs.filter((log) => log.args);
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Legacy Shield events');
     }
-
-    await Promise.all(
-      filtered.map(async (event) => {
-        const { args, transactionHash, blockNumber } = event;
-        const fees: Optional<bigint[]> = undefined;
-        return eventsListener(txidVersion, [
-          V2Events.formatShieldEvent(
-            args,
-            transactionHash,
-            blockNumber,
-            fees,
-            undefined, // timestamp
-          ),
-        ]);
-      }),
-    );
+    const formatted = filtered.map( (event) => {
+      const { args, transactionHash, blockNumber } = event;
+      const fees: Optional<bigint[]> = undefined;
+      return V2Events.formatShieldEvent(
+          args,
+          transactionHash,
+          blockNumber,
+          fees,
+          undefined, // timestamp
+        )
+    })
+    return eventsListener(txidVersion, formatted)
   }
 
   static async processTransactEvents(
@@ -298,19 +290,16 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Transact events');
     }
-    await Promise.all(
-      filtered.map(async (event) => {
-        const { args, transactionHash, blockNumber } = event;
-        return eventsListener(txidVersion, [
-          V2Events.formatTransactEvent(
-            args,
-            transactionHash,
-            blockNumber,
-            undefined, // timestamp
-          ),
-        ]);
-      }),
-    );
+    const formatted = filtered.map((event) => {
+      const { args, transactionHash, blockNumber } = event;
+        return V2Events.formatTransactEvent(
+          args,
+          transactionHash,
+          blockNumber,
+          undefined, // timestamp
+        )
+    })
+    return await eventsListener(txidVersion, formatted)
   }
 
   static async processUnshieldEvents(
@@ -318,26 +307,21 @@ export class V2Events {
     eventsUnshieldListener: EventsUnshieldListener,
     logs: UnshieldEvent.Log[],
   ): Promise<void> {
-    const unshields: UnshieldStoredEvent[] = [];
-
     const filtered = logs.filter((log) => log.args);
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Unshield events');
     }
-    for (const log of filtered) {
-      const { args, transactionHash, blockNumber } = log;
-      unshields.push(
-        V2Events.formatUnshieldEvent(
-          args,
-          transactionHash,
-          blockNumber,
-          log.index,
-          undefined, // timestamp
-        ),
-      );
-    }
-
-    await eventsUnshieldListener(txidVersion, unshields);
+    const formatted = filtered.map((event) => {
+      const { args, transactionHash, blockNumber } = event;
+      return  V2Events.formatUnshieldEvent(
+        args,
+        transactionHash,
+        blockNumber,
+        event.index,
+        undefined, // timestamp
+      )
+    })
+    await eventsUnshieldListener(txidVersion, formatted);
   }
 
   static formatNullifiedEvents(

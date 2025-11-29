@@ -123,6 +123,7 @@ import { extractFirstNoteERC20AmountMapFromTransactionRequest } from '../validat
 import { Registry } from '../utils/registry';
 import { CURRENT_UTXO_MERKLETREE_HISTORY_VERSION, ZERO_32_BYTE_VALUE } from '../utils/constants';
 import { delay } from '../utils/promises';
+import { CommitmentProcessingGroupSize } from '../models/merkletree-types';
 
 type ScannedDBCommitment = PutBatch<string, Buffer>;
 
@@ -2870,7 +2871,7 @@ abstract class AbstractWallet extends EventEmitter {
         // Create sparse array of tree
         const treeHeight = await utxoMerkletree.getTreeLength(treeIndex);
 
-        const batchSize = 2000;
+        const batchSize = CommitmentProcessingGroupSize.XXLarge;
         const totalLeavesToScan = treeHeight - startScanHeight;
         const totalBatches = Math.ceil(totalLeavesToScan / batchSize);
 

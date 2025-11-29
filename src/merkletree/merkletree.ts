@@ -20,6 +20,7 @@ import {
   TREE_MAX_ITEMS,
 } from '../models/merkletree-types';
 import { TXIDVersion } from '../models';
+import { delay } from '../utils/promises';
 
 const INVALID_MERKLE_ROOT_ERROR_MESSAGE = 'Cannot insert leaves. Invalid merkle root.';
 
@@ -52,7 +53,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
   isScanning = false;
 
-  private processingWriteQueueTrees: { [tree: number]: boolean } = {};
+  private processingWriteQueueLock: { [tree: number]: Promise<void> } = {};
 
   invalidMerklerootDetailsByTree: { [tree: number]: InvalidMerklerootDetails } = {};
 
@@ -545,7 +546,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
    * @param startIndex - Starting index of leaves to insert
    * @param leaves - Leaves to insert
    */
-  private async insertLeaves(tree: number, startIndex: number, leaves: T[]): Promise<void> {
+  private async insertLeaves(tree: number, startIndex: number, leaves: T[], skipValidation = false): Promise<void> {
     // Start insertion at startIndex
     let index = startIndex;
 
@@ -557,7 +558,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
 
     firstLevelHashWriteGroup[0] = [];
 
-    EngineDebug.log(`insertLeaves: startIndex ${startIndex}, group length ${leaves.length}`);
+    EngineDebug.log(`insertLeaves: tree: ${tree} startIndex ${startIndex}, group length ${leaves.length}`);
 
     // Push values to leaves of write index
     for (const leaf of leaves) {
@@ -590,14 +591,20 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       rootNode,
     );
 
-    if (validRoot) {
-      await this.validRootCallback(tree, lastLeafIndex);
+    if(!skipValidation){
+      if (validRoot) {
+        await this.validRootCallback(tree, lastLeafIndex);
+      } else {
+        await this.invalidRootCallback(tree, lastLeafIndex, leaves[leafIndex]);
+        throw new Error(
+          `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} [${this.merkletreeType}] Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
+        );
+      }
     } else {
-      await this.invalidRootCallback(tree, lastLeafIndex, leaves[leafIndex]);
-      throw new Error(
-        `${INVALID_MERKLE_ROOT_ERROR_MESSAGE} [${this.merkletreeType}] Tree ${tree}, startIndex ${startIndex}, group length ${leaves.length}.`,
-      );
+
+      await this.validRootCallback(tree, lastLeafIndex);
     }
+
 
     // If new root is valid, write to DB.
     await this.writeTreeToDB(tree, hashWriteGroup, dataWriteGroup);
@@ -705,91 +712,109 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     lastKnownInvalidLeaf: T,
   ): Promise<void>;
 
-  private async processWriteQueueForTree(treeIndex: number): Promise<void> {
-    let processingGroupSize = this.defaultCommitmentProcessingSize;
+  private async processWriteQueueForTree(treeIndex: number, skipValidation = false): Promise<void> {
+    const previousPromise = this.processingWriteQueueLock[treeIndex] ?? Promise.resolve();
 
-    let currentTreeLength = await this.getTreeLength(treeIndex);
-    const treeWriteQueue = this.writeQueue[treeIndex];
-    for (const writeQueueKey of Object.keys(treeWriteQueue)) {
-      if (!isDefined(writeQueueKey)) continue;
-      const writeQueueIndex = Number(writeQueueKey);
-      const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
-      if (alreadyAddedToTree) {
-        delete treeWriteQueue[writeQueueIndex];
+    let resolveLock: () => void = () => {};
+    const myPromise = new Promise<void>((resolve) => {
+      resolveLock = resolve;
+    });
+    this.processingWriteQueueLock[treeIndex] = myPromise;
+
+    try {
+      await previousPromise;
+    } catch {
+      // Ignore error from previous promise
+    }
+
+    try {
+      let processingGroupSize = this.defaultCommitmentProcessingSize;
+
+      let currentTreeLength = await this.getTreeLength(treeIndex);
+      const treeWriteQueue = this.writeQueue[treeIndex];
+
+      if (!isDefined(treeWriteQueue)) {
+        return;
       }
-    }
 
-    if (this.processingWriteQueueTrees[treeIndex]) {
-      EngineDebug.log(
-        `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}] Already processing writeQueue. Killing re-process.`,
-      );
-      return;
-    }
-
-    while (isDefined(this.writeQueue[treeIndex])) {
-      // Process leaves as a group until we hit an invalid merkleroot.
-      // Then, process each single item.
-      // This optimizes for fewer `merklerootValidator` calls, while still protecting
-      // users against invalid roots and broken trees.
-
-      this.processingWriteQueueTrees[treeIndex] = true;
-
-      currentTreeLength = await this.getTreeLength(treeIndex);
-
-      const processWriteQueuePrefix = `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}]`;
-
-      try {
-        const processedAny = await this.processWriteQueue(
-          treeIndex,
-          currentTreeLength,
-          processingGroupSize,
-        );
-        if (!processedAny) {
-          EngineDebug.log(`${processWriteQueuePrefix} No more events to process.`);
-          break;
+      for (const writeQueueKey of Object.keys(treeWriteQueue)) {
+        if (!isDefined(writeQueueKey)) continue;
+        const writeQueueIndex = Number(writeQueueKey);
+        const alreadyAddedToTree = writeQueueIndex < currentTreeLength;
+        if (alreadyAddedToTree) {
+          delete treeWriteQueue[writeQueueIndex];
         }
-      } catch (cause) {
-        if (!(cause instanceof Error)) {
-          EngineDebug.log(`${processWriteQueuePrefix} Unknown error found. ${cause as string}`);
-          return;
-        }
-        const ignoreInTests = true;
-        const err = new Error('Failed to process merkletree write queue', { cause });
-        EngineDebug.error(err, ignoreInTests);
-        if (cause.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE)) {
-          const nextProcessingGroupSize = Merkletree.nextProcessingGroupSize(processingGroupSize);
-          if (nextProcessingGroupSize) {
-            EngineDebug.log(
-              `${processWriteQueuePrefix} Invalid merkleroot found. Processing with group size ${nextProcessingGroupSize}.`,
-            );
-            processingGroupSize = nextProcessingGroupSize;
+      }
+
+      while (isDefined(this.writeQueue[treeIndex])) {
+        // Process leaves as a group until we hit an invalid merkleroot.
+        // Then, process each single item.
+        // This optimizes for fewer `merklerootValidator` calls, while still protecting
+        // users against invalid roots and broken trees.
+
+        currentTreeLength = await this.getTreeLength(treeIndex);
+
+        const processWriteQueuePrefix = `[processWriteQueueForTree: ${this.chain.type}:${this.chain.id}]`;
+
+        try {
+          const processedAny = await this.processWriteQueue(
+            treeIndex,
+            currentTreeLength,
+            processingGroupSize,
+            skipValidation
+          );
+          if (!processedAny) {
+            EngineDebug.log(`${processWriteQueuePrefix} No more events to process.`);
+            break;
+          }
+        } catch (cause) {
+          if (!(cause instanceof Error)) {
+            EngineDebug.log(`${processWriteQueuePrefix} Unknown error found. ${cause as string}`);
+            return;
+          }
+          const ignoreInTests = true;
+          const err = new Error('Failed to process merkletree write queue', { cause });
+          EngineDebug.error(err, ignoreInTests);
+          if (cause.message.startsWith(INVALID_MERKLE_ROOT_ERROR_MESSAGE)) {
+            const nextProcessingGroupSize = Merkletree.nextProcessingGroupSize(processingGroupSize);
+            if (nextProcessingGroupSize) {
+              EngineDebug.log(
+                `${processWriteQueuePrefix} Invalid merkleroot found. Processing with group size ${nextProcessingGroupSize}.`,
+              );
+              processingGroupSize = nextProcessingGroupSize;
+            } else {
+              EngineDebug.log(
+                `${processWriteQueuePrefix} Unable to process more events. Invalid merkleroot found.`,
+              );
+              break;
+            }
           } else {
+            // Unknown error.
             EngineDebug.log(
-              `${processWriteQueuePrefix} Unable to process more events. Invalid merkleroot found.`,
+              `${processWriteQueuePrefix} Unable to process more events. Unknown error.`,
             );
             break;
           }
-        } else {
-          // Unknown error.
-          EngineDebug.log(
-            `${processWriteQueuePrefix} Unable to process more events. Unknown error.`,
-          );
-          break;
+        }
+
+        // Delete queue for entire tree if necessary.
+        const noElementsInTreeWriteQueue = treeWriteQueue.reduce((x) => x + 1, 0) === 0;
+        if (noElementsInTreeWriteQueue) {
+          delete this.writeQueue[treeIndex];
         }
       }
-
-      // Delete queue for entire tree if necessary.
-      const noElementsInTreeWriteQueue = treeWriteQueue.reduce((x) => x + 1, 0) === 0;
-      if (noElementsInTreeWriteQueue) {
-        delete this.writeQueue[treeIndex];
+    } finally {
+      resolveLock();
+      if (this.processingWriteQueueLock[treeIndex] === myPromise) {
+        delete this.processingWriteQueueLock[treeIndex];
       }
     }
-
-    this.processingWriteQueueTrees[treeIndex] = false;
   }
 
   private static nextProcessingGroupSize(processingGroupSize: CommitmentProcessingGroupSize) {
     switch (processingGroupSize) {
+      case CommitmentProcessingGroupSize.XXXXLarge:
+        return CommitmentProcessingGroupSize.XXXLarge;
       case CommitmentProcessingGroupSize.XXXLarge:
         // Process with smaller group.
         return CommitmentProcessingGroupSize.XXLarge;
@@ -819,13 +844,14 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
     treeIndex: number,
     currentTreeLength: number,
     maxCommitmentGroupsToProcess: number,
+    skipValidation = false
   ): Promise<boolean> {
     // If there is an element in the write queue equal to the tree length, process it.
     const nextCommitmentGroup = this.writeQueue[treeIndex][currentTreeLength];
     if (!isDefined(nextCommitmentGroup)) {
-      // EngineDebug.log(
-      //   `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
-      // );
+      EngineDebug.log(
+        `[processWriteQueue: ${this.chain.type}:${this.chain.id}] No commitment group for index ${currentTreeLength}`,
+      );
       return false;
     }
 
@@ -843,7 +869,7 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       nextIndex += next.length;
     }
 
-    await this.insertLeaves(treeIndex, currentTreeLength, dataWriteGroups.flat());
+    await this.insertLeaves(treeIndex, currentTreeLength, dataWriteGroups.flat(), skipValidation);
 
     // Delete the batch after processing it.
     // Ensures bad batches are deleted, therefore halting update loop if one is found.
@@ -864,9 +890,17 @@ export abstract class Merkletree<T extends MerkletreeLeaf> {
       .filter((index) => !Number.isNaN(index));
   }
 
-  async updateTreesFromWriteQueue(): Promise<void> {
+  async updateTreesFromWriteQueue(skipValidation = false): Promise<void> {
     const treeIndices: number[] = this.treeIndicesFromWriteQueue();
-    await Promise.all(treeIndices.map((treeIndex) => this.processWriteQueueForTree(treeIndex)));
+    for(const treeIndex of treeIndices) {
+      try {
+        await this.processWriteQueueForTree(treeIndex, skipValidation)
+      } catch {
+        await delay(2_000)
+        await this.updateTreesFromWriteQueue(skipValidation)
+        return
+      }
+    }
   }
 
   /**

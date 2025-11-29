@@ -47,7 +47,7 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
     // For Txid merkletree on POI Nodes, we will calculate for every Single tree update, in order to capture its merkleroot.
     const commitmentProcessingGroupSize = isPOINode
       ? CommitmentProcessingGroupSize.Single
-      : CommitmentProcessingGroupSize.XXXLarge;
+      : CommitmentProcessingGroupSize.XXXXLarge;
 
     super(db, chain, txidVersion, merklerootValidator, commitmentProcessingGroupSize);
 
@@ -276,9 +276,13 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
 
     const { tree: latestTree, index: latestIndex } = await this.getLatestTreeAndIndex();
     let nextTree = latestTree;
-    let nextIndex = latestIndex;
+    let nextIndex = latestIndex; 
 
     const railgunTxidIndexLookupBatch: PutBatch[] = [];
+
+    let batchTree = -1;
+    let batchStartIndex = -1;
+    let batchLeaves: RailgunTransactionWithHash[] = [];
 
     for (const railgunTransactionWithTxid of railgunTransactionsWithTxids) {
       const { tree, index } = TXIDMerkletree.nextTreeAndIndex(nextTree, nextIndex);
@@ -319,14 +323,30 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       // eslint-disable-next-line no-await-in-loop
       await this.savePOILaunchSnapshotIfNecessary(railgunTransactionWithTxid, latestLeafIndex);
 
-      // eslint-disable-next-line no-await-in-loop
-      await this.queueLeaves(nextTree, nextIndex, [railgunTransactionWithTxid]);
+      if (batchTree === -1) {
+        batchTree = nextTree;
+        batchStartIndex = nextIndex;
+      }
+
+      if (nextTree !== batchTree) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.queueLeaves(batchTree, batchStartIndex, batchLeaves);
+        batchLeaves = [];
+        batchTree = nextTree;
+        batchStartIndex = nextIndex;
+      }
+
+      batchLeaves.push(railgunTransactionWithTxid);
 
       railgunTxidIndexLookupBatch.push({
         type: 'put',
         key: this.getRailgunTxidLookupDBPath(railgunTxid).join(':'),
         value: String(txidIndex),
       });
+    }
+
+    if (batchLeaves.length > 0) {
+      await this.queueLeaves(batchTree, batchStartIndex, batchLeaves);
     }
 
     await this.db.batch(railgunTxidIndexLookupBatch, 'utf8');
