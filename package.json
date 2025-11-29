@@ -101,5 +101,6 @@
     "@railgun-community/curve25519-scalarmult-wasm": false,
     "@railgun-community/poseidon-hash-wasm": false,
     "crypto": false
-  }
+  },
+  "packageManager": "yarn@1.22.22"
 }
