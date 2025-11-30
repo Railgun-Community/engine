@@ -320,6 +320,25 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       const { railgunTxid } = railgunTransactionWithTxid;
 
       const latestLeafIndex = nextIndex - 1;
+
+      if (
+        this.shouldSavePOILaunchSnapshot &&
+        this.savedPOILaunchSnapshot !== true &&
+        batchLeaves.length > 0
+      ) {
+        const poiLaunchBlock = POI.launchBlocks.get(null, this.chain);
+        if (
+          isDefined(poiLaunchBlock) &&
+          railgunTransactionWithTxid.blockNumber >= poiLaunchBlock
+        ) {
+          // eslint-disable-next-line no-await-in-loop
+          await this.queueLeaves(batchTree, batchStartIndex, batchLeaves);
+          batchLeaves = [];
+          batchTree = -1;
+          batchStartIndex = -1;
+        }
+      }
+
       // eslint-disable-next-line no-await-in-loop
       await this.savePOILaunchSnapshotIfNecessary(railgunTransactionWithTxid, latestLeafIndex);
 
@@ -337,6 +356,14 @@ export class TXIDMerkletree extends Merkletree<RailgunTransactionWithHash> {
       }
 
       batchLeaves.push(railgunTransactionWithTxid);
+
+      if (this.shouldStoreMerkleroots) {
+        // eslint-disable-next-line no-await-in-loop
+        await this.queueLeaves(batchTree, batchStartIndex, batchLeaves);
+        batchLeaves = [];
+        batchTree = -1;
+        batchStartIndex = -1;
+      }
 
       railgunTxidIndexLookupBatch.push({
         type: 'put',

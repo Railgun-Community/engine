@@ -231,18 +231,21 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Shield events');
     }
-    const formatted = filtered.map( (log) => {
-      const { args, transactionHash, blockNumber } = log;
+    // const formatted = filtered.map( (log) => {
+    for(const event of filtered){
+      const { args, transactionHash, blockNumber } = event;
       const { fees } = args;
-      return V2Events.formatShieldEvent(
+      const formattedEvents = V2Events.formatShieldEvent(
           args,
           transactionHash,
           blockNumber,
           fees,
           undefined, // timestamp
+    
         )
-    })
-    return eventsListener(txidVersion, formatted)
+      // eslint-disable-next-line no-await-in-loop
+      await eventsListener(txidVersion, [formattedEvents])
+    }
   }
 
   static async processShieldEvents_LegacyShield_PreMar23(
@@ -267,18 +270,20 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Legacy Shield events');
     }
-    const formatted = filtered.map( (event) => {
+    // const formatted = filtered.map( (event) => {
+    for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
       const fees: Optional<bigint[]> = undefined;
-      return V2Events.formatShieldEvent(
+      const formattedEvents = V2Events.formatShieldEvent(
           args,
           transactionHash,
           blockNumber,
           fees,
           undefined, // timestamp
         )
-    })
-    return eventsListener(txidVersion, formatted)
+      // eslint-disable-next-line no-await-in-loop
+      await eventsListener(txidVersion, [formattedEvents])
+    }
   }
 
   static async processTransactEvents(
@@ -290,16 +295,18 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Transact events');
     }
-    const formatted = filtered.map((event) => {
+    // const formatted = filtered.map((event) => {
+    for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
-        return V2Events.formatTransactEvent(
-          args,
-          transactionHash,
-          blockNumber,
-          undefined, // timestamp
-        )
-    })
-    return await eventsListener(txidVersion, formatted)
+      const formattedEvent = V2Events.formatTransactEvent(
+        args,
+        transactionHash,
+        blockNumber,
+        undefined, // timestamp
+      )
+      // eslint-disable-next-line no-await-in-loop
+      await eventsListener(txidVersion, [formattedEvent])
+    }
   }
 
   static async processUnshieldEvents(
@@ -311,17 +318,20 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Unshield events');
     }
-    const formatted = filtered.map((event) => {
+    // const formatted = filtered.map((event) => {
+    for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
-      return  V2Events.formatUnshieldEvent(
+
+      const formattedEvents = V2Events.formatUnshieldEvent(
         args,
         transactionHash,
         blockNumber,
         event.index,
         undefined, // timestamp
       )
-    })
-    await eventsUnshieldListener(txidVersion, formatted);
+      // eslint-disable-next-line no-await-in-loop
+      await eventsUnshieldListener(txidVersion, [formattedEvents]);
+    }
   }
 
   static formatNullifiedEvents(
