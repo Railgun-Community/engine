@@ -388,7 +388,7 @@ describe('relay-adapt', function test() {
       ethersWallet.address,
       random,
       true, // useDummyProof
-      false, // sendWithPublicWallet
+      true, // sendWithPublicWallet
     );
 
     // 6: Send relay transaction.
