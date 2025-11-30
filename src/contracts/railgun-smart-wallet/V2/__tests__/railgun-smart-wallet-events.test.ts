@@ -107,7 +107,7 @@ describe('railgun-smart-wallet-events', function runTests() {
 
     engine.prover.setSnarkJSGroth16(groth16 as SnarkJSGroth16);
 
-    provider = new PollingJsonRpcProvider('https://eth.llamarpc.com', 1, 100);
+    provider = new PollingJsonRpcProvider('https://rpc.mevblocker.io', 1, 100);
 
     chain = {
       type: ChainType.EVM,
