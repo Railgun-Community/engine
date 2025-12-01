@@ -37,7 +37,7 @@ import {
 import { Prover, SnarkJSGroth16 } from '../prover/prover';
 import { TestERC20 } from '../test/abi/typechain/TestERC20';
 import { TestERC721 } from '../test/abi/typechain/TestERC721';
-import { delay, promiseTimeout } from '../utils/promises';
+import { promiseTimeout } from '../utils/promises';
 import { Chain, ChainType } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
