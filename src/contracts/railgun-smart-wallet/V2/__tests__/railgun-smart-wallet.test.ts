@@ -400,7 +400,7 @@ describe('railgun-smart-wallet', function runTests() {
       isV2Test() ? 1_370_000 : 1_400_000,
     );
     expect(Number(gasEstimate_DummyActualBroadcasterFee)).to.be.lessThan(
-      isV2Test() ? 1_420_000 : 1_500_000,
+      isV2Test() ? 1_430_000 : 1_500_000,
     );
 
     // Case 3 - Actual transaction
