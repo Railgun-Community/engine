@@ -231,7 +231,6 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Shield events');
     }
-    // const formatted = filtered.map( (log) => {
     for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
       const { fees } = args;
@@ -270,7 +269,6 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Legacy Shield events');
     }
-    // const formatted = filtered.map( (event) => {
     for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
       const fees: Optional<bigint[]> = undefined;
@@ -295,7 +293,6 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Transact events');
     }
-    // const formatted = filtered.map((event) => {
     for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
       const formattedEvent = V2Events.formatTransactEvent(
@@ -318,7 +315,6 @@ export class V2Events {
     if (logs.length !== filtered.length) {
       throw new Error('Args required for Unshield events');
     }
-    // const formatted = filtered.map((event) => {
     for(const event of filtered){
       const { args, transactionHash, blockNumber } = event;
 
