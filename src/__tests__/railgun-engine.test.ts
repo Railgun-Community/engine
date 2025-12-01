@@ -37,7 +37,7 @@ import {
 import { Prover, SnarkJSGroth16 } from '../prover/prover';
 import { TestERC20 } from '../test/abi/typechain/TestERC20';
 import { TestERC721 } from '../test/abi/typechain/TestERC721';
-import { promiseTimeout } from '../utils/promises';
+import { delay, promiseTimeout } from '../utils/promises';
 import { Chain, ChainType } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import { TOKEN_SUB_ID_NULL } from '../models/transaction-constants';
@@ -566,6 +566,8 @@ describe('railgun-engine', function test() {
         true, // shouldGeneratePreTransactionPOIs
       );
 
+      await delay(10_000)
+    console.log('provedtx', provedTransactions)
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList).length).to.equal(1);
     expect(Object.keys(preTransactionPOIsPerTxidLeafPerList[MOCK_LIST_KEY]).length).to.equal(1);
 
@@ -576,7 +578,7 @@ describe('railgun-engine', function test() {
       chain,
       provedTransactions,
     );
-
+    console.log('transact generated', transact)
     const isValidPOI = await POIValidation.isValidSpendableTransaction(
       txidVersion,
       chain,
@@ -591,6 +593,7 @@ describe('railgun-engine', function test() {
     );
     expect(isValidPOI.isValid).to.equal(true, isValidPOI.error);
 
+    console.log('SENDING generated',)
     const transactTx = await sendTransactionWithLatestNonce(ethersWallet, transact);
     const transactReceipt = await transactTx.wait();
 
