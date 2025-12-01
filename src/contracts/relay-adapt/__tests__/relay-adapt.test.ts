@@ -845,7 +845,7 @@ describe('relay-adapt', function test() {
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // Perform scans: Unshield and Shield
-    const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
@@ -1026,7 +1026,7 @@ describe('relay-adapt', function test() {
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // Perform scans: Unshield and Shield
-    const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_t, _u, txReceipt] = await Promise.all([
@@ -1216,7 +1216,7 @@ describe('relay-adapt', function test() {
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // Perform scans: Unshield and Shield
-    const scansAwaiter = awaitMultipleScans(wallet, chain, 3);
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
