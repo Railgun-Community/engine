@@ -179,12 +179,14 @@ describe('relay-adapt', function test() {
         shieldRequest,
       );
 
+      const shieldEventPromise = awaitRailgunSmartWalletShield(txidVersion, chain);
+
       // Send shield on chain
       const tx = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [_, txReceipt] = await Promise.all([
-        awaitRailgunSmartWalletShield(txidVersion, chain),
+        shieldEventPromise,
         tx.wait(),
         promiseTimeout(
           awaitScan(wallet, chain),
@@ -220,11 +222,13 @@ describe('relay-adapt', function test() {
       shieldRequest,
     );
 
+    const shieldEventPromise = awaitRailgunSmartWalletShield(txidVersion, chain);
+
     // Send shield on chain
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
     await Promise.all([
-      awaitRailgunSmartWalletShield(txidVersion, chain),
+      shieldEventPromise,
       txResponse.wait(),
       promiseTimeout(awaitScan(wallet, chain), 15000),
     ]);
@@ -353,7 +357,7 @@ describe('relay-adapt', function test() {
         true,
       );
     expect(relayAdaptParams).to.equal(
-      '0xa54346cdc981dd16bf95990bd28264a2e498e8db8be602b9611b999df51f3cf1',
+      '0x5e4276701b6d9e5a6642a50b30859e76a125a16164e373e5833410e79d8cf996',
     );
 
     // 4. Create real transactions with relay adapt params.
@@ -392,14 +396,17 @@ describe('relay-adapt', function test() {
     );
 
     // 6: Send relay transaction.
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
+    const unshieldEventPromise = awaitRailgunSmartWalletUnshield(txidVersion, chain);
+
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     const awaiterScan = awaitMultipleScans(wallet, chain, 2);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_t, _u, txReceipt] = await Promise.all([
-      awaitRailgunSmartWalletTransact(txidVersion, chain),
-      awaitRailgunSmartWalletUnshield(txidVersion, chain),
+      transactEventPromise,
+      unshieldEventPromise,
       txResponse.wait(),
       awaiterScan,
     ]);
@@ -588,18 +595,15 @@ describe('relay-adapt', function test() {
     );
 
     // 9: Send relay transaction.
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_t, _u, txReceipt] = await Promise.all([
-      awaitRailgunSmartWalletTransact(txidVersion, chain),
-      awaitRailgunSmartWalletUnshield(txidVersion, chain),
+    // Perform scans: Unshield and Shield
+    const scansAwaiter = awaitMultipleScans(wallet, chain, 2);
+
+    const [txReceipt] = await Promise.all([
       txResponse.wait(),
-      promiseTimeout(
-        awaitScan(wallet, chain),
-        10000,
-        'Timed out waiting for scan after cross-contract call',
-      ),
+      transactEventPromise,
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
@@ -651,11 +655,14 @@ describe('relay-adapt', function test() {
     );
 
     // Unshield to relay adapt.
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
+    const unshieldEventPromise = awaitRailgunSmartWalletUnshield(txidVersion, chain);
+
     const txTransact = await sendTransactionWithLatestNonce(ethersWallet, transact);
 
     await Promise.all([
-      awaitRailgunSmartWalletTransact(txidVersion, chain),
-      awaitRailgunSmartWalletUnshield(txidVersion, chain),
+      transactEventPromise,
+      unshieldEventPromise,
       awaitMultipleScans(wallet, chain, 2),
       txTransact.wait(),
     ]);
@@ -842,6 +849,7 @@ describe('relay-adapt', function test() {
     relayTransaction.gasLimit = (gasEstimate * 120n) / 100n;
 
     // 8. Send transaction.
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // Perform scans: Unshield and Shield
@@ -849,7 +857,7 @@ describe('relay-adapt', function test() {
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
-      awaitRailgunSmartWalletTransact(txidVersion, chain),
+      transactEventPromise,
     ]);
     if (txReceipt == null) {
       throw new Error('No transaction receipt for relay transaction');
@@ -1023,6 +1031,9 @@ describe('relay-adapt', function test() {
     relayTransaction.gasLimit = BigInt('25000000');
 
     // 8. Send transaction.
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
+    const unshieldEventPromise = awaitRailgunSmartWalletUnshield(txidVersion, chain);
+
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // Perform scans: Unshield and Shield
@@ -1030,8 +1041,8 @@ describe('relay-adapt', function test() {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_t, _u, txReceipt] = await Promise.all([
-      awaitRailgunSmartWalletTransact(txidVersion, chain),
-      awaitRailgunSmartWalletUnshield(txidVersion, chain),
+      transactEventPromise,
+      unshieldEventPromise,
       txResponse.wait(),
     ]);
     if (txReceipt == null) {
@@ -1213,6 +1224,7 @@ describe('relay-adapt', function test() {
     relayTransaction.gasLimit = (gasEstimateFinal * 101n) / 100n;
 
     // 8. Send transaction.
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, relayTransaction);
 
     // Perform scans: Unshield and Shield
@@ -1220,7 +1232,7 @@ describe('relay-adapt', function test() {
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
-      awaitRailgunSmartWalletTransact(txidVersion, chain),
+      transactEventPromise,
     ]);
 
     if (txReceipt == null) {
