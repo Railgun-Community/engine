@@ -1007,9 +1007,11 @@ describe('railgun-smart-wallet', function runTests() {
       shieldInput,
     ]);
 
+    const shieldEventPromise = awaitRailgunSmartWalletShield(txidVersion, chain);
+
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
     await Promise.all([
-      awaitRailgunSmartWalletShield(txidVersion, chain),
+      shieldEventPromise,
       promiseTimeout(awaitScan(wallet, chain), 5000),
       txResponse.wait(),
     ]);
@@ -1165,10 +1167,12 @@ describe('railgun-smart-wallet', function runTests() {
       provedTransactions,
     );
 
+    const transactEventPromise = awaitRailgunSmartWalletTransact(txidVersion, chain);
+
     // Send transact on chain
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, transact);
 
-    await Promise.all([txResponse.wait(), awaitRailgunSmartWalletTransact(txidVersion, chain)]);
+    await Promise.all([txResponse.wait(), transactEventPromise]);
 
     // Check merkle root changed
     const merkleRootAfterTransact = await RailgunVersionedSmartContracts.getAccumulator(

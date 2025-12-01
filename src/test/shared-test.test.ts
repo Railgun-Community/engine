@@ -60,11 +60,13 @@ export const shieldNFTForTest = async (
     shieldInput,
   ]);
 
+  const shieldEventPromise = awaitRailgunSmartWalletShield(txidVersion, chain);
+
   // Send shield on chain
   const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
   await Promise.all([
-    awaitRailgunSmartWalletShield(txidVersion, chain),
+    shieldEventPromise,
     promiseTimeout(awaitScan(wallet, chain), 15000, 'Timed out waiting for NFT shield'),
     txResponse.wait(),
   ]);
