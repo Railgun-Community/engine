@@ -1232,6 +1232,7 @@ describe('relay-adapt', function test() {
 
     const [txReceipt] = await Promise.all([
       txResponse.wait(),
+      scansAwaiter,
       transactEventPromise,
     ]);
 
