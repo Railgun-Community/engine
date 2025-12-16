@@ -1,7 +1,7 @@
 import { Signature } from '@railgun-community/circomlibjs';
 import { poseidon } from '../utils/poseidon';
 import { Database } from '../database/database';
-import { deriveNodes, SpendingKeyPair, WalletNode } from '../key-derivation/wallet-node';
+import { deriveNodes, SpendingKeyPair, WalletNode, deriveEphemeralWallet } from '../key-derivation';
 import { WalletData } from '../models/wallet-types';
 import { ByteUtils } from '../utils/bytes';
 import { sha256 } from '../utils/hash';
@@ -10,6 +10,11 @@ import { Mnemonic } from '../key-derivation/bip39';
 import { PublicInputsRailgun } from '../models';
 import { signEDDSA } from '../utils/keys-utils';
 import { Prover } from '../prover/prover';
+import { HDNodeWallet } from 'ethers';
+import { RelayAdapt7702Helper } from '../contracts/relay-adapt/relay-adapt-7702-helper';
+import { EIP7702Authorization } from '../models/relay-adapt-types';
+import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
+import { RelayAdapt } from '../abi/typechain/RelayAdapt';
 
 class RailgunWallet extends AbstractWallet {
   /**
@@ -26,6 +31,99 @@ class RailgunWallet extends AbstractWallet {
     const spendingKeyPair = await this.getSpendingKeyPair(encryptionKey);
     const msg = poseidon([publicInputs.merkleRoot, publicInputs.boundParamsHash, ...publicInputs.nullifiers, ...publicInputs.commitmentsOut]);
     return signEDDSA(spendingKeyPair.privateKey, msg);
+  }
+
+  /**
+   * Get ephemeral wallet for RelayAdapt7702
+   * @param {string} encryptionKey - encryption key to use with database
+   * @param {number} index - index of derivation path
+   * @returns {Promise<HDNodeWallet>}
+   */
+  async getEphemeralWallet(encryptionKey: string, index: number): Promise<HDNodeWallet> {
+    const { mnemonic } = (await AbstractWallet.read(
+      this.db,
+      this.id,
+      encryptionKey,
+    )) as WalletData;
+    return deriveEphemeralWallet(mnemonic, index);
+  }
+
+  /**
+   * Get current ephemeral key index
+   * @returns {Promise<number>}
+   */
+  async getEphemeralKeyIndex(): Promise<number> {
+    try {
+      const index = await this.db.get([this.id, 'ephemeral_index'], 'utf8');
+      return parseInt(index as string, 10);
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  /**
+   * Set ephemeral key index
+   * @param {number} index - new index
+   * @returns {Promise<void>}
+   */
+  async setEphemeralKeyIndex(index: number): Promise<void> {
+    await this.db.put([this.id, 'ephemeral_index'], index.toString(), 'utf8');
+  }
+
+  /**
+   * Get current ephemeral address
+   * @param {string} encryptionKey - encryption key to use with database
+   * @returns {Promise<string>}
+   */
+  async getCurrentEphemeralAddress(encryptionKey: string): Promise<string> {
+    const index = await this.getEphemeralKeyIndex();
+    const wallet = await this.getEphemeralWallet(encryptionKey, index);
+    return wallet.address;
+  }
+
+  /**
+   * Sign EIP-7702 Authorization and Execution Payload
+   * @param {string} encryptionKey - encryption key to use with database
+   * @param {string} contractAddress - RelayAdapt7702 contract address
+   * @param {bigint} chainId - Chain ID
+   * @param {(TransactionStructV2 | TransactionStructV3)[]} transactions - Railgun transactions
+   * @param {RelayAdapt.ActionDataStruct} actionData - Action Data
+   * @returns {Promise<{ authorization: EIP7702Authorization; signature: string }>}
+   */
+  async sign7702Request(
+    encryptionKey: string,
+    contractAddress: string,
+    chainId: bigint,
+    transactions: (TransactionStructV2 | TransactionStructV3)[],
+    actionData: RelayAdapt.ActionDataStruct,
+  ): Promise<{ authorization: EIP7702Authorization; signature: string }> {
+    const index = await this.getEphemeralKeyIndex();
+    const ephemeralWallet = await this.getEphemeralWallet(encryptionKey, index);
+
+    const authorization = await RelayAdapt7702Helper.signEIP7702Authorization(
+      ephemeralWallet,
+      contractAddress,
+      chainId,
+      0, // Nonce is always 0 for ephemeral keys
+    );
+
+    const signature = await RelayAdapt7702Helper.signExecutionAuthorization(
+      ephemeralWallet,
+      transactions,
+      actionData,
+      chainId,
+    );
+
+    return { authorization, signature };
+  }
+
+  /**
+   * Ratchet ephemeral key index
+   * @returns {Promise<void>}
+   */
+  async ratchetEphemeralAddress(): Promise<void> {
+    const index = await this.getEphemeralKeyIndex();
+    await this.setEphemeralKeyIndex(index + 1);
   }
 
   /**
