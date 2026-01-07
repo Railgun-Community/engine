@@ -95,6 +95,7 @@ class RailgunWallet extends AbstractWallet {
     chainId: bigint,
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt.ActionDataStruct,
+    nonce: number = 0,
   ): Promise<{ authorization: Authorization; signature: string }> {
     const index = await this.getEphemeralKeyIndex();
     const ephemeralWallet = await this.getEphemeralWallet(encryptionKey, index);
@@ -103,7 +104,7 @@ class RailgunWallet extends AbstractWallet {
       ephemeralWallet,
       contractAddress,
       chainId,
-      0, // Nonce is always 0 for ephemeral keys
+      nonce, // Nonce is always 0 for ephemeral keys, but can be reused if needed/desired.
     );
 
     const signature = await RelayAdapt7702Helper.signExecutionAuthorization(
