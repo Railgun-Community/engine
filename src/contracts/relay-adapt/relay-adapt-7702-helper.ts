@@ -1,4 +1,4 @@
-import { ContractTransaction, AbiCoder, keccak256, Wallet, encodeRlp, toBeHex, concat, Interface, HDNodeWallet } from 'ethers';
+import { ContractTransaction, AbiCoder, keccak256, Wallet, Interface, HDNodeWallet, Authorization } from 'ethers';
 import { ByteUtils } from '../../utils/bytes';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 import { AddressData, decodeAddress } from '../../key-derivation';
@@ -12,35 +12,25 @@ import { ShieldNoteNFT } from '../../note/nft/shield-note-nft';
 import { ERC721_NOTE_VALUE } from '../../note/note-util';
 import { RelayAdapt, ShieldRequestStruct } from '../../abi/typechain/RelayAdapt';
 import { TransactionStructV2, TransactionStructV3 } from '../../models/transaction-types';
-import { EIP7702Authorization } from '../../models/relay-adapt-types';
 import { ABIRelayAdapt7702 } from '../../abi/abi';
+import { signEIP7702Authorization as signEIP7702AuthorizationCore } from '../../transaction/eip7702';
 
 class RelayAdapt7702Helper {
+  /**
+   * Signs an EIP-7702 Authorization using ethers native methods.
+   * @param signer - The ephemeral key signer
+   * @param contractAddress - The address to delegate to (RelayAdapt7702)
+   * @param chainId - Chain ID
+   * @param nonce - Nonce (typically 0 for ephemeral keys)
+   * @returns Authorization tuple
+   */
   static async signEIP7702Authorization(
     signer: Wallet | HDNodeWallet,
     contractAddress: string,
     chainId: bigint,
     nonce: number,
-  ): Promise<EIP7702Authorization> {
-    // 0x05 || rlp([chain_id, address, nonce])
-    const rlpEncoded = encodeRlp([
-      toBeHex(chainId),
-      contractAddress,
-      toBeHex(nonce),
-    ]);
-    const payload = concat(['0x05', rlpEncoded]);
-    const digest = keccak256(payload);
-
-    const signature = signer.signingKey.sign(digest);
-
-    return {
-      chainId: chainId.toString(),
-      address: contractAddress,
-      nonce,
-      yParity: signature.yParity,
-      r: signature.r,
-      s: signature.s,
-    };
+  ): Promise<Authorization> {
+    return signEIP7702AuthorizationCore(signer, contractAddress, chainId, nonce);
   }
 
   static async signExecutionAuthorization(

@@ -1,4 +1,4 @@
-import { ContractTransaction, Provider, TransactionRequest } from 'ethers';
+import { ContractTransaction, Provider, TransactionRequest, Authorization } from 'ethers';
 import { ContractStore } from '../contract-store';
 import { Chain } from '../../models/engine-types';
 import { TXIDVersion } from '../../models/poi-types';
@@ -7,7 +7,6 @@ import { TransactionReceiptLog, TransactionStructV2, TransactionStructV3 } from 
 import { RelayAdaptV2Contract } from './V2/relay-adapt-v2';
 import { RelayAdapt7702Contract } from './V2/relay-adapt-7702';
 import { RelayAdaptV3Contract } from './V3/relay-adapt-v3';
-import { EIP7702Authorization } from '../../models/relay-adapt-types';
 
 export class RelayAdaptVersionedSmartContracts {
   static getRelayAdaptContract(txidVersion: TXIDVersion, chain: Chain, isRelayAdapt7702 = false) {
@@ -30,7 +29,7 @@ export class RelayAdaptVersionedSmartContracts {
     chain: Chain,
     shieldRequest: ShieldRequestStruct,
     isRelayAdapt7702 = false,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     random31Bytes?: string,
     ephemeralAddress?: string,
@@ -59,7 +58,7 @@ export class RelayAdaptVersionedSmartContracts {
     useDummyProof: boolean,
     sendWithPublicWallet: boolean,
     isRelayAdapt7702 = false,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
   ): Promise<ContractTransaction> {
@@ -110,7 +109,7 @@ export class RelayAdaptVersionedSmartContracts {
     isBroadcasterTransaction: boolean,
     minGasLimit?: bigint,
     isRelayAdapt7702 = false,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
   ): Promise<ContractTransaction> {

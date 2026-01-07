@@ -10,9 +10,8 @@ import { Mnemonic } from '../key-derivation/bip39';
 import { PublicInputsRailgun } from '../models';
 import { signEDDSA } from '../utils/keys-utils';
 import { Prover } from '../prover/prover';
-import { HDNodeWallet } from 'ethers';
+import { HDNodeWallet, Authorization } from 'ethers';
 import { RelayAdapt7702Helper } from '../contracts/relay-adapt/relay-adapt-7702-helper';
-import { EIP7702Authorization } from '../models/relay-adapt-types';
 import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 import { RelayAdapt } from '../abi/typechain/RelayAdapt';
 
@@ -88,7 +87,7 @@ class RailgunWallet extends AbstractWallet {
    * @param {bigint} chainId - Chain ID
    * @param {(TransactionStructV2 | TransactionStructV3)[]} transactions - Railgun transactions
    * @param {RelayAdapt.ActionDataStruct} actionData - Action Data
-   * @returns {Promise<{ authorization: EIP7702Authorization; signature: string }>}
+   * @returns {Promise<{ authorization: Authorization; signature: string }>}
    */
   async sign7702Request(
     encryptionKey: string,
@@ -96,7 +95,7 @@ class RailgunWallet extends AbstractWallet {
     chainId: bigint,
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt.ActionDataStruct,
-  ): Promise<{ authorization: EIP7702Authorization; signature: string }> {
+  ): Promise<{ authorization: Authorization; signature: string }> {
     const index = await this.getEphemeralKeyIndex();
     const ephemeralWallet = await this.getEphemeralWallet(encryptionKey, index);
 

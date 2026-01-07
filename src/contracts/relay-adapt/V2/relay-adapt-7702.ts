@@ -8,6 +8,7 @@ import {
   Result,
   Log,
   toUtf8String,
+  Authorization,
 } from 'ethers';
 import { ABIRelayAdapt, ABIRelayAdapt7702 } from '../../../abi/abi';
 import { TransactionReceiptLog } from '../../../models/formatted-types';
@@ -20,7 +21,6 @@ import { RelayAdapt } from '../../../abi/typechain/RelayAdapt';
 import { PayableOverrides } from '../../../abi/typechain/common';
 import { TransactionStructV2 } from '../../../models/transaction-types';
 import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
-import { EIP7702Authorization } from '../../../models/relay-adapt-types';
 import { ByteUtils } from '../../../utils/bytes';
 
 enum RelayAdaptEvent {
@@ -51,7 +51,7 @@ export class RelayAdapt7702Contract {
 
   async populateShieldBaseToken(
     shieldRequest: ShieldRequestStruct,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     random31Bytes?: string,
     ephemeralAddress?: string,
@@ -164,7 +164,7 @@ export class RelayAdapt7702Contract {
     random31Bytes: string,
     _useDummyProof: boolean,
     sendWithPublicWallet: boolean,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
   ): Promise<ContractTransaction> {
@@ -270,7 +270,7 @@ export class RelayAdapt7702Contract {
     isGasEstimate: boolean,
     isBroadcasterTransaction: boolean,
     minGasLimit?: bigint,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
   ): Promise<ContractTransaction> {
@@ -367,7 +367,7 @@ export class RelayAdapt7702Contract {
   private async populateRelayMulticall(
     calls: ContractTransaction[],
     overrides: PayableOverrides,
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     random31Bytes?: string,
     ephemeralAddress?: string,
@@ -403,7 +403,7 @@ export class RelayAdapt7702Contract {
     calls: ContractTransaction[],
     overrides: PayableOverrides,
     minimumGasLimit = BigInt(0),
-    authorization?: EIP7702Authorization,
+    authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
   ): Promise<ContractTransaction> {

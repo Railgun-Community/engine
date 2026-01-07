@@ -1,49 +1,27 @@
-import { HDNodeWallet, Wallet, keccak256, encodeRlp, getBytes, toBeHex } from 'ethers';
-import { EIP7702Authorization } from '../models/relay-adapt-types';
-
-function toRlpInteger(value: number): string | Uint8Array {
-  if (value === 0) {
-    return new Uint8Array(0);
-  }
-  return toBeHex(value);
-}
+import { HDNodeWallet, Wallet, Authorization } from 'ethers';
 
 /**
- * Signs an EIP-7702 Authorization Tuple.
- * Payload: 0x05 || rlp([chain_id, address, nonce])
+ * Signs an EIP-7702 Authorization Tuple using ethers native methods.
  * @param signer - The ephemeral key signer
  * @param contractAddress - The address to delegate to (RelayAdapt7702)
- * @param chainId - Chain ID
- * @param nonce - Nonce (default 0)
- * @returns EIP7702Authorization
+ * @param chainId - Chain ID (optional - will be auto-populated if not provided)
+ * @param nonce - Nonce (optional - will be auto-populated if not provided)
+ * @returns Authorization
  */
-export const signEIP7702Authorization = (
+export const signEIP7702Authorization = async (
   signer: HDNodeWallet | Wallet,
   contractAddress: string,
-  chainId: number,
-  nonce: number = 0
-): EIP7702Authorization => {
-  // RLP encode the tuple [chain_id, address, nonce]
-  // We use toRlpInteger to ensure numbers are formatted correctly for RLP (0 -> empty bytes, others -> hex)
-  const rlpEncoded = encodeRlp([
-    toRlpInteger(chainId),
-    contractAddress,
-    toRlpInteger(nonce)
-  ]);
-
-  // Prepend 0x05 (EIP-7702 transaction type / magic byte)
-  const payload = new Uint8Array([0x05, ...getBytes(rlpEncoded)]);
-  const hash = keccak256(payload);
-
-  // Sign the hash directly (not EIP-191)
-  const sig = signer.signingKey.sign(hash);
-
-  return {
-    chainId: chainId.toString(),
+  chainId?: bigint,
+  nonce?: number,
+): Promise<Authorization> => {
+  // Use ethers 6.14.3+ native 7702 authorization signing
+  const authRequest = await signer.populateAuthorization({
     address: contractAddress,
-    nonce,
-    yParity: sig.yParity,
-    r: sig.r,
-    s: sig.s,
-  };
+    ...(chainId !== undefined && { chainId }),
+    ...(nonce !== undefined && { nonce: BigInt(nonce) }),
+  });
+  
+  return signer.authorize(authRequest);
 };
+
+

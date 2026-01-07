@@ -1,37 +1,32 @@
-import { verifyMessage, getBytes, keccak256, AbiCoder, encodeRlp, toBeHex, recoverAddress } from 'ethers';
+import { verifyMessage, getBytes, keccak256, AbiCoder, encodeRlp, toBeHex, recoverAddress, Authorization } from 'ethers';
 import { TransactionStructV2 } from '../models/transaction-types';
 import { RelayAdapt7702 } from '../abi/typechain/RelayAdapt7702';
-import { EIP7702Authorization } from '../models/relay-adapt-types';
 import { ACTION_DATA_STRUCT_ABI, TRANSACTION_STRUCT_ABI } from '../transaction/relay-adapt-7702-signature';
 
 export class RelayAdapt7702Validator {
   static validateAuthorization(
-    authorization: EIP7702Authorization,
+    authorization: Authorization,
     expectedContractAddress: string,
     expectedChainId: number
   ): string {
     if (authorization.address.toLowerCase() !== expectedContractAddress.toLowerCase()) {
       throw new Error('Authorization contract address mismatch');
     }
-    if (BigInt(authorization.chainId) !== BigInt(expectedChainId)) {
+    if (authorization.chainId !== BigInt(expectedChainId)) {
       throw new Error('Authorization chain ID mismatch');
     }
 
     // Reconstruct payload
     const rlpEncoded = encodeRlp([
-      authorization.chainId === '0' ? new Uint8Array(0) : toBeHex(BigInt(authorization.chainId)),
+      authorization.chainId === 0n ? new Uint8Array(0) : toBeHex(authorization.chainId),
       authorization.address,
-      authorization.nonce === 0 ? new Uint8Array(0) : toBeHex(authorization.nonce)
+      authorization.nonce === 0n ? new Uint8Array(0) : toBeHex(authorization.nonce)
     ]);
     const payload = new Uint8Array([0x05, ...getBytes(rlpEncoded)]);
     const hash = keccak256(payload);
 
     // Recover address
-    return recoverAddress(hash, {
-      r: authorization.r,
-      s: authorization.s,
-      yParity: authorization.yParity
-    });
+    return recoverAddress(hash, authorization.signature);
   }
 
   static validateExecution(
