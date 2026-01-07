@@ -279,17 +279,7 @@ describe('relay-adapt-7702', function test() {
     // Send shield on chain
     const txResponse = await sendTransactionWithLatestNonce(ethersWallet, shieldTx);
 
-    // console.log(`Transaction hash: ${txResponse.hash}`);
     const receipt = await txResponse.wait();
-    // console.log(`Transaction status: ${receipt?.status}`);
-    
-    // if (receipt) {
-    //     console.log('Logs length:', receipt.logs.length);
-    //     receipt.logs.forEach((log, index) => {
-    //         console.log(`Log ${index} address: ${log.address}`);
-    //         console.log(`Log ${index} topics: ${log.topics}`);
-    //     });
-    // }
 
     if (receipt?.status === 0) {
       console.error('Transaction failed');
