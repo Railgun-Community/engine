@@ -39,7 +39,11 @@ export class PollingJsonRpcProvider extends JsonRpcProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-underscore-dangle
   _getSubscriber(sub: any): Subscriber {
     if (sub.type === 'event') {
-      return new BatchedPollingEventSubscriber(this, sub.filter, this.#eventPollingInterval);
+      const newSub = new BatchedPollingEventSubscriber(this, sub.filter, this.#eventPollingInterval);
+      if (this.#isPaused) {
+        newSub.pause(false);
+      }
+      return newSub;
     }
     // eslint-disable-next-line no-underscore-dangle
     return super._getSubscriber(sub);
