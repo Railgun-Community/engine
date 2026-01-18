@@ -1,5 +1,5 @@
 import { Contract, ContractTransaction } from 'ethers';
-import { ABIRailgunSmartWallet, ABIRelayAdapt } from '../abi/abi';
+import { ABIRailgunSmartWallet, ABIRelayAdapt, ABIRelayAdapt7702 } from '../abi/abi';
 import { Chain } from '../models/engine-types';
 import { TransactionStructOutput } from '../abi/typechain/RailgunSmartWallet';
 import { AddressData } from '../key-derivation';
@@ -20,6 +20,7 @@ import { TXIDVersion } from '../models/poi-types';
 enum TransactionName {
   RailgunSmartWallet = 'transact',
   RelayAdapt = 'relay',
+  RelayAdapt7702 = 'execute'
 }
 
 const getABIForTransaction = (transactionName: TransactionName): Array<any> => {
@@ -28,6 +29,8 @@ const getABIForTransaction = (transactionName: TransactionName): Array<any> => {
       return ABIRailgunSmartWallet;
     case TransactionName.RelayAdapt:
       return ABIRelayAdapt;
+    case TransactionName.RelayAdapt7702:
+      return ABIRelayAdapt7702;
   }
   throw new Error('Unsupported transactionName');
 };
@@ -40,8 +43,11 @@ export const extractFirstNoteERC20AmountMapFromTransactionRequestV2 = (
   receivingViewingPrivateKey: Uint8Array,
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
+  useRelayAdapt7702: boolean = false,
 ): Promise<Record<string, bigint>> => {
-  const transactionName = useRelayAdapt
+  const transactionName = useRelayAdapt7702
+    ? TransactionName.RelayAdapt7702
+    : useRelayAdapt
     ? TransactionName.RelayAdapt
     : TransactionName.RailgunSmartWallet;
 
@@ -64,8 +70,11 @@ export const extractRailgunTransactionDataFromTransactionRequestV2 = (
   receivingViewingPrivateKey: Uint8Array,
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
+  useRelayAdapt7702: boolean = false,
 ): Promise<ExtractedRailgunTransactionData> => {
-  const transactionName = useRelayAdapt
+  const transactionName = useRelayAdapt7702
+    ? TransactionName.RelayAdapt7702
+    : useRelayAdapt
     ? TransactionName.RelayAdapt
     : TransactionName.RailgunSmartWallet;
 

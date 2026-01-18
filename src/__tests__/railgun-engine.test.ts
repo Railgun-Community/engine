@@ -321,6 +321,8 @@ describe('railgun-engine', function test() {
       { [TXIDVersion.V2_PoseidonMerkle]: 24, [TXIDVersion.V3_PoseidonMerkle]: 24 },
       0,
       !isV2Test(), // supportsV3
+      config.contracts.relayAdapt7702,
+      config.contracts.adapt7702Deployer,
     );
 
     const balance = await token.balanceOf(ethersWallet.address);

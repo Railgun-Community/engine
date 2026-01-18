@@ -3,6 +3,8 @@ import EventEmitter from 'events';
 import { FallbackProvider } from 'ethers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
+import { RelayAdapt7702Contract } from './contracts/relay-adapt/V2/relay-adapt-7702';
+import { RelayAdapt7702DeployerContract } from './contracts/relay-adapt/V2/relay-adapt-7702-deployer';
 import { Database, DatabaseNamespace } from './database/database';
 import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
@@ -1477,6 +1479,8 @@ class RailgunEngine extends EventEmitter {
     deploymentBlocks: Record<TXIDVersion, number>,
     poiLaunchBlock: Optional<number>,
     supportsV3: boolean,
+    relayAdapt7702ContractAddress?: string,
+    relayAdapt7702DeployerAddress?: string,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
@@ -1523,6 +1527,8 @@ class RailgunEngine extends EventEmitter {
     );
     const hasSmartWalletContract = ContractStore.railgunSmartWalletContracts.has(null, chain);
     const hasRelayAdaptV2Contract = ContractStore.relayAdaptV2Contracts.has(null, chain);
+    const hasRelayAdapt7702Contract = ContractStore.relayAdapt7702Contracts.has(null, chain);
+    const hasRelayAdapt7702DeployerContract = ContractStore.relayAdapt7702DeployerContracts.has(null, chain);
     const hasPoseidonMerkleAccumulatorV3Contract =
       ContractStore.poseidonMerkleAccumulatorV3Contracts.has(null, chain);
     const hasPoseidonMerkleVerifierV3Contract = ContractStore.poseidonMerkleVerifierV3Contracts.has(
@@ -1534,6 +1540,8 @@ class RailgunEngine extends EventEmitter {
       hasAnyMerkletree ||
       hasSmartWalletContract ||
       hasRelayAdaptV2Contract ||
+      hasRelayAdapt7702Contract ||
+      hasRelayAdapt7702DeployerContract ||
       hasPoseidonMerkleAccumulatorV3Contract ||
       hasPoseidonMerkleVerifierV3Contract ||
       hasTokenVaultV3Contract
@@ -1559,6 +1567,22 @@ class RailgunEngine extends EventEmitter {
       chain,
       new RelayAdaptV2Contract(relayAdaptV2ContractAddress, defaultProvider),
     );
+
+    if (relayAdapt7702ContractAddress) {
+      ContractStore.relayAdapt7702Contracts.set(
+        null,
+        chain,
+        new RelayAdapt7702Contract(relayAdapt7702ContractAddress, defaultProvider),
+      );
+    }
+
+    if (relayAdapt7702DeployerAddress) {
+      ContractStore.relayAdapt7702DeployerContracts.set(
+        null,
+        chain,
+        new RelayAdapt7702DeployerContract(relayAdapt7702DeployerAddress, defaultProvider),
+      );
+    }
 
     if (supportsV3) {
       ContractStore.poseidonMerkleAccumulatorV3Contracts.set(
@@ -2180,6 +2204,30 @@ class RailgunEngine extends EventEmitter {
     return shieldCommitments;
   }
 
+  /**
+   * Get RelayAdapt7702 contract address
+   * @param chain - chain type/id
+   * @returns address
+   */
+  getRelayAdapt7702ContractAddress(chain: Chain): Optional<string> {
+    const contract = ContractStore.relayAdapt7702Contracts.get(null, chain);
+    return contract?.address;
+  }
+
+  /**
+   * Validate RelayAdapt7702 contract address
+   * @param chain - chain type/id
+   * @param address - address to validate
+   * @returns true if valid
+   */
+  async validateRelayAdapt7702Address(chain: Chain, address: string): Promise<boolean> {
+    const deployer = ContractStore.relayAdapt7702DeployerContracts.get(null, chain);
+    if (!deployer) {
+      return false;
+    }
+    return deployer.isDeployed(address);
+  }
+
   // Top-level exports:
 
   static encodeAddress = encodeAddress;
@@ -2189,6 +2237,10 @@ class RailgunEngine extends EventEmitter {
   railgunSmartWalletContracts = ContractStore.railgunSmartWalletContracts;
 
   relayAdaptV2Contracts = ContractStore.relayAdaptV2Contracts;
+
+  relayAdapt7702Contracts = ContractStore.relayAdapt7702Contracts;
+
+  relayAdapt7702DeployerContracts = ContractStore.relayAdapt7702DeployerContracts;
 }
 
 export { RailgunEngine };
