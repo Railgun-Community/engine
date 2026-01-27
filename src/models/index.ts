@@ -14,3 +14,4 @@ export {
 export * from './wallet-types';
 export * from './prover-types';
 export * from './typechain-types';
+export * from './relay-adapt-types';
