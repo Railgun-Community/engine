@@ -427,7 +427,7 @@
 
 "@railgun-reloaded/prover@github:railgun-reloaded/prover#shub-engine-pluggable":
   version "1.0.0"
-  resolved "git+ssh://git@github.com/railgun-reloaded/prover.git#45e0abd4c45902261c43e4f6447be5a946431986"
+  resolved "git+ssh://git@github.com/railgun-reloaded/prover.git#01472edc722d5e82f9f6f253b6beb89e666b13af"
   dependencies:
     snarkjs "^0.7.5"
 
@@ -726,6 +726,11 @@
   version "15.0.1"
   resolved "https://registry.npmjs.org/@types/sinonjs__fake-timers/-/sinonjs__fake-timers-15.0.1.tgz"
   integrity sha512-Ko2tjWJq8oozHzHV+reuvS5KYIRAokHnGbDwGh/J64LntgpbuylF74ipEL24HCyRjf9FOlBiBHWBR1RlVKsI1w==
+
+"@types/snarkjs@^0.7.9":
+  version "0.7.9"
+  resolved "https://registry.npmjs.org/@types/snarkjs/-/snarkjs-0.7.9.tgz"
+  integrity sha512-pb4Bq3GI2YQOQOG0dR/YuQs/mqcuL6k/vnz68LIPtpA2frrUL3twf69a3AUK9eUmNNeW0RIKkq6scDlC75Is+g==
 
 "@typescript-eslint/eslint-plugin@^5.59.8":
   version "5.59.8"
