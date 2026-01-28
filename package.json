@@ -9,6 +9,7 @@
     "clean": "rimraf dist && rimraf coverage",
     "lint": "eslint src/**/*.ts src/*.ts; tsc --noEmit; tsc -p tsconfig.test.json --noEmit",
     "test": "yarn build-test && env NODE_ENV=test mocha 'src/**/__tests__/*.test.ts'",
+    "test-adapter": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true npx mocha 'src/prover/__tests__/groth16-adapter-prover.test.ts'",
     "test-V2": "yarn build-test && env NODE_ENV=test V2_TEST=1 mocha 'src/**/__tests__/*.test.ts'",
     "test-hardhat": "env NODE_ENV=test RUN_HARDHAT_TESTS=1 npm test",
     "test-hardhat-V2": "env NODE_ENV=test V2_TEST=1 RUN_HARDHAT_TESTS=1 npm test",
