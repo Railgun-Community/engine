@@ -60,7 +60,7 @@ export abstract class ShieldNote {
     const decrypted = AES.decryptGCM(
       {
         iv: hexlified0.slice(0, 32),
-        tag: hexlified0.slice(16, 64),
+        tag: hexlified0.slice(32, 64),
         data: [hexlified1.slice(0, 32)],
       },
       sharedKey,
