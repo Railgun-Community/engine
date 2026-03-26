@@ -168,7 +168,7 @@ export class Prover {
    * Used to set Groth16 implementation from @railgun-reloaded/prover.
    */
   setGroth16FromReloadedProver() {
-    this.setSnarkJSGroth16(createGroth16ForEngine());
+    this.setSnarkJSGroth16(createGroth16ForEngine() as unknown as SnarkJSGroth16);
   }
 
   /**
