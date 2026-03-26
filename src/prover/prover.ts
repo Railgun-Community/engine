@@ -1,37 +1,25 @@
+import { createGroth16ForEngine } from '@railgun-reloaded/prover';
 import EngineDebug from '../debugger/debugger';
-import { ByteLength, ByteUtils } from '../utils/bytes';
+import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
 import {
   ArtifactGetter,
   FormattedCircuitInputsRailgun,
-  UnprovedTransactionInputs,
-  Proof,
-  PublicInputsRailgun,
-  SnarkProof,
-  NativeProverFormattedJsonInputsRailgun,
   FormattedCircuitInputsPOI,
   NativeProverFormattedJsonInputsPOI,
+  NativeProverFormattedJsonInputsRailgun,
+  Proof,
   PublicInputsPOI,
+  PublicInputsRailgun,
+  SnarkProof,
+  UnprovedTransactionInputs,
 } from '../models/prover-types';
+import { POIEngineProofInputs, TXIDVersion } from '../models';
+import { ByteLength, ByteUtils } from '../utils/bytes';
+import { isDefined } from '../utils/is-defined';
 import { stringifySafe } from '../utils/stringify';
 import { ProofCache } from './proof-cache';
 import { ProofCachePOI } from './proof-cache-poi';
-import { MERKLE_ZERO_VALUE_BIGINT } from '../models/merkletree-types';
-import { POIEngineProofInputs, TXIDVersion } from '../models';
-import { isDefined } from '../utils/is-defined';
 import { ProgressService } from './progress-service';
-import type { ProverArtifacts } from '@railgun-reloaded/prover';
-import {
-  createGroth16FromTransactionProver,
-  createGroth16FromPOIProver,
-  SnarkjsTransactionProver,
-  SnarkjsPoiProver,
-  standardToSnarkJSTransactionInput,
-  standardToSnarkJSPOIInput,
-} from '@railgun-reloaded/prover';
-import {
-  engineFormattedRailgunToTransactionCircuitInputs,
-  engineFormattedPOIToPOICircuitInputs,
-} from './engine-to-snarkjs-format';
 
 const ZERO_VALUE_POI = MERKLE_ZERO_VALUE_BIGINT;
 
@@ -177,129 +165,18 @@ export class Prover {
   }
 
   /**
-   * Converts engine Artifact to @railgun-reloaded/prover ProverArtifacts shape.
+   * Used to set Groth16 implementation from @railgun-reloaded/prover.
    */
-  private static engineArtifactToProverArtifacts(artifact: Artifact): ProverArtifacts {
-    if (!artifact.wasm) {
-      throw new Error('WASM artifact is required for @railgun-reloaded/prover');
-    }
-    return {
-      vkey: artifact.vkey as ProverArtifacts['vkey'],
-      zkey: new Uint8Array(artifact.zkey as ArrayLike<number>),
-      wasm: new Uint8Array(artifact.wasm as ArrayLike<number>),
-    };
-  }
-
-  /**
-   * Uses the groth16 adapter from @railgun-reloaded/prover for proof generation
-   * for private transfers (transaction/joinsplit) and unshield, and for POI proofs.
-   * Artifacts are loaded per proof from the engine's artifact getter.
-   */
-  setGroth16FromReloadedProver(): void {
-    this.setGroth16FromReloadedProverImpl();
+  setGroth16FromReloadedProver() {
+    this.setSnarkJSGroth16(createGroth16ForEngine());
   }
 
   /**
    * Alias for setGroth16FromReloadedProver for compatibility with wallets that
    * call setUseGroth16Adapter() to enable the @railgun-reloaded/prover groth16 adapter.
    */
-  setUseGroth16Adapter(): void {
-    this.setGroth16FromReloadedProverImpl();
-  }
-
-  private setGroth16FromReloadedProverImpl(): void {
-    const suppressDebugLogger = { debug: () => {} };
-
-    this.groth16 = {
-      fullProveRailgun: async (
-        formattedInputs: FormattedCircuitInputsRailgun,
-        _wasm: Optional<ArrayLike<number>>,
-        _zkey: ArrayLike<number>,
-        _logger: { debug: (log: string) => void },
-        _dat: ArrayLike<number> | undefined,
-        progressCallback: ProverProgressCallback,
-      ) => {
-        const progressService = new ProgressService(0, 95, 1500, 250);
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        progressService.progressSteadily(progressCallback);
-        try {
-          const publicInputs: PublicInputsRailgun = {
-            merkleRoot: formattedInputs.merkleRoot,
-            boundParamsHash: formattedInputs.boundParamsHash,
-            nullifiers: formattedInputs.nullifiers,
-            commitmentsOut: formattedInputs.commitmentsOut,
-          };
-          const artifacts = await this.artifactGetter.getArtifacts(publicInputs);
-          const proverArtifacts = Prover.engineArtifactToProverArtifacts(artifacts);
-          const txProver = new SnarkjsTransactionProver(proverArtifacts);
-          const adapter = createGroth16FromTransactionProver(txProver);
-          const transactionCircuitInputs = engineFormattedRailgunToTransactionCircuitInputs(formattedInputs);
-          const snarkjsInputs = standardToSnarkJSTransactionInput(transactionCircuitInputs);
-          const result = await adapter.fullProve(
-            snarkjsInputs,
-            proverArtifacts.wasm,
-            proverArtifacts.zkey,
-            suppressDebugLogger,
-          );
-          progressService.stop();
-          return {
-            proof: {
-              pi_a: result.proof.pi_a,
-              pi_b: result.proof.pi_b,
-              pi_c: result.proof.pi_c,
-            },
-            publicSignals: result.publicSignals,
-          };
-        } catch (cause) {
-          progressService.stop();
-          throw new Error('@railgun-reloaded/prover failed to fullProveRailgun', { cause });
-        }
-      },
-
-      fullProvePOI: async (
-        formattedInputs: FormattedCircuitInputsPOI,
-        _wasm: Optional<ArrayLike<number>>,
-        _zkey: ArrayLike<number>,
-        _logger: { debug: (log: string) => void },
-        _dat: ArrayLike<number> | undefined,
-        progressCallback: ProverProgressCallback,
-      ) => {
-        const progressService = new ProgressService(0, 95, 3000, 250);
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        progressService.progressSteadily(progressCallback);
-        try {
-          const maxInputs = formattedInputs.nullifiers.length;
-          const maxOutputs = formattedInputs.commitmentsOut.length;
-          const artifacts = await this.artifactGetter.getArtifactsPOI(maxInputs, maxOutputs);
-          const proverArtifacts = Prover.engineArtifactToProverArtifacts(artifacts);
-          const poiProver = new SnarkjsPoiProver(proverArtifacts);
-          const adapter = createGroth16FromPOIProver(poiProver);
-          const poiCircuitInputs = engineFormattedPOIToPOICircuitInputs(formattedInputs);
-          const snarkjsInputs = standardToSnarkJSPOIInput(poiCircuitInputs);
-          const result = await adapter.fullProve(
-            snarkjsInputs,
-            proverArtifacts.wasm,
-            proverArtifacts.zkey,
-            suppressDebugLogger,
-          );
-          progressService.stop();
-          return {
-            proof: {
-              pi_a: result.proof.pi_a,
-              pi_b: result.proof.pi_b,
-              pi_c: result.proof.pi_c,
-            },
-            publicSignals: result.publicSignals,
-          };
-        } catch (cause) {
-          progressService.stop();
-          throw new Error('@railgun-reloaded/prover failed to fullProvePOI', { cause });
-        }
-      },
-
-      // verification ignored for now
-      verify: undefined,
-    };
+  setUseGroth16Adapter() {
+    this.setGroth16FromReloadedProver();
   }
 
   /**
