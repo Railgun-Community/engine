@@ -1600,8 +1600,10 @@ abstract class AbstractWallet extends EventEmitter {
           }
           const isLegacyPOIProof = railgunTransaction.blockNumber < poiLaunchBlock;
 
-          const spentTXOs = TXOs.filter((txo) =>
-            railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
+          const spentTXOs = POI.filterSpentTXOs(
+            TXOs,
+            railgunTransaction.nullifiers,
+            railgunTransaction.utxoTreeIn,
           );
 
           const sentCommitmentsForRailgunTxid = sentCommitments.filter(

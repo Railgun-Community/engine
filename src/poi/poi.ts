@@ -156,6 +156,14 @@ export class POI {
     return keys.every((key) => Object.prototype.hasOwnProperty.call(obj, key));
   }
 
+  static filterSpentTXOs(TXOs: TXO[], nullifiers: string[], utxoTreeIn: number): TXO[] {
+    return TXOs.filter(
+      (txo) =>
+        nullifiers.includes(`0x${txo.nullifier}`) &&
+        txo.tree === utxoTreeIn,
+    );
+  }
+
   static getListKeysCanGenerateSpentPOIs(
     spentTXOs: TXO[],
     sentCommitments: SentCommitment[],
