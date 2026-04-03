@@ -191,8 +191,10 @@ const formatSpentStatusInfo = async (
       }
       const isLegacyPOIProof = railgunTransaction.blockNumber < poiLaunchBlock;
 
-      spentTXOs = TXOs.filter((txo) =>
-        railgunTransaction.nullifiers.includes(`0x${txo.nullifier}`),
+      spentTXOs = POI.filterSpentTXOs(
+        TXOs,
+        railgunTransaction.nullifiers,
+        railgunTransaction.utxoTreeIn,
       );
       listKeysCanGenerateSpentPOIs = POI.getListKeysCanGenerateSpentPOIs(
         spentTXOs,
