@@ -3,4 +3,8 @@
 /* eslint-disable */
 export { PoseidonMerkleAccumulator__factory } from "./PoseidonMerkleAccumulator__factory";
 export { PoseidonMerkleVerifier__factory } from "./PoseidonMerkleVerifier__factory";
+export { RailgunSmartWallet_Legacy_PreMar23__factory } from "./RailgunSmartWallet_Legacy_PreMar23__factory";
+export { Registry__factory } from "./Registry__factory";
+export { RelayAdapt__factory } from "./RelayAdapt__factory";
+export { RelayAdapt7702__factory } from "./RelayAdapt7702__factory";
 export { TokenVault__factory } from "./TokenVault__factory";

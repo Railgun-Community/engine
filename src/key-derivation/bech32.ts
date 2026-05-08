@@ -80,7 +80,7 @@ function decodeAddress(address: string): AddressData {
       throw new Error('No address to decode');
     }
 
-    const decoded = bech32m.decode(address, ADDRESS_LENGTH_LIMIT);
+    const decoded = bech32m.decode(address as any, ADDRESS_LENGTH_LIMIT);
 
     if (decoded.prefix !== PREFIX) {
       throw new Error('Invalid address prefix');

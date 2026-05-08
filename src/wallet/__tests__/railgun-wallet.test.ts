@@ -298,6 +298,91 @@ describe('railgun-wallet', () => {
     expect(decoded.chain).to.deep.equal(chain);
   });
 
+  it('Should scope ephemeral key index by chain ID', async () => {
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(0);
+    expect(await wallet.getEphemeralKeyIndex(10n)).to.equal(0);
+
+    await wallet.setEphemeralKeyIndex(1n, 3);
+    await wallet.setEphemeralKeyIndex(10n, 7);
+
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(3);
+    expect(await wallet.getEphemeralKeyIndex(10n)).to.equal(7);
+  });
+
+  it('Should ratchet ephemeral key index for selected chain only', async () => {
+    await wallet.setEphemeralKeyIndex(1n, 2);
+    await wallet.setEphemeralKeyIndex(10n, 5);
+
+    await wallet.ratchetEphemeralAddress(1n);
+
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(3);
+    expect(await wallet.getEphemeralKeyIndex(10n)).to.equal(5);
+  });
+
+  it('Should keep base path when using injected ephemeral derivation suffix strategy', async () => {
+    wallet.setEphemeralWalletDerivationStrategy((index) => {
+      return `${index}'/99`;
+    });
+
+    const ephemeralWallet = await wallet.getEphemeralWallet(testEncryptionKey, 1n, 2);
+
+    expect(ephemeralWallet.path).to.equal("m/44'/60'/0'/7702'/0'/1'/2'/99");
+  });
+
+  it('Should isolate suffixed ephemeral key index paths from the default path', async () => {
+    await wallet.setEphemeralKeyIndex(1n, 3);
+
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'/99`,
+      getDBPathSuffix: () => ['custom'],
+    });
+
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(0);
+
+    await wallet.setEphemeralKeyIndex(1n, 7);
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(7);
+
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'`,
+      getDBPathSuffix: () => [],
+    });
+
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(3);
+  });
+
+  it('Should reject invalid ephemeral key index path suffixes', async () => {
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'`,
+      getDBPathSuffix: () => [''],
+    });
+
+    await expect(wallet.getEphemeralKeyIndex(1n)).to.be.rejectedWith(
+      'Invalid ephemeral key index DB path suffix.',
+    );
+  });
+
+  it('Should reject non-string injected derivation path suffixes', async () => {
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: () => 123 as unknown as string,
+      getDBPathSuffix: () => [],
+    });
+
+    await expect(wallet.getEphemeralWallet(testEncryptionKey, 1n, 2)).to.be.rejectedWith(
+      'Invalid ephemeral wallet derivation path suffix.',
+    );
+  });
+
+  it('Should reject non-string injected DB path suffix segments', async () => {
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'`,
+      getDBPathSuffix: () => [123 as unknown as string],
+    });
+
+    await expect(wallet.getEphemeralKeyIndex(1n)).to.be.rejectedWith(
+      'Invalid ephemeral key index DB path suffix.',
+    );
+  });
+
   it('Should get empty wallet details', async () => {
     const walletDetails = await wallet.getWalletDetails(txidVersion, chain);
     expect(walletDetails).to.deep.equal({
