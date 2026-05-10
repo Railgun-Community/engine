@@ -230,6 +230,66 @@ describe('railgun-wallet', () => {
     });
   });
 
+  it('loadUTXOMerkletree preserves walletDetails when version key is undefined (post-clear case)', async () => {
+    // Regression for the redundant-rescan-after-refresh bug.
+    //
+    // Setup: simulate the post-cold-sync state where the wallet has scanned
+    // and persisted treeScannedHeights, but an adjacent clear path
+    // (engine.clearUTXOMerkletreeAndLoadedWalletsAllTXIDVersions, which
+    // clearNamespace()s the wallet/chain prefix) has wiped the wallet's
+    // version key without re-setting it.
+    //
+    // Pre-fix: next loadUTXOMerkletree would see undefined and call
+    // clearDecryptedBalancesAllTXIDVersions again, wiping the freshly
+    // persisted treeScannedHeights → forced full leaf rescan.
+    //
+    // Post-fix: undefined is handled as "nothing to migrate" and the
+    // version key is just re-stamped; walletDetails is preserved.
+    // beforeEach already called clearDecryptedBalancesAllTXIDVersions, so
+    // the version key is already undefined and walletDetails is empty —
+    // exactly the "post-adjacent-wipe" state the bug reproduces.
+    const versionAfterBeforeEach = await wallet.getUTXOMerkletreeHistoryVersion(
+      chain,
+    );
+    expect(versionAfterBeforeEach).to.satisfy(
+      (v: unknown) => v === undefined || Number.isNaN(v),
+    );
+
+    // Seed walletDetails as if a previous sync persisted scanned heights.
+    // Re-fetch the map, set our entry, write it back via msgpack — same
+    // path decryptBalances uses internally to persist treeScannedHeights.
+    const map = await wallet.getWalletDetailsMap(chain);
+    map[txidVersion] = {
+      treeScannedHeights: [123],
+      creationTree: 0,
+      creationTreeHeight: 7,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    const msgpackLite = require('msgpack-lite');
+    await db.put(
+      wallet.getWalletDetailsPath(chain),
+      msgpackLite.encode(map),
+    );
+
+    // Pre-fix: loadUTXOMerkletree saw undefined and called
+    // clearDecryptedBalancesAllTXIDVersions, wiping walletDetails →
+    // forced full leaf rescan on next decryptBalances run.
+    // Post-fix: undefined is treated as "no migration", just re-stamps
+    // the version key. walletDetails is preserved.
+    await wallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+
+    const persisted = await wallet.getWalletDetails(txidVersion, chain);
+    expect(persisted.treeScannedHeights).to.deep.equal([123]);
+    expect(persisted.creationTree).to.equal(0);
+    expect(persisted.creationTreeHeight).to.equal(7);
+
+    // Version key must be re-stamped so the NEXT loadUTXOMerkletree also
+    // skips the clear path.
+    const versionAfter = await wallet.getUTXOMerkletreeHistoryVersion(chain);
+    expect(versionAfter).to.be.a('number');
+    expect(versionAfter).to.be.greaterThan(0);
+  });
+
   describe('createScannedDBCommitments — transact commitment hash verification', () => {
     // Genuinely-encrypted self-transfer note that decrypts cleanly for `wallet`.
     const encryptOwnTransactNote = async () => {

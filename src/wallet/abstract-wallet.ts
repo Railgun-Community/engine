@@ -222,19 +222,33 @@ abstract class AbstractWallet extends EventEmitter {
     txidVersion: TXIDVersion,
     utxoMerkletree: UTXOMerkletree,
   ): Promise<void> {
-    // Remove balances if the UTXO merkletree is out of date for this wallet.
     const { chain } = utxoMerkletree;
     const utxoMerkletreeHistoryVersion = await this.getUTXOMerkletreeHistoryVersion(chain);
-    if (
-      !isDefined(utxoMerkletreeHistoryVersion) ||
+
+    if (!isDefined(utxoMerkletreeHistoryVersion)) {
+      // Either a cold install (namespace already empty — no clear needed) or
+      // an adjacent path wiped our wallet namespace without preserving this
+      // version key (engine's clearUTXOMerkletreeAndLoadedWallets chain
+      // calls clearDecryptedBalancesAllTXIDVersions which clearNamespace()s
+      // the wallet/chain prefix this key lives under). Either way, no
+      // schema migration is needed — just write the marker so future schema
+      // bumps are detected. Skipping the clear preserves any walletDetails
+      // that were rebuilt after the adjacent wipe, avoiding an unnecessary
+      // full leaf rescan on the next boot.
+      await this.setUTXOMerkletreeHistoryVersion(
+        chain,
+        CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
+      );
+    } else if (
       utxoMerkletreeHistoryVersion < CURRENT_UTXO_MERKLETREE_HISTORY_VERSION
     ) {
+      // Real schema migration: stored version is older than what this code
+      // expects. Clear and re-stamp.
       await this.clearDecryptedBalancesAllTXIDVersions(chain);
-      await this.setUTXOMerkletreeHistoryVersion(chain, CURRENT_UTXO_MERKLETREE_HISTORY_VERSION);
-
-      this.utxoMerkletrees.set(txidVersion, utxoMerkletree.chain, utxoMerkletree);
-
-      return;
+      await this.setUTXOMerkletreeHistoryVersion(
+        chain,
+        CURRENT_UTXO_MERKLETREE_HISTORY_VERSION,
+      );
     }
 
     this.utxoMerkletrees.set(txidVersion, utxoMerkletree.chain, utxoMerkletree);
