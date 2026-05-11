@@ -33,6 +33,7 @@ import { Database } from '../../database/database';
 import { AddressData } from '../../key-derivation/bech32';
 import { TransactNote } from '../../note/transact-note';
 import { Prover, SnarkJSGroth16 } from '../../prover/prover';
+import { type ExternalSignerConnector, HardwareWallet } from '../../wallet/hardware-wallet';
 import { RailgunWallet } from '../../wallet/railgun-wallet';
 import { config } from '../../test/config.test';
 import { hashBoundParamsV2, hashBoundParamsV3 } from '../bound-params';
@@ -849,6 +850,96 @@ describe('transaction-erc20', function test() {
     assert.isTrue(verifyEDDSA(msg, signature, pubkey));
 
     expect(signature).to.deep.equal(signEDDSA(privateKey, msg));
+  });
+
+  it('Should request one hardware wallet batch approval and sign with the returned sub-session', async () => {
+    transactionBatch.addOutput(await makeNote(1n));
+
+    const hardwareWallet = await HardwareWallet.fromShareableViewingKey(
+      db,
+      testEncryptionKey,
+      wallet.generateShareableViewingKey(),
+      undefined,
+      prover,
+    );
+    await hardwareWallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+    await hardwareWallet.decryptBalances(txidVersion, chain, () => {}, false);
+    await hardwareWallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
+
+    const signedSubSessions: Optional<string>[] = [];
+    const expectedHashes: bigint[] = [];
+    let batchApprovalCalls = 0;
+    let approvedRequestCount = 0;
+    const connector: ExternalSignerConnector = {
+      requestBatchApproval: async (requests) => {
+        batchApprovalCalls += 1;
+        approvedRequestCount = requests.length;
+        return 'batch-sub-session';
+      },
+      sign: async (expectedHash, _publicInputs, subSession) => {
+        signedSubSessions.push(subSession);
+        expectedHashes.push(expectedHash);
+        return signEDDSA(
+          (await wallet.getSpendingKeyPair(testEncryptionKey)).privateKey,
+          expectedHash,
+        );
+      },
+    };
+    hardwareWallet.setConnector(connector);
+
+    const { provedTransactions } = await transactionBatch.generateTransactions(
+      prover,
+      hardwareWallet,
+      txidVersion,
+      testEncryptionKey,
+      () => {},
+      false,
+    );
+
+    expect(provedTransactions).to.have.length(1);
+    expect(batchApprovalCalls).to.equal(1);
+    expect(approvedRequestCount).to.equal(1);
+    expect(expectedHashes).to.have.length(1);
+    expect(signedSubSessions).to.deep.equal(['batch-sub-session']);
+  });
+
+  it('Should sign hardware wallet transactions without a batch approval sub-session when unsupported', async () => {
+    transactionBatch.addOutput(await makeNote(1n));
+
+    const hardwareWallet = await HardwareWallet.fromShareableViewingKey(
+      db,
+      testEncryptionKey,
+      wallet.generateShareableViewingKey(),
+      undefined,
+      prover,
+    );
+    await hardwareWallet.loadUTXOMerkletree(txidVersion, utxoMerkletree);
+    await hardwareWallet.decryptBalances(txidVersion, chain, () => {}, false);
+    await hardwareWallet.refreshPOIsForTXIDVersion(chain, txidVersion, true);
+
+    const signedSubSessions: Optional<string>[] = [];
+    const connector: ExternalSignerConnector = {
+      sign: async (expectedHash, _publicInputs, subSession) => {
+        signedSubSessions.push(subSession);
+        return signEDDSA(
+          (await wallet.getSpendingKeyPair(testEncryptionKey)).privateKey,
+          expectedHash,
+        );
+      },
+    };
+    hardwareWallet.setConnector(connector);
+
+    const { provedTransactions } = await transactionBatch.generateTransactions(
+      prover,
+      hardwareWallet,
+      txidVersion,
+      testEncryptionKey,
+      () => {},
+      false,
+    );
+
+    expect(provedTransactions).to.have.length(1);
+    expect(signedSubSessions).to.deep.equal([undefined]);
   });
 
   it('Should generate validated inputs for transaction batch', async () => {

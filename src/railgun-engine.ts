@@ -32,6 +32,7 @@ import {
   UnshieldStoredEvent,
 } from './models/event-types';
 import { ViewOnlyWallet } from './wallet/view-only-wallet';
+import { HardwareWallet, type ExternalSignerConnector } from './wallet/hardware-wallet';
 import { AbstractWallet } from './wallet/abstract-wallet';
 import WalletInfo from './wallet/wallet-info';
 import {
@@ -2115,10 +2116,38 @@ class RailgunEngine extends EventEmitter {
    * @returns id
    */
   async loadExistingViewOnlyWallet(encryptionKey: string, id: string): Promise<ViewOnlyWallet> {
-    if (isDefined(this.wallets[id])) {
-      return this.wallets[id] as ViewOnlyWallet;
+    const loadedWallet = this.wallets[id];
+    if (isDefined(loadedWallet)) {
+      if (loadedWallet instanceof ViewOnlyWallet) {
+        return loadedWallet;
+      }
+      this.unloadWallet(id);
     }
     const wallet = await ViewOnlyWallet.loadExisting(this.db, encryptionKey, id, this.prover);
+    await this.loadWallet(wallet);
+    return wallet;
+  }
+
+  async loadExistingHardwareWallet(
+    encryptionKey: string,
+    id: string,
+    connector: ExternalSignerConnector,
+  ): Promise<HardwareWallet> {
+    const loadedWallet = this.wallets[id];
+    if (isDefined(loadedWallet)) {
+      if (loadedWallet instanceof HardwareWallet) {
+        loadedWallet.setConnector(connector);
+        return loadedWallet;
+      }
+      this.unloadWallet(id);
+    }
+    const wallet = await HardwareWallet.loadExisting(
+      this.db,
+      encryptionKey,
+      id,
+      this.prover,
+    );
+    wallet.setConnector(connector);
     await this.loadWallet(wallet);
     return wallet;
   }
@@ -2165,6 +2194,24 @@ class RailgunEngine extends EventEmitter {
       creationBlockNumbers,
       this.prover,
     );
+    await this.loadWallet(wallet);
+    return wallet;
+  }
+
+  async createHardwareWalletFromShareableViewingKey(
+    encryptionKey: string,
+    shareableViewingKey: string,
+    creationBlockNumbers: Optional<number[][]>,
+    connector: ExternalSignerConnector,
+  ): Promise<HardwareWallet> {
+    const wallet = await HardwareWallet.fromShareableViewingKey(
+      this.db,
+      encryptionKey,
+      shareableViewingKey,
+      creationBlockNumbers,
+      this.prover,
+    );
+    wallet.setConnector(connector);
     await this.loadWallet(wallet);
     return wallet;
   }

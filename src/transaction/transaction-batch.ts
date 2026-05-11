@@ -18,13 +18,15 @@ import { stringifySafe } from '../utils/stringify';
 import { Chain } from '../models/engine-types';
 import { TransactNote } from '../note/transact-note';
 import {
+  PrivateInputsRailgun,
   PreTransactionPOIsPerTxidLeafPerList,
+  PublicInputsRailgun,
   TXIDVersion,
   TreeBalance,
   UnprovedTransactionInputs,
 } from '../models';
 import { getTokenDataHash } from '../note/note-util';
-import { AbstractWallet } from '../wallet';
+import { AbstractWallet, HardwareWallet } from '../wallet';
 import { BoundParamsStruct } from '../abi/typechain/RailgunSmartWallet';
 import { isDefined } from '../utils/is-defined';
 import { POI } from '../poi';
@@ -427,9 +429,16 @@ export class TransactionBatch {
       data: '0x', // TODO-V3: Add RelayAdapt encoded calldata
     };
 
-    for (let index = 0; index < transactionDatas.length; index += 1) {
-      const { transaction, utxos, hasUnshield } = transactionDatas[index];
+    const generatedRequests: {
+      transaction: Transaction;
+      utxos: TXO[];
+      hasUnshield: boolean;
+      publicInputs: PublicInputsRailgun;
+      privateInputs: PrivateInputsRailgun;
+      boundParams: BoundParamsStruct | PoseidonMerkleVerifier.BoundParamsStruct;
+    }[] = [];
 
+    for (const { transaction, utxos, hasUnshield } of transactionDatas) {
       const { publicInputs, privateInputs, boundParams } =
         // eslint-disable-next-line no-await-in-loop
         await transaction.generateTransactionRequest(
@@ -439,8 +448,36 @@ export class TransactionBatch {
           globalBoundParams,
         );
 
+      generatedRequests.push({
+        transaction,
+        utxos,
+        hasUnshield,
+        publicInputs,
+        privateInputs,
+        boundParams,
+      });
+    }
+
+    let subSession: Optional<string>;
+    if (wallet instanceof HardwareWallet) {
+      subSession = await wallet.requestBatchApproval(generatedRequests);
+    }
+
+    for (let index = 0; index < generatedRequests.length; index += 1) {
+      const {
+        transaction,
+        utxos,
+        hasUnshield,
+        publicInputs,
+        privateInputs,
+        boundParams,
+      } = generatedRequests[index];
+
       // eslint-disable-next-line no-await-in-loop
-      const signature = await wallet.sign(publicInputs, encryptionKey);
+      const signature = await wallet.sign(
+        publicInputs,
+        wallet instanceof HardwareWallet ? (subSession ?? '') : encryptionKey,
+      );
 
       // Specific types per TXIDVersion
       let treeNumber: BigNumberish;
