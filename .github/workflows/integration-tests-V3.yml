@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '22'
+          cache: 'yarn'
       - name: Checkout engine repo
         uses: actions/checkout@v3
         with:
@@ -24,22 +25,43 @@ jobs:
         with:
           repository: Railgun-Privacy/contract
           path: contract
+      - name: Enable Corepack
+        run: corepack enable
       - name: Yarn in engine
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install
-          dir: 'engine'
+        working-directory: ./engine
+        run: yarn install --frozen-lockfile
       - name: Yarn in contract
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install
-          dir: 'contract'
+        working-directory: ./contract
+        run: yarn install --frozen-lockfile
       - name: Build contract
-        run: cd contract && ./node_modules/.bin/hardhat compile
-      - name: Run contract hardhat and engine tests
-        uses: BerniWittmann/background-server-action@v1
-        with:
-          command: cd engine && yarn test-hardhat
-          start: cd contract && npx hardhat node >/dev/null, cd contract && sleep 5 && npx hardhat deploy:test --network localhost >/dev/null
-          wait-on: 'http://localhost:8545'
-          wait-on-timeout: 120
+        working-directory: ./contract
+        run: ./node_modules/.bin/hardhat compile
+      - name: Start Hardhat node (background)
+        working-directory: ./contract
+        run: |
+          npx hardhat node > "$GITHUB_WORKSPACE/hardhat.log" 2>&1 &
+          echo $! > "$GITHUB_WORKSPACE/hardhat.pid"
+          for i in {1..120}; do
+            if curl -s -o /dev/null -X POST -H "Content-Type: application/json" \
+                 --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
+                 http://localhost:8545; then
+              echo "Hardhat node ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Hardhat node did not become ready in 120s"
+          cat "$GITHUB_WORKSPACE/hardhat.log"
+          exit 1
+      - name: Deploy test contracts
+        working-directory: ./contract
+        run: npx hardhat deploy:test --network localhost
+      - name: Run engine tests
+        working-directory: ./engine
+        run: yarn test-hardhat
+      - name: Stop Hardhat node
+        if: always()
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/hardhat.pid" ]; then
+            kill "$(cat "$GITHUB_WORKSPACE/hardhat.pid")" 2>/dev/null || true
+          fi
