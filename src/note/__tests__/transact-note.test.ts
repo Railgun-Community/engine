@@ -433,7 +433,7 @@ describe('transact-note', () => {
         expect(decrypted.tokenHash).to.equal(note.tokenHash);
         expect(decrypted.value).to.equal(note.value);
         expect(decrypted.random).to.equal(note.random);
-        // expect(decrypted.hash).to.equal(note.hash);
+        expect(decrypted.hash).to.equal(note.hash);
         expect(decrypted.memoText).to.equal(note.memoText);
 
         // Check if vector encrypted values are successfully decrypted
@@ -457,8 +457,7 @@ describe('transact-note', () => {
         expect(decryptedFromCiphertext.tokenHash).to.equal(note.tokenHash);
         expect(decryptedFromCiphertext.value).to.equal(note.value);
         expect(decryptedFromCiphertext.random).to.equal(note.random);
-        // TODO: Update vectors for note hashes
-        // expect(decryptedFromCiphertext.hash).to.equal(note.hash);
+        expect(decryptedFromCiphertext.hash).to.equal(note.hash);
         expect(decryptedFromCiphertext.memoText).to.equal(note.memoText);
         expect(decryptedFromCiphertext.receiverAddressData.masterPublicKey).to.equal(
           address.masterPublicKey,

@@ -550,6 +550,14 @@ abstract class AbstractWallet extends EventEmitter {
     const walletAddress = this.getAddress();
     const commitmentType: CommitmentType = AbstractWallet.getCommitmentType(leaf);
 
+    // SECURITY: a decrypted transact note must re-hash to the on-chain commitment
+    // hash; one that decrypts cleanly but hashes differently is tampered/corrupt.
+    const decryptedNoteMatchesCommitment = (note: TransactNote): boolean => {
+      const noteHash = ByteUtils.nToHex(note.hash, ByteLength.UINT_256);
+      const commitmentHash = ByteUtils.formatToByteLength(leaf.hash, ByteLength.UINT_256);
+      return noteHash === commitmentHash;
+    };
+
     switch (commitmentType) {
       case CommitmentType.TransactCommitmentV2: {
         const commitment = leaf as TransactCommitmentV2;
@@ -578,6 +586,10 @@ abstract class AbstractWallet extends EventEmitter {
             leaf.blockNumber,
             undefined, // transactCommitmentBatchIndex
           );
+          if (noteReceive && !decryptedNoteMatchesCommitment(noteReceive)) {
+            EngineDebug.log('Discarding decrypted receive note: hash does not match commitment.');
+            noteReceive = undefined;
+          }
           serializedNoteReceive = noteReceive ? noteReceive.serialize() : undefined;
         }
         if (sharedKeySender) {
@@ -595,6 +607,10 @@ abstract class AbstractWallet extends EventEmitter {
             leaf.blockNumber,
             undefined, // transactCommitmentBatchIndex
           );
+          if (noteSend && !decryptedNoteMatchesCommitment(noteSend)) {
+            EngineDebug.log('Discarding decrypted send note: hash does not match commitment.');
+            noteSend = undefined;
+          }
           serializedNoteSend = noteSend ? noteSend.serialize() : undefined;
         }
         break;
@@ -667,6 +683,10 @@ abstract class AbstractWallet extends EventEmitter {
             leaf.blockNumber,
             commitment.transactCommitmentBatchIndex,
           );
+          if (noteReceive && !decryptedNoteMatchesCommitment(noteReceive)) {
+            EngineDebug.log('Discarding decrypted receive note: hash does not match commitment.');
+            noteReceive = undefined;
+          }
           serializedNoteReceive = noteReceive ? noteReceive.serialize() : undefined;
         }
         if (sharedKeySender) {
@@ -684,6 +704,10 @@ abstract class AbstractWallet extends EventEmitter {
             leaf.blockNumber,
             commitment.transactCommitmentBatchIndex,
           );
+          if (noteSend && !decryptedNoteMatchesCommitment(noteSend)) {
+            EngineDebug.log('Discarding decrypted send note: hash does not match commitment.');
+            noteSend = undefined;
+          }
           serializedNoteSend = noteSend ? noteSend.serialize() : undefined;
         }
         break;
@@ -721,6 +745,10 @@ abstract class AbstractWallet extends EventEmitter {
             leaf.blockNumber,
             undefined, // transactCommitmentBatchIndex
           );
+          if (noteReceive && !decryptedNoteMatchesCommitment(noteReceive)) {
+            EngineDebug.log('Discarding decrypted receive note: hash does not match commitment.');
+            noteReceive = undefined;
+          }
           serializedNoteReceive = noteReceive
             ? noteReceive.serializeLegacy(viewingPrivateKey)
             : undefined;
@@ -740,6 +768,10 @@ abstract class AbstractWallet extends EventEmitter {
             leaf.blockNumber,
             undefined, // transactCommitmentBatchIndex
           );
+          if (noteSend && !decryptedNoteMatchesCommitment(noteSend)) {
+            EngineDebug.log('Discarding decrypted send note: hash does not match commitment.');
+            noteSend = undefined;
+          }
           serializedNoteSend = noteSend ? noteSend.serializeLegacy(viewingPrivateKey) : undefined;
         }
         break;
