@@ -2,20 +2,34 @@ import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { utf8ToBytes } from 'ethereum-cryptography/utils';
 import memdown from 'memdown';
-import { verifyED25519 } from '../../utils/keys-utils';
+import {
+  getNoteBlindingKeys,
+  getSharedSymmetricKey,
+  verifyED25519,
+} from '../../utils/keys-utils';
 import { RailgunWallet } from '../railgun-wallet';
 import { ViewOnlyWallet } from '../view-only-wallet';
 import { config } from '../../test/config.test';
 import { Chain, ChainType } from '../../models/engine-types';
 import { Database } from '../../database/database';
 import { sha256 } from '../../utils/hash';
-import { ByteUtils } from '../../utils/bytes';
+import { ByteLength, ByteUtils } from '../../utils/bytes';
 import { RailgunEngine } from '../../railgun-engine';
 import { Mnemonic } from '../../key-derivation/bip39';
 import { UTXOMerkletree } from '../../merkletree/utxo-merkletree';
 import { Prover } from '../../prover/prover';
 import { getTestTXIDVersion, testArtifactsGetter } from '../../test/helper.test';
 import { addChainSupportsV3 } from '../../chain/chain';
+import { TransactNote, getTokenDataERC20 } from '../../note';
+import { TXIDVersion } from '../../models/poi-types';
+import {
+  CommitmentCiphertextV2,
+  CommitmentType,
+  OutputType,
+  TransactCommitmentV2,
+} from '../../models/formatted-types';
+import WalletInfo from '../wallet-info';
+import { isDefined } from '../../utils/is-defined';
 
 chai.use(chaiAsPromised);
 const { expect } = chai;
@@ -213,6 +227,103 @@ describe('railgun-wallet', () => {
       treeScannedHeights: [],
       creationTree: undefined,
       creationTreeHeight: undefined,
+    });
+  });
+
+  describe('createScannedDBCommitments — transact commitment hash verification', () => {
+    // Genuinely-encrypted self-transfer note that decrypts cleanly for `wallet`.
+    const encryptOwnTransactNote = async () => {
+      WalletInfo.setWalletSource('test');
+      const tokenData = getTokenDataERC20('0x5fbdb2315678afecb367f032d93f642f64180aa3');
+      const note = TransactNote.createTransfer(
+        wallet.addressKeys,
+        wallet.addressKeys,
+        1000n,
+        tokenData,
+        false, // showSenderAddressToRecipient
+        OutputType.Transfer,
+        undefined, // memoText
+      );
+      const { senderRandom } = note;
+      if (!isDefined(senderRandom)) {
+        throw new Error('Test setup: senderRandom undefined');
+      }
+      const viewingKeyPair = wallet.getViewingKeyPair();
+      const blindingKeys = getNoteBlindingKeys(
+        viewingKeyPair.pubkey,
+        wallet.addressKeys.viewingPublicKey,
+        note.random,
+        senderRandom,
+      );
+      const sharedKey = await getSharedSymmetricKey(
+        viewingKeyPair.privateKey,
+        blindingKeys.blindedReceiverViewingKey,
+      );
+      if (!isDefined(sharedKey)) {
+        throw new Error('Test setup: shared key undefined');
+      }
+      const { noteCiphertext, noteMemo, annotationData } = note.encryptV2(
+        TXIDVersion.V2_PoseidonMerkle,
+        sharedKey,
+        wallet.addressKeys.masterPublicKey,
+        senderRandom,
+        viewingKeyPair.privateKey,
+      );
+      const ciphertext: CommitmentCiphertextV2 = {
+        ciphertext: noteCiphertext,
+        blindedSenderViewingKey: ByteUtils.hexlify(blindingKeys.blindedSenderViewingKey),
+        blindedReceiverViewingKey: ByteUtils.hexlify(blindingKeys.blindedReceiverViewingKey),
+        annotationData,
+        memo: noteMemo,
+      };
+      return { note, ciphertext };
+    };
+
+    const makeV2Leaf = (
+      ciphertext: CommitmentCiphertextV2,
+      hash: string,
+    ): TransactCommitmentV2 => ({
+      commitmentType: CommitmentType.TransactCommitmentV2,
+      hash,
+      txid: ByteUtils.formatToByteLength('00', ByteLength.UINT_256),
+      timestamp: undefined,
+      blockNumber: 0,
+      utxoTree: 0,
+      utxoIndex: 0,
+      railgunTxid: undefined,
+      ciphertext,
+    });
+
+    it('Should store a receive commitment when the decrypted note hash matches', async () => {
+      const { note, ciphertext } = await encryptOwnTransactNote();
+      const matchingHash = ByteUtils.nToHex(note.hash, ByteLength.UINT_256);
+      await wallet.scanLeaves(
+        TXIDVersion.V2_PoseidonMerkle,
+        [makeV2Leaf(ciphertext, matchingHash)],
+        0, // tree
+        chain,
+        0, // startScanHeight
+        undefined, // scanTicker
+      );
+      const key = wallet.getWalletReceiveCommitmentDBPrefix(chain, 0, 0);
+      await expect(db.get(key)).to.be.fulfilled;
+    });
+
+    it('Should discard a decrypted note whose hash does not match the commitment', async () => {
+      const { note, ciphertext } = await encryptOwnTransactNote();
+      // Pair the genuine, cleanly-decrypting ciphertext with a different
+      // (but well-formed) on-chain commitment hash — the attack this fix blocks.
+      const tamperedHash = ByteUtils.nToHex(note.hash + 1n, ByteLength.UINT_256);
+      await wallet.scanLeaves(
+        TXIDVersion.V2_PoseidonMerkle,
+        [makeV2Leaf(ciphertext, tamperedHash)],
+        0, // tree
+        chain,
+        0, // startScanHeight
+        undefined, // scanTicker
+      );
+      const key = wallet.getWalletReceiveCommitmentDBPrefix(chain, 0, 0);
+      await expect(db.get(key)).to.be.rejected;
     });
   });
 
