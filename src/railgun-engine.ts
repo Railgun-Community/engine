@@ -73,6 +73,7 @@ import { TokenVaultContract } from './contracts/railgun-smart-wallet/V3/token-va
 import { Registry } from './utils/registry';
 import { stringToBigInt } from './utils/bigint';
 import { isTransactCommitment } from './utils/commitment';
+import { getEngineTxidSyncBatchSize } from './utils/txid-sync-batch-size';
 
 class RailgunEngine extends EventEmitter {
   readonly db: Database;
@@ -924,27 +925,47 @@ class RailgunEngine extends EventEmitter {
 
       const txidMerkletree = this.getTXIDMerkletree(txidVersion, chain);
 
-      // while loop to handle multiple queries
+      // Loop calling quickSync. Each iteration commits its batch to the
+      // txid merkletree before the next iteration runs, so a crash mid-scan
+      // loses at most one quickSync batch instead of the entire accumulated
+      // backlog. The cursor (latest railgun txid) lives in the DB — we
+      // re-derive it after each commit. Continue while the source returned
+      // a full batch (== txidSyncBatchSize), implying more data remains.
+      const txidSyncBatchSize = getEngineTxidSyncBatchSize();
       let isLooping = true;
       const txidMerkletreeHistoryStartScanPercentage = 0.4; // 40%
       const txidMerkletreeEndScanPercentage = 0.99; // 99%
-      const railgunTransactions: RailgunTransactionV2[] = [];
-      const latestRailgunTransaction: Optional<RailgunTransactionWithHash> =
+      let totalTransactionsThisScan = 0;
+
+      const initialLatest: Optional<RailgunTransactionWithHash> =
         await txidMerkletree.getLatestRailgunTransaction();
       if (
-        latestRailgunTransaction &&
-        latestRailgunTransaction.version !== RailgunTransactionVersion.V2
+        initialLatest &&
+        initialLatest.version !== RailgunTransactionVersion.V2
       ) {
         // Should never happen
         return;
       }
-      let latestTranasction: RailgunTransactionV2 =
-        latestRailgunTransaction as RailgunTransactionV2;
+
       let txidMerkletreeStartScanPercentage = 0.2; // 20%
+      /* eslint-disable no-await-in-loop */
       while (isLooping) {
-        const railgunTransactionsRAW: RailgunTransactionV2[] =  await this.quickSyncRailgunTransactionsV2(chain, latestTranasction?.graphID);
-        railgunTransactions.push(...railgunTransactionsRAW);
-        latestTranasction = railgunTransactionsRAW[railgunTransactionsRAW.length - 1];
+        const dbLatest: Optional<RailgunTransactionWithHash> =
+          await txidMerkletree.getLatestRailgunTransaction();
+        const cursorGraphID =
+          (dbLatest as RailgunTransactionV2 | undefined)?.graphID;
+        const railgunTransactionsRAW: RailgunTransactionV2[] =
+          await this.quickSyncRailgunTransactionsV2(chain, cursorGraphID);
+        if (railgunTransactionsRAW.length === 0) break;
+        await this.handleNewRailgunTransactionsV2(
+          txidVersion,
+          chain,
+          railgunTransactionsRAW,
+          dbLatest?.verificationHash,
+          txidMerkletreeHistoryStartScanPercentage,
+          txidMerkletreeEndScanPercentage,
+        );
+        totalTransactionsThisScan += railgunTransactionsRAW.length;
         this.emitTXIDMerkletreeScanUpdateEvent(
           txidVersion,
           chain,
@@ -954,16 +975,9 @@ class RailgunEngine extends EventEmitter {
         if (txidMerkletreeStartScanPercentage > 1) {
           txidMerkletreeStartScanPercentage = 0.95;
         }
-        isLooping = railgunTransactionsRAW.length === 10000;
+        isLooping = railgunTransactionsRAW.length === txidSyncBatchSize;
       }
-      await this.handleNewRailgunTransactionsV2(
-        txidVersion,
-        chain,
-        railgunTransactions,
-        latestRailgunTransaction?.verificationHash,
-        txidMerkletreeHistoryStartScanPercentage,
-        txidMerkletreeEndScanPercentage,
-      );
+      /* eslint-enable no-await-in-loop */
 
       const scanCompleteData: MerkletreeHistoryScanEventData = {
         scanStatus: MerkletreeScanStatus.Complete,
@@ -971,7 +985,7 @@ class RailgunEngine extends EventEmitter {
         chain,
       };
 
-      if (railgunTransactions.length) {
+      if (totalTransactionsThisScan > 0) {
         // Only scan wallets if utxoMerkletree is not currently scanning
         const utxoMerkletree = this.getUTXOMerkletree(txidVersion, chain);
         if (!utxoMerkletree.isScanning) {
@@ -1043,7 +1057,23 @@ class RailgunEngine extends EventEmitter {
 
     const v2BlockNumber = RailgunSmartWalletContract.getEngineV2StartBlockNumber(chain);
 
-    const toQueue: RailgunTransactionWithHash[] = [];
+    let toQueue: RailgunTransactionWithHash[] = [];
+
+    // Flush threshold: drain toQueue → DB in chunks instead of one giant
+    // commit at the end. Smaller chunks = more frequent durable checkpoints
+    // (better crash-recovery granularity) at the cost of more DB writes.
+    // Same knob as the outer-loop continuation threshold so download cap,
+    // loop termination, and insert flush all agree on the unit of work.
+    const txidSyncBatchSize = getEngineTxidSyncBatchSize();
+    const flushQueue = async (): Promise<void> => {
+      if (toQueue.length === 0) return;
+      await txidMerkletree.queueRailgunTransactions(
+        toQueue,
+        latestValidatedTxidIndex,
+      );
+      toQueue = [];
+      await txidMerkletree.updateTreesFromWriteQueue();
+    };
 
     let previousVerificationHash = latestVerificationHash;
 
@@ -1193,6 +1223,12 @@ class RailgunEngine extends EventEmitter {
             `Stopping queue of Railgun TXIDs - Invalid verification hash. This occurs very rarely during a chain re-org and will resolve itself in minutes.`,
           ),
         );
+        // Commit any valid prefix accumulated so far before clearing —
+        // otherwise the clearLeavesAfterTxidIndex below operates on the
+        // pre-flush DB state, which is fine, but flushing first keeps the
+        // valid prefix durable in case the clear path itself fails.
+        // eslint-disable-next-line no-await-in-loop
+        await flushQueue();
         // Clear 10 leaves to allow for re-org to resolve.
         const numLeavesToClear = 10;
         // eslint-disable-next-line no-await-in-loop
@@ -1204,6 +1240,11 @@ class RailgunEngine extends EventEmitter {
 
       toQueue.push(railgunTransactionWithTxid);
 
+      if (toQueue.length >= txidSyncBatchSize) {
+        // eslint-disable-next-line no-await-in-loop
+        await flushQueue();
+      }
+
       // Only emit progress every 100 TXIDs.
       if (index % 100 === 0) {
         const progress = index / railgunTransactionsLength;
@@ -1211,8 +1252,7 @@ class RailgunEngine extends EventEmitter {
       }
     }
 
-    await txidMerkletree.queueRailgunTransactions(toQueue, latestValidatedTxidIndex);
-    await txidMerkletree.updateTreesFromWriteQueue();
+    await flushQueue();
   }
 
   private async handleNewRailgunTransactionsV3(
