@@ -1,7 +1,10 @@
 import { verifyTypedData, getBytes, keccak256, encodeRlp, toBeHex, recoverAddress, Authorization } from 'ethers';
 import { TransactionStructV2 } from '../models/transaction-types';
 import { RelayAdapt7702 } from '../abi/typechain/RelayAdapt7702';
-import { getExecutePayloadHash } from '../transaction/relay-adapt-7702-signature';
+import {
+  RelayAdapt7702ExecutionDetails,
+  getExecutePayloadHash,
+} from '../transaction/relay-adapt-7702-signature';
 
 export class RelayAdapt7702Validator {
   static validateAuthorization(
@@ -34,7 +37,8 @@ export class RelayAdapt7702Validator {
     actionData: RelayAdapt7702.ActionDataStruct,
     signature: string,
     chainId: number,
-    expectedSigner: string
+    expectedSigner: string,
+    executionDetails?: RelayAdapt7702ExecutionDetails,
   ): void {
     const domain = {
       name: 'RelayAdapt7702',
@@ -48,7 +52,7 @@ export class RelayAdapt7702Validator {
     };
 
     const recoveredAddress = verifyTypedData(domain, types, {
-      payloadHash: getExecutePayloadHash(transactions, actionData),
+      payloadHash: getExecutePayloadHash(transactions, actionData, executionDetails),
     }, signature);
 
     if (recoveredAddress.toLowerCase() !== expectedSigner.toLowerCase()) {

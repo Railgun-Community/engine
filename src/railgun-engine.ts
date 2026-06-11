@@ -4,6 +4,7 @@ import { FallbackProvider } from 'ethers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
 import { RelayAdapt7702Contract } from './contracts/relay-adapt/V2/relay-adapt-7702';
+import { RelayAdapt7702ExecutionType } from './transaction/relay-adapt-7702-signature';
 import {
   RegistryContract,
   REGISTRY_NAME_RELAY_ADAPT_7702,
@@ -1528,6 +1529,7 @@ class RailgunEngine extends EventEmitter {
     supportsV3: boolean,
     relayAdapt7702ContractAddress?: string,
     railgunRegistryContractAddress?: string,
+    relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
@@ -1619,7 +1621,11 @@ class RailgunEngine extends EventEmitter {
       ContractStore.relayAdapt7702Contracts.set(
         null,
         chain,
-        new RelayAdapt7702Contract(relayAdapt7702ContractAddress, defaultProvider),
+        new RelayAdapt7702Contract(
+          relayAdapt7702ContractAddress,
+          defaultProvider,
+          relayAdapt7702ExecutionType,
+        ),
       );
     }
 

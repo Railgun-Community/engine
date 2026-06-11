@@ -15,6 +15,8 @@ import { RelayAdapt7702 } from '../../abi/typechain/RelayAdapt7702';
 import { TransactionStructV2, TransactionStructV3 } from '../../models/transaction-types';
 import { signEIP7702Authorization as signEIP7702AuthorizationCore } from '../../transaction/eip7702';
 import {
+  RelayAdapt7702ExecutionDetails,
+  RelayAdapt7702ExecutionType,
   getExecutePayloadHash,
   signExecutionAuthorization as signExecutionAuthorizationCore,
   ZERO_7702_ADAPT_PARAMS,
@@ -43,15 +45,44 @@ class RelayAdapt7702Helper {
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt7702.ActionDataStruct,
     chainId: bigint,
+    executionDetails?: RelayAdapt7702ExecutionDetails,
   ): Promise<string> {
-    return signExecutionAuthorizationCore(signer, transactions, actionData, Number(chainId));
+    return signExecutionAuthorizationCore(signer, transactions, actionData, Number(chainId), executionDetails);
   }
 
   static getExecutePayloadHash(
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt7702.ActionDataStruct,
+    executionDetails?: RelayAdapt7702ExecutionDetails,
   ): string {
-    return getExecutePayloadHash(transactions, actionData);
+    return getExecutePayloadHash(transactions, actionData, executionDetails);
+  }
+
+  static encodeExecute(
+    relayAdapt7702Interface: Interface,
+    transactions: TransactionStructV2[],
+    actionData: RelayAdapt7702.ActionDataStruct,
+    signature: string,
+    executionDetails: RelayAdapt7702ExecutionDetails,
+  ): string {
+    if (executionDetails.executionType === RelayAdapt7702ExecutionType.LegacyPreExecuteNonce) {
+      return relayAdapt7702Interface.encodeFunctionData('execute', [
+        transactions,
+        actionData,
+        signature,
+      ]);
+    }
+
+    if (executionDetails.executeNonce == null) {
+      throw new Error('RelayAdapt7702 execute nonce required for nonce-aware execute.');
+    }
+
+    return relayAdapt7702Interface.encodeFunctionData('execute', [
+      transactions,
+      actionData,
+      executionDetails.executeNonce,
+      signature,
+    ]);
   }
 
   static getZeroAdaptParams(): string {

@@ -10,7 +10,7 @@ import {
   toUtf8String,
   Authorization,
 } from 'ethers';
-import { ABIRelayAdapt, ABIRelayAdapt7702 } from '../../../abi/abi';
+import { ABIRelayAdapt, ABIRelayAdapt7702, ABIRelayAdapt7702_Legacy_PreExecuteNonce } from '../../../abi/abi';
 import { TransactionReceiptLog } from '../../../models/formatted-types';
 import { getTokenDataERC20 } from '../../../note/note-util';
 import { ZERO_ADDRESS } from '../../../utils/constants';
@@ -22,6 +22,10 @@ import { RelayAdapt7702 } from '../../../abi/typechain/RelayAdapt7702';
 import { PayableOverrides } from '../../../abi/typechain/common';
 import { TransactionStructV2 } from '../../../models/transaction-types';
 import { MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2 } from '../constants';
+import {
+  DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
+  RelayAdapt7702ExecutionType,
+} from '../../../transaction/relay-adapt-7702-signature';
 
 enum RelayAdaptEvent {
   CallError = 'CallError',
@@ -33,6 +37,12 @@ export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 export class RelayAdapt7702Contract {
   private readonly contract: RelayAdapt;
 
+  private readonly provider: Provider;
+
+  private readonly relayAdapt7702Interface: Interface;
+
+  private readonly executionType: RelayAdapt7702ExecutionType;
+
   readonly address: string;
 
   /**
@@ -40,11 +50,21 @@ export class RelayAdapt7702Contract {
    * @param relayAdaptV2ContractAddress - address of Railgun relay adapt contract
    * @param provider - Network provider
    */
-  constructor(relayAdaptV2ContractAddress: string, provider: Provider) {
+  constructor(
+    relayAdaptV2ContractAddress: string,
+    provider: Provider,
+    executionType: RelayAdapt7702ExecutionType = DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
+  ) {
     this.address = relayAdaptV2ContractAddress;
+    this.provider = provider;
+    this.executionType = executionType;
+    const relayAdapt7702ABI = executionType === RelayAdapt7702ExecutionType.LegacyPreExecuteNonce
+      ? ABIRelayAdapt7702_Legacy_PreExecuteNonce
+      : ABIRelayAdapt7702;
+    this.relayAdapt7702Interface = new Interface(relayAdapt7702ABI);
     this.contract = new Contract(
       relayAdaptV2ContractAddress,
-      ABIRelayAdapt7702,
+      relayAdapt7702ABI,
       provider,
     ) as unknown as RelayAdapt;
   }
@@ -386,13 +406,26 @@ export class RelayAdapt7702Contract {
     );
     
     const sig = signature ?? '0x';
+    const executeNonce = this.executionType === RelayAdapt7702ExecutionType.ExecuteWithNonce
+      ? await this.getExecuteNonce(ephemeralAddress)
+      : undefined;
 
-    const populatedTransaction = await (this.contract as any).execute.populateTransaction(
+    const data = RelayAdapt7702Helper.encodeExecute(
+      this.relayAdapt7702Interface,
       transactions,
       actionData,
       sig,
-      overrides,
+      {
+        executionType: this.executionType,
+        executeNonce,
+      },
     );
+
+    const populatedTransaction = {
+      to: this.address,
+      data,
+      ...overrides,
+    } as ContractTransaction;
 
     if (ephemeralAddress) {
       populatedTransaction.to = ephemeralAddress;
@@ -403,6 +436,16 @@ export class RelayAdapt7702Contract {
     }
 
     return populatedTransaction;
+  }
+
+  private async getExecuteNonce(ephemeralAddress?: string): Promise<bigint> {
+    const nonceContractAddress = ephemeralAddress ?? this.address;
+    const nonceContract = new Contract(
+      nonceContractAddress,
+      ABIRelayAdapt7702,
+      this.provider,
+    ) as unknown as RelayAdapt7702;
+    return nonceContract.nonce();
   }
 
   private static getCallErrorTopic() {

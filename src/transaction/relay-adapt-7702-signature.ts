@@ -3,6 +3,19 @@ import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-
 import { RelayAdapt7702__factory } from '../abi/typechain/factories/RelayAdapt7702__factory';
 import { RelayAdapt7702 } from '../abi/typechain/RelayAdapt7702';
 
+export enum RelayAdapt7702ExecutionType {
+  ExecuteWithNonce = 'ExecuteWithNonce',
+  LegacyPreExecuteNonce = 'LegacyPreExecuteNonce',
+}
+
+export type RelayAdapt7702ExecutionDetails = {
+  executionType: RelayAdapt7702ExecutionType;
+  executeNonce?: bigint;
+};
+
+export const DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE =
+  RelayAdapt7702ExecutionType.ExecuteWithNonce;
+
 const iface = RelayAdapt7702__factory.createInterface();
 const executeFunc = iface.getFunction('execute');
 if (!executeFunc) {
@@ -28,11 +41,30 @@ export const ZERO_7702_ADAPT_PARAMS = '0x000000000000000000000000000000000000000
 export const getExecutePayloadHash = (
   transactions: (TransactionStructV2 | TransactionStructV3)[],
   actionData: RelayAdapt7702.ActionDataStruct,
+  executionDetails: RelayAdapt7702ExecutionDetails = {
+    executionType: DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
+    executeNonce: 0n,
+  },
 ): string => {
   const abiCoder = AbiCoder.defaultAbiCoder();
+  const { executionType, executeNonce } = executionDetails;
+
+  if (executionType === RelayAdapt7702ExecutionType.LegacyPreExecuteNonce) {
+    const encodedLegacy = abiCoder.encode(
+      [`${TRANSACTION_STRUCT_ABI}[]`, ACTION_DATA_STRUCT_ABI],
+      [transactions, actionData],
+    );
+
+    return keccak256(encodedLegacy);
+  }
+
+  if (executeNonce == null) {
+    throw new Error('RelayAdapt7702 execute nonce required for nonce-aware execute.');
+  }
+
   const encoded = abiCoder.encode(
-    [`${TRANSACTION_STRUCT_ABI}[]`, ACTION_DATA_STRUCT_ABI],
-    [transactions, actionData],
+    [`${TRANSACTION_STRUCT_ABI}[]`, ACTION_DATA_STRUCT_ABI, 'uint256'],
+    [transactions, actionData, executeNonce],
   );
 
   return keccak256(encoded);
@@ -52,7 +84,11 @@ export const signExecutionAuthorization = async (
   signer: HDNodeWallet | Wallet,
   transactions: (TransactionStructV2 | TransactionStructV3)[],
   actionData: RelayAdapt7702.ActionDataStruct,
-  chainId: number
+  chainId: number,
+  executionDetails: RelayAdapt7702ExecutionDetails = {
+    executionType: DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
+    executeNonce: 0n,
+  },
 ): Promise<string> => {
   const domain = {
     name: 'RelayAdapt7702',
@@ -66,6 +102,6 @@ export const signExecutionAuthorization = async (
   };
 
   return signer.signTypedData(domain, types, {
-    payloadHash: getExecutePayloadHash(transactions, actionData),
+    payloadHash: getExecutePayloadHash(transactions, actionData, executionDetails),
   });
 };

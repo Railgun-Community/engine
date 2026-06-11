@@ -21,6 +21,10 @@ import { HDNodeWallet, Authorization } from 'ethers';
 import { RelayAdapt7702Helper } from '../contracts/relay-adapt/relay-adapt-7702-helper';
 import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 import { RelayAdapt7702 } from '../abi/typechain/RelayAdapt7702';
+import {
+  DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
+  RelayAdapt7702ExecutionDetails,
+} from '../transaction/relay-adapt-7702-signature';
 
 export type EphemeralWalletDerivationStrategy = (
   index: number,
@@ -241,6 +245,10 @@ class RailgunWallet extends AbstractWallet {
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt7702.ActionDataStruct,
     nonce: number = 0,
+    executionDetails: RelayAdapt7702ExecutionDetails = {
+      executionType: DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
+      executeNonce: 0n,
+    },
   ): Promise<{ authorization: Authorization; signature: string }> {
     const ephemeralWallet = await this.getCurrentEphemeralWallet(encryptionKey, chainId);
 
@@ -256,6 +264,7 @@ class RailgunWallet extends AbstractWallet {
       transactions,
       actionData,
       chainId,
+      executionDetails,
     );
 
     return { authorization, signature };

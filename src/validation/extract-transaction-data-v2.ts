@@ -1,5 +1,10 @@
 import { Contract, ContractTransaction } from 'ethers';
-import { ABIRailgunSmartWallet, ABIRelayAdapt, ABIRelayAdapt7702 } from '../abi/abi';
+import {
+  ABIRailgunSmartWallet,
+  ABIRelayAdapt,
+  ABIRelayAdapt7702,
+  ABIRelayAdapt7702_Legacy_PreExecuteNonce,
+} from '../abi/abi';
 import { Chain } from '../models/engine-types';
 import { TransactionStructOutput } from '../abi/typechain/RailgunSmartWallet';
 import { AddressData } from '../key-derivation';
@@ -16,6 +21,7 @@ import { TransactNote } from '../note/transact-note';
 import { getSharedSymmetricKey } from '../utils/keys-utils';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { TXIDVersion } from '../models/poi-types';
+import { RelayAdapt7702ExecutionType } from '../transaction/relay-adapt-7702-signature';
 
 enum TransactionName {
   RailgunSmartWallet = 'transact',
@@ -23,14 +29,23 @@ enum TransactionName {
   RelayAdapt7702 = 'execute'
 }
 
-const getABIForTransaction = (transactionName: TransactionName): Array<any> => {
+const getABIsForTransaction = (
+  transactionName: TransactionName,
+  relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
+): Array<Array<any>> => {
   switch (transactionName) {
     case TransactionName.RailgunSmartWallet:
-      return ABIRailgunSmartWallet;
+      return [ABIRailgunSmartWallet];
     case TransactionName.RelayAdapt:
-      return ABIRelayAdapt;
+      return [ABIRelayAdapt];
     case TransactionName.RelayAdapt7702:
-      return ABIRelayAdapt7702;
+      if (relayAdapt7702ExecutionType === RelayAdapt7702ExecutionType.LegacyPreExecuteNonce) {
+        return [ABIRelayAdapt7702_Legacy_PreExecuteNonce];
+      }
+      if (relayAdapt7702ExecutionType === RelayAdapt7702ExecutionType.ExecuteWithNonce) {
+        return [ABIRelayAdapt7702];
+      }
+      return [ABIRelayAdapt7702, ABIRelayAdapt7702_Legacy_PreExecuteNonce];
   }
   throw new Error('Unsupported transactionName');
 };
@@ -44,6 +59,7 @@ export const extractFirstNoteERC20AmountMapFromTransactionRequestV2 = (
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
   useRelayAdapt7702: boolean = false,
+  relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
 ): Promise<Record<string, bigint>> => {
   const transactionName = useRelayAdapt7702
     ? TransactionName.RelayAdapt7702
@@ -59,6 +75,7 @@ export const extractFirstNoteERC20AmountMapFromTransactionRequestV2 = (
     receivingViewingPrivateKey,
     receivingRailgunAddressData,
     tokenDataGetter,
+    relayAdapt7702ExecutionType,
   );
 };
 
@@ -71,6 +88,7 @@ export const extractRailgunTransactionDataFromTransactionRequestV2 = (
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
   useRelayAdapt7702: boolean = false,
+  relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
 ): Promise<ExtractedRailgunTransactionData> => {
   const transactionName = useRelayAdapt7702
     ? TransactionName.RelayAdapt7702
@@ -86,7 +104,38 @@ export const extractRailgunTransactionDataFromTransactionRequestV2 = (
     receivingViewingPrivateKey,
     receivingRailgunAddressData,
     tokenDataGetter,
+    relayAdapt7702ExecutionType,
   );
+};
+
+const parseTransactionWithABIs = (
+  contractAddress: string,
+  abis: Array<Array<any>>,
+  transactionRequest: ContractTransaction,
+) => {
+  let lastError: Optional<Error>;
+
+  for (const abi of abis) {
+    try {
+      const contract = new Contract(contractAddress, abi);
+      const parsedTransaction = contract.interface.parseTransaction({
+        data: transactionRequest.data ?? '',
+        value: transactionRequest.value,
+      });
+      if (parsedTransaction) {
+        return parsedTransaction;
+      }
+    } catch (cause) {
+      if (cause instanceof Error) {
+        lastError = cause;
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+  throw new Error('No transaction parsable from request');
 };
 
 const getRailgunTransactionRequestsV2 = (
@@ -94,8 +143,9 @@ const getRailgunTransactionRequestsV2 = (
   transactionRequest: ContractTransaction,
   transactionName: TransactionName,
   contractAddress: string,
+  relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
 ): TransactionStructOutput[] => {
-  const abi = getABIForTransaction(transactionName);
+  const abis = getABIsForTransaction(transactionName, relayAdapt7702ExecutionType);
 
   if (
     !transactionRequest.to ||
@@ -106,15 +156,11 @@ const getRailgunTransactionRequestsV2 = (
     );
   }
 
-  const contract = new Contract(contractAddress, abi);
-
-  const parsedTransaction = contract.interface.parseTransaction({
-    data: transactionRequest.data ?? '',
-    value: transactionRequest.value,
-  });
-  if (!parsedTransaction) {
-    throw new Error('No transaction parsable from request');
-  }
+  const parsedTransaction = parseTransactionWithABIs(
+    contractAddress,
+    abis,
+    transactionRequest,
+  );
   if (parsedTransaction.name !== transactionName) {
     throw new Error(
       `Contract method ${parsedTransaction.name} invalid: expected ${transactionName}`,
@@ -145,6 +191,7 @@ const extractFirstNoteERC20AmountMapV2 = async (
   receivingViewingPrivateKey: Uint8Array,
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
+  relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
 ): Promise<Record<string, bigint>> => {
   const erc20PaymentAmounts: Record<string, bigint> = {};
 
@@ -153,6 +200,7 @@ const extractFirstNoteERC20AmountMapV2 = async (
     transactionRequest,
     transactionName,
     contractAddress,
+    relayAdapt7702ExecutionType,
   );
 
   await Promise.all(
@@ -207,12 +255,14 @@ const extractRailgunTransactionDataV2 = async (
   receivingViewingPrivateKey: Uint8Array,
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
+  relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
 ): Promise<ExtractedRailgunTransactionData> => {
   const railgunTxs: TransactionStructOutput[] = getRailgunTransactionRequestsV2(
     chain,
     transactionRequest,
     transactionName,
     contractAddress,
+    relayAdapt7702ExecutionType,
   );
 
   const extractedRailgunTransactionData: ExtractedRailgunTransactionData = await Promise.all(

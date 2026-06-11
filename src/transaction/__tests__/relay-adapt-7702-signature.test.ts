@@ -1,6 +1,12 @@
 import { expect } from 'chai';
-import { Wallet, verifyTypedData } from 'ethers';
-import { getExecutePayloadHash, signExecutionAuthorization } from '../relay-adapt-7702-signature';
+import { AbiCoder, Wallet, keccak256, verifyTypedData } from 'ethers';
+import {
+  ACTION_DATA_STRUCT_ABI,
+  RelayAdapt7702ExecutionType,
+  TRANSACTION_STRUCT_ABI,
+  getExecutePayloadHash,
+  signExecutionAuthorization,
+} from '../relay-adapt-7702-signature';
 import { TransactionStructV2 } from '../../models/transaction-types';
 import { RelayAdapt7702 } from '../../abi/typechain/RelayAdapt7702';
 import { TXIDVersion } from '../../models/poi-types';
@@ -46,7 +52,17 @@ describe('RelayAdapt7702 Execution Signature', () => {
       calls: [],
     };
 
-    const signature = await signExecutionAuthorization(signer, [mockTransaction], mockActionData, chainId);
+    const executionDetails = {
+      executionType: RelayAdapt7702ExecutionType.ExecuteWithNonce,
+      executeNonce: 2n,
+    };
+    const signature = await signExecutionAuthorization(
+      signer,
+      [mockTransaction],
+      mockActionData,
+      chainId,
+      executionDetails,
+    );
 
     const recovered = verifyTypedData(
       {
@@ -59,11 +75,40 @@ describe('RelayAdapt7702 Execution Signature', () => {
         Execute: [{ name: 'payloadHash', type: 'bytes32' }],
       },
       {
-        payloadHash: getExecutePayloadHash([mockTransaction], mockActionData),
+        payloadHash: getExecutePayloadHash([mockTransaction], mockActionData, executionDetails),
       },
       signature,
     );
 
     expect(recovered).to.equal(signer.address);
+  });
+
+  it('should encode current and legacy payload hashes explicitly', () => {
+    const mockActionData: RelayAdapt7702.ActionDataStruct = {
+      requireSuccess: true,
+      minGasLimit: 100000n,
+      calls: [],
+    };
+    const transactions: TransactionStructV2[] = [];
+    const abiCoder = AbiCoder.defaultAbiCoder();
+    const executeNonce = 2n;
+
+    const legacyHash = getExecutePayloadHash(transactions, mockActionData, {
+      executionType: RelayAdapt7702ExecutionType.LegacyPreExecuteNonce,
+    });
+    const currentHash = getExecutePayloadHash(transactions, mockActionData, {
+      executionType: RelayAdapt7702ExecutionType.ExecuteWithNonce,
+      executeNonce,
+    });
+
+    expect(legacyHash).to.equal(keccak256(abiCoder.encode(
+      [`${TRANSACTION_STRUCT_ABI}[]`, ACTION_DATA_STRUCT_ABI],
+      [transactions, mockActionData],
+    )));
+    expect(currentHash).to.equal(keccak256(abiCoder.encode(
+      [`${TRANSACTION_STRUCT_ABI}[]`, ACTION_DATA_STRUCT_ABI, 'uint256'],
+      [transactions, mockActionData, executeNonce],
+    )));
+    expect(currentHash).to.not.equal(legacyHash);
   });
 });
