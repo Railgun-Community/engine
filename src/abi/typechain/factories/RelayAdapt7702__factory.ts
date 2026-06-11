@@ -62,19 +62,6 @@ const _abi = [
   },
   {
     inputs: [],
-    name: "CALL_TYPEHASH",
-    outputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "DOMAIN_SEPARATOR",
     outputs: [
       {
@@ -355,6 +342,11 @@ const _abi = [
         type: "tuple",
       },
       {
+        internalType: "uint256",
+        name: "_nonce",
+        type: "uint256",
+      },
+      {
         internalType: "bytes",
         name: "_signature",
         type: "bytes",
@@ -594,8 +586,59 @@ const _abi = [
         name: "_actionData",
         type: "tuple",
       },
+      {
+        internalType: "uint256",
+        name: "_nonce",
+        type: "uint256",
+      },
     ],
     name: "getExecutePayloadHash",
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "pure",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bool",
+        name: "_requireSuccess",
+        type: "bool",
+      },
+      {
+        components: [
+          {
+            internalType: "address",
+            name: "to",
+            type: "address",
+          },
+          {
+            internalType: "bytes",
+            name: "data",
+            type: "bytes",
+          },
+          {
+            internalType: "uint256",
+            name: "value",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct RelayAdapt7702.Call[]",
+        name: "_calls",
+        type: "tuple[]",
+      },
+      {
+        internalType: "uint256",
+        name: "_nonce",
+        type: "uint256",
+      },
+    ],
+    name: "getMulticallPayloadHash",
     outputs: [
       {
         internalType: "bytes32",

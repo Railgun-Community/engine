@@ -332,11 +332,6 @@
         "type": "tuple"
       },
       {
-        "internalType": "uint256",
-        "name": "_nonce",
-        "type": "uint256"
-      },
-      {
         "internalType": "bytes",
         "name": "_signature",
         "type": "bytes"
@@ -575,11 +570,6 @@
         "internalType": "struct RelayAdapt7702.ActionData",
         "name": "_actionData",
         "type": "tuple"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_nonce",
-        "type": "uint256"
       }
     ],
     "name": "getExecutePayloadHash",

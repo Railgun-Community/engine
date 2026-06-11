@@ -219,13 +219,13 @@ export declare namespace RelayAdapt7702 {
 export interface RelayAdapt7702Interface extends Interface {
   getFunction(
     nameOrSignature:
-      | "CALL_TYPEHASH"
       | "DOMAIN_SEPARATOR"
       | "EXECUTE_TYPEHASH"
       | "MULTICALL_TYPEHASH"
       | "adaptImplementation"
       | "execute"
       | "getExecutePayloadHash"
+      | "getMulticallPayloadHash"
       | "multicall"
       | "nonce"
       | "railgun"
@@ -238,10 +238,6 @@ export interface RelayAdapt7702Interface extends Interface {
 
   getEvent(nameOrSignatureOrTopic: "CallError"): EventFragment;
 
-  encodeFunctionData(
-    functionFragment: "CALL_TYPEHASH",
-    values?: undefined
-  ): string;
   encodeFunctionData(
     functionFragment: "DOMAIN_SEPARATOR",
     values?: undefined
@@ -260,11 +256,20 @@ export interface RelayAdapt7702Interface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "execute",
-    values: [TransactionStruct[], RelayAdapt7702.ActionDataStruct, BytesLike]
+    values: [
+      TransactionStruct[],
+      RelayAdapt7702.ActionDataStruct,
+      BigNumberish,
+      BytesLike
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "getExecutePayloadHash",
-    values: [TransactionStruct[], RelayAdapt7702.ActionDataStruct]
+    values: [TransactionStruct[], RelayAdapt7702.ActionDataStruct, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getMulticallPayloadHash",
+    values: [boolean, RelayAdapt7702.CallStruct[], BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "multicall",
@@ -291,10 +296,6 @@ export interface RelayAdapt7702Interface extends Interface {
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "CALL_TYPEHASH",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "DOMAIN_SEPARATOR",
     data: BytesLike
   ): Result;
@@ -313,6 +314,10 @@ export interface RelayAdapt7702Interface extends Interface {
   decodeFunctionResult(functionFragment: "execute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getExecutePayloadHash",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getMulticallPayloadHash",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "multicall", data: BytesLike): Result;
@@ -382,8 +387,6 @@ export interface RelayAdapt7702 extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  CALL_TYPEHASH: TypedContractMethod<[], [string], "view">;
-
   DOMAIN_SEPARATOR: TypedContractMethod<[], [string], "view">;
 
   EXECUTE_TYPEHASH: TypedContractMethod<[], [string], "view">;
@@ -396,6 +399,7 @@ export interface RelayAdapt7702 extends BaseContract {
     [
       _transactions: TransactionStruct[],
       _actionData: RelayAdapt7702.ActionDataStruct,
+      _nonce: BigNumberish,
       _signature: BytesLike
     ],
     [void],
@@ -405,7 +409,18 @@ export interface RelayAdapt7702 extends BaseContract {
   getExecutePayloadHash: TypedContractMethod<
     [
       _transactions: TransactionStruct[],
-      _actionData: RelayAdapt7702.ActionDataStruct
+      _actionData: RelayAdapt7702.ActionDataStruct,
+      _nonce: BigNumberish
+    ],
+    [string],
+    "view"
+  >;
+
+  getMulticallPayloadHash: TypedContractMethod<
+    [
+      _requireSuccess: boolean,
+      _calls: RelayAdapt7702.CallStruct[],
+      _nonce: BigNumberish
     ],
     [string],
     "view"
@@ -453,9 +468,6 @@ export interface RelayAdapt7702 extends BaseContract {
   ): T;
 
   getFunction(
-    nameOrSignature: "CALL_TYPEHASH"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
     nameOrSignature: "DOMAIN_SEPARATOR"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -473,6 +485,7 @@ export interface RelayAdapt7702 extends BaseContract {
     [
       _transactions: TransactionStruct[],
       _actionData: RelayAdapt7702.ActionDataStruct,
+      _nonce: BigNumberish,
       _signature: BytesLike
     ],
     [void],
@@ -483,7 +496,19 @@ export interface RelayAdapt7702 extends BaseContract {
   ): TypedContractMethod<
     [
       _transactions: TransactionStruct[],
-      _actionData: RelayAdapt7702.ActionDataStruct
+      _actionData: RelayAdapt7702.ActionDataStruct,
+      _nonce: BigNumberish
+    ],
+    [string],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "getMulticallPayloadHash"
+  ): TypedContractMethod<
+    [
+      _requireSuccess: boolean,
+      _calls: RelayAdapt7702.CallStruct[],
+      _nonce: BigNumberish
     ],
     [string],
     "view"
