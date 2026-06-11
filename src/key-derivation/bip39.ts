@@ -34,17 +34,25 @@ export class Mnemonic {
   /**
    * For deriving 0x private key from mnemonic and derivation index. Not for use with 0zk.
    */
-  static to0xPrivateKey(mnemonic: string, derivationIndex?: number): string {
-    const seed = mnemonicToSeedSync(mnemonic);
+  static to0xPrivateKey(
+    mnemonic: string,
+    derivationIndex?: number,
+    password: string = '',
+  ): string {
+    const seed = mnemonicToSeedSync(mnemonic, password);
     const path = getPath(derivationIndex);
     const node = HDKey.fromMasterSeed(seed).derive(path);
     const privateKey = bytesToHex(node.privateKey as Uint8Array);
     return privateKey;
   }
 
-  static to0xAddress(mnemonic: string, derivationIndex?: number): string {
+  static to0xAddress(
+    mnemonic: string,
+    derivationIndex?: number,
+    password: string = '',
+  ): string {
     const path = getPath(derivationIndex);
-    const wallet = HDNodeWallet.fromMnemonic(EthersMnemonic.fromPhrase(mnemonic), path);
+    const wallet = HDNodeWallet.fromMnemonic(EthersMnemonic.fromPhrase(mnemonic, password), path);
     return wallet.address;
   }
 }

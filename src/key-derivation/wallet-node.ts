@@ -29,13 +29,17 @@ const derivePathsForIndex = (index: number = 0) => {
   };
 };
 
-export const deriveNodes = (mnemonic: string, index: number = 0): WalletNodes => {
+export const deriveNodes = (
+  mnemonic: string,
+  index: number = 0,
+  password: string = '',
+): WalletNodes => {
   const paths = derivePathsForIndex(index);
   return {
     // eslint-disable-next-line no-use-before-define
-    spending: WalletNode.fromMnemonic(mnemonic).derive(paths.spending),
+    spending: WalletNode.fromMnemonic(mnemonic, password).derive(paths.spending),
     // eslint-disable-next-line no-use-before-define
-    viewing: WalletNode.fromMnemonic(mnemonic).derive(paths.viewing),
+    viewing: WalletNode.fromMnemonic(mnemonic, password).derive(paths.viewing),
   };
 };
 
@@ -57,8 +61,8 @@ export class WalletNode {
    * Create BIP32 node from mnemonic
    * @returns {WalletNode}
    */
-  static fromMnemonic(mnemonic: string): WalletNode {
-    const seed = Mnemonic.toSeed(mnemonic);
+  static fromMnemonic(mnemonic: string, password: string = ''): WalletNode {
+    const seed = Mnemonic.toSeed(mnemonic, password);
     return new WalletNode(getMasterKeyFromSeed(seed));
   }
 

@@ -2182,6 +2182,30 @@ class RailgunEngine extends EventEmitter {
     return wallet;
   }
 
+  /**
+   * Creates wallet from mnemonic and BIP39 mnemonic password.
+   * The mnemonic password is distinct from the wallet database encryption key.
+   */
+  async createWalletFromMnemonicWithPassword(
+    encryptionKey: string,
+    mnemonic: string,
+    mnemonicPassword: string,
+    index: number = 0,
+    creationBlockNumbers: Optional<number[][]> = undefined,
+  ): Promise<RailgunWallet> {
+    const wallet = await RailgunWallet.fromMnemonicWithPassword(
+      this.db,
+      encryptionKey,
+      mnemonic,
+      mnemonicPassword,
+      index,
+      creationBlockNumbers,
+      this.prover,
+    );
+    await this.loadWallet(wallet);
+    return wallet;
+  }
+
   async createViewOnlyWalletFromShareableViewingKey(
     encryptionKey: string,
     shareableViewingKey: string,
