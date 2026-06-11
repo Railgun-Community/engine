@@ -84,6 +84,32 @@ describe('railgun-wallet', () => {
     expect(wallet2.id).to.equal(wallet.id);
   });
 
+  it('Should load existing wallet with mnemonic password', async () => {
+    const mnemonicPassword = 'test mnemonic password';
+    const passwordWallet = await RailgunWallet.fromMnemonicWithPassword(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      mnemonicPassword,
+      0,
+      undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
+    );
+
+    const loadedWallet = await RailgunWallet.loadExisting(
+      db,
+      testEncryptionKey,
+      passwordWallet.id,
+      new Prover(testArtifactsGetter),
+    );
+
+    expect(passwordWallet.id).to.not.equal(wallet.id);
+    expect(loadedWallet.id).to.equal(passwordWallet.id);
+    expect(await loadedWallet.getChainAddress(testEncryptionKey)).to.equal(
+      await passwordWallet.getChainAddress(testEncryptionKey),
+    );
+  });
+
   it('Should load existing view-only wallet', async () => {
     const viewOnlyWallet2 = await ViewOnlyWallet.loadExisting(
       db,

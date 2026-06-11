@@ -135,10 +135,11 @@ class Transaction {
     txidVersion: TXIDVersion,
     encryptionKey: string,
     globalBoundParams: PoseidonMerkleVerifier.GlobalBoundParamsStruct,
+    mnemonicPassword?: string,
   ): Promise<RailgunTransactionRequest> {
     const merkletree = wallet.getUTXOMerkletree(txidVersion, this.chain);
     const merkleRoot = await merkletree.getRoot(this.spendingTree);
-    const spendingKey = await wallet.getSpendingKeyPair(encryptionKey);
+    const spendingKey = await wallet.getSpendingKeyPair(encryptionKey, mnemonicPassword);
     const nullifyingKey = wallet.getNullifyingKey();
     const senderViewingKeys = wallet.getViewingKeyPair();
 

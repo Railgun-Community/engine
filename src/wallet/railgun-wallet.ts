@@ -17,13 +17,20 @@ class RailgunWallet extends AbstractWallet {
    * Spending key should be kept private and only accessed on demand
    * @returns {Promise<SpendingKeyPair>}
    */
-  async getSpendingKeyPair(encryptionKey: string): Promise<SpendingKeyPair> {
-    const node = await this.loadSpendingKey(encryptionKey);
+  async getSpendingKeyPair(
+    encryptionKey: string,
+    mnemonicPassword?: string,
+  ): Promise<SpendingKeyPair> {
+    const node = await this.loadSpendingKey(encryptionKey, mnemonicPassword);
     return node.getSpendingKeyPair();
   }
 
-  async sign(publicInputs: PublicInputsRailgun, encryptionKey: string): Promise<Signature> {
-    const spendingKeyPair = await this.getSpendingKeyPair(encryptionKey);
+  async sign(
+    publicInputs: PublicInputsRailgun,
+    encryptionKey: string,
+    mnemonicPassword?: string,
+  ): Promise<Signature> {
+    const spendingKeyPair = await this.getSpendingKeyPair(encryptionKey, mnemonicPassword);
     const msg = poseidon([publicInputs.merkleRoot, publicInputs.boundParamsHash, ...publicInputs.nullifiers, ...publicInputs.commitmentsOut]);
     return signEDDSA(spendingKeyPair.privateKey, msg);
   }
@@ -33,44 +40,54 @@ class RailgunWallet extends AbstractWallet {
    * @param {BytesData} encryptionKey
    * @returns {Node} BabyJubJub node
    */
-  private async loadSpendingKey(encryptionKey: string): Promise<WalletNode> {
-    const { mnemonic, index } = (await RailgunWallet.read(
+  private async loadSpendingKey(
+    encryptionKey: string,
+    mnemonicPasswordOverride?: string,
+  ): Promise<WalletNode> {
+    const { mnemonic, mnemonicPassword, index } = (await RailgunWallet.read(
       this.db,
       this.id,
       encryptionKey,
     )) as WalletData;
-    return deriveNodes(mnemonic, index).spending;
+    return deriveNodes(mnemonic, index, mnemonicPasswordOverride ?? mnemonicPassword).spending;
   }
 
   /**
    * Helper to get the ethereum/whatever address is associated with this wallet
    */
   async getChainAddress(encryptionKey: string): Promise<string> {
-    const { mnemonic, index } = (await AbstractWallet.read(
+    const { mnemonic, mnemonicPassword, index } = (await AbstractWallet.read(
       this.db,
       this.id,
       encryptionKey,
     )) as WalletData;
-    return Mnemonic.to0xAddress(mnemonic, index);
+    return Mnemonic.to0xAddress(mnemonic, index, mnemonicPassword);
   }
 
   /**
    * Calculate Wallet ID from mnemonic and derivation path index
    * @returns {string} hash of mnemonic and index
    */
-  private static generateID(mnemonic: string, index: number): string {
-    return sha256(ByteUtils.combine([Mnemonic.toSeed(mnemonic), index.toString(16)]));
+  private static generateID(
+    mnemonic: string,
+    index: number,
+    mnemonicPassword: string = '',
+  ): string {
+    return sha256(
+      ByteUtils.combine([Mnemonic.toSeed(mnemonic, mnemonicPassword), index.toString(16)]),
+    );
   }
 
   private static async createWallet(
     id: string,
     db: Database,
     mnemonic: string,
+    mnemonicPassword: string,
     index: number,
     creationBlockNumbers: Optional<number[][]>,
     prover: Prover,
   ) {
-    const nodes = deriveNodes(mnemonic, index);
+    const nodes = deriveNodes(mnemonic, index, mnemonicPassword);
 
     const viewingKeyPair = await nodes.viewing.getViewingKeyPair();
     const spendingPublicKey = nodes.spending.getSpendingKeyPair().pubkey;
@@ -100,12 +117,47 @@ class RailgunWallet extends AbstractWallet {
     creationBlockNumbers: Optional<number[][]>,
     prover: Prover,
   ): Promise<RailgunWallet> {
-    const id = RailgunWallet.generateID(mnemonic, index);
+    return this.fromMnemonicWithPassword(
+      db,
+      encryptionKey,
+      mnemonic,
+      '', // mnemonicPassword
+      index,
+      creationBlockNumbers,
+      prover,
+    );
+  }
+
+  /**
+   * Create a wallet from mnemonic and BIP39 mnemonic password.
+   */
+  static async fromMnemonicWithPassword(
+    db: Database,
+    encryptionKey: string,
+    mnemonic: string,
+    mnemonicPassword: string,
+    index: number,
+    creationBlockNumbers: Optional<number[][]>,
+    prover: Prover,
+  ): Promise<RailgunWallet> {
+    const id = RailgunWallet.generateID(mnemonic, index, mnemonicPassword);
 
     // Write encrypted mnemonic to DB
-    await AbstractWallet.write(db, id, encryptionKey, { mnemonic, index, creationBlockNumbers });
+    const walletData: WalletData = { mnemonic, index, creationBlockNumbers };
+    if (mnemonicPassword !== '') {
+      walletData.mnemonicPassword = mnemonicPassword;
+    }
+    await AbstractWallet.write(db, id, encryptionKey, walletData);
 
-    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers, prover);
+    return this.createWallet(
+      id,
+      db,
+      mnemonic,
+      mnemonicPassword,
+      index,
+      creationBlockNumbers,
+      prover,
+    );
   }
 
   /**
@@ -122,7 +174,7 @@ class RailgunWallet extends AbstractWallet {
     prover: Prover,
   ): Promise<RailgunWallet> {
     // Get encrypted mnemonic and index from DB
-    const { mnemonic, index, creationBlockNumbers } = (await AbstractWallet.read(
+    const { mnemonic, mnemonicPassword, index, creationBlockNumbers } = (await AbstractWallet.read(
       db,
       id,
       encryptionKey,
@@ -131,7 +183,15 @@ class RailgunWallet extends AbstractWallet {
       throw new Error('Incorrect wallet type.');
     }
 
-    return this.createWallet(id, db, mnemonic, index, creationBlockNumbers, prover);
+    return this.createWallet(
+      id,
+      db,
+      mnemonic,
+      mnemonicPassword ?? '',
+      index,
+      creationBlockNumbers,
+      prover,
+    );
   }
 }
 

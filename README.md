@@ -41,6 +41,7 @@ Others
 RAILGUN Wallet
 
 - `railgunEngine.createWalletFromMnemonic()` (instance method)
+- `railgunEngine.createWalletFromMnemonicWithPassword()` (instance method)
 - `railgunEngine.loadExistingWallet()` (instance method)
 
 View-only RAILGUN Wallet

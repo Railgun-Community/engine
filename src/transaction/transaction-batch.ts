@@ -371,6 +371,7 @@ export class TransactionBatch {
     progressCallback: (progress: number, status: string) => void,
     shouldGeneratePreTransactionPOIs: boolean,
     originShieldTxidForSpendabilityOverride?: string,
+    mnemonicPassword?: string,
   ): Promise<{
     provedTransactions: (TransactionStructV2 | TransactionStructV3)[];
     preTransactionPOIsPerTxidLeafPerList: PreTransactionPOIsPerTxidLeafPerList;
@@ -446,6 +447,7 @@ export class TransactionBatch {
           txidVersion,
           encryptionKey,
           globalBoundParams,
+          mnemonicPassword,
         );
 
       generatedRequests.push({
@@ -477,6 +479,7 @@ export class TransactionBatch {
       const signature = await wallet.sign(
         publicInputs,
         wallet instanceof HardwareWallet ? (subSession ?? '') : encryptionKey,
+        wallet instanceof HardwareWallet ? undefined : mnemonicPassword,
       );
 
       // Specific types per TXIDVersion
@@ -590,6 +593,7 @@ export class TransactionBatch {
     txidVersion: TXIDVersion,
     encryptionKey: string,
     originShieldTxidForSpendabilityOverride?: string,
+    mnemonicPassword?: string,
   ): Promise<(TransactionStructV2 | TransactionStructV3)[]> {
     const spendingSolutionGroups = await this.generateValidSpendingSolutionGroupsAllOutputs(
       wallet,
@@ -619,6 +623,7 @@ export class TransactionBatch {
         txidVersion,
         encryptionKey,
         globalBoundParams,
+        mnemonicPassword,
       );
       // eslint-disable-next-line no-await-in-loop
       const dummyProvedTransaction = await transaction.generateDummyProvedTransaction(

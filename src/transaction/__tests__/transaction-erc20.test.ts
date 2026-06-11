@@ -850,6 +850,31 @@ describe('transaction-erc20', function test() {
     assert.isTrue(verifyEDDSA(msg, signature, pubkey));
 
     expect(signature).to.deep.equal(signEDDSA(privateKey, msg));
+
+    const mnemonicPassword = 'test mnemonic password';
+    const passwordWallet = await RailgunWallet.fromMnemonicWithPassword(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      mnemonicPassword,
+      0,
+      undefined,
+      prover,
+    );
+    const signatureWithMnemonicPassword = await wallet.sign(
+      publicInputs,
+      testEncryptionKey,
+      mnemonicPassword,
+    );
+    const passwordSpendingKeyPair = await passwordWallet.getSpendingKeyPair(testEncryptionKey);
+
+    assert.isTrue(
+      verifyEDDSA(
+        msg,
+        signatureWithMnemonicPassword,
+        passwordSpendingKeyPair.pubkey,
+      ),
+    );
   });
 
   it('Should request one hardware wallet batch approval and sign with the returned sub-session', async () => {
