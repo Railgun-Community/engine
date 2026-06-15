@@ -1,6 +1,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { utf8ToBytes } from 'ethereum-cryptography/utils';
+import { Authorization, Signature as EthSignature } from 'ethers';
 import memdown from 'memdown';
 import {
   getNoteBlindingKeys,
@@ -348,6 +349,104 @@ describe('railgun-wallet', () => {
     });
 
     expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(3);
+  });
+
+  it('Should get current ephemeral address from injected signer provider', async () => {
+    const signerAddress = '0x1111111111111111111111111111111111111111';
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'`,
+      getDBPathSuffix: () => ['ledger'],
+      getSigner: async (request) => {
+        expect(request).to.deep.equal({
+          railgunWalletID: wallet.id,
+          railgunAccountIndex: 0,
+          chainId: 1n,
+          ephemeralIndex: 4,
+        });
+        return {
+          address: signerAddress,
+          populateAuthorization: async (authorizationRequest) => authorizationRequest,
+          authorize: async (authorizationRequest) => ({
+            address: authorizationRequest.address as string,
+            chainId: authorizationRequest.chainId === undefined
+              ? 0n
+              : BigInt(authorizationRequest.chainId.toString()),
+            nonce: authorizationRequest.nonce === undefined
+              ? 0n
+              : BigInt(authorizationRequest.nonce.toString()),
+            signature: EthSignature.from({
+              r: `0x${'11'.repeat(32)}`,
+              s: `0x${'22'.repeat(32)}`,
+              yParity: 0,
+            }),
+          }),
+          signTypedData: async () => `0x${'33'.repeat(65)}`,
+        };
+      },
+    });
+    await wallet.setEphemeralKeyIndex(1n, 4);
+
+    expect(await wallet.getCurrentEphemeralAddress(testEncryptionKey, 1n)).to.equal(signerAddress);
+  });
+
+  it('Should sign 7702 request with injected signer provider', async () => {
+    const contractAddress = '0x2222222222222222222222222222222222222222';
+    const authorizationSignature = EthSignature.from({
+      r: `0x${'44'.repeat(32)}`,
+      s: `0x${'55'.repeat(32)}`,
+      yParity: 1,
+    });
+    const authorization: Authorization = {
+      address: contractAddress,
+      chainId: 1n,
+      nonce: 7n,
+      signature: authorizationSignature,
+    };
+    const executionSignature = `0x${'66'.repeat(65)}`;
+
+    let typedDataVerifyingContract: Optional<string>;
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'`,
+      getDBPathSuffix: () => ['ledger'],
+      getSigner: async (request) => {
+        expect(request.ephemeralIndex).to.equal(5);
+        return {
+          address: '0x1111111111111111111111111111111111111111',
+          populateAuthorization: async (authorizationRequest) => authorizationRequest,
+          authorize: async (authorizationRequest) => {
+            expect(authorizationRequest.address).to.equal(contractAddress);
+            expect(authorizationRequest.chainId).to.equal(1n);
+            expect(authorizationRequest.nonce).to.equal(7n);
+            return authorization;
+          },
+          signTypedData: async (domain, types, value) => {
+            typedDataVerifyingContract = domain.verifyingContract ?? undefined;
+            expect(domain.name).to.equal('RelayAdapt7702');
+            expect(types.Execute).to.deep.equal([{ name: 'payloadHash', type: 'bytes32' }]);
+            expect(typeof value.payloadHash).to.equal('string');
+            return executionSignature;
+          },
+        };
+      },
+    });
+    await wallet.setEphemeralKeyIndex(1n, 5);
+
+    const result = await wallet.sign7702Request(
+      testEncryptionKey,
+      contractAddress,
+      1n,
+      [],
+      {
+        requireSuccess: true,
+        minGasLimit: 0n,
+        calls: [],
+      },
+      7,
+    );
+
+    expect(result.authorization).to.equal(authorization);
+    expect(result.signature).to.equal(executionSignature);
+    expect(typedDataVerifyingContract).to.equal('0x1111111111111111111111111111111111111111');
   });
 
   it('Should reject invalid ephemeral key index path suffixes', async () => {

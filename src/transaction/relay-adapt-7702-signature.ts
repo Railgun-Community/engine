@@ -1,7 +1,8 @@
-import { HDNodeWallet, Wallet, AbiCoder, keccak256 } from 'ethers';
+import { AbiCoder, keccak256 } from 'ethers';
 import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 import { RelayAdapt7702__factory } from '../abi/typechain/factories/RelayAdapt7702__factory';
 import { RelayAdapt7702 } from '../abi/typechain/RelayAdapt7702';
+import type { RelayAdapt7702HookedSigner } from './relay-adapt-7702-signer';
 
 export enum RelayAdapt7702ExecutionType {
   ExecuteWithNonce = 'ExecuteWithNonce',
@@ -81,7 +82,7 @@ export const getExecutePayloadHash = (
  * @returns Signature string
  */
 export const signExecutionAuthorization = async (
-  signer: HDNodeWallet | Wallet,
+  signer: RelayAdapt7702HookedSigner,
   transactions: (TransactionStructV2 | TransactionStructV3)[],
   actionData: RelayAdapt7702.ActionDataStruct,
   chainId: number,

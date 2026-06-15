@@ -1,4 +1,4 @@
-import { ContractTransaction, Wallet, Interface, HDNodeWallet, Authorization } from 'ethers';
+import { ContractTransaction, Interface, Authorization } from 'ethers';
 import { ByteUtils } from '../../utils/bytes';
 import { ShieldNoteERC20 } from '../../note/erc20/shield-note-erc20';
 import { AddressData, decodeAddress } from '../../key-derivation';
@@ -21,6 +21,7 @@ import {
   signExecutionAuthorization as signExecutionAuthorizationCore,
   ZERO_7702_ADAPT_PARAMS,
 } from '../../transaction/relay-adapt-7702-signature';
+import type { RelayAdapt7702HookedSigner } from '../../transaction/relay-adapt-7702-signer';
 
 class RelayAdapt7702Helper {
   /**
@@ -32,7 +33,7 @@ class RelayAdapt7702Helper {
    * @returns Authorization tuple
    */
   static async signEIP7702Authorization(
-    signer: Wallet | HDNodeWallet,
+    signer: RelayAdapt7702HookedSigner,
     contractAddress: string,
     chainId: bigint,
     nonce: number,
@@ -41,7 +42,7 @@ class RelayAdapt7702Helper {
   }
 
   static async signExecutionAuthorization(
-    signer: Wallet | HDNodeWallet,
+    signer: RelayAdapt7702HookedSigner,
     transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt7702.ActionDataStruct,
     chainId: bigint,

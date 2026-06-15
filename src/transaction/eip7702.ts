@@ -1,4 +1,5 @@
-import { HDNodeWallet, Wallet, Authorization } from 'ethers';
+import { Authorization } from 'ethers';
+import type { RelayAdapt7702HookedSigner } from './relay-adapt-7702-signer';
 
 /**
  * Signs an EIP-7702 Authorization Tuple using ethers native methods.
@@ -9,7 +10,7 @@ import { HDNodeWallet, Wallet, Authorization } from 'ethers';
  * @returns Authorization
  */
 export const signEIP7702Authorization = async (
-  signer: HDNodeWallet | Wallet,
+  signer: RelayAdapt7702HookedSigner,
   contractAddress: string,
   chainId?: bigint,
   nonce?: number,

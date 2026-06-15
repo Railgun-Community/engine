@@ -25,6 +25,7 @@ import {
   DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
   RelayAdapt7702ExecutionDetails,
 } from '../transaction/relay-adapt-7702-signature';
+import type { RelayAdapt7702HookedSigner } from '../transaction/relay-adapt-7702-signer';
 
 export type EphemeralWalletDerivationStrategy = (
   index: number,
@@ -32,6 +33,13 @@ export type EphemeralWalletDerivationStrategy = (
 
 // Optional namespace segments appended after the engine-owned chain path.
 export type EphemeralWalletDBPathStrategy = () => string[];
+
+export type EphemeralSignerRequest = {
+  readonly railgunWalletID: string;
+  readonly railgunAccountIndex: number;
+  readonly chainId: bigint;
+  readonly ephemeralIndex: number;
+};
 
 const EPHEMERAL_KEY_INDEX_PROVIDER_NAMESPACE = 'provider';
 
@@ -95,6 +103,7 @@ const getEphemeralSignerDBPathSuffix = (
 export interface EphemeralSignerProvider {
   getPathSuffix: EphemeralWalletDerivationStrategy;
   getDBPathSuffix: EphemeralWalletDBPathStrategy;
+  getSigner?: (request: EphemeralSignerRequest) => Promise<RelayAdapt7702HookedSigner>;
 }
 
 const defaultEphemeralSignerProvider: EphemeralSignerProvider = {
@@ -193,8 +202,30 @@ class RailgunWallet extends AbstractWallet {
     encryptionKey: string,
     chainId: bigint,
   ): Promise<string> {
-    const wallet = await this.getCurrentEphemeralWallet(encryptionKey, chainId);
-    return wallet.address;
+    const signer = await this.getCurrentEphemeralSigner(encryptionKey, chainId);
+    return signer.address;
+  }
+
+  async getCurrentEphemeralSigner(
+    encryptionKey: string,
+    chainId: bigint,
+  ): Promise<RelayAdapt7702HookedSigner> {
+    const ephemeralIndex = await this.getEphemeralKeyIndex(chainId);
+    if (this.ephemeralSignerProvider.getSigner) {
+      const { index: railgunAccountIndex } = (await AbstractWallet.read(
+        this.db,
+        this.id,
+        encryptionKey,
+      )) as WalletData;
+      return this.ephemeralSignerProvider.getSigner({
+        railgunWalletID: this.id,
+        railgunAccountIndex,
+        chainId,
+        ephemeralIndex,
+      });
+    }
+
+    return this.getEphemeralWallet(encryptionKey, chainId, ephemeralIndex);
   }
 
   /**
@@ -250,17 +281,17 @@ class RailgunWallet extends AbstractWallet {
       executeNonce: 0n,
     },
   ): Promise<{ authorization: Authorization; signature: string }> {
-    const ephemeralWallet = await this.getCurrentEphemeralWallet(encryptionKey, chainId);
+    const ephemeralSigner = await this.getCurrentEphemeralSigner(encryptionKey, chainId);
 
     const authorization = await RelayAdapt7702Helper.signEIP7702Authorization(
-      ephemeralWallet,
+      ephemeralSigner,
       contractAddress,
       chainId,
       nonce,
     );
 
     const signature = await RelayAdapt7702Helper.signExecutionAuthorization(
-      ephemeralWallet,
+      ephemeralSigner,
       transactions,
       actionData,
       chainId,
