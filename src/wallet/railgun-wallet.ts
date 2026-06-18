@@ -42,25 +42,28 @@ class RailgunWallet extends AbstractWallet {
    */
   private async loadSpendingKey(
     encryptionKey: string,
-    mnemonicPasswordOverride?: string,
+    mnemonicPassword?: string,
   ): Promise<WalletNode> {
-    const { mnemonic, mnemonicPassword, index } = (await RailgunWallet.read(
+    const { mnemonic, index } = (await RailgunWallet.read(
       this.db,
       this.id,
       encryptionKey,
     )) as WalletData;
-    return deriveNodes(mnemonic, index, mnemonicPasswordOverride ?? mnemonicPassword).spending;
+    RailgunWallet.assertMnemonicPasswordMatchesID(this.id, mnemonic, index, mnemonicPassword);
+    return deriveNodes(mnemonic, index, mnemonicPassword).spending;
   }
 
   /**
-   * Helper to get the ethereum/whatever address is associated with this wallet
+   * Helper to get the ethereum/whatever address is associated with this wallet.
+   * The BIP39 mnemonic password (if any) must be supplied; it is never stored.
    */
-  async getChainAddress(encryptionKey: string): Promise<string> {
-    const { mnemonic, mnemonicPassword, index } = (await AbstractWallet.read(
+  async getChainAddress(encryptionKey: string, mnemonicPassword?: string): Promise<string> {
+    const { mnemonic, index } = (await AbstractWallet.read(
       this.db,
       this.id,
       encryptionKey,
     )) as WalletData;
+    RailgunWallet.assertMnemonicPasswordMatchesID(this.id, mnemonic, index, mnemonicPassword);
     return Mnemonic.to0xAddress(mnemonic, index, mnemonicPassword);
   }
 
@@ -76,6 +79,23 @@ class RailgunWallet extends AbstractWallet {
     return sha256(
       ByteUtils.combine([Mnemonic.toSeed(mnemonic, mnemonicPassword), index.toString(16)]),
     );
+  }
+
+  /**
+   * The BIP39 mnemonic password is never persisted; it must be supplied by the caller
+   * on load and on every spend. Verify the supplied password reproduces this wallet's
+   * ID — a mismatch means the wrong (or a missing) password was supplied, which would
+   * otherwise silently derive a different, unrelated key. Fail loudly instead.
+   */
+  private static assertMnemonicPasswordMatchesID(
+    id: string,
+    mnemonic: string,
+    index: number,
+    mnemonicPassword: string = '',
+  ): void {
+    if (RailgunWallet.generateID(mnemonic, index, mnemonicPassword) !== id) {
+      throw new Error('Incorrect mnemonic password for wallet.');
+    }
   }
 
   private static async createWallet(
@@ -142,12 +162,10 @@ class RailgunWallet extends AbstractWallet {
   ): Promise<RailgunWallet> {
     const id = RailgunWallet.generateID(mnemonic, index, mnemonicPassword);
 
-    // Write encrypted mnemonic to DB
-    const walletData: WalletData = { mnemonic, index, creationBlockNumbers };
-    if (mnemonicPassword !== '') {
-      walletData.mnemonicPassword = mnemonicPassword;
-    }
-    await AbstractWallet.write(db, id, encryptionKey, walletData);
+    // Write encrypted mnemonic to DB. The BIP39 mnemonic password is intentionally NOT
+    // persisted: storing it next to the mnemonic would defeat its purpose as a second
+    // factor. The caller owns the password and must supply it on load and on spend.
+    await AbstractWallet.write(db, id, encryptionKey, { mnemonic, index, creationBlockNumbers });
 
     return this.createWallet(
       id,
@@ -172,9 +190,10 @@ class RailgunWallet extends AbstractWallet {
     encryptionKey: string,
     id: string,
     prover: Prover,
+    mnemonicPassword?: string,
   ): Promise<RailgunWallet> {
     // Get encrypted mnemonic and index from DB
-    const { mnemonic, mnemonicPassword, index, creationBlockNumbers } = (await AbstractWallet.read(
+    const { mnemonic, index, creationBlockNumbers } = (await AbstractWallet.read(
       db,
       id,
       encryptionKey,
@@ -182,6 +201,10 @@ class RailgunWallet extends AbstractWallet {
     if (!mnemonic) {
       throw new Error('Incorrect wallet type.');
     }
+    // The mnemonic password is not stored — the supplied one must reproduce this wallet's
+    // ID. Verifying here turns a wrong/missing password into a clear error instead of
+    // silently loading a different, unrelated wallet's keys.
+    RailgunWallet.assertMnemonicPasswordMatchesID(id, mnemonic, index, mnemonicPassword);
 
     return this.createWallet(
       id,

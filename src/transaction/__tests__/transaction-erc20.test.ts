@@ -851,6 +851,8 @@ describe('transaction-erc20', function test() {
 
     expect(signature).to.deep.equal(signEDDSA(privateKey, msg));
 
+    // Mnemonic-password wallet: the password is supplied (never stored) and must be
+    // threaded through sign -> getSpendingKeyPair to derive the correct spending key.
     const mnemonicPassword = 'test mnemonic password';
     const passwordWallet = await RailgunWallet.fromMnemonicWithPassword(
       db,
@@ -861,20 +863,32 @@ describe('transaction-erc20', function test() {
       undefined,
       prover,
     );
-    const signatureWithMnemonicPassword = await wallet.sign(
+    const passwordSpendingKeyPair = await passwordWallet.getSpendingKeyPair(
+      testEncryptionKey,
+      mnemonicPassword,
+    );
+    const signatureWithMnemonicPassword = await passwordWallet.sign(
       publicInputs,
       testEncryptionKey,
       mnemonicPassword,
     );
-    const passwordSpendingKeyPair = await passwordWallet.getSpendingKeyPair(testEncryptionKey);
 
     assert.isTrue(
-      verifyEDDSA(
-        msg,
-        signatureWithMnemonicPassword,
-        passwordSpendingKeyPair.pubkey,
-      ),
+      verifyEDDSA(msg, signatureWithMnemonicPassword, passwordSpendingKeyPair.pubkey),
     );
+    expect(signatureWithMnemonicPassword).to.deep.equal(
+      signEDDSA(passwordSpendingKeyPair.privateKey, msg),
+    );
+
+    // Signing a mnemonic-password wallet without the password must fail loudly rather
+    // than silently derive a different, unrelated key.
+    await expect(passwordWallet.sign(publicInputs, testEncryptionKey)).to.be.rejectedWith(
+      'Incorrect mnemonic password for wallet.',
+    );
+    // Supplying a password for a wallet that has none must likewise fail.
+    await expect(
+      wallet.sign(publicInputs, testEncryptionKey, mnemonicPassword),
+    ).to.be.rejectedWith('Incorrect mnemonic password for wallet.');
   });
 
   it('Should request one hardware wallet batch approval and sign with the returned sub-session', async () => {

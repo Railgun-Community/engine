@@ -36,7 +36,6 @@ export type AddressKeys = {
 
 export type WalletData = {
   mnemonic: string;
-  mnemonicPassword?: string;
   index: number;
   creationBlockNumbers: Optional<number[][]>;
 };

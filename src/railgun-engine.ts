@@ -2098,13 +2098,25 @@ class RailgunEngine extends EventEmitter {
    * Load existing wallet
    * @param {string} encryptionKey - encryption key of wallet
    * @param {string} id - wallet ID
+   * @param {string} mnemonicPassword - BIP39 mnemonic password, if the wallet was created
+   *   with one. Not stored by the engine; must be supplied on every load (and on spend).
    * @returns id
    */
-  async loadExistingWallet(encryptionKey: string, id: string): Promise<RailgunWallet> {
+  async loadExistingWallet(
+    encryptionKey: string,
+    id: string,
+    mnemonicPassword?: string,
+  ): Promise<RailgunWallet> {
     if (isDefined(this.wallets[id])) {
       return this.wallets[id] as RailgunWallet;
     }
-    const wallet = await RailgunWallet.loadExisting(this.db, encryptionKey, id, this.prover);
+    const wallet = await RailgunWallet.loadExisting(
+      this.db,
+      encryptionKey,
+      id,
+      this.prover,
+      mnemonicPassword,
+    );
     await this.loadWallet(wallet);
     return wallet;
   }

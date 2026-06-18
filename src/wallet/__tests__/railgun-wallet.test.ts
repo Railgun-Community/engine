@@ -96,18 +96,75 @@ describe('railgun-wallet', () => {
       new Prover(testArtifactsGetter),
     );
 
+    // A mnemonic password produces a distinct wallet from the no-password wallet.
+    expect(passwordWallet.id).to.not.equal(wallet.id);
+
+    // The mnemonic password is never stored, so it must be supplied again on load.
     const loadedWallet = await RailgunWallet.loadExisting(
       db,
       testEncryptionKey,
       passwordWallet.id,
       new Prover(testArtifactsGetter),
+      mnemonicPassword,
     );
 
-    expect(passwordWallet.id).to.not.equal(wallet.id);
     expect(loadedWallet.id).to.equal(passwordWallet.id);
-    expect(await loadedWallet.getChainAddress(testEncryptionKey)).to.equal(
-      await passwordWallet.getChainAddress(testEncryptionKey),
+    expect(await loadedWallet.getChainAddress(testEncryptionKey, mnemonicPassword)).to.equal(
+      await passwordWallet.getChainAddress(testEncryptionKey, mnemonicPassword),
     );
+    // The chain address also differs from the no-password wallet.
+    expect(
+      await passwordWallet.getChainAddress(testEncryptionKey, mnemonicPassword),
+    ).to.not.equal(await wallet.getChainAddress(testEncryptionKey));
+  });
+
+  it('Should produce the same id/address for a no-password wallet (regression)', async () => {
+    // Loading without a password must reproduce the wallet unchanged — guards the
+    // empty-passphrase derivation path against regressions.
+    const loadedWallet = await RailgunWallet.loadExisting(
+      db,
+      testEncryptionKey,
+      wallet.id,
+      new Prover(testArtifactsGetter),
+    );
+    expect(loadedWallet.id).to.equal(wallet.id);
+    expect(await loadedWallet.getChainAddress(testEncryptionKey)).to.equal(
+      await wallet.getChainAddress(testEncryptionKey),
+    );
+  });
+
+  it('Should reject loading a mnemonic-password wallet with a wrong/missing password', async () => {
+    const mnemonicPassword = 'test mnemonic password';
+    const passwordWallet = await RailgunWallet.fromMnemonicWithPassword(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      mnemonicPassword,
+      0,
+      undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
+    );
+
+    // Missing password.
+    await expect(
+      RailgunWallet.loadExisting(
+        db,
+        testEncryptionKey,
+        passwordWallet.id,
+        new Prover(testArtifactsGetter),
+      ),
+    ).to.be.rejectedWith('Incorrect mnemonic password for wallet.');
+
+    // Wrong password.
+    await expect(
+      RailgunWallet.loadExisting(
+        db,
+        testEncryptionKey,
+        passwordWallet.id,
+        new Prover(testArtifactsGetter),
+        'wrong password',
+      ),
+    ).to.be.rejectedWith('Incorrect mnemonic password for wallet.');
   });
 
   it('Should load existing view-only wallet', async () => {
