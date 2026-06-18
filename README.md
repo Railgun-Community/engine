@@ -42,7 +42,10 @@ RAILGUN Wallet
 
 - `railgunEngine.createWalletFromMnemonic()` (instance method)
 - `railgunEngine.createWalletFromMnemonicWithPassword()` (instance method)
+  - The BIP39 mnemonic password is **not stored** by the engine. The caller owns it and
+    must supply it again to `loadExistingWallet()` and to every spend.
 - `railgunEngine.loadExistingWallet()` (instance method)
+  - Pass the BIP39 mnemonic password as the third argument for wallets created with one.
 
 View-only RAILGUN Wallet
 
