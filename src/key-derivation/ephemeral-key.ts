@@ -60,11 +60,15 @@ export const deriveEphemeralWalletFromPathSuffix = (
   mnemonic: string,
   basePath: string,
   pathSuffix: string,
+  mnemonicPassword?: string,
 ): HDNodeWallet => {
   const normalizedPathSuffix = normalizeEphemeralWalletPathSuffix(pathSuffix);
   const normalizedBasePath = basePath.replace(/\/+$/g, '');
   const path = `${normalizedBasePath}/${normalizedPathSuffix}`;
-  return HDNodeWallet.fromPhrase(mnemonic, undefined, path);
+  // The BIP-39 mnemonic password (if any) must feed the seed, exactly as the spending-key
+  // and EOA-address derivations do; otherwise the ephemeral key would be derivable from the
+  // mnemonic alone and would not match the password-protected wallet.
+  return HDNodeWallet.fromPhrase(mnemonic, mnemonicPassword, path);
 };
 
 /**
@@ -74,6 +78,7 @@ export const deriveEphemeralWalletFromPathSuffix = (
  * @param railgunIndex - Base RAILGUN wallet derivation index
  * @param chainId - Chain ID for the ephemeral key
  * @param index - Index for the ephemeral key (nonce)
+ * @param mnemonicPassword - BIP-39 mnemonic password, if the wallet uses one
  * @returns HDNodeWallet
  */
 export const deriveEphemeralWallet = (
@@ -81,8 +86,9 @@ export const deriveEphemeralWallet = (
   railgunIndex: number,
   chainId: bigint,
   index: number,
+  mnemonicPassword?: string,
 ): HDNodeWallet => {
   const basePath = getEphemeralWalletBasePath(railgunIndex, chainId);
   const pathSuffix = getEphemeralWalletPathSuffix(index);
-  return deriveEphemeralWalletFromPathSuffix(mnemonic, basePath, pathSuffix);
+  return deriveEphemeralWalletFromPathSuffix(mnemonic, basePath, pathSuffix, mnemonicPassword);
 };

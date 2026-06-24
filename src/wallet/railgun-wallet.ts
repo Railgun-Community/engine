@@ -144,21 +144,26 @@ class RailgunWallet extends AbstractWallet {
    * @param {string} encryptionKey - encryption key to use with database
    * @param {bigint} chainId - Chain ID for the ephemeral key
    * @param {number} index - index of derivation path
+   * @param {string} mnemonicPassword - BIP-39 mnemonic password, if the wallet uses one
    * @returns {Promise<HDNodeWallet>}
    */
   async getEphemeralWallet(
     encryptionKey: string,
     chainId: bigint,
     index: number,
+    mnemonicPassword?: string,
   ): Promise<HDNodeWallet> {
     const { mnemonic, index: railgunIndex } = (await AbstractWallet.read(
       this.db,
       this.id,
       encryptionKey,
     )) as WalletData;
+    // The mnemonic password is never persisted; a wrong/missing one would silently derive a
+    // different, unrelated ephemeral key. Fail loudly, as the spending-key path does.
+    RailgunWallet.assertMnemonicPasswordMatchesID(this.id, mnemonic, railgunIndex, mnemonicPassword);
     const basePath = getEphemeralWalletBasePath(railgunIndex, chainId);
     const pathSuffix = getEphemeralSignerPathSuffix(this.ephemeralSignerProvider, index);
-    return deriveEphemeralWalletFromPathSuffix(mnemonic, basePath, pathSuffix);
+    return deriveEphemeralWalletFromPathSuffix(mnemonic, basePath, pathSuffix, mnemonicPassword);
   }
 
   /**
@@ -204,17 +209,21 @@ class RailgunWallet extends AbstractWallet {
   async getCurrentEphemeralAddress(
     encryptionKey: string,
     chainId: bigint,
+    mnemonicPassword?: string,
   ): Promise<string> {
-    const signer = await this.getCurrentEphemeralSigner(encryptionKey, chainId);
+    const signer = await this.getCurrentEphemeralSigner(encryptionKey, chainId, mnemonicPassword);
     return signer.address;
   }
 
   async getCurrentEphemeralSigner(
     encryptionKey: string,
     chainId: bigint,
+    mnemonicPassword?: string,
   ): Promise<RelayAdapt7702HookedSigner> {
     const ephemeralIndex = await this.getEphemeralKeyIndex(chainId);
     if (this.ephemeralSignerProvider.getSigner) {
+      // Custom signer providers (e.g. hardware wallets) control their own keys and do not
+      // derive from the mnemonic, so the mnemonic password does not apply to this branch.
       const { index: railgunAccountIndex } = (await AbstractWallet.read(
         this.db,
         this.id,
@@ -228,7 +237,7 @@ class RailgunWallet extends AbstractWallet {
       });
     }
 
-    return this.getEphemeralWallet(encryptionKey, chainId, ephemeralIndex);
+    return this.getEphemeralWallet(encryptionKey, chainId, ephemeralIndex, mnemonicPassword);
   }
 
   /**
@@ -239,13 +248,14 @@ class RailgunWallet extends AbstractWallet {
   async getCurrentEphemeralWallet(
     encryptionKey: string,
     chainId: bigint,
+    mnemonicPassword?: string,
   ): Promise<HDNodeWallet> {
     if (this.ephemeralWalletOverride) {
       return this.ephemeralWalletOverride;
     }
 
     const index = await this.getEphemeralKeyIndex(chainId);
-    return this.getEphemeralWallet(encryptionKey, chainId, index);
+    return this.getEphemeralWallet(encryptionKey, chainId, index, mnemonicPassword);
   }
 
   setEphemeralSignerProvider(provider: EphemeralSignerProvider): void {
@@ -300,8 +310,13 @@ class RailgunWallet extends AbstractWallet {
       executionType: DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
       executeNonce: 0n,
     },
+    mnemonicPassword?: string,
   ): Promise<{ authorization: Authorization; signature: string }> {
-    const ephemeralSigner = await this.getCurrentEphemeralSigner(encryptionKey, chainId);
+    const ephemeralSigner = await this.getCurrentEphemeralSigner(
+      encryptionKey,
+      chainId,
+      mnemonicPassword,
+    );
 
     const authorization = await RelayAdapt7702Helper.signEIP7702Authorization(
       ephemeralSigner,

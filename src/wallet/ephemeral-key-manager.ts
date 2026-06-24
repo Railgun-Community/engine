@@ -5,10 +5,12 @@ import { RailgunWallet } from './railgun-wallet';
 export class EphemeralKeyManager {
   private railgunWallet: RailgunWallet;
   private encryptionKey: string;
+  private mnemonicPassword?: string;
 
-  constructor(railgunWallet: RailgunWallet, encryptionKey: string) {
+  constructor(railgunWallet: RailgunWallet, encryptionKey: string, mnemonicPassword?: string) {
     this.railgunWallet = railgunWallet;
     this.encryptionKey = encryptionKey;
+    this.mnemonicPassword = mnemonicPassword;
   }
 
   async getWallet(chainId: bigint, index: number): Promise<HDNodeWallet> {
@@ -16,6 +18,7 @@ export class EphemeralKeyManager {
       this.encryptionKey,
       chainId,
       index,
+      this.mnemonicPassword,
     );
   }
 

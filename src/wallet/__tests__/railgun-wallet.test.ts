@@ -370,6 +370,40 @@ describe('railgun-wallet', () => {
     expect(otherEphemeral.path).to.equal("m/44'/60'/0'/7702'/1'/1'/2'");
   });
 
+  it('Should require the BIP-39 mnemonic password for ephemeral derivation', async () => {
+    const passwordWallet = await RailgunWallet.fromMnemonicWithPassword(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      'correct-horse',
+      0,
+      undefined, // creationBlockNumbers
+      new Prover(testArtifactsGetter),
+    );
+
+    // Correct password derives an ephemeral wallet.
+    const ephemeral = await passwordWallet.getEphemeralWallet(
+      testEncryptionKey,
+      1n,
+      0,
+      'correct-horse',
+    );
+    expect(ephemeral.address).to.be.a('string');
+
+    // A wrong or missing password fails loudly instead of deriving an unrelated key.
+    await expect(
+      passwordWallet.getEphemeralWallet(testEncryptionKey, 1n, 0, 'wrong'),
+    ).to.be.rejectedWith('Incorrect mnemonic password for wallet.');
+    await expect(
+      passwordWallet.getEphemeralWallet(testEncryptionKey, 1n, 0),
+    ).to.be.rejectedWith('Incorrect mnemonic password for wallet.');
+
+    // The ephemeral key is bound to the password: it differs from the same mnemonic with
+    // no password (the beforeEach `wallet`).
+    const noPasswordEphemeral = await wallet.getEphemeralWallet(testEncryptionKey, 1n, 0);
+    expect(ephemeral.address).to.not.equal(noPasswordEphemeral.address);
+  });
+
   it('Should keep base path when using injected ephemeral derivation suffix strategy', async () => {
     wallet.setEphemeralWalletDerivationStrategy((index) => {
       return `${index}'/99`;

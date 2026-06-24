@@ -136,4 +136,20 @@ describe('Ephemeral Key Derivation', () => {
       'out of range for a hardened BIP-32 segment',
     );
   });
+
+  it('should derive a different wallet when a mnemonic password is used', () => {
+    const noPassword = deriveEphemeralWallet(mnemonic, railgunIndex, chainId, 0);
+    const withPassword = deriveEphemeralWallet(mnemonic, railgunIndex, chainId, 0, 'p4ssw0rd');
+
+    // The password feeds the BIP-39 seed, so the ephemeral key must differ.
+    expect(withPassword.address).to.not.equal(noPassword.address);
+    // Deterministic for the same password.
+    expect(deriveEphemeralWallet(mnemonic, railgunIndex, chainId, 0, 'p4ssw0rd').address).to.equal(
+      withPassword.address,
+    );
+    // An empty password matches the no-password derivation (BIP-39 default).
+    expect(deriveEphemeralWallet(mnemonic, railgunIndex, chainId, 0, '').address).to.equal(
+      noPassword.address,
+    );
+  });
 });
