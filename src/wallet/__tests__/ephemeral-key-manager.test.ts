@@ -15,23 +15,27 @@ const MOCK_CHAIN: Chain = { type: ChainType.EVM, id: 1 };
 
 describe('engine ephemeral-key-manager', () => {
   let getEphemeralWalletStub: SinonStub;
-  let getEphemeralKeyIndexStub: SinonStub;
-  let setEphemeralKeyIndexStub: SinonStub;
+  let incrementEphemeralKeyIndexStub: SinonStub;
+  let setEphemeralKeyIndexIfGreaterStub: SinonStub;
   let getTransactionHistoryStub: SinonStub;
+  let isCanonicalEphemeralProviderStub: SinonStub;
   let manager: EphemeralKeyManager;
 
   beforeEach(() => {
     const railgunWallet = {
       getEphemeralWallet: async () => {},
-      getEphemeralKeyIndex: async () => {},
-      setEphemeralKeyIndex: async () => {},
+      incrementEphemeralKeyIndex: async () => {},
+      setEphemeralKeyIndexIfGreater: async () => {},
       getTransactionHistory: async () => {},
+      isCanonicalEphemeralProvider: () => true,
     } as unknown as RailgunWallet;
 
     getEphemeralWalletStub = Sinon.stub(railgunWallet, 'getEphemeralWallet');
-    getEphemeralKeyIndexStub = Sinon.stub(railgunWallet, 'getEphemeralKeyIndex');
-    setEphemeralKeyIndexStub = Sinon.stub(railgunWallet, 'setEphemeralKeyIndex');
+    incrementEphemeralKeyIndexStub = Sinon.stub(railgunWallet, 'incrementEphemeralKeyIndex');
+    setEphemeralKeyIndexIfGreaterStub = Sinon.stub(railgunWallet, 'setEphemeralKeyIndexIfGreater');
     getTransactionHistoryStub = Sinon.stub(railgunWallet, 'getTransactionHistory');
+    isCanonicalEphemeralProviderStub = Sinon.stub(railgunWallet, 'isCanonicalEphemeralProvider');
+    isCanonicalEphemeralProviderStub.returns(true);
 
     manager = new EphemeralKeyManager(railgunWallet, MOCK_ENCRYPTION_KEY);
   });
@@ -47,14 +51,12 @@ describe('engine ephemeral-key-manager', () => {
 
   it('Should get next wallet and increment index', async () => {
     const mockWallet = HDNodeWallet.fromPhrase(MOCK_MNEMONIC);
-    getEphemeralKeyIndexStub.resolves(5);
+    incrementEphemeralKeyIndexStub.resolves(6);
     getEphemeralWalletStub.resolves(mockWallet);
-    setEphemeralKeyIndexStub.resolves();
 
     const wallet = await manager.getNextWallet(BigInt(MOCK_CHAIN.id));
     expect(wallet.address).to.equal(mockWallet.address);
-    expect(getEphemeralKeyIndexStub.calledWith(BigInt(MOCK_CHAIN.id))).to.be.true;
-    expect(setEphemeralKeyIndexStub.calledWith(BigInt(MOCK_CHAIN.id), 6)).to.be.true;
+    expect(incrementEphemeralKeyIndexStub.calledWith(BigInt(MOCK_CHAIN.id))).to.be.true;
     expect(getEphemeralWalletStub.calledWith(MOCK_ENCRYPTION_KEY, BigInt(MOCK_CHAIN.id), 6)).to.be.true;
   });
 
@@ -74,12 +76,19 @@ describe('engine ephemeral-key-manager', () => {
       },
     ]);
 
-    getEphemeralKeyIndexStub.resolves(0);
-    setEphemeralKeyIndexStub.resolves();
+    setEphemeralKeyIndexIfGreaterStub.resolves(2);
 
     const recoveredIndex = await manager.scanHistoryForEphemeralIndex(MOCK_CHAIN, 100);
 
     expect(recoveredIndex).to.equal(2);
-    expect(setEphemeralKeyIndexStub.calledWith(BigInt(MOCK_CHAIN.id), 2)).to.be.true;
+    expect(setEphemeralKeyIndexIfGreaterStub.calledWith(BigInt(MOCK_CHAIN.id), 2)).to.be.true;
+  });
+
+  it('Should reject history scan for a custom (non-canonical) provider', async () => {
+    isCanonicalEphemeralProviderStub.returns(false);
+
+    await expect(manager.scanHistoryForEphemeralIndex(MOCK_CHAIN, 100)).to.be.rejectedWith(
+      'only supported for the default ephemeral provider',
+    );
   });
 });

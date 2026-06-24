@@ -25,9 +25,7 @@ export class EphemeralKeyManager {
   }
 
   async getNextWallet(chainId: bigint): Promise<HDNodeWallet> {
-    const currentIndex = await this.railgunWallet.getEphemeralKeyIndex(chainId);
-    const nextIndex = currentIndex + 1;
-    await this.railgunWallet.setEphemeralKeyIndex(chainId, nextIndex);
+    const nextIndex = await this.railgunWallet.incrementEphemeralKeyIndex(chainId);
     return this.getWallet(chainId, nextIndex);
   }
 
@@ -35,6 +33,12 @@ export class EphemeralKeyManager {
     chain: Chain,
     scanLimit = 100,
   ): Promise<number> {
+    if (!this.railgunWallet.isCanonicalEphemeralProvider()) {
+      throw new Error(
+        'scanHistoryForEphemeralIndex is only supported for the default ephemeral provider. ' +
+          'A custom ephemeral signer provider must manage its own index.',
+      );
+    }
     const chainId = BigInt(chain.id);
     const history = await this.railgunWallet.getTransactionHistory(chain, undefined);
 
@@ -68,12 +72,8 @@ export class EphemeralKeyManager {
       currentIndex += 1;
     }
 
+    // Raise the stored index atomically so a concurrent ratchet cannot be clobbered.
     const nextIndex = maxUsedIndex + 1;
-    const storedIndex = await this.railgunWallet.getEphemeralKeyIndex(chainId);
-    if (nextIndex > storedIndex) {
-      await this.railgunWallet.setEphemeralKeyIndex(chainId, nextIndex);
-    }
-
-    return nextIndex;
+    return this.railgunWallet.setEphemeralKeyIndexIfGreater(chainId, nextIndex);
   }
 }

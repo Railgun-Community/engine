@@ -22,6 +22,7 @@ import { getSharedSymmetricKey } from '../utils/keys-utils';
 import { TokenDataGetter } from '../token/token-data-getter';
 import { TXIDVersion } from '../models/poi-types';
 import { RelayAdapt7702ExecutionType } from '../transaction/relay-adapt-7702-signature';
+import { RelayAdapt7702Validator } from './relay-adapt-7702-validator';
 
 enum TransactionName {
   RailgunSmartWallet = 'transact',
@@ -138,12 +139,61 @@ const parseTransactionWithABIs = (
   throw new Error('No transaction parsable from request');
 };
 
+/**
+ * Advisory check that the decoded RelayAdapt7702 execute calldata carries an execution
+ * signature that recovers to the executing (ephemeral) account. For the 7702 path the
+ * extractor's contractAddress is the ephemeral account (it is asserted to equal the tx
+ * `to`), which is the EIP-712 verifyingContract, so it is the expected signer.
+ *
+ * This is intentionally NOT fail-closed: decoded calldata may not re-encode byte-identically
+ * (e.g. commitmentCiphertext shape), so a mismatch is a diagnostic signal, not a gate.
+ * Promote to fail-closed only after verifying re-encode fidelity end-to-end against the
+ * deployed contract.
+ */
+export const validateRelayAdapt7702ExecutionSignatureAdvisory = (
+  chain: Chain,
+  expectedSigner: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args: any,
+): void => {
+  try {
+    const signature: string = args['_signature'];
+    if (!isDefined(signature) || signature.length <= 2) {
+      // No real signature present (e.g. gas estimate); nothing to validate.
+      return;
+    }
+    const hasNonce = isDefined(args['_nonce']);
+    RelayAdapt7702Validator.validateExecution(
+      args['_transactions'],
+      args['_actionData'],
+      signature,
+      BigInt(chain.id),
+      expectedSigner,
+      {
+        executionType: hasNonce
+          ? RelayAdapt7702ExecutionType.ExecuteWithNonce
+          : RelayAdapt7702ExecutionType.LegacyPreExecuteNonce,
+        executeNonce: hasNonce ? BigInt(args['_nonce']) : undefined,
+      },
+    );
+  } catch (cause) {
+    EngineDebug.error(
+      new Error(
+        `Advisory: RelayAdapt7702 execution signature did not validate for ${chain.type}:${chain.id}`,
+        { cause: cause instanceof Error ? cause : undefined },
+      ),
+      true,
+    );
+  }
+};
+
 const getRailgunTransactionRequestsV2 = (
   chain: Chain,
   transactionRequest: ContractTransaction,
   transactionName: TransactionName,
   contractAddress: string,
   relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
+  runExecutionSignatureCheck = false,
 ): TransactionStructOutput[] => {
   const abis = getABIsForTransaction(transactionName, relayAdapt7702ExecutionType);
 
@@ -169,6 +219,12 @@ const getRailgunTransactionRequestsV2 = (
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const args = recursivelyDecodeResult(parsedTransaction.args);
+
+  if (transactionName === TransactionName.RelayAdapt7702 && runExecutionSignatureCheck) {
+    // Advisory only: surface (do not reject on) a bad 7702 execution signature.
+    // Run once (txid-extraction pass) to avoid double-logging on the fee pass.
+    validateRelayAdapt7702ExecutionSignatureAdvisory(chain, contractAddress, args);
+  }
 
   // eslint-disable-next-line no-underscore-dangle
   const railgunTxs: TransactionStructOutput[] = args._transactions;
@@ -263,6 +319,7 @@ const extractRailgunTransactionDataV2 = async (
     transactionName,
     contractAddress,
     relayAdapt7702ExecutionType,
+    true, // run the advisory execution-signature check on the txid-extraction pass only
   );
 
   const extractedRailgunTransactionData: ExtractedRailgunTransactionData = await Promise.all(

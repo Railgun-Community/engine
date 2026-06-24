@@ -114,6 +114,8 @@ const defaultEphemeralSignerProvider: EphemeralSignerProvider = {
 class RailgunWallet extends AbstractWallet {
   ephemeralWalletOverride: HDNodeWallet | undefined;
   private ephemeralSignerProvider: EphemeralSignerProvider = defaultEphemeralSignerProvider;
+  private ephemeralProviderIsCustom = false;
+  private ephemeralIndexLocks = new Map<bigint, Promise<unknown>>();
   /**
    * Load encrypted spending key Node from database
    * Spending key should be kept private and only accessed on demand
@@ -171,7 +173,8 @@ class RailgunWallet extends AbstractWallet {
     );
     try {
       const index = await this.db.get(dbPath, 'utf8');
-      return parseInt(index as string, 10);
+      const parsed = parseInt(index as string, 10);
+      return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
     } catch (err) {
       return 0;
     }
@@ -247,10 +250,27 @@ class RailgunWallet extends AbstractWallet {
 
   setEphemeralSignerProvider(provider: EphemeralSignerProvider): void {
     this.ephemeralSignerProvider = provider;
+    this.ephemeralProviderIsCustom = true;
   }
 
   setEphemeralWalletDerivationStrategy(strategy: EphemeralWalletDerivationStrategy): void {
-    this.ephemeralSignerProvider.getPathSuffix = strategy;
+    // Replace with a fresh object — never mutate the provider in place, which (when the
+    // field still aliases the shared default singleton) would leak this strategy into
+    // every other wallet, silently changing their derivation while their own
+    // ephemeralProviderIsCustom flag stays false.
+    this.ephemeralSignerProvider = { ...this.ephemeralSignerProvider, getPathSuffix: strategy };
+    this.ephemeralProviderIsCustom = true;
+  }
+
+  /**
+   * Whether ephemeral derivation uses the engine's default canonical layout
+   * (m/.../<index>'). A custom signer provider controls its own derivation, so the
+   * engine cannot reconstruct its addresses from an integer index — index ratcheting
+   * and history scanning are therefore unsupported for custom providers, which must
+   * manage their own index via setEphemeralKeyIndex (namespaced by getDBPathSuffix).
+   */
+  isCanonicalEphemeralProvider(): boolean {
+    return !this.ephemeralProviderIsCustom;
   }
 
   /**
@@ -302,14 +322,72 @@ class RailgunWallet extends AbstractWallet {
   }
 
   /**
+   * Serialize a read-modify-write of the ephemeral key index per chain so
+   * concurrent callers can never observe the same index and derive the same
+   * ephemeral signer (which would reuse the EIP-7702 key / execute nonce).
+   */
+  private async runExclusiveEphemeralIndex<T>(
+    chainId: bigint,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const previous = this.ephemeralIndexLocks.get(chainId) ?? Promise.resolve();
+    const run = previous.then(fn, fn);
+    this.ephemeralIndexLocks.set(
+      chainId,
+      run.then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+    return run;
+  }
+
+  /**
+   * Atomically increment and persist the ephemeral key index for a chain,
+   * returning the new index.
+   * @returns {Promise<number>}
+   */
+  async incrementEphemeralKeyIndex(chainId: bigint): Promise<number> {
+    if (this.ephemeralProviderIsCustom) {
+      throw new Error(
+        'Ephemeral key index ratcheting is only supported for the default ephemeral provider. ' +
+          'A custom ephemeral signer provider must manage its own index via setEphemeralKeyIndex.',
+      );
+    }
+    return this.runExclusiveEphemeralIndex(chainId, async () => {
+      const index = await this.getEphemeralKeyIndex(chainId);
+      const nextIndex = index + 1;
+      await this.setEphemeralKeyIndex(chainId, nextIndex);
+      return nextIndex;
+    });
+  }
+
+  /**
+   * Atomically raise the ephemeral key index to candidateIndex when it exceeds the
+   * current stored index, returning the resulting index. Serialized with
+   * incrementEphemeralKeyIndex so a concurrent ratchet cannot be clobbered (used by the
+   * history-recovery scan).
+   * @returns {Promise<number>}
+   */
+  async setEphemeralKeyIndexIfGreater(chainId: bigint, candidateIndex: number): Promise<number> {
+    return this.runExclusiveEphemeralIndex(chainId, async () => {
+      const current = await this.getEphemeralKeyIndex(chainId);
+      if (candidateIndex > current) {
+        await this.setEphemeralKeyIndex(chainId, candidateIndex);
+        return candidateIndex;
+      }
+      return current;
+    });
+  }
+
+  /**
    * Ratchet ephemeral key index
    * @returns {Promise<void>}
    */
   async ratchetEphemeralAddress(
     chainId: bigint,
   ): Promise<void> {
-    const index = await this.getEphemeralKeyIndex(chainId);
-    await this.setEphemeralKeyIndex(chainId, index + 1);
+    await this.incrementEphemeralKeyIndex(chainId);
   }
 
   /**

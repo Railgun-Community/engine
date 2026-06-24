@@ -320,6 +320,56 @@ describe('railgun-wallet', () => {
     expect(await wallet.getEphemeralKeyIndex(10n)).to.equal(5);
   });
 
+  it('Should reject index ratchet for a custom ephemeral signer provider', async () => {
+    wallet.setEphemeralWalletDerivationStrategy((index) => `${index}'`);
+
+    await expect(wallet.ratchetEphemeralAddress(1n)).to.be.rejectedWith(
+      'only supported for the default ephemeral provider',
+    );
+  });
+
+  it('Should hand out unique indices under concurrent increment', async () => {
+    await wallet.setEphemeralKeyIndex(1n, 0);
+
+    const results = await Promise.all(
+      Array.from({ length: 25 }, () => wallet.incrementEphemeralKeyIndex(1n)),
+    );
+
+    // Mutual exclusion: no two concurrent callers may observe the same index.
+    expect(new Set(results).size).to.equal(25);
+    expect(Math.max(...results)).to.equal(25);
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(25);
+  });
+
+  it('Should only raise the ephemeral key index, never lower it', async () => {
+    await wallet.setEphemeralKeyIndex(1n, 5);
+
+    expect(await wallet.setEphemeralKeyIndexIfGreater(1n, 3)).to.equal(5);
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(5);
+
+    expect(await wallet.setEphemeralKeyIndexIfGreater(1n, 8)).to.equal(8);
+    expect(await wallet.getEphemeralKeyIndex(1n)).to.equal(8);
+  });
+
+  it('Should not leak a custom ephemeral derivation strategy across wallets', async () => {
+    const otherWallet = await RailgunWallet.fromMnemonic(
+      db,
+      testEncryptionKey,
+      testMnemonic,
+      1, // distinct account index → distinct wallet
+      undefined,
+      new Prover(testArtifactsGetter),
+    );
+
+    wallet.setEphemeralWalletDerivationStrategy((index) => `${index}'/99`);
+
+    // The other wallet must keep the canonical default derivation, unaffected by the
+    // first wallet's custom strategy.
+    expect(otherWallet.isCanonicalEphemeralProvider()).to.equal(true);
+    const otherEphemeral = await otherWallet.getEphemeralWallet(testEncryptionKey, 1n, 2);
+    expect(otherEphemeral.path).to.equal("m/44'/60'/0'/7702'/1'/1'/2'");
+  });
+
   it('Should keep base path when using injected ephemeral derivation suffix strategy', async () => {
     wallet.setEphemeralWalletDerivationStrategy((index) => {
       return `${index}'/99`;

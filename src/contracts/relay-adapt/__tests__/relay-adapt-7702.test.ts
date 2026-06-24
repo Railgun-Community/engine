@@ -242,7 +242,6 @@ describe('relay-adapt-7702', function test() {
     const random31Bytes = ByteUtils.randomHex(31);
 
     const actionData = RelayAdapt7702Helper.getActionData(
-      random31Bytes,
       true, // requireSuccess
       orderedCalls,
       BigInt(0), // minGasLimit
@@ -364,7 +363,6 @@ describe('relay-adapt-7702', function test() {
     );
 
     const actionData = RelayAdapt7702Helper.getActionData(
-      random,
       false, // sendWithPublicWallet = false
       orderedCalls,
       BigInt(0),
@@ -507,7 +505,6 @@ describe('relay-adapt-7702', function test() {
     );
 
     const actionData = RelayAdapt7702Helper.getActionData(
-      random,
       true, // requireSuccess (sendWithPublicWallet=true)
       orderedCalls,
       BigInt(0), // minGasLimit
@@ -700,7 +697,6 @@ describe('relay-adapt-7702', function test() {
     const minGasLimitForContract = RelayAdapt7702Contract.getMinimumGasLimitForContract(minGasLimit);
 
     const actionDataGasEstimate = RelayAdapt7702Helper.getActionData(
-      gasEstimateRandom,
       false, // requireSuccess (isGasEstimate=false, isBroadcasterTransaction=true -> false)
       orderedCallsGasEstimate,
       minGasLimitForContract,
@@ -793,7 +789,6 @@ describe('relay-adapt-7702', function test() {
     });
 
     const actionDataFinal = RelayAdapt7702Helper.getActionData(
-      random,
       false, // requireSuccess
       orderedCallsFinal,
       minGasLimitForContract,
@@ -954,7 +949,6 @@ describe('relay-adapt-7702', function test() {
     const random31Bytes = ByteUtils.randomHex(31);
 
     const actionData = RelayAdapt7702Helper.getActionData(
-      random31Bytes,
       true, // requireSuccess
       orderedCalls,
       BigInt(0), // minGasLimit
@@ -1117,7 +1111,6 @@ describe('relay-adapt-7702', function test() {
     const minGasLimitForContract = RelayAdapt7702Contract.getMinimumGasLimitForContract(minGasLimit);
 
     const actionDataGasEstimate = RelayAdapt7702Helper.getActionData(
-      randomGasEstimate,
       true, // requireSuccess (isGasEstimate=true -> true)
       orderedCallsGasEstimate,
       minGasLimitForContract,
@@ -1211,7 +1204,6 @@ describe('relay-adapt-7702', function test() {
     });
 
     const actionDataFinal = RelayAdapt7702Helper.getActionData(
-      random,
       false, // requireSuccess
       orderedCallsFinal,
       minGasLimitForContract,
@@ -1404,7 +1396,6 @@ describe('relay-adapt-7702', function test() {
     const minGasLimitForContract = RelayAdapt7702Contract.getMinimumGasLimitForContract(minGasLimit);
 
     const actionDataGasEstimate = RelayAdapt7702Helper.getActionData(
-      gasEstimateRandom,
       true, // requireSuccess (isGasEstimate=true -> true)
       orderedCallsGasEstimate,
       minGasLimitForContract,
@@ -1487,7 +1478,6 @@ describe('relay-adapt-7702', function test() {
     });
 
     const actionDataFinal = RelayAdapt7702Helper.getActionData(
-      random,
       false, // requireSuccess
       orderedCallsFinal,
       minGasLimitForContract,
@@ -1682,7 +1672,6 @@ describe('relay-adapt-7702', function test() {
     const minGasLimitForContract = RelayAdapt7702Contract.getMinimumGasLimitForContract(minGasLimit);
 
     const actionDataGasEstimate = RelayAdapt7702Helper.getActionData(
-      randomGasEstimate,
       true, // requireSuccess (isGasEstimate=true -> true)
       orderedCallsGasEstimate,
       minGasLimitForContract,
@@ -1765,7 +1754,6 @@ describe('relay-adapt-7702', function test() {
     });
 
     const actionDataFinal = RelayAdapt7702Helper.getActionData(
-      random,
       false, // requireSuccess
       orderedCallsFinal,
       minGasLimitForContract,

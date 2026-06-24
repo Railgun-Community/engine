@@ -85,7 +85,7 @@ export const signExecutionAuthorization = async (
   signer: RelayAdapt7702HookedSigner,
   transactions: (TransactionStructV2 | TransactionStructV3)[],
   actionData: RelayAdapt7702.ActionDataStruct,
-  chainId: number,
+  chainId: number | bigint,
   executionDetails: RelayAdapt7702ExecutionDetails = {
     executionType: DEFAULT_RELAY_ADAPT_7702_EXECUTION_TYPE,
     executeNonce: 0n,

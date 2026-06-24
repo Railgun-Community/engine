@@ -1,5 +1,5 @@
 import { verifyTypedData, getBytes, keccak256, encodeRlp, toBeHex, recoverAddress, Authorization } from 'ethers';
-import { TransactionStructV2 } from '../models/transaction-types';
+import { TransactionStructV2, TransactionStructV3 } from '../models/transaction-types';
 import { RelayAdapt7702 } from '../abi/typechain/RelayAdapt7702';
 import {
   RelayAdapt7702ExecutionDetails,
@@ -10,7 +10,8 @@ export class RelayAdapt7702Validator {
   static validateAuthorization(
     authorization: Authorization,
     expectedContractAddress: string,
-    expectedChainId: number
+    expectedChainId: number | bigint,
+    expectedSigner?: string,
   ): string {
     if (authorization.address.toLowerCase() !== expectedContractAddress.toLowerCase()) {
       throw new Error('Authorization contract address mismatch');
@@ -28,15 +29,19 @@ export class RelayAdapt7702Validator {
     const payload = new Uint8Array([0x05, ...getBytes(rlpEncoded)]);
     const hash = keccak256(payload);
 
-    // Recover address
-    return recoverAddress(hash, authorization.signature);
+    // Recover address. ethers rejects non-canonical (high-s, malleable) signatures here.
+    const recovered = recoverAddress(hash, authorization.signature);
+    if (expectedSigner != null && recovered.toLowerCase() !== expectedSigner.toLowerCase()) {
+      throw new Error('Authorization signer mismatch');
+    }
+    return recovered;
   }
 
   static validateExecution(
-    transactions: TransactionStructV2[],
+    transactions: (TransactionStructV2 | TransactionStructV3)[],
     actionData: RelayAdapt7702.ActionDataStruct,
     signature: string,
-    chainId: number,
+    chainId: number | bigint,
     expectedSigner: string,
     executionDetails?: RelayAdapt7702ExecutionDetails,
   ): void {

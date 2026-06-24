@@ -1637,6 +1637,10 @@ class RailgunEngine extends EventEmitter {
       );
     }
 
+    if (isDefined(relayAdapt7702ContractAddress) && isDefined(railgunRegistryContractAddress)) {
+      await this.warnIfRelayAdapt7702AddressMismatchesRegistry(chain, relayAdapt7702ContractAddress);
+    }
+
     if (supportsV3) {
       ContractStore.poseidonMerkleAccumulatorV3Contracts.set(
         null,
@@ -2369,6 +2373,60 @@ class RailgunEngine extends EventEmitter {
       return registeredAddress.toLowerCase() === address.toLowerCase();
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Pure check: returns false only when the registry reports a concrete (defined,
+   * non-zero) RelayAdapt7702 address that differs from the configured one. An absent
+   * or zero-address registry entry returns true (cannot confirm or deny).
+   */
+  static relayAdapt7702AddressMatchesRegistry(
+    registeredAddress: Optional<string>,
+    configuredAddress: string,
+  ): boolean {
+    if (!isDefined(registeredAddress) || /^0x0+$/i.test(registeredAddress)) {
+      return true;
+    }
+    return registeredAddress.toLowerCase() === configuredAddress.toLowerCase();
+  }
+
+  /**
+   * Warn (do not block) if the configured RelayAdapt7702 delegate address disagrees with
+   * the on-chain registry. Users sign EIP-7702 authorizations delegating to this address,
+   * so a mismatch is worth surfacing — but the registry can legitimately lag behind freshly
+   * deployed contracts, and blocking on that would brick otherwise-valid wallets. The engine
+   * keeps using the configured address; the warning flags the discrepancy for reconciliation.
+   */
+  private async warnIfRelayAdapt7702AddressMismatchesRegistry(
+    chain: Chain,
+    configuredAddress: string,
+  ): Promise<void> {
+    const registry = ContractStore.railgunRegistryContract.get(null, chain);
+    if (!registry) {
+      return;
+    }
+    let registeredAddress: Optional<string>;
+    try {
+      registeredAddress = await promiseTimeout(
+        registry.getContractAddress(REGISTRY_NAME_RELAY_ADAPT_7702),
+        10_000,
+        'Timed out verifying RelayAdapt7702 address against registry',
+      );
+    } catch (cause) {
+      EngineDebug.error(
+        new Error('Could not verify RelayAdapt7702 address against registry', { cause }),
+        true,
+      );
+      return;
+    }
+    if (!RailgunEngine.relayAdapt7702AddressMatchesRegistry(registeredAddress, configuredAddress)) {
+      EngineDebug.error(
+        new Error(
+          `RelayAdapt7702 address ${configuredAddress} does not match registry-reported ${registeredAddress} for ${chain.type}:${chain.id}. Using the configured address; update the registry to silence this warning.`,
+        ),
+        true,
+      );
     }
   }
 

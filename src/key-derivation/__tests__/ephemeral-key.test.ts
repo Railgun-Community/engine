@@ -3,6 +3,7 @@ import {
   deriveEphemeralWallet,
   deriveEphemeralWalletFromPathSuffix,
   getEphemeralWalletBasePath,
+  getEphemeralWalletPathSuffix,
 } from '../ephemeral-key';
 
 describe('Ephemeral Key Derivation', () => {
@@ -101,5 +102,38 @@ describe('Ephemeral Key Derivation', () => {
         "m/44'/60'/0'/7702'/0'/1'/5'",
       ),
     ).to.throw('Ephemeral wallet derivation path suffix must be relative.');
+  });
+
+  it('should reject chain IDs at or above the hardened BIP-32 limit', () => {
+    // 2^31 is the first invalid hardened segment value.
+    expect(() => getEphemeralWalletBasePath(0, 2147483648n)).to.throw(
+      'hardened BIP-32 segment limit',
+    );
+    // 2^31 - 1 is the largest valid hardened chain segment.
+    expect(() => getEphemeralWalletBasePath(0, 2147483647n)).to.not.throw();
+  });
+
+  it('should reject deriving an ephemeral wallet on a chain ID above the hardened limit', () => {
+    // e.g. Palm (11297108109) exceeds 2^31 and would otherwise throw opaquely in ethers.
+    expect(() => deriveEphemeralWallet(mnemonic, railgunIndex, 11297108109n, 0)).to.throw(
+      'exceeds the hardened BIP-32 segment limit',
+    );
+  });
+
+  it('should reject an out-of-range railgun wallet index', () => {
+    expect(() => getEphemeralWalletBasePath(2147483648, 1n)).to.throw(
+      'out of range for a hardened BIP-32 segment',
+    );
+  });
+
+  it('should reject an out-of-range ephemeral index suffix', () => {
+    expect(() => getEphemeralWalletPathSuffix(2147483648)).to.throw(
+      'out of range for a hardened BIP-32 segment',
+    );
+    // 2^31 - 1 is the largest valid hardened index.
+    expect(() => getEphemeralWalletPathSuffix(2147483647)).to.not.throw();
+    expect(() => deriveEphemeralWallet(mnemonic, railgunIndex, chainId, 2147483648)).to.throw(
+      'out of range for a hardened BIP-32 segment',
+    );
   });
 });

@@ -35,7 +35,7 @@ export const RETURN_DATA_RELAY_ADAPT_STRING_PREFIX = '0x5c0dee5d';
 export const RETURN_DATA_STRING_PREFIX = '0x08c379a0';
 
 export class RelayAdapt7702Contract {
-  private readonly contract: RelayAdapt;
+  private readonly contract: RelayAdapt7702;
 
   private readonly provider: Provider;
 
@@ -66,7 +66,7 @@ export class RelayAdapt7702Contract {
       relayAdaptV2ContractAddress,
       relayAdapt7702ABI,
       provider,
-    ) as unknown as RelayAdapt;
+    ) as unknown as RelayAdapt7702;
   }
 
   async populateShieldBaseToken(
@@ -75,6 +75,7 @@ export class RelayAdapt7702Contract {
     signature?: string,
     random31Bytes?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     void random31Bytes;
 
@@ -90,6 +91,7 @@ export class RelayAdapt7702Contract {
       authorization,
       signature,
       ephemeralAddress,
+      executeNonce,
     );
   }
 
@@ -186,6 +188,7 @@ export class RelayAdapt7702Contract {
     authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForUnshieldBaseToken(
       unshieldAddress,
@@ -203,6 +206,7 @@ export class RelayAdapt7702Contract {
       authorization,
       signature,
       ephemeralAddress,
+      executeNonce,
     );
   }
 
@@ -268,6 +272,7 @@ export class RelayAdapt7702Contract {
     authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     const orderedCalls: ContractTransaction[] = await this.getOrderedCallsForCrossContractCalls(
       crossContractCalls,
@@ -302,6 +307,7 @@ export class RelayAdapt7702Contract {
       authorization,
       signature,
       ephemeralAddress,
+      executeNonce,
     );
 
     // Set default gas limit for cross-contract calls.
@@ -366,6 +372,7 @@ export class RelayAdapt7702Contract {
     authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     // Always requireSuccess when there is no Broadcaster payment.
     const requireSuccess = true;
@@ -382,6 +389,7 @@ export class RelayAdapt7702Contract {
       authorization,
       signature,
       ephemeralAddress,
+      executeNonce,
     );
   }
 
@@ -398,16 +406,17 @@ export class RelayAdapt7702Contract {
     authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
+    executeNonceOverride?: bigint,
   ): Promise<ContractTransaction> {
     const actionData: RelayAdapt7702.ActionDataStruct = RelayAdapt7702Helper.getActionData(
       requireSuccess,
       calls,
       minimumGasLimit,
     );
-    
+
     const sig = signature ?? '0x';
     const executeNonce = this.executionType === RelayAdapt7702ExecutionType.ExecuteWithNonce
-      ? await this.getExecuteNonce(ephemeralAddress)
+      ? executeNonceOverride ?? (await this.getExecuteNonce(ephemeralAddress))
       : undefined;
 
     const data = RelayAdapt7702Helper.encodeExecute(
@@ -438,7 +447,14 @@ export class RelayAdapt7702Contract {
     return populatedTransaction;
   }
 
-  private async getExecuteNonce(ephemeralAddress?: string): Promise<bigint> {
+  /**
+   * Reads the RelayAdapt7702 execute nonce for the executing account. Callers
+   * MUST read this once and pass the same value to both the execution signature
+   * (RelayAdapt7702Helper.signExecutionAuthorization, via executionDetails.executeNonce)
+   * and populateCrossContractCalls (executeNonce). Otherwise the signed nonce and
+   * the encoded nonce diverge for any nonce > 0 and on-chain execution reverts.
+   */
+  async getExecuteNonce(ephemeralAddress?: string): Promise<bigint> {
     const nonceContractAddress = ephemeralAddress ?? this.address;
     const nonceContract = new Contract(
       nonceContractAddress,

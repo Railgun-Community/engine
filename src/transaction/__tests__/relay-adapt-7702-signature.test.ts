@@ -111,4 +111,44 @@ describe('RelayAdapt7702 Execution Signature', () => {
     )));
     expect(currentHash).to.not.equal(legacyHash);
   });
+
+  it('preserves chain IDs above 2^53 in the execution signature domain', async () => {
+    const signer = Wallet.createRandom();
+    // 2^53 + 1 is not representable as a JS number, so Number(chainId) would truncate it.
+    const largeChainId = 9007199254740993n;
+    const mockActionData: RelayAdapt7702.ActionDataStruct = {
+      requireSuccess: true,
+      minGasLimit: 100000n,
+      calls: [],
+    };
+    const transactions: TransactionStructV2[] = [];
+    const executionDetails = {
+      executionType: RelayAdapt7702ExecutionType.ExecuteWithNonce,
+      executeNonce: 1n,
+    };
+
+    const signature = await signExecutionAuthorization(
+      signer,
+      transactions,
+      mockActionData,
+      largeChainId,
+      executionDetails,
+    );
+
+    // Recover against the FULL bigint chain ID (as the on-chain contract sees block.chainid).
+    // A truncated Number(chainId) on the signing side would not recover to the signer.
+    const recovered = verifyTypedData(
+      {
+        name: 'RelayAdapt7702',
+        version: '1',
+        chainId: largeChainId,
+        verifyingContract: signer.address,
+      },
+      { Execute: [{ name: 'payloadHash', type: 'bytes32' }] },
+      { payloadHash: getExecutePayloadHash(transactions, mockActionData, executionDetails) },
+      signature,
+    );
+
+    expect(recovered).to.equal(signer.address);
+  });
 });

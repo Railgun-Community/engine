@@ -33,6 +33,7 @@ export class RelayAdaptVersionedSmartContracts {
     signature?: string,
     random31Bytes?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     if (isRelayAdapt7702) {
       const contract7702 = ContractStore.relayAdapt7702Contracts.getOrThrow(null, chain);
@@ -42,6 +43,7 @@ export class RelayAdaptVersionedSmartContracts {
         signature,
         random31Bytes,
         ephemeralAddress,
+        executeNonce,
       );
     }
     return this.getRelayAdaptContract(txidVersion, chain, isRelayAdapt7702).populateShieldBaseToken(
@@ -61,6 +63,7 @@ export class RelayAdaptVersionedSmartContracts {
     authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
@@ -75,6 +78,7 @@ export class RelayAdaptVersionedSmartContracts {
             authorization,
             signature,
             ephemeralAddress,
+            executeNonce,
           );
         }
         const contractV2 = ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);
@@ -112,6 +116,7 @@ export class RelayAdaptVersionedSmartContracts {
     authorization?: Authorization,
     signature?: string,
     ephemeralAddress?: string,
+    executeNonce?: bigint,
   ): Promise<ContractTransaction> {
     switch (txidVersion) {
       case TXIDVersion.V2_PoseidonMerkle: {
@@ -128,6 +133,7 @@ export class RelayAdaptVersionedSmartContracts {
             authorization,
             signature,
             ephemeralAddress,
+            executeNonce,
           );
         }
         const contractV2 = ContractStore.relayAdaptV2Contracts.getOrThrow(null, chain);

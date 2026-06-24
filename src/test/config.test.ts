@@ -21,7 +21,7 @@ let config = {
     weth9: '0xA7c59f010700930003b33aB25a7a0679C860f29c',
     relayAdapt: '0xfaAddC93baf78e89DCf37bA67943E1bE8F37Bb8c',
     relayAdapt7702: '0x5bf5b11053e734690269C6B9D438F8C9d48F528A',
-    adapt7702Deployer: '0x3155755b79aA083bd953911C92705B7aA82a18F9',
+    railgunRegistry: '0x3155755b79aA083bd953911C92705B7aA82a18F9',
 
     // V3
     poseidonMerkleAccumulatorV3: '0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5',

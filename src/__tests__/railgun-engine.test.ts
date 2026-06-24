@@ -322,7 +322,7 @@ describe('railgun-engine', function test() {
       0,
       !isV2Test(), // supportsV3
       config.contracts.relayAdapt7702,
-      config.contracts.adapt7702Deployer,
+      config.contracts.railgunRegistry,
     );
 
     const balance = await token.balanceOf(ethersWallet.address);

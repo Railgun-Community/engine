@@ -48,7 +48,7 @@ class RelayAdapt7702Helper {
     chainId: bigint,
     executionDetails?: RelayAdapt7702ExecutionDetails,
   ): Promise<string> {
-    return signExecutionAuthorizationCore(signer, transactions, actionData, Number(chainId), executionDetails);
+    return signExecutionAuthorizationCore(signer, transactions, actionData, chainId, executionDetails);
   }
 
   static getExecutePayloadHash(
@@ -160,39 +160,10 @@ class RelayAdapt7702Helper {
    * Format action data field for relay call.
    */
   static getActionData(
-    random: string,
     requireSuccess: boolean,
     calls: ContractTransaction[],
     minGasLimit: bigint,
-  ): RelayAdapt7702.ActionDataStruct;
-  static getActionData(
-    requireSuccess: boolean,
-    calls: ContractTransaction[],
-    minGasLimit: bigint,
-  ): RelayAdapt7702.ActionDataStruct;
-  static getActionData(
-    randomOrRequireSuccess: string | boolean,
-    callsOrRequireSuccess: ContractTransaction[] | boolean,
-    callsOrMinGasLimit: ContractTransaction[] | bigint,
-    maybeMinGasLimit?: bigint,
   ): RelayAdapt7702.ActionDataStruct {
-    const requireSuccess =
-      typeof randomOrRequireSuccess === 'boolean'
-        ? randomOrRequireSuccess
-        : (callsOrRequireSuccess as boolean);
-    const calls =
-      typeof randomOrRequireSuccess === 'boolean'
-        ? (callsOrRequireSuccess as ContractTransaction[])
-        : (callsOrMinGasLimit as ContractTransaction[]);
-    const minGasLimit =
-      typeof randomOrRequireSuccess === 'boolean'
-        ? (callsOrMinGasLimit as bigint)
-        : maybeMinGasLimit;
-
-    if (minGasLimit == null) {
-      throw new Error('RelayAdapt7702Helper.getActionData missing minGasLimit.');
-    }
-
     return {
       requireSuccess,
       minGasLimit,
