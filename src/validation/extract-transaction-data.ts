@@ -21,6 +21,7 @@ export const extractFirstNoteERC20AmountMapFromTransactionRequest = (
   receivingViewingPrivateKey: Uint8Array,
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
+  useRelayAdapt7702: boolean = false,
 ) => {
   switch (txidVersion) {
     case TXIDVersion.V2_PoseidonMerkle:
@@ -32,6 +33,7 @@ export const extractFirstNoteERC20AmountMapFromTransactionRequest = (
         receivingViewingPrivateKey,
         receivingRailgunAddressData,
         tokenDataGetter,
+        useRelayAdapt7702,
       );
     case TXIDVersion.V3_PoseidonMerkle:
       return extractFirstNoteERC20AmountMapFromTransactionRequestV3(
@@ -55,6 +57,7 @@ export const extractRailgunTransactionDataFromTransactionRequest = (
   receivingViewingPrivateKey: Uint8Array,
   receivingRailgunAddressData: AddressData,
   tokenDataGetter: TokenDataGetter,
+  useRelayAdapt7702: boolean = false,
 ) => {
   switch (txidVersion) {
     case TXIDVersion.V2_PoseidonMerkle:
@@ -66,6 +69,7 @@ export const extractRailgunTransactionDataFromTransactionRequest = (
         receivingViewingPrivateKey,
         receivingRailgunAddressData,
         tokenDataGetter,
+        useRelayAdapt7702,
       );
     case TXIDVersion.V3_PoseidonMerkle:
       return extractRailgunTransactionDataFromTransactionRequestV3(
