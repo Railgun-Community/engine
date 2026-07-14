@@ -220,6 +220,16 @@ class RailgunWallet extends AbstractWallet {
     chainId: bigint,
     mnemonicPassword?: string,
   ): Promise<RelayAdapt7702HookedSigner> {
+    // The EIP-7702 authorization authority MUST equal the tx `to` and the account whose nonce
+    // is read. getCurrentEphemeralWallet (which drives `to` and the nonce) returns the override
+    // first, so the signer that produces the authorization must honor the same override first —
+    // otherwise a pinned ephemeral signs the authorization with a different (HD-derived) account,
+    // authority != `to`, and a sponsored execute no-ops on-chain. Override wins over a custom
+    // signer provider, matching getCurrentEphemeralWallet's precedence.
+    if (this.ephemeralWalletOverride) {
+      return this.ephemeralWalletOverride;
+    }
+
     const ephemeralIndex = await this.getEphemeralKeyIndex(chainId);
     if (this.ephemeralSignerProvider.getSigner) {
       // Custom signer providers (e.g. hardware wallets) control their own keys and do not

@@ -1,7 +1,7 @@
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { utf8ToBytes } from 'ethereum-cryptography/utils';
-import { Authorization, Signature as EthSignature } from 'ethers';
+import { Authorization, HDNodeWallet, Signature as EthSignature } from 'ethers';
 import memdown from 'memdown';
 import {
   getNoteBlindingKeys,
@@ -531,6 +531,38 @@ describe('railgun-wallet', () => {
     expect(result.authorization).to.equal(authorization);
     expect(result.signature).to.equal(executionSignature);
     expect(typedDataVerifyingContract).to.equal('0x1111111111111111111111111111111111111111');
+  });
+
+  it('Should resolve the ephemeral signer and address to a pinned override', async () => {
+    // A pinned override must drive BOTH the tx target/nonce (getCurrentEphemeralWallet) and the
+    // authorization signer (getCurrentEphemeralSigner). If the signer ignored the override, the
+    // recovered EIP-7702 authority would differ from `to` and a sponsored execute would no-op.
+    const override = HDNodeWallet.createRandom();
+    await wallet.setCurrentEphemeralWallet(override);
+
+    const signer = await wallet.getCurrentEphemeralSigner(testEncryptionKey, 1n);
+    expect(signer.address).to.equal(override.address);
+    expect(await wallet.getCurrentEphemeralAddress(testEncryptionKey, 1n)).to.equal(
+      override.address,
+    );
+
+    const ephemeralWallet = await wallet.getCurrentEphemeralWallet(testEncryptionKey, 1n);
+    expect(ephemeralWallet.address).to.equal(override.address);
+  });
+
+  it('Should prefer a pinned override over an injected signer provider for the signer', async () => {
+    const override = HDNodeWallet.createRandom();
+    await wallet.setCurrentEphemeralWallet(override);
+    wallet.setEphemeralSignerProvider({
+      getPathSuffix: (index) => `${index}'`,
+      getDBPathSuffix: () => ['ledger'],
+      getSigner: async () => {
+        throw new Error('signer provider must not be consulted when an override is set');
+      },
+    });
+
+    const signer = await wallet.getCurrentEphemeralSigner(testEncryptionKey, 1n);
+    expect(signer.address).to.equal(override.address);
   });
 
   it('Should reject invalid ephemeral key index path suffixes', async () => {
