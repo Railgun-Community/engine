@@ -41,6 +41,7 @@ export class POIValidation {
     receivingViewingPrivateKey: Uint8Array,
     receivingRailgunAddressData: AddressData,
     tokenDataGetter: TokenDataGetter,
+    useRelayAdapt7702: boolean = false,
   ): Promise<{
     isValid: boolean;
     error?: string;
@@ -57,6 +58,7 @@ export class POIValidation {
           receivingViewingPrivateKey,
           receivingRailgunAddressData,
           tokenDataGetter,
+          useRelayAdapt7702,
         );
 
       const activeListKeys = POI.getActiveListKeys();

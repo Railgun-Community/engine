@@ -3,8 +3,16 @@
 /* eslint-disable */
 export type { PoseidonMerkleAccumulator } from "./PoseidonMerkleAccumulator";
 export type { PoseidonMerkleVerifier } from "./PoseidonMerkleVerifier";
+export type { RailgunSmartWallet_Legacy_PreMar23 } from "./RailgunSmartWallet_Legacy_PreMar23";
+export type { Registry } from "./Registry";
+export type { RelayAdapt } from "./RelayAdapt";
+export type { RelayAdapt7702 } from "./RelayAdapt7702";
 export type { TokenVault } from "./TokenVault";
 export * as factories from "./factories";
 export { PoseidonMerkleAccumulator__factory } from "./factories/PoseidonMerkleAccumulator__factory";
 export { PoseidonMerkleVerifier__factory } from "./factories/PoseidonMerkleVerifier__factory";
+export { RailgunSmartWallet_Legacy_PreMar23__factory } from "./factories/RailgunSmartWallet_Legacy_PreMar23__factory";
+export { Registry__factory } from "./factories/Registry__factory";
+export { RelayAdapt__factory } from "./factories/RelayAdapt__factory";
+export { RelayAdapt7702__factory } from "./factories/RelayAdapt7702__factory";
 export { TokenVault__factory } from "./factories/TokenVault__factory";

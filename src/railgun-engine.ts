@@ -3,6 +3,12 @@ import EventEmitter from 'events';
 import { FallbackProvider } from 'ethers';
 import { RailgunSmartWalletContract } from './contracts/railgun-smart-wallet/V2/railgun-smart-wallet';
 import { RelayAdaptV2Contract } from './contracts/relay-adapt/V2/relay-adapt-v2';
+import { RelayAdapt7702Contract } from './contracts/relay-adapt/V2/relay-adapt-7702';
+import { RelayAdapt7702ExecutionType } from './transaction/relay-adapt-7702-signature';
+import {
+  RegistryContract,
+  REGISTRY_NAME_RELAY_ADAPT_7702,
+} from './contracts/relay-adapt/V2/registry';
 import { Database, DatabaseNamespace } from './database/database';
 import { Prover } from './prover/prover';
 import { encodeAddress, decodeAddress } from './key-derivation/bech32';
@@ -641,8 +647,11 @@ class RailgunEngine extends EventEmitter {
       const { tree: latestTree } = await utxoMerkletree.getLatestTreeAndIndex();
       // check roots for trees up to this tree on 'scan'
       for (let treeIndex = 0; treeIndex <= latestTree; treeIndex += 1) {
+        // eslint-disable-next-line no-await-in-loop
         const index = await utxoMerkletree.getLatestIndexForTree(treeIndex);
+        // eslint-disable-next-line no-await-in-loop
         const root = await utxoMerkletree.getRoot(treeIndex);
+        // eslint-disable-next-line no-await-in-loop
         const isValid = await RailgunEngine.validateMerkleroot(
           txidVersion,
           chain,
@@ -1518,6 +1527,9 @@ class RailgunEngine extends EventEmitter {
     deploymentBlocks: Record<TXIDVersion, number>,
     poiLaunchBlock: Optional<number>,
     supportsV3: boolean,
+    relayAdapt7702ContractAddress?: string,
+    railgunRegistryContractAddress?: string,
+    relayAdapt7702ExecutionType?: RelayAdapt7702ExecutionType,
   ) {
     EngineDebug.log(`loadNetwork: ${chain.type}:${chain.id}`);
 
@@ -1564,6 +1576,8 @@ class RailgunEngine extends EventEmitter {
     );
     const hasSmartWalletContract = ContractStore.railgunSmartWalletContracts.has(null, chain);
     const hasRelayAdaptV2Contract = ContractStore.relayAdaptV2Contracts.has(null, chain);
+    const hasRelayAdapt7702Contract = ContractStore.relayAdapt7702Contracts.has(null, chain);
+    const hasRegistryContract = ContractStore.railgunRegistryContract.has(null, chain);
     const hasPoseidonMerkleAccumulatorV3Contract =
       ContractStore.poseidonMerkleAccumulatorV3Contracts.has(null, chain);
     const hasPoseidonMerkleVerifierV3Contract = ContractStore.poseidonMerkleVerifierV3Contracts.has(
@@ -1575,6 +1589,8 @@ class RailgunEngine extends EventEmitter {
       hasAnyMerkletree ||
       hasSmartWalletContract ||
       hasRelayAdaptV2Contract ||
+      hasRelayAdapt7702Contract ||
+      hasRegistryContract ||
       hasPoseidonMerkleAccumulatorV3Contract ||
       hasPoseidonMerkleVerifierV3Contract ||
       hasTokenVaultV3Contract
@@ -1600,6 +1616,30 @@ class RailgunEngine extends EventEmitter {
       chain,
       new RelayAdaptV2Contract(relayAdaptV2ContractAddress, defaultProvider),
     );
+
+    if (isDefined(relayAdapt7702ContractAddress)) {
+      ContractStore.relayAdapt7702Contracts.set(
+        null,
+        chain,
+        new RelayAdapt7702Contract(
+          relayAdapt7702ContractAddress,
+          defaultProvider,
+          relayAdapt7702ExecutionType,
+        ),
+      );
+    }
+
+    if (isDefined(railgunRegistryContractAddress)) {
+      ContractStore.railgunRegistryContract.set(
+        null,
+        chain,
+        new RegistryContract(railgunRegistryContractAddress, defaultProvider),
+      );
+    }
+
+    if (isDefined(relayAdapt7702ContractAddress) && isDefined(railgunRegistryContractAddress)) {
+      await this.warnIfRelayAdapt7702AddressMismatchesRegistry(chain, relayAdapt7702ContractAddress);
+    }
 
     if (supportsV3) {
       ContractStore.poseidonMerkleAccumulatorV3Contracts.set(
@@ -2306,6 +2346,90 @@ class RailgunEngine extends EventEmitter {
     return shieldCommitments;
   }
 
+  /**
+   * Get RelayAdapt7702 contract address
+   * @param chain - chain type/id
+   * @returns address
+   */
+  getRelayAdapt7702ContractAddress(chain: Chain): Optional<string> {
+    const contract = ContractStore.relayAdapt7702Contracts.get(null, chain);
+    return contract?.address;
+  }
+
+  /**
+   * Validate RelayAdapt7702 contract address
+   * @param chain - chain type/id
+   * @param address - address to validate
+   * @returns true if valid
+   */
+  async validateRelayAdapt7702Address(chain: Chain, address: string): Promise<boolean> {
+    const registry = ContractStore.railgunRegistryContract.get(null, chain);
+    if (!registry) {
+      return false;
+    }
+
+    try {
+      const registeredAddress = await registry.getContractAddress(REGISTRY_NAME_RELAY_ADAPT_7702);
+      return registeredAddress.toLowerCase() === address.toLowerCase();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Pure check: returns false only when the registry reports a concrete (defined,
+   * non-zero) RelayAdapt7702 address that differs from the configured one. An absent
+   * or zero-address registry entry returns true (cannot confirm or deny).
+   */
+  static relayAdapt7702AddressMatchesRegistry(
+    registeredAddress: Optional<string>,
+    configuredAddress: string,
+  ): boolean {
+    if (!isDefined(registeredAddress) || /^0x0+$/i.test(registeredAddress)) {
+      return true;
+    }
+    return registeredAddress.toLowerCase() === configuredAddress.toLowerCase();
+  }
+
+  /**
+   * Warn (do not block) if the configured RelayAdapt7702 delegate address disagrees with
+   * the on-chain registry. Users sign EIP-7702 authorizations delegating to this address,
+   * so a mismatch is worth surfacing — but the registry can legitimately lag behind freshly
+   * deployed contracts, and blocking on that would brick otherwise-valid wallets. The engine
+   * keeps using the configured address; the warning flags the discrepancy for reconciliation.
+   */
+  private async warnIfRelayAdapt7702AddressMismatchesRegistry(
+    chain: Chain,
+    configuredAddress: string,
+  ): Promise<void> {
+    const registry = ContractStore.railgunRegistryContract.get(null, chain);
+    if (!registry) {
+      return;
+    }
+    let registeredAddress: Optional<string>;
+    try {
+      registeredAddress = await promiseTimeout(
+        registry.getContractAddress(REGISTRY_NAME_RELAY_ADAPT_7702),
+        10_000,
+        'Timed out verifying RelayAdapt7702 address against registry',
+      );
+    } catch (cause) {
+      EngineDebug.error(
+        new Error('Could not verify RelayAdapt7702 address against registry', { cause }),
+        true,
+      );
+      return;
+    }
+    if (!RailgunEngine.relayAdapt7702AddressMatchesRegistry(registeredAddress, configuredAddress)) {
+      EngineDebug.error(
+        new Error(
+          `RelayAdapt7702 address ${configuredAddress} does not match registry-reported ${registeredAddress} for ${chain.type}:${chain.id}. Using the configured address; update the registry to silence this warning.`,
+        ),
+        true,
+      );
+    }
+  }
+
   // Top-level exports:
 
   static encodeAddress = encodeAddress;
@@ -2315,6 +2439,10 @@ class RailgunEngine extends EventEmitter {
   railgunSmartWalletContracts = ContractStore.railgunSmartWalletContracts;
 
   relayAdaptV2Contracts = ContractStore.relayAdaptV2Contracts;
+
+  relayAdapt7702Contracts = ContractStore.relayAdapt7702Contracts;
+
+  railgunRegistryContract = ContractStore.railgunRegistryContract;
 }
 
 export { RailgunEngine };

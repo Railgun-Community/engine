@@ -9,6 +9,7 @@ export {
   SpendingKeyPair,
   SpendingPublicKey,
   ViewingKeyPair,
+  deriveEphemeralWallet,
 } from './key-derivation';
 export * from './merkletree/merkletree';
 export * from './validation';

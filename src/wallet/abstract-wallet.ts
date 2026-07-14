@@ -2118,6 +2118,7 @@ abstract class AbstractWallet extends EventEmitter {
     transactionRequest: ContractTransaction,
     useRelayAdapt: boolean,
     pois: PreTransactionPOIsPerTxidLeafPerList,
+    useRelayAdapt7702: boolean,
   ): Promise<{
     isValid: boolean;
     error?: string;
@@ -2134,6 +2135,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.getViewingKeyPair().privateKey,
       this.addressKeys,
       this.tokenDataGetter,
+      useRelayAdapt7702,
     );
   }
 
@@ -2318,6 +2320,7 @@ abstract class AbstractWallet extends EventEmitter {
     transactionRequest: ContractTransaction,
     useRelayAdapt: boolean,
     contractAddress: string,
+    useRelayAdapt7702: boolean = false,
   ) {
     return extractFirstNoteERC20AmountMapFromTransactionRequest(
       txidVersion,
@@ -2328,6 +2331,7 @@ abstract class AbstractWallet extends EventEmitter {
       this.getViewingKeyPair().privateKey,
       this.addressKeys,
       this.tokenDataGetter,
+      useRelayAdapt7702
     );
   }
 
